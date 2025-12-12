@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="view_daily_budget_analytic_form" model="ir.ui.view">
+            <field name="name">daily.budget.analytic.form</field>
+            <field name="model">daily.budget.analytic</field>
+            <field name="arch" type="xml">
+                <form string="Gestion des budgets" create="1" edit="1" delete="0">
+                    <header>
+                        <button name="action_generate" type="object" string="Generer les lignes journalieres"
+                                class="btn-primary" invisible="state != 'draft'"/>
+                        <button name="action_done" type="object" string="Valider"
+                                class="btn-info" invisible="state != 'pending'"/>
+                        <button name="action_draft" type="object" string="Annuler"
+                                class="btn-warning" invisible="state != 'pending'"/>
+                        <button name="action_close" type="object" string="Clôturer"
+                                class="btn btn-success" invisible="state != 'in_progress'" />
+                        <field name="state" widget="statusbar" statusbar_visible="draft,pending,in_progress,done"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name" class="oe_edit_only"/>
+                            <h1>
+                                <field name="name" placeholder="Nom" readonly="state in ('pending', 'in_progress', 'done')"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="budget_type" readonly='1'/>
+                                <field name="company_id" invisible="1"/>
+                                <field name="plan_analytic_id" required='1' readonly="state in ('pending', 'in_progress', 'done')"/>
+                                <field name="account_analytic_id" 
+                                        domain="[('plan_id', '=', plan_analytic_id)]"
+                                        invisible="not plan_analytic_id"
+                                        required="plan_analytic_id"
+                                        readonly="state in ('pending', 'in_progress', 'done')"/>
+                                
+                            </group>
+                            <group>
+                                <field name="budget_amount"/>
+                                <field name="currency_id" invisible="1"/>
+                                <field name="budget_id" readonly='1' invisible="not budget_id"/>
+                                <label for="date_from" string="Periode"/>
+                                <div>
+                                    <field name="date_from" class="oe_inline" readonly="state in ('pending', 'in_progress', 'done')"/>
+                                    <span> à </span>
+                                    <field name="date_to" class="oe_inline" readonly="state in ('pending', 'in_progress', 'done')"/>
+                                </div>
+                            </group>
+                            
+                        </group> 
+                        <notebook>
+                            <page string="Description">
+                                <field name="note" placeholder="Ajouter une note"/>
+                            </page>
+                            <page string="Les lignes de budget journaliere">
+                                <field name="line_ids" readonly="state in ('in_progress', 'done')">
+                                    <list editable="bottom" create="0" edit="1" delete="0"
+                                            decoration-success="variance &gt; 0"
+                                            decoration-danger="variance &lt; 0">
+                                        <field name="name"/>
+                                        <field name="plan_analytic_id"/>
+                                        <field name="account_analytic_id" domain="[('plan_id', '=', plan_analytic_id)]"/>
+                                        <field name="currency_id" column_invisible="True"/>
+                                        <field name="state" column_invisible="True"/>
+                                        <field name="budget_amount" sum="budget"/>
+                                        <field name="actual_amount" sum="actual" invisible="state not in ('in_progress', 'done')" optional="hide"/>
+                                        <field name="variance_percent" widget="percentage" invisible="state not in ('in_progress', 'done')" optional="hide"/>
+                                        <field name="variance" sum="variance" invisible="state not in ('in_progress', 'done')" optional="hide"/>
+                                        <field name="date_from" optional="hide"/>
+                                        <field name="date_to" optional="hide"/>
+                                    </list>
+                                </field>
+                            </page>
+                        </notebook>                      
+                    </sheet>
+                    <chatter reload_on_follower="True"/>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_daily_budget_analytic_list" model="ir.ui.view">
+            <field name="name">daily.budget.analytic.list</field>
+            <field name="model">daily.budget.analytic</field>
+            <field name="arch" type="xml">
+                
+                <list string="Gestion des budget" create="1" edit="1" delete="0">
+                    <field name="name"/>
+                    <field name="budget_type"/>
+                    <field name="account_analytic_id" domain="[('plan_id', '=', plan_analytic_id)]"/>
+                    <field name="budget_amount"/>
+                    <field name="date_from"/>
+                    <field name="date_to"/>
+                    <field name="state"
+                       decoration-success="state == 'in_progress'"
+                       decoration-info="state == 'draft'"
+                       decoration-muted="state == 'done'"
+                       widget="badge"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="action_daily_budget_analytic" model="ir.actions.act_window">
+            <field name="name">Gestion des budget</field>
+            <field name="res_model">daily.budget.analytic</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Créer votre budget journalier
+                </p>
+            </field>
+        </record>
+
+
+        <!-- Menu principal -->
+
+        <menuitem id="menu_daily_budget_analytic"
+                  name="Budget Journalier"
+                  parent="account.menu_finance_entries"
+                  action="action_daily_budget_analytic"
+                  sequence="54"/>
+    </data>
+
+</odoo>
