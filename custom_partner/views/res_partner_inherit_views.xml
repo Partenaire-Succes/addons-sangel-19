@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ce code permet de modifier le libellé etiquette en catgorie client-->
+        <record id="res_partner_inherit_form_view" model="ir.ui.view">
+            <field name="name">res.partner.inherit.form</field>
+            <field name="model">res.partner</field>
+            <field name="inherit_id" ref="base.view_partner_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='category_id']" position="attributes">
+                    <attribute name="string">Catégorie client</attribute>
+                </xpath>
+
+                <xpath expr="//field[@name='vat']" position="after">
+                    <field name="customer_id" readonly="1"/>
+                    <field name="code_family" readonly="1"/>
+                </xpath>
+
+                <xpath expr="//page[@name='sales_purchases']/group[1]/group[1]/field[@name='user_id']"
+                       position="after">
+                    <field name="primary_responsible_id" readonly="1"/>
+                    <field name="secondary_responsible_id" readonly="1"/>
+                </xpath>
+
+                <xpath expr="//page[@name='sales_purchases']" position="after">
+                    <page name="discount" string="Remises &amp; Taxes">
+                        <group>
+                            <group name="customer_discount" string="Remises">
+                                <field name="discount_eligible"/>
+                                <field name="discount_percentage"
+                                       invisible="discount_eligible == False"
+                                       widget="percentage"
+                                       class="oe_inline"
+                                       options="{'factor': 1.0}"
+                                />
+                                <label for="discount_start_date" string="Période"
+                                       invisible="discount_eligible == False"/>
+                                <div invisible="discount_eligible == False">
+                                    <field name="discount_start_date" class="oe_inline"/>
+                                    -
+                                    <field name="discount_end_date" class="oe_inline"/>
+                                </div>
+                            </group>
+                            <group name="taxes" string="Taxes">
+                                <field name="is_airsi_eligible" readonly="1"/>
+                            </group>
+                        </group>
+                    </page>
+                </xpath>
+
+                <xpath expr="//notebook" position="inside">
+                    <page string="Cartes de fidélité">
+                        <field name="loyalty_card_ids" readonly="1">
+                            <list>
+                                <field name="code"/>
+                                <field name="points"/>
+                                <field name="expiration_date"/>
+                                <field name="program_id"/>
+                            </list>
+                        </field>
+                    </page>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</odoo>

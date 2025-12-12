@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_loyalty_card_form_inherit" model="ir.ui.view">
+            <field name="name">loyalty.card.form.inherit.code</field>
+            <field name="model">loyalty.card</field>
+            <field name="inherit_id" ref="loyalty.loyalty_card_view_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='code']" position="attributes">
+                    <attribute name="readonly">0</attribute>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>
+
+
