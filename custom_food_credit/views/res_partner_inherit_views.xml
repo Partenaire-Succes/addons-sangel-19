@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="res_partner_form_view" model="ir.ui.view">
+            <field name="name">res.partner.inherit.form</field>
+            <field name="model">res.partner</field>
+            <field name="inherit_id" ref="base.view_partner_form"/>
+            <field name="arch" type="xml">
+
+                <xpath expr="//notebook" position="inside">
+                    <page string="Credt" name="page_credit">
+                        <group name="group_credit">
+                            <group string="Credit Alimentaire" invisible="not is_company">
+                                <field name="is_food"/>
+                                <field name="amount_food" invisible="is_food != True"/>
+                                <field name="currency_id" invisible='1'/>
+                            </group>
+                            <group string="Limite de credit">
+                                <field name="is_limit" />
+                                <field name="amount_credit_limit" invisible="is_limit != True"/>
+                            </group>
+                        </group>
+                    </page>
+                </xpath>
+
+            </field>
+        </record>
+
+    </data>
+</odoo>

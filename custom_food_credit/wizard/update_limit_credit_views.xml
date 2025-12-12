@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Vue du wizard -->
+        <record id="view_update_limit_credit_wizard" model="ir.ui.view">
+            <field name="name">update.limit.credit.wizard.form</field>
+            <field name="model">update.limit.credit.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Mise a jours des limites de credit">
+                    <group>
+                        <group>
+                            <field name="limit_id"/>
+                            <field name="state"/>
+                            <field name="move_id" required="state != 'limit'" invisible="state != 'invoice'"/>
+                            <field name="payment_id" required="state != 'limit'" invisible="state != 'invoice'"/>
+                        </group>
+                        <group>
+                            <field name="amount_limit"/>
+                            <field name="amount_limit_consumed"/>
+                            <field name="amount" readonly="state != 'limit'"/>
+                        </group>
+                    </group>
+                    <footer>
+                        <button string="Mise à limite de credit" type="object" name="update_limit_credit" class="btn-primary"/>
+                        <button string="Annuler" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <!-- Action pour ouvrir le wizard -->
+        <record id="action_update_limit_credit_wizard" model="ir.actions.act_window">
+            <field name="name">Mise a jours des limites de credit</field>
+            <field name="res_model">update.limit.credit.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+        </record>
+    </data>
+</odoo>

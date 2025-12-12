@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_invoice_document_inherit" inherit_id="account.report_invoice_document">
+        
+        <!-- Ajouter l'en-tête de la nouvelle colonne dans le <thead> -->
+        <xpath expr="//table[@name='invoice_line_table']//thead//tr/th[@name='th_description']" position="after">
+            <th name="th_product_code" class="text-start" t-if="o.food_id">
+                <span>Details Consommations</span>
+            </th>
+        </xpath>
+        
+        <xpath expr="//table[@name='invoice_line_table']//tbody//td[@name='account_invoice_line_name']" position="after">
+            <td name="td_product_code" class="text-start" t-if="o.food_id">
+                <span t-field="line.invoice_text">GROS/(1/2 GROS): 2025-10-01 14:22:53 - SOY00029 - 34657.00</span>
+            </td>
+        </xpath>
+        
+    </template>
+</odoo>

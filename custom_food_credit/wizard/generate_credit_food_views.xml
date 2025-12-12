@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Vue du wizard -->
+        <record id="view_food_credit_generation_wizard" model="ir.ui.view">
+            <field name="name">food.credit.generation.wizard.form</field>
+            <field name="model">food.credit.generation.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Génération des Crédits Alimentaires">
+                    <group>
+                        <group>
+                            <field name="month"/>
+                            <field name="year"/>
+                        </group>
+                        <group>
+                            <field name="overwrite_existing"/>
+                        </group>
+                    </group>
+                    <group string="Sociétés">
+                        <field name="company_ids" nolabel="1"/>
+                    </group>
+                    <footer>
+                        <button string="Générer" type="object" name="action_generate" class="btn-primary"/>
+                        <button string="Annuler" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <!-- Action pour ouvrir le wizard -->
+        <record id="action_food_credit_generation_wizard" model="ir.actions.act_window">
+            <field name="name">Générer Crédits Alimentaires</field>
+            <field name="res_model">food.credit.generation.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+        </record>
+    </data>
+</odoo>

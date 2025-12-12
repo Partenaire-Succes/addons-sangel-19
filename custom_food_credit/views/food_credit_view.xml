@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Vue formulaire Code Inventaire -->
+        <record id="view_food_credit_form" model="ir.ui.view">
+            <field name="name">food.credit.form</field>
+            <field name="model">food.credit</field>
+            <field name="arch" type="xml">
+                <form string="Gestion des credits Alimentaire" create="0" edit="1" delete="0">
+                    <header>
+                        <button display="always" class="btn btn-primary" 
+                                string="Générer Crédits Alimentaires" type="action" invisible="state != 'draft'"
+                                name="%(custom_food_credit.action_food_credit_generation_wizard)d" />
+                        <button name="action_done" type="object" string="Soumettre pour validation"
+                                class="btn-info" invisible="state != 'draft'" />
+                        <button name="action_close" type="object" string="Clôturer"
+                                class="btn btn-success" invisible="state != 'in_progress'" />
+                        <button display="always" class="btn btn-primary" 
+                                string="Generer les factures" type="action" invisible="state not in ('in_progress', 'done')"
+                                name="%(custom_food_credit.action_food_credit_invoice_wizard)d" />
+                        <field name="state" widget="statusbar" statusbar_visible="draft,in_progress,done"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name" class="oe_edit_only"/>
+                            <h1>
+                                <field name="name" placeholder="Nom" readonly="1"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="partner_company_id" domain="[('is_company', '=', True)]"/>
+                                <field name="responsible_id"/>
+                                <field name="move_id"/>
+                                <field name="count_child"/>
+                            </group>
+                            <group>
+                                <field name="amount" invisible='1'/>
+                                <field name="total_amount_limit"/>
+                                <field name="amount_used"/>
+                                <label for="start" string="Periode"/>
+                                <div>
+                                    <field name="start" class="oe_inline"/>
+                                    <span> à </span>
+                                    <field name="end" class="oe_inline"/>
+                                </div>
+                            </group>
+                            
+                        </group> 
+                        <notebook>
+                            <page string="Description">
+                                <field name="note" placeholder="Ajouter une note"/>
+                            </page>
+                            <page string="Liste des Employes concerne">
+                                <field name="line_ids" readonly="state == 'done'">
+                                    <list editable="bottom" create="0" edit="1" delete="0">
+                                        <field name="food_id" column_invisible="True"/>
+                                        <field name="partner_id" string='Client' column_invisible="True"/>
+                                        <field name="partner_name" string='Client' />
+                                        <field name="start" string='Date Debut' optional="hide"/>
+                                        <field name="end" string="Date Fin" optional="hide"/>
+                                        <field name="amount" string='Montant du credit mensuel'  optional="hide"/>
+                                        <field name="solde"/>
+                                        <field name="amount_used" optional="hide"/>
+                                        <field name="partner_company_id" optional="hide"/>
+                                        <field name="invoice_text" />
+
+                                    </list>
+                                </field>
+                            </page>
+                            <page string="Les Employes" invisible="0">
+                                <field name="partner_ids" readonly="state == 'done'">
+                                    <list editable="bottom" create="0" edit="1" delete="0">
+                                        <field name="name" string='Client'/>
+                                        <field name="parent_id" string='Societe Associe'/>
+                                        <field name="email" string="Email"/>
+                                        <field name="country_id" string="Pays"/>
+                                    </list>
+                                </field>
+                            </page>
+                        </notebook>                      
+                    </sheet>
+                    <chatter reload_on_follower="True"/>
+                </form>
+            </field>
+        </record>
+
+        <!-- Vue liste Credits Alimentaire -->
+        <record id="view_food_credit_list" model="ir.ui.view">
+            <field name="name">food.credit.list</field>
+            <field name="model">food.credit</field>
+            <field name="arch" type="xml">
+                
+                <list string="Gestion des credits Alimentaire" create="0" edit="1" delete="0">
+                    <header>
+                        <button name="action_generate_credits_with_lines" 
+                                type="object" 
+                                string="Générer Crédits + Lignes" 
+                                class="btn-primary"
+                                icon="fa-magic"
+                                confirm="Générer tous les crédits du mois avec leurs lignes ?"/>
+                                
+                        <button name="action_regenerate_selected_credits" 
+                                type="object" 
+                                invisible="1"
+                                string="Régénérer Lignes" 
+                                class="btn-secondary"
+                                icon="fa-refresh"/>
+                        <button name="action_done" type="object" string="Soumettre pour validation"
+                                class="btn-info" />
+                        <button name="action_close" type="object" string="Clôturer"
+                                class="btn btn-success" />
+                    </header>
+                    <field name="name"/>
+                    <field name="partner_company_id"/>
+                    <field name="amount_used"/>
+                    <field name="state"/>
+                    <field name="state"
+                       decoration-success="state == 'in_progress'"
+                       decoration-info="state == 'draft'"
+                       decoration-muted="state == 'done'"
+                       widget="badge"/>
+
+                    <button name="action_done" type="object" string="Soumettre" class="btn-info"
+                            icon="fa-check" invisible="state != 'draft'"/>
+                    <button name="action_close" type="object" string="Clôturer" class="btn btn-success"
+                            icon="fa-lock" invisible="state != 'in_progress'"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- Action family name Inventaire -->
+        <record id="action_food_credit" model="ir.actions.act_window">
+            <field name="name">Gestion des credits Alimentaire</field>
+            <field name="res_model">food.credit</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Créer votre premier Credits Alimentaire
+                </p>
+            </field>
+        </record>
+
+
+        <!-- Menu principal -->
+
+        <menuitem id="menu_food_credit"
+                  name="Credit alimentaire"
+                  parent="sale.menu_sale_config"
+                  action="action_food_credit"
+                  sequence="12"/>
+
+
+    </data>
+
+</odoo>

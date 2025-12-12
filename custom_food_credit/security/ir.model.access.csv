@@ -1,0 +1,10 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_food_credit,access_food_credit,model_food_credit,,1,1,1,1
+access_food_credit_line,access_food_credit_line,model_food_credit_line,,1,1,1,1
+access_res_partner,access_res_partner,model_res_partner,,1,1,1,1
+access_limit_credit,access_limit_credit,model_limit_credit,,1,1,1,1
+access_limit_credit_operation,access_limit_credit_operation,model_limit_credit_operation,,1,1,1,1
+
+access_food_credit_generation_wizard,access_food_credit_generation_wizard,model_food_credit_generation_wizard,,1,1,1,1
+access_food_credit_invoice_wizard,access_food_credit_invoice_wizard,model_food_credit_invoice_wizard,,1,1,1,1
+access_update_limit_credit_wizard,access_update_limit_credit_wizard,model_update_limit_credit_wizard,,1,1,1,1

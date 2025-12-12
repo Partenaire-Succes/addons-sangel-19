@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="account_payment_register_form_view" model="ir.ui.view">
+            <field name="name">account.payment.register.inherit.form</field>
+            <field name="model">account.payment.register</field>
+            <field name="inherit_id" ref="account.view_account_payment_register_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='payment_method_line_id']" position="after">
+                    <field name="linked_limit"/>
+                </xpath>
+                <!-- <xpath expr="//group[1]" position="after">
+                    <group name="credit">
+                        <group name="credit">
+                            <field name="is_food" invisible="not is_food"/>
+                            <field name="is_limit" invisible="not is_limit"/>
+                        </group>
+                        <group name="solde">
+                            <field name="food_solde" invisible="not is_food"/>
+                            <field name="limit_solde" invisible="not is_limit"/>
+                        </group>
+                    </group>
+                </xpath>  -->
+            </field>
+        </record>
+    </data>
+</odoo>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="account_payment_inherit_form_view" model="ir.ui.view">
+            <field name="name">account.payment.inherit.form</field>
+            <field name="model">account.payment</field>
+            <field name="inherit_id" ref="account.view_account_payment_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='partner_bank_id']" position="after">
+                    <field name="linked_food" invisible='not linked_food'/>
+                    <field name="linked_limit" invisible='not linked_limit'/>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</odoo>
