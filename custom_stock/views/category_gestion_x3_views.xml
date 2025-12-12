@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Niveau 6 -->
+        <record id="view_product_category_x3_form" model="ir.ui.view">
+            <field name="name">product.category.x3.form</field>
+            <field name="model">product.category.x3</field>
+            <field name="arch" type="xml">
+                <form string="Category de gestion, Niveau 6">
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name" class="oe_edit_only"/>
+                            <h1>
+                                <field name="name" placeholder="Nom" readonly="0"/>
+                            </h1>
+                        </div>  
+                        <group>
+                            <group>
+                                <field name="stock"/>
+                            </group>
+                            <group>
+                                <field name="description" />
+                            </group>
+                        </group>                    
+                    </sheet>
+                    <chatter reload_on_follower="True"/>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_product_category_x3_tree" model="ir.ui.view">
+            <field name="name">product.category.x3.tree</field>
+            <field name="model">product.category.x3</field>
+            <field name="arch" type="xml">
+                <list string="Category de gestion, Niveau 6">
+                    <field name="name"/>
+                    <field name="stock"/>
+                    <field name="description"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- Action niveau 6 -->
+        <record id="action_product_category_x3" model="ir.actions.act_window">
+            <field name="name">Niveau 6</field>
+            <field name="res_model">product.category.x3</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Créer votre Category de gestion, Niveau 6
+                </p>
+            </field>
+        </record>
+
+        <!-- Vue formulaire Code Inventaire -->
+        <record id="view_product_family_x3_form" model="ir.ui.view">
+            <field name="name">product.family.x3.form</field>
+            <field name="model">product.family.x3</field>
+            <field name="arch" type="xml">
+                <form string="Famille Inventaire">
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name" class="oe_edit_only"/>
+                            <h1>
+                                <field name="name" placeholder="Nom" readonly="0"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="table"/>
+                            </group>
+                            <group>
+                                <field name="description" />
+                            </group>
+                        </group>                      
+                    </sheet>
+                    <chatter reload_on_follower="True"/>
+                </form>
+            </field>
+        </record>
+
+        <!-- Vue liste product family x3 -->
+        <record id="view_product_family_x3_tree" model="ir.ui.view">
+            <field name="name">product.family.x3.tree</field>
+            <field name="model">product.family.x3</field>
+            <field name="arch" type="xml">
+                <list string="Famille inventaire">
+                    <field name="name"/>
+                    <field name="table"/>
+                    <field name="description"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- Action family name Inventaire -->
+        <record id="action_product_family_x3" model="ir.actions.act_window">
+            <field name="name">product family x3</field>
+            <field name="res_model">product.family.x3</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Créer votre premier product family x3
+                </p>
+            </field>
+        </record>
+
+        <record id="view_product_type_x3_form" model="ir.ui.view">
+            <field name="name">product.type.x3.form</field>
+            <field name="model">product.type.x3</field>
+            <field name="arch" type="xml">
+                <form string="Type article">
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name" class="oe_edit_only"/>
+                            <h1>
+                                <field name="name" placeholder="Nom" readonly="0"/>
+                            </h1>
+                        </div>  
+                        <group>
+                            <group>
+                                <field name="table"/>
+                            </group>
+                            <group>
+                                <field name="description" />
+                            </group>
+                        </group>                    
+                    </sheet>
+                    <chatter reload_on_follower="True"/>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_product_type_x3_tree" model="ir.ui.view">
+            <field name="name">product.type.x3.tree</field>
+            <field name="model">product.type.x3</field>
+            <field name="arch" type="xml">
+                <list string="Type article">
+                    <field name="name"/>
+                    <field name="table"/>
+                    <field name="description"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- Action niveau 6 -->
+        <record id="action_product_type_x3" model="ir.actions.act_window">
+            <field name="name">Type article</field>
+            <field name="res_model">product.type.x3</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Créer votre Type article
+                </p>
+            </field>
+        </record>
+
+        <!-- Vue formulaire Code Inventaire -->
+        <record id="view_product_status_sage_form" model="ir.ui.view">
+            <field name="name">product.status.sage.form</field>
+            <field name="model">product.status.sage</field>
+            <field name="arch" type="xml">
+                <form string="Statut article">
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name" class="oe_edit_only"/>
+                            <h1>
+                                <field name="name" placeholder="Nom" readonly="0"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="table"/>
+                            </group>
+                            <group>
+                                <field name="description" />
+                            </group>
+                        </group>                      
+                    </sheet>
+                    <chatter reload_on_follower="True"/>
+                </form>
+            </field>
+        </record>
+
+        <!-- Vue liste product family x3 -->
+        <record id="view_product_status_sage_tree" model="ir.ui.view">
+            <field name="name">product.status.sage.tree</field>
+            <field name="model">product.status.sage</field>
+            <field name="arch" type="xml">
+                <list string="Statut article">
+                    <field name="name"/>
+                    <field name="table"/>
+                    <field name="description"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- Action family name Inventaire -->
+        <record id="action_product_status_sage" model="ir.actions.act_window">
+            <field name="name">product family x3</field>
+            <field name="res_model">product.status.sage</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Créer votre Statut article
+                </p>
+            </field>
+        </record>
+
+        <!-- Menu principal -->
+        <menuitem id="menu_product_category_x3"
+                  name="Niveau 6"
+                  parent="menu_categorie_inventory_main"
+                  action="action_product_category_x3"
+                  sequence="4"/>
+
+
+        <menuitem id="menu_product_family_x3"
+                  name="Niveau 7"
+                  parent="menu_categorie_inventory_main"
+                  action="action_product_family_x3"
+                  sequence="5"/>
+
+        <menuitem id="menu_product_status_sage"
+                  name="Statut article"
+                  parent="menu_categorie_inventory_main"
+                  action="action_product_status_sage"
+                  sequence="6"/>
+
+
+        <menuitem id="menu_product_type_x3"
+                  name="Type article"
+                  parent="menu_categorie_inventory_main"
+                  action="action_product_type_x3"
+                  sequence="7"/>
+
+    </data>
+
+</odoo>

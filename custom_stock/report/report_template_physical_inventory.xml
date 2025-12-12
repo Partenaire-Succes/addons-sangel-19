@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Template du rapport d'inventaire complet -->
+        <template id="report_physical_inventory_document">
+            <t t-call="web.external_layout">
+                <div class="page">
+                    <div class="oe_structure"/>
+
+                    <!-- En-tête du rapport -->
+                    <div class="row">
+                        <div class="col-8">
+                            <h2>Rapport d'Inventaire Physique</h2>
+                            <h4 t-field="doc.name" class="text-primary"/>
+                        </div>
+                        <div class="col-4 text-right">
+                            <strong>Date:</strong> <span t-field="doc.date" t-options="{'format': 'dd/MM/yyyy'}"/><br/>
+                            <strong>Equipe:</strong> <span t-field="doc.team_inventory_id"/><br/>
+                            <strong>Statut:</strong>
+                            <span t-field="doc.state" class="badge badge-info"/>
+                        </div>
+                    </div>
+
+                    <!-- Informations de l'inventaire -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Categorie:</strong></td>
+                                    <td><span t-field="doc.code_category_id.name"/></td>
+                                    <td><strong>Code Inventaire:</strong></td>
+                                    <td><span t-field="doc.code_inventory_id.name"/></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Societe:</strong></td>
+                                    <td><span t-field="doc.company_id.name"/></td>
+                                    <td><strong>Date de validation:</strong></td>
+                                    <td><span t-field="doc.date_done" t-options="{'format': 'dd/MM/yyyy HH:mm'}"/></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h4>Détail des articles inventoriés</h4>
+
+                            <!-- Filtrer les lignes selon les besoins -->
+                            <t t-set="filtered_lines" t-value="doc.physical_line_ids"/>
+
+                            <t t-if="filtered_lines">
+                                <table class="table table-sm table-bordered">
+                                    <thead style="background-color: #f8f9fa;">
+                                        <tr>
+                                            <th style="width: 25%">Article</th>
+                                            <th style="width: 10%">Unité</th>
+                                            <th style="width: 12%" class="text-right" t-if="doc.state != 'draft'">Qté Théorique</th>
+                                            <th style="width: 12%" class="text-right">Qté Comptée</th>
+                                            <th style="width: 12%" class="text-right" t-if="doc.state != 'draft'">Écart</th>
+                                            <th style="width: 12%" class="text-right" t-if="doc.state != 'draft'">Prix unitaire (PMP)</th>
+                                            <th style="width: 12%" class="text-right" t-if="doc.state != 'draft'">Valorisation</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+
+                                        <t t-set="total_theoretical" t-value="0"/>
+                                        <t t-set="total_counted" t-value="0"/>
+                                        <t t-set="total_difference" t-value="0"/>
+                                        <t t-set="total_price_standard" t-value="0"/>
+                                        <t t-set="total_valorisation" t-value="0"/>
+                                        <t t-set="lines_with_difference" t-value="0"/>
+
+                                        <t t-foreach="filtered_lines" t-as="line">
+                                            <t t-set="total_theoretical" t-value="total_theoretical + line.quantity"/>
+                                            <t t-set="total_counted" t-value="total_counted + line.physical_qty"/>
+                                            <t t-set="total_difference" t-value="total_difference + line.qty_diff"/>
+                                            <t t-set="total_price_standard" t-value="total_price_standard + line.standard_price"/>
+                                            <t t-set="total_valorisation" t-value="total_valorisation + line.valorisation"/>
+                                            <t t-if="line.qty_diff != 0" t-set="lines_with_difference" t-value="lines_with_difference + 1"/>
+
+                                            <tr>
+                                                <td>
+                                                    <strong t-field="line.product_tmpl_id.name"/>
+                                                </td>
+                                                <td><span t-field="line.product_uom_id.name"/></td>
+                                                <td class="text-right" t-if="doc.state != 'draft'">
+                                                    <span t-field="line.quantity"/>
+                                                </td>
+                                                <td class="text-right">
+                                                    <span t-field="line.physical_qty"/>
+                                                </td>
+                                                <td class="text-right" t-if="doc.state != 'draft'">
+                                                    <span t-field="line.qty_diff" />
+
+                                                </td>
+                                                <td class="text-right" t-if="doc.state != 'draft'">
+                                                    <span t-field="line.standard_price" />
+                                                    
+                                                </td>
+                                                <td class="text-right" t-if="doc.state != 'draft'">
+                                                    <span t-field="line.valorisation" />
+                                                    
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+
+                                    <!-- Ligne de totaux -->
+                                    <tfoot style="background-color: #e9ecef;">
+                                        <tr class="font-weight-bold">
+                                            <td colspan="2"><strong>TOTAUX GÉNÉRAUX</strong></td>
+                                            <td class="text-right" t-if="doc.state != 'draft'">
+                                                <span t-esc="'{:,.2f}'.format(total_theoretical)"/>
+                                            </td>
+                                            <td class="text-right">
+                                                <span t-esc="'{:,.2f}'.format(total_counted)"/>
+                                            </td>
+                                            <td class="text-right" t-if="doc.state != 'draft'">
+                                                <span t-esc="'{:,.2f}'.format(total_difference)"
+                                                      t-att-class="'text-danger' if total_difference &lt; 0 else ('text-success' if total_difference &gt; 0 else 'text-dark')"/>
+                                            </td>
+                                            <td class="text-right" t-if="doc.state != 'draft'">
+                                                <span t-esc="'{:,.2f}'.format(total_price_standard)"/>
+                                            </td>
+                                            <td class="text-right" t-if="doc.state != 'draft'">
+                                                <span t-esc="'{:,.2f}'.format(total_valorisation)"
+                                                      t-att-class="'text-danger' if total_valorisation &lt; 0 else ('text-success' if total_valorisation &gt; 0 else 'text-dark')"/>
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </t>
+                            <t t-else="">
+                                <div class="alert alert-warning">
+                                    <strong>Aucune ligne d'inventaire trouvée.</strong>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+
+                    <!-- Résumé et statistiques -->
+                    <div class="row mt-4" t-if="doc.state != 'draft'">
+                        <div class="col-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>Résumé de l'inventaire</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p><strong>Nombre total d'articles:</strong> <span t-esc="len(filtered_lines)"/></p>
+                                    <p><strong>Articles avec écarts:</strong> <span t-esc="lines_with_difference"/></p>
+                                    <p><strong>Pourcentage d'exactitude:</strong>
+                                        <span t-esc="'{:.1%}'.format((len(filtered_lines) - lines_with_difference) / len(filtered_lines) if filtered_lines else 0)"/>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Notes -->
+                            <t t-if="doc.note">
+                                <div class="card mt-3">
+                                    <div class="card-header">
+                                        <h5>Notes et observations</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <p t-field="doc.note"/>
+                                    </div>
+                                </div>
+                            </t>
+                        </div>
+
+                        <div class="col-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>Informations du rapport</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p><strong>Rapport généré le:</strong> <span t-esc="datetime.datetime.now().strftime('%d/%m/%Y à %H:%M')"/></p>
+                                    <p><strong>Par:</strong> <span t-esc="user.name"/></p>
+                                    <p><strong>Société:</strong> <span t-esc="user.company_id.name"/></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="oe_structure"/>
+                </div>
+            </t>
+        </template>
+
+        <!-- Définition du rapport principal -->
+        <template id="report_physical_inventory">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="doc">
+                    <t t-call="custom_stock.report_physical_inventory_document"/>
+                </t>
+            </t>
+        </template>
+    </data>
+</odoo>

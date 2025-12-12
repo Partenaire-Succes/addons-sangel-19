@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Template du rapport d'inventaire complet -->
+        <template id="report_physical_inventory_decompte_document">
+            <t t-call="web.external_layout">
+                <div class="page">
+                    <div class="oe_structure"/>
+
+                    <!-- En-tête du rapport -->
+                    <div class="row">
+                        <div class="col-4"> </div>
+                        <div class="col-4 text-center">
+                            <span>Code Inv. : </span><span t-field="doc.code_inventory_id.name"/>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <strong>Liste Comptage Inventaire au </strong>
+                            <span t-field="doc.date" t-options="{'format': 'dd/MM/yyyy'}"/>
+                            <strong> <h3><span t-field="doc.company_id.name"/></h3></strong>
+                        </div>
+                    </div>
+
+                    <!-- En-tête des colonnes -->
+                    <div class="row mt-3">
+                        <div class="col-12" style="border: solid 1px #000;">
+                            <div class="row">
+                                <div class="col-2"><strong>Code Article :</strong></div>
+                                <div class="col-5"><strong>Désignation</strong></div>
+                                <div class="col-5"><strong>Qté Comptée</strong></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Liste des articles -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <t t-set="filtered_lines" t-value="doc.physical_line_ids"/>
+                            <t t-if="filtered_lines">
+                                <t t-foreach="filtered_lines" t-as="line">
+                                    <div class="row" style="margin-bottom: 15px;">
+                                        <div class="col-2">
+                                            <span t-field="line.product_tmpl_id.code_article"/>
+                                        </div>
+                                        <div class="col-5">
+                                            <span t-field="line.product_tmpl_id.name"/>
+                                        </div>
+                                        <div class="col-5">
+                                            <strong>Qté Totale = ___________________</strong>
+                                            &#160;
+                                        </div>
+                                        <br/><br/><br/><br/><br/><br/><br/>
+                                    </div>
+                                </t>
+                            </t>
+                            <t t-else="">
+                                <div class="alert alert-warning">
+                                    <strong>Aucune ligne d'inventaire trouvée.</strong>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+
+                    <div class="oe_structure"/>
+                </div>
+            </t>
+        </template>
+
+        <!-- Définition du rapport principal -->
+        <template id="report_physical_inventory_decompte">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="doc">
+                    <t t-call="custom_stock.report_physical_inventory_decompte_document"/>
+                </t>
+            </t>
+        </template>
+    </data>
+</odoo>

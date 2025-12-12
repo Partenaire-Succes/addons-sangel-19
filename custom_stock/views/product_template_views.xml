@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ce code permet de modifier le libellé etiquette en catgorie client-->
+        <record id="product_template_inherit_form_view" model="ir.ui.view">
+            <field name="name">product.template.inherit.form</field>
+            <field name="model">product.template</field>
+            <field name="inherit_id" ref="stock.view_template_property_form"/>
+            <field name="arch" type="xml">
+
+                <!-- Odoo 19: Use stock_property group as anchor (more reliable than route_from_categ_ids which may be invisible) -->
+                <xpath expr="//group[@name='stock_property']" position="before">
+                    <group string="Code Inventaire" name="code_inventory_group">
+                        <field name="code_inventory_id"/>
+                    </group>
+                </xpath>
+                <xpath expr="//group[@name='stock_property']" position="after">
+                    <group string="Système de classification en rateau" name="system_classification">
+                        <field name="radius_id"/>
+                        <field name="s_radius_id" domain="[('radius_id', '=', radius_id)]"/>
+                        <field name="family_categ_id"/>
+                        <field name="s_family_id" domain="[('family_categ_id', '=', family_categ_id)]"/>
+                    </group>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="product_template_form_view_composite" model="ir.ui.view">
+            <field name="name">product.template.form.composite</field>
+            <field name="model">product.template</field>
+            <field name="inherit_id" ref="product.product_template_form_view"/>
+            <field name="arch" type="xml">
+                <xpath expr="//label[@for='list_price']" position="attributes">
+                    <attribute name="string">Prix de base</attribute>
+                </xpath>
+                <xpath expr="//page[6]" position="after">
+                    <page string="Articles &amp; remises" name="article_and_discount">
+                        <group>
+                            <group name="pack_group" string="Décomposition D'articles">
+                                <field name="is_pack_parent"/>
+                                <field name="pack_child_product_id" options="{'no_create_edit': True}"
+                                       invisible="is_pack_parent == False"/>
+                                <field name="pack_qty" invisible="is_pack_parent == False"/>
+                                <field name="pack_equiv_cartons_available" readonly="1"
+                                       invisible="is_pack_parent == False"/>
+                                <field name="pack_equiv_units_available" readonly="1"
+                                       invisible="is_pack_parent == False"/>
+                            </group>
+                            <group name="article_and_discount" string="Remises et taxes">
+                                <field name="discount_ligne"/>
+                                <field name="airsi_tax_id"/>
+                            </group>
+
+                            <group name="code_article" string="Articles">
+                                <field name="code_article"/>
+                            </group>
+                        </group>
+
+                    </page>
+
+                    <page string="Sage X3" name="fields_x3">
+                        <group>
+                            <group name="table_group">
+                                <field name="cat_gestion_id" />
+                                <field name="prod_family_x3_id" />
+                                <field name="prod_type_x3_id" />
+                                <field name="prod_status_x3_id" />
+                            </group>
+                            <group name="price_group">
+                                <field name="price_unit_ttc"/>
+                                <field name="price_carton"/>
+                                <field name="price_negoce"/>
+                                <field name="price_ecom"/>
+                            </group>
+                        </group>
+
+                        <group name="magasin_group" string="Magasins">
+                            <group>
+                                <field name="is_yop_demi_gros"/>
+                                <field name="is_yop_detail"/>
+                                <field name="is_synacass_ci"/>
+                            </group>
+                            <group>
+                                <field name="is_bassam"/>
+                                <field name="is_square"/>
+                                <field name="is_koumassi"/>
+                            </group>
+                            <group>
+                                <field name="prod_cond"/>
+                                <field name="marque"/>
+                            </group>
+                        </group> 
+                    </page>
+                </xpath>
+
+            </field>
+        </record>
+
+
+        <!-- Add activity view for price change alerts -->
+        <record id="mail_activity_view_form_popup_inherit" model="ir.ui.view">
+            <field name="name">mail.activity.view.form.popup.inherit</field>
+            <field name="model">mail.activity</field>
+            <field name="inherit_id" ref="mail.mail_activity_view_form_popup"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='summary']" position="after">
+                    <div class="alert alert-success"
+                         invisible="('summary', 'not ilike', 'Étiquettes')">
+                        <strong>📝 Instructions :</strong>
+                        <ol class="mb-0 mt-2">
+                            <li>Imprimer les nouvelles étiquettes pour ce produit</li>
+                            <li>Remplacer les anciennes étiquettes</li>
+                            <li>Marquer cette activité comme "Terminée"</li>
+                        </ol>
+                    </div>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</odoo>

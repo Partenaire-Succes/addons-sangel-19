@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Odoo 19 structure:
+         1. ir.module.category - High level category
+         2. res.groups.privilege - Privilege linked to category  
+         3. res.groups - Groups linked to privilege via privilege_id
+    -->
+
+    <!-- Category (application level) -->
+    <record model="ir.module.category" id="module_category_products_custom">
+        <field name="name">Produits</field>
+        <field name="sequence">130</field>
+    </record>
+
+    <!-- Privilege (links category to groups) -->
+    <record model="res.groups.privilege" id="privilege_product_creation">
+        <field name="name">Création Produits</field>
+        <field name="description">Permet de créer des produits</field>
+        <field name="category_id" ref="module_category_products_custom"/>
+        <field name="sequence">10</field>
+    </record>
+
+    <!-- Group linked to privilege -->
+    <record id="group_product_admin" model="res.groups">
+        <field name="name">Administrateur Produits</field>
+        <field name="privilege_id" ref="privilege_product_creation"/>
+    </record>
+</odoo>

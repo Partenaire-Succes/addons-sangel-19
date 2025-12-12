@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="sproduct_supplierinfo_list_views_inherits" model="ir.ui.view">
+        <field name="name">product.supplierinfo.list.views.inherits</field>
+        <field name="model">product.supplierinfo</field>
+        <field name="inherit_id" ref="product.product_supplierinfo_tree_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='price']" position="after">
+                <field name="primary" widget="boolean_toggle"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="stock_warehouse_orderpoint_list_views_inherits" model="ir.ui.view">
+        <field name="name">stock.warehouse.orderpoint.list.views.inherits</field>
+        <field name="model">stock.warehouse.orderpoint</field>
+        <field name="inherit_id" ref="stock.view_warehouse_orderpoint_tree_editable"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="attributes">
+                <attribute name="multi_edit">1</attribute>
+            </xpath>
+            <xpath expr="//list" position="inside">
+                <header>
+                    <button name="auto_update_supply" 
+                        type="object" 
+                        string="Mettre à jour les fournisseurs" 
+                        class="btn-primary"
+                        icon="fa-magic"
+                        confirm="Cette action va modifier les fournisseurs. Voulez-vous continuer ?"/>
+                </header>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

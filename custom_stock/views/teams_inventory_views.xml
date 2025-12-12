@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Vue formulaire team Inventaire -->
+        <record id="view_team_inventory_form" model="ir.ui.view">
+            <field name="name">team.inventory.form</field>
+            <field name="model">team.inventory</field>
+            <field name="arch" type="xml">
+                <form string="Inventaire Journalier" create="0" edit="1">
+                    
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name" class="oe_edit_only"/>
+                            <h1>
+                                <field name="name" placeholder="Nom" readonly="0"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <group >
+                                <field name="responsible_id" />
+                            </group>
+                            <group >
+                                <field name="company_id" />
+                            </group>
+                        </group>
+                        <notebook>
+                        <page string="Members" name="members_users">
+                            <field name="member_ids" mode="kanban" class="w-100">
+                                <kanban>
+                                    <templates>
+                                        <t t-name="card" class="flex-row">
+                                            <aside>
+                                                <field name="avatar_128" widget="image" class="o_image_64_cover" alt="Avatar"/>
+                                            </aside>
+                                            <main class="ms-3">
+                                                <field name="name" class="fw-bold fs-5"/>
+                                                <div class="d-flex align-items-baseline text-break">
+                                                    <i class="fa fa-envelope me-1" role="img" aria-label="Email" title="Email"/><field name="work_email"/>
+                                                </div>
+                                            </main>
+                                        </t>
+                                    </templates>
+                                </kanban>
+                            </field>
+                        </page>
+                    </notebook>
+                                           
+                    </sheet>
+                    <chatter reload_on_follower="True"/>
+                </form>
+            </field>
+        </record>
+
+        <!-- Vue liste team Inventaire -->
+        <record id="view_team_inventory_tree" model="ir.ui.view">
+            <field name="name">team.inventory.tree</field>
+            <field name="model">team.inventory</field>
+            <field name="arch" type="xml">
+                <list string="Code inventaire">
+                    <field name="name"/>
+                    <field name="responsible_id" />
+                    <field name="company_id" />
+                </list>
+            </field>
+        </record>
+
+        <!-- Action Team Inventaire -->
+        <record id="action_team_inventory" model="ir.actions.act_window">
+            <field name="name">team inventaire</field>
+            <field name="res_model">team.inventory</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Créer votre premier Team inventaire
+                </p>
+            </field>
+        </record>
+
+        <!-- Menu principal -->
+
+        <menuitem id="menu_action_team_inventory"
+                name="Equipe Inventaire Journalier"
+                parent="stock.menu_stock_config_settings"
+                action="action_team_inventory"
+                sequence="20"/>
+
+    </data>
+
+</odoo>

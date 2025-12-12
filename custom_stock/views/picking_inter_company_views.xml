@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="stock_picking_inter_view_form" model="ir.ui.view">
+            <field name="name">stock.picking.inter.view.form</field>
+            <field name="model">stock.picking.inter</field>
+            <field name="arch" type="xml">
+                <form string="">
+                    <header>
+                        <button name="action_confirm_inter" type="object" string="Confirmé" invisible="state != 'draft'" class="btn btn-success"/>
+                        <button name="action_cancel" type="object" string="Annulé" invisible="state != 'confirmed'" class="btn btn-danger"/>
+                        <button name="action_draft" type="object" string="Mettre en Brouillon" invisible="state not in ('cancel','reject')" class="btn btn-primary"/>
+                        <div>
+                            <span style="color: red; font-weight: bold;">
+                                Avant de confirmer, assurez-vous que vous avez coché toutes les sociétés.
+                            </span>
+                        </div>
+                        <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,done,cancel,reject"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_title">
+                            <h1 class="d-flex">
+                                <field name="name"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <group  string="Source">
+                                <field name="partner_id" readonly="state in ['cancel', 'done']" placeholder="e.g. Lumber Inc"/>
+                                <field name="send_company_id" options="{'no_open': True}" readonly="state in ['cancel', 'done']"/>
+                                <label for="scheduled_date"/>
+                                <div class="o_row">
+                                    <field name="scheduled_date" readonly="state in ['cancel', 'done']" required="id"
+                                        decoration-warning="state not in ('done', 'cancel') and scheduled_date &lt; now"
+                                        decoration-danger="state not in ('done', 'cancel') and scheduled_date &lt; current_date"
+                                        decoration-bf="state not in ('done', 'cancel') and (scheduled_date &lt; current_date or scheduled_date &lt; now)"/>
+                                </div>
+                                <field name="date_deadline" invisible="state in ('done', 'cancel') or not date_deadline"
+                                        decoration-danger="date_deadline and date_deadline &lt; current_date"
+                                        decoration-bf="date_deadline and date_deadline &lt; current_date"/>
+                                <field name="date_done" string="Effective Date" invisible="state != 'done'"/>
+                                <field name="origin" placeholder="e.g. PO0032" readonly="state in ['cancel', 'done']"/>
+                                <field name="picking_id" readonly="1"/>
+                            </group>
+                            <group string="Destination">
+                                <field name="company_id" options="{'no_open': True}" readonly="state in ['cancel', 'done']"/>
+                                <field name="picking_type_id" options="{'no_open': True}" readonly="state in ('done', 'cancel')"
+                                        context="{'force_company': company_id}"
+                                        domain="[('company_id', '=', company_id)]"/>
+                                <field name="location_id" readonly="state == 'done'"
+                                        context="{'force_company': company_id}"
+                                        domain="[('company_id', '=', company_id)]"/>
+                                <field name="location_dest_id" readonly="state == 'done'"
+                                        context="{'force_company': company_id}"
+                                        domain="[('company_id', '=', company_id)]"/>
+
+                            </group>
+                        </group>
+                        <group>
+                            <button display="always" class="btn btn-secondary" string="Ajouter produits (multiple)" type="action"
+                                        name="%(custom_stock.action_product_selector_wizard)d" />
+                        </group>
+                        <notebook>
+                            <page name="operation" string="Operetions">
+                                <field name="picking_inter_line_ids" mode="list,kanban" widget="stock_move_one2many"
+                                    context="{'default_company_id': company_id, 'default_date': scheduled_date,
+                                            'default_date_deadline': date_deadline, 'default_picking_id': picking_id,
+                                            'default_picking_type_id': picking_type_id, 'default_location_id': location_id,
+                                            'default_location_dest_id': location_dest_id, 'default_partner_id': partner_id}" >
+
+                                    <list string="Mouvement" editable="bottom" >
+
+                                        <field name="company_id" column_invisible="True"/>
+                                        <field name="picking_id" column_invisible="True"/>
+                                        <field name="picking_type_id" column_invisible="True"/>
+                                        <field name="location_id" column_invisible="True"/>
+                                        <field name="location_dest_id" column_invisible="True"/>
+                                        <field name="partner_id" column_invisible="True"/>
+                                        <field name="move_line_ids" column_invisible="True"/>
+
+                                        <field name="product_id"/>
+                                        <field name="description_picking" optional="hide"/>
+                                        <field name="date" />
+                                        <field name="purchase_id" column_invisible="True"/>
+                                        <field name="date_deadline" optional="hide" column_invisible="True"/>
+                                        <field name="qty_available" />
+                                        <field name="product_uom_qty"/>
+                                        <field name="quantity" column_invisible="True"/>
+                                        <field name="lot_ids" domain="[('product_id', '=', product_id)]" optional="hide" readonly="False" widget="many2many_tags"/>
+                                        <field name="move_id" column_invisible="True"/>
+                                        <field name="picking_inter_id" column_invisible="True"/>
+                                    </list>
+                                </field>
+                            </page>
+
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="stock_picking_inter_view_list" model="ir.ui.view">
+            <field name="name">stock.picking.inter.view.list</field>
+            <field name="model">stock.picking.inter</field>
+            <field name="arch" type="xml">
+                <list string="">
+                    <field name="name"/>
+                    <field name="send_company_id"/>
+                    <field name="scheduled_date"/>
+                    <field name="company_id"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="stock_picking_inter_action" model="ir.actions.act_window">
+            <field name="name">Transferts interentreprises</field>
+            <field name="res_model">stock.picking.inter</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_create">
+                    Create your first inter company transfer.
+                </p>
+            </field>
+            <field name="context">{}</field>
+            <field name="domain">[]</field>
+        </record>
+
+        <menuitem
+            name="Transfert Inter Magasin"
+            id="menu_stock_picking_inter"
+            parent="stock.menu_stock_transfers"
+            action="stock_picking_inter_action"
+            sequence="25"
+        />
+
+    </data>
+</odoo>

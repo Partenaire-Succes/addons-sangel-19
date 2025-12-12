@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Vue formulaire sub family Inventaire -->
+        <record id="view_sub_family_inventory_form" model="ir.ui.view">
+            <field name="name">sub.family.inventory.form</field>
+            <field name="model">sub.family.inventory</field>
+            <field name="arch" type="xml">
+                <form string="Sous Famille inventaire">
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name" class="oe_edit_only"/>
+                            <h1>
+                                <field name="name" placeholder="Nom" readonly="0"/>
+                            </h1>
+                        </div>  
+                        <group>
+                            <group>
+                                <field name="code"/>
+                            </group>
+                            <group>
+                                <field name="family_categ_id" options="{'no_create': True}" widget="many2one_tags" placeholder="Famille"/>
+                            </group>
+                        </group>                    
+                    </sheet>
+                    <chatter reload_on_follower="True"/>
+                </form>
+            </field>
+        </record>
+
+        <!-- Vue liste Code Inventaire -->
+        <record id="view_sub_family_inventory_tree" model="ir.ui.view">
+            <field name="name">sub.family.inventory.tree</field>
+            <field name="model">sub.family.inventory</field>
+            <field name="arch" type="xml">
+                <list string="Sous Famille inventaire">
+                    <field name="name"/>
+                    <field name="code"/>
+                    <field name="family_categ_id"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- Action Code Inventaire -->
+        <record id="action_sub_family_inventory" model="ir.actions.act_window">
+            <field name="name">Sous Famille inventaire</field>
+            <field name="res_model">sub.family.inventory</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Créer votre premier Sous Famille inventaire
+                </p>
+            </field>
+        </record>
+
+        <!-- Vue formulaire Code Inventaire -->
+        <record id="view_family_inventory_form" model="ir.ui.view">
+            <field name="name">family.inventory.form</field>
+            <field name="model">family.inventory</field>
+            <field name="arch" type="xml">
+                <form string="Famille Inventaire">
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name" class="oe_edit_only"/>
+                            <h1>
+                                <field name="name" placeholder="Nom" readonly="0"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <field name="code" placeholder="Code Famille"/>
+                        </group>                       
+                    </sheet>
+                    <chatter reload_on_follower="True"/>
+                </form>
+            </field>
+        </record>
+
+        <!-- Vue liste family Inventaire -->
+        <record id="view_family_inventory_tree" model="ir.ui.view">
+            <field name="name">family.inventory.tree</field>
+            <field name="model">family.inventory</field>
+            <field name="arch" type="xml">
+                <list string="Famille inventaire">
+                    <field name="name"/>
+                    <field name="code"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- Action family name Inventaire -->
+        <record id="action_family_inventory" model="ir.actions.act_window">
+            <field name="name">family inventaire</field>
+            <field name="res_model">family.inventory</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Créer votre premier family inventaire
+                </p>
+            </field>
+        </record>
+
+        <!-- View inherit category Product -->
+
+        <record id="product_category_form_views_inherits" model="ir.ui.view">
+            <field name="name">product.category.form.views.inherits</field>
+            <field name="model">product.category</field>
+            <field name="inherit_id" ref="product.product_category_form_view"/>
+            <field name="arch" type="xml">
+
+                <xpath expr="//group[@name='first']" position="after">
+                    <group name="group_info">
+                        <group name="code_group" string="Info Categorie">
+                            <field name="code" />
+                        </group>
+                    </group>
+                    
+                </xpath>
+
+                <xpath expr="//group[@name='first']" position="attributes">
+                    <attribute name="invisible">True</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_product_category_family_tree" model="ir.ui.view">
+            <field name="name">product.category.tree</field>
+            <field name="model">product.category</field>
+            <field name="inherit_id" ref="product.product_category_list_view"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='display_name']" position="after">
+                    <field name="code"/>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="action_categ_family_inventory" model="ir.actions.act_window">
+            <field name="name">family inventaire</field>
+            <field name="res_model">product.category</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Créer votre premier family inventaire
+                </p>
+            </field>
+        </record>
+
+        <!-- Menu principal -->
+        <menuitem id="menu_categorie_inventory_main"
+                  name="Categorie inventaire"
+                  parent="stock.menu_stock_config_settings"
+                  sequence="22"/>
+
+        <menuitem id="menu_family_inventory"
+                  name="Famille"
+                  parent="menu_categorie_inventory_main"
+                  action="action_family_inventory"
+                  sequence="2"/>
+                  
+        <menuitem id="menu_family_categ_inventory"
+                  name="Famille Categ"
+                  parent="menu_categorie_inventory_main"
+                  action="action_categ_family_inventory"
+                  sequence="1"/>
+
+        <menuitem id="menu_sub_family_inventory"
+                  name="Sous Famille"
+                  parent="menu_categorie_inventory_main"
+                  action="action_sub_family_inventory"
+                  sequence="3"/>
+
+    </data>
+
+</odoo>

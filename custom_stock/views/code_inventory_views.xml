@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Vue formulaire Code Inventaire -->
+        <record id="view_code_category_inventory_form" model="ir.ui.view">
+            <field name="name">code.category.inventory.form</field>
+            <field name="model">code.category.inventory</field>
+            <field name="arch" type="xml">
+                <form string="Code Categorie Inventaire">
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name" class="oe_edit_only"/>
+                            <h1>
+                                <field name="name" placeholder="Nom" readonly="0"/>
+                            </h1>
+                        </div>                        
+                    </sheet>
+                    <chatter reload_on_follower="True"/>
+                </form>
+            </field>
+        </record>
+
+        <!-- Vue liste Code Inventaire -->
+        <record id="view_code_category_inventory_tree" model="ir.ui.view">
+            <field name="name">code.category.inventory.tree</field>
+            <field name="model">code.category.inventory</field>
+            <field name="arch" type="xml">
+                <list string="Code inventaire">
+                    <field name="name"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- Action Code Inventaire -->
+        <record id="action_code_category_inventory" model="ir.actions.act_window">
+            <field name="name">Code Categorie inventaire</field>
+            <field name="res_model">code.category.inventory</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Créer votre premier Code Categorie inventaire
+                </p>
+            </field>
+        </record>
+
+        <!-- Vue formulaire Code Inventaire -->
+        <record id="view_code_inventory_form" model="ir.ui.view">
+            <field name="name">code.inventory.form</field>
+            <field name="model">code.inventory</field>
+            <field name="arch" type="xml">
+                <form string="Code Inventaire">
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name" class="oe_edit_only"/>
+                            <h1>
+                                <field name="name" placeholder="Nom" readonly="0"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <field name="code_category_id" options="{'no_create': True}" widget="many2one_tags" placeholder="Catégorie Code Inventaire"/>
+                        </group>                       
+                    </sheet>
+                    <chatter reload_on_follower="True"/>
+                </form>
+            </field>
+        </record>
+
+        <!-- Vue liste Code Inventaire -->
+        <record id="view_code_inventory_tree" model="ir.ui.view">
+            <field name="name">code.inventory.tree</field>
+            <field name="model">code.inventory</field>
+            <field name="arch" type="xml">
+                <list string="Code inventaire">
+                    <field name="name"/>
+                    <field name="code_category_id" options="{'no_create': True}" widget="many2one_tags" placeholder="Catégorie Code Inventaire"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- Action Code name Inventaire -->
+        <record id="action_code_inventory" model="ir.actions.act_window">
+            <field name="name">Code inventaire</field>
+            <field name="res_model">code.inventory</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Créer votre premier Code inventaire
+                </p>
+            </field>
+        </record>
+
+
+        <!-- Menu principal -->
+        <menuitem id="menu_code_inventory_main"
+                  name="Code inventaire"
+                  parent="stock.menu_stock_config_settings"
+                  sequence="21"/>
+
+        <menuitem id="menu_code_inventory"
+                  name="Code"
+                  parent="menu_code_inventory_main"
+                  action="action_code_inventory"
+                  sequence="2"/>
+
+        <menuitem id="menu_code_category_inventory"
+                  name="Code Categorie"
+                  parent="menu_code_inventory_main"
+                  action="action_code_category_inventory"
+                  sequence="1"/>
+
+    </data>
+
+</odoo>

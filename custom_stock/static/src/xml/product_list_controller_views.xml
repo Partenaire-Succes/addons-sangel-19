@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates xml:space="preserve">
+    <t t-name="product_creation_control.ListView" t-inherit="web.ListView" t-inherit-mode="extension" owl="1">
+        <xpath expr="//div[hasclass('o_list_buttons')]//button[@data-hotkey='c']" position="attributes">
+            <attribute name="t-if">props.canCreate and env.model.config.resModel !== 'product.template' or (env.model.config.resModel === 'product.template' and props.hasCreateAccess)</attribute>
+        </xpath>
+    </t>
+</templates>

@@ -1,0 +1,28 @@
+<odoo>
+    <data>
+        <record id="code_invenory_category_a" model="code.category.inventory">
+            <field name="name">Code inventaire A</field>
+        </record>
+        <record id="code_invenory_category_b" model="code.category.inventory">
+            <field name="name">Code inventaire B</field>
+        </record>
+        <record id="code_invenory_category_c" model="code.category.inventory">
+            <field name="name">Code inventaire C</field>
+        </record>
+        <record id="code_invenory_category_d" model="code.category.inventory">
+            <field name="name">Code inventaire D</field>
+        </record>
+        <record id="code_invenory_category_e" model="code.category.inventory">
+            <field name="name">Code inventaire E</field>
+        </record>
+        <record id="code_invenory_category_f" model="code.category.inventory">
+            <field name="name">Code inventaire F</field>
+        </record>
+        <record id="code_invenory_category_g" model="code.category.inventory">
+            <field name="name">Code inventaire G</field>
+        </record>
+        <record id="code_invenory_category_h" model="code.category.inventory">
+            <field name="name">Code inventaire H</field>
+        </record>
+    </data>
+</odoo>

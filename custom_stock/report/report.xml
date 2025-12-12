@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Rapport unique d'inventaire physique -->
+        <record id="action_report_physical_inventory" model="ir.actions.report">
+            <field name="name">Rapport d'Inventaire Physique Journalier</field>
+            <field name="model">physical.inventory</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">custom_stock.report_physical_inventory</field>
+            <field name="report_file">custom_stock.report_physical_inventory</field>
+            <field name="binding_model_id" ref="model_physical_inventory"/>
+            <field name="binding_type">report</field>
+            <field name="paperformat_id" ref="base.paperformat_euro"/>
+            <field name="print_report_name">'Inventaire_%s_%s' % (object.name, object.date)</field>
+        </record>
+
+        <!-- Rapport unique d'inventaire physique Décompte -->
+        <record id="action_report_physical_inventory_decompte" model="ir.actions.report">
+            <field name="name">Rapport d'Inventaire Physique Décompte</field>
+            <field name="model">physical.inventory</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">custom_stock.report_physical_inventory_decompte</field>
+            <field name="report_file">custom_stock.report_physical_inventory_decompte</field>
+            <field name="binding_model_id" ref="model_physical_inventory"/>
+            <field name="binding_type">report</field>
+            <field name="paperformat_id" ref="base.paperformat_euro"/>
+            <field name="print_report_name">'Décompte_%s_%s' % (object.name, object.date)</field>
+        </record>
+    </data>
+</odoo>
