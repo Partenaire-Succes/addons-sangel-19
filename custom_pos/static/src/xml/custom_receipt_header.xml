@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <!-- Héritage du template ReceiptHeader pour ajouter le nom du POS -->
+    <t t-name="point_of_sale.ReceiptHeader"
+       t-inherit="point_of_sale.ReceiptHeader"
+       t-inherit-mode="extension">
+
+        <!-- Ajouter le nom de la caisse après le header (Odoo 19: uses order.config) -->
+        <xpath expr="//div[@class='pos-receipt-contact']" position="inside">
+            <div t-if="order.config.name">
+                <span class="pos-name small" t-esc="order.config.name"/>
+            </div>
+        </xpath>
+
+    </t>
+</templates>

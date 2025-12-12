@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="custom_pos_templates">
+    <!-- Suppression propre du template original -->
+    <t t-inherit="point_of_sale.OpeningControlPopup" t-inherit-mode="extension" priority="20">
+        <xpath expr="//div[@class='opening-cash-section mb-3']/label[@class='form-label']" position="replace">
+            <label class="form-label">Fond de caisse</label>
+        </xpath>
+    </t>
+</templates>

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Odoo 19 structure:
+         1. ir.module.category - High level category
+         2. res.groups.privilege - Privilege linked to category  
+         3. res.groups - Groups linked to privilege via privilege_id
+    -->
+    
+    <!-- Category (application level) -->
+    <record model="ir.module.category" id="module_category_pos_custom">
+        <field name="name">POS Personnalisé</field>
+        <field name="sequence">120</field>
+    </record>
+    
+    <!-- Privilege (links category to groups) -->
+    <record model="res.groups.privilege" id="privilege_pos_access">
+        <field name="name">Accès Caisse</field>
+        <field name="description">Caissière: Peut vendre les produits disponibles. DSI: Vend même en rupture de stock.</field>
+        <field name="category_id" ref="module_category_pos_custom"/>
+        <field name="sequence">10</field>
+    </record>
+    
+    <!-- Groups linked to privilege -->
+    <record id="group_pos_user" model="res.groups">
+        <field name="name">Caissiere</field>
+        <field name="privilege_id" ref="privilege_pos_access"/>
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+    <record id="group_pos_admin" model="res.groups">
+        <field name="name">Responsable des caisse</field>
+        <field name="privilege_id" ref="privilege_pos_access"/>
+        <field name="implied_ids" eval="[(4, ref('group_pos_user'))]"/>
+    </record>
+    <record id="group_pos_shop" model="res.groups">
+        <field name="name">Responsable des Magasin</field>
+        <field name="privilege_id" ref="privilege_pos_access"/>
+        <field name="implied_ids" eval="[(4, ref('group_pos_admin'))]"/>
+    </record>
+    <record id="group_pos_dsi" model="res.groups">
+        <field name="name">DSI</field>
+        <field name="privilege_id" ref="privilege_pos_access"/>
+        <field name="implied_ids" eval="[(4, ref('group_pos_shop'))]"/>
+    </record>
+</odoo>
