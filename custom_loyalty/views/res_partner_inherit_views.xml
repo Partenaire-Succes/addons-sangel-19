@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="res_partner_loyalty_form_view" model="ir.ui.view">
+            <field name="name">res.partner.inherit.form</field>
+            <field name="model">res.partner</field>
+            <field name="inherit_id" ref="custom_food_credit.res_partner_form_view"/>
+            <field name="arch" type="xml">
+                
+                <xpath expr="//page[@name='page_credit']/group[@name='group_credit']" position="inside">
+                    <group string="Carte de fidélité">
+                        <field name="is_loyalty" />
+                    </group>
+                </xpath>
+
+            </field>
+        </record>
+
+    </data>
+</odoo>

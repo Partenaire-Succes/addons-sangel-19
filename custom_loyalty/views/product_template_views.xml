@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="product_template_form_view_inherit_loyalty" model="ir.ui.view">
+        <field name="name">product.template.form.inherit.loyalty</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="custom_stock.product_template_form_view_composite"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@name='code_article']" position="after">
+                <group name="loyalty" string="Fidélité">
+                    <field name="is_eligible"/>
+                    <field name="family_loyalty"/>
+                </group>
+            </xpath>
+            
+        </field>
+    </record>
+
+    <record id="loyalty_product_category_form_views_inherits" model="ir.ui.view">
+        <field name="name">product.category.form.views.inherits</field>
+        <field name="model">product.category</field>
+        <field name="inherit_id" ref="custom_stock.product_category_form_views_inherits"/>
+        <field name="arch" type="xml">
+
+            <xpath expr="//group[@name='group_info']" position="inside">
+                <group name="loyalty" string="Fidélité">
+                    <field name="family_loyalty" />
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

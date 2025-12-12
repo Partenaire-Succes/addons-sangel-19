@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="account_payment_register_loyalty_form_view" model="ir.ui.view">
+            <field name="name">account.payment.register.loyalty.inherit.form</field>
+            <field name="model">account.payment.register</field>
+            <field name="inherit_id" ref="account.view_account_payment_register_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//group[1]" position="after">
+                    <group name="loyalty">
+                        <group name="loyalty">
+                            <field name="is_loyalty" invisible="not is_loyalty"/>
+                            <field name="linked_loyalty" invisible='1'/>
+                        </group>
+                        <group name="solde_loyalty">
+                            <field name="loyalty_solde" invisible="not is_loyalty"/>
+                        </group>
+                    </group>
+                </xpath> 
+            </field>
+        </record>
+    </data>
+</odoo>

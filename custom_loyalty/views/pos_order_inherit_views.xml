@@ -1,0 +1,25 @@
+<!-- views/pos_order_views.xml -->
+<odoo>
+
+    <record id="view_loyalty_history_form" model="ir.ui.view">
+        <field name="name">loyalty.history.form</field>
+        <field name="model">loyalty.history</field>
+        <field name="inherit_id" ref="loyalty.loyalty_history_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='description']" position="after">
+                <field name="pos_name"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_loyalty_card_form" model="ir.ui.view">
+        <field name="name">loyalty.card.form</field>
+        <field name="model">loyalty.card</field>
+        <field name="inherit_id" ref="loyalty.loyalty_card_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook//field[@name='description']" position="after">
+                <field name="pos_name"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

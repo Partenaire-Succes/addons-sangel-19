@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="pos_loyalty_payment_method_form_view" model="ir.ui.view">
+            <field name="name">pos.payment.method.inherit.form</field>
+            <field name="model">pos.payment.method</field>
+            <field name="inherit_id" ref="custom_food_credit.pos_payment_method_form_view"/>
+            <field name="arch" type="xml">
+
+                <xpath expr="//field[@name='is_limit']" position="after">
+                    <field name="is_loyalty" />
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</odoo>
