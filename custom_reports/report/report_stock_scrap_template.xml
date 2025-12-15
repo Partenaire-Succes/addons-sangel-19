@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_stock_adjustment">
+        <t t-call="web.html_container">
+            <t t-call="web.external_layout">
+                <t t-foreach="docs" t-as="o">
+                    <div class="page">
+                        <style>
+                            /* ====== STYLE GLOBAL ====== */
+                            .stock-adjustment-report {
+                                font-family: 'Lato', 'Helvetica Neue', Arial, sans-serif;
+                                font-size: 12pt;
+                                color: #222;
+                            }
+                            .stock-adjustment-report h2,
+                            .stock-adjustment-report h3 {
+                                margin: 0;
+                                padding: 0;
+                            }
+                            .stock-adjustment-report table {
+                                width: 100%;
+                                border-collapse: collapse;
+                                margin-bottom: 10px;
+                            }
+                            .stock-adjustment-report th,
+                            .stock-adjustment-report td {
+                                border: 0.6px solid #444;
+                                padding: 4px 6px;
+                                font-size: 12pt;
+                            }
+                            .stock-adjustment-report th {
+                                background-color: #f2f2f2;
+                                color: #000;
+                                font-weight: 600;
+                                text-align: center;
+                            }
+                            .stock-adjustment-report td {
+                                vertical-align: middle;
+                            }
+                            .stock-adjustment-report .text-right { text-align: right; }
+                            .stock-adjustment-report .text-center { text-align: center; }
+
+                            /* ====== TITRES ET EN-TÊTES ====== */
+                            .report-header {
+                                border-bottom: 1px solid #777;
+                                padding-bottom: 6px;
+                                margin-bottom: 10px;
+                            }
+                            .report-title {
+                                font-size: 12pt;
+                                font-weight: bold;
+                                text-align: center;
+                                color: #333;
+                                margin-bottom: 6px;
+                            }
+                            .report-meta {
+                                font-size: 12pt;
+                                margin-bottom: 5px;
+                            }
+                            .meta-row {
+                                display: flex;
+                                justify-content: space-between;
+                                margin-bottom: 3px;
+                            }
+
+                            /* ====== BLOCS D’AJUSTEMENT ====== */
+
+                            .reason-header {
+                                font-weight: bold;
+                                font-size: 12pt;
+                                color: #444;
+                                padding: 4px 3px;
+                                background-color: #e8eef9
+                                border-left: 3px solid #b0b0b0;
+                                margin-bottom: 3px;
+                            }
+
+                            /* ====== LIGNES DE TOTAL ====== */
+                            .subtotal-row td {
+                                background-color: #f6f6f6;
+                                font-weight: bold;
+                                border-top: 1px solid #999;
+                            }
+                            .total-row td {
+                                background-color: #e8eef9;
+                                font-weight: bold;
+                                font-size: 12pt;
+                                border-top: 1px solid #777;
+                            }
+                            .grand-total-row td {
+                                background-color: #cfe3ff;
+                                font-weight: bold;
+                                font-size: 12pt;
+                                border-top: 1.2px solid #555;
+                            }
+
+                            /* ====== ESPACEMENTS ====== */
+                            .section-spacing { height: 10px; }
+                        </style>
+
+                        <div class="stock-adjustment-report">
+                            <!-- ====== En-tête ====== -->
+                            <div class="report-header">
+
+                                <div class="report-title">
+                                    Édition des ajustements de stock du
+                                    <span t-esc="o.date_from.strftime('%d/%m/%Y')"/> au
+                                    <span t-esc="o.date_to.strftime('%d/%m/%Y')"/>
+                                </div>
+
+                                <div class="meta-row">
+                                    <div><strong>Poste(s):</strong> Tous les postes</div>
+                                    <div><strong>Utilisateur(s):</strong> Tous les utilisateurs</div>
+                                </div>
+                                <div class="meta-row">
+                                    <div>
+                                        <strong>Édition faite le</strong>
+                                        <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y à %H:%M')"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ====== Données ====== -->
+                            <t t-set="grouped_data" t-value="o.get_grouped_data()"/>
+                            <t t-set="totals_by_type" t-value="o.get_totals_by_type(grouped_data)"/>
+                            <t t-set="grand_totals" t-value="o.get_grand_totals(totals_by_type)"/>
+
+                            <!-- ====== Boucle sur les types ====== -->
+                            <t t-foreach="grouped_data.items()" t-as="adj_type_item">
+                                <t t-set="adj_type" t-value="adj_type_item[0]"/>
+                                <t t-set="reasons_dict" t-value="adj_type_item[1]"/>
+
+                                <!-- ====== Boucle sur les raisons ====== -->
+                                <t t-foreach="reasons_dict.items()" t-as="reason_item">
+                                    <t t-set="reason_key" t-value="reason_item[0]"/>
+                                    <t t-set="reason_data" t-value="reason_item[1]"/>
+
+                                    <div class="reason-header">
+                                        Type d’Ajustement : <span t-esc="reason_data['reason_name']"/>
+                                    </div>
+
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th style="width:12%">Document</th>
+                                                <th style="width:10%">Date</th>
+                                                <th style="width:12%">Caissier</th>
+                                                <th style="width:12%">Article</th>
+                                                <th style="width:30%">Désignation</th>
+                                                <th style="width:12%" class="text-right">Quantité</th>
+                                                <th style="width:12%" class="text-right">Total P.A</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-foreach="reason_data['lines']" t-as="line">
+                                                <tr>
+                                                    <td><span t-esc="line['document']"/></td>
+                                                    <td><span t-esc="line['date'].strftime('%d/%m/%Y') if line['date'] else ''"/></td>
+                                                    <td><span t-esc="line['cashier']"/></td>
+                                                    <td><span t-esc="line['article']"/></td>
+                                                    <td><span t-esc="line['designation']"/></td>
+                                                    <td class="text-right"><span t-esc="'%.2f' % line['quantity']"/></td>
+                                                    <td class="text-right"><span t-esc="'%.2f' % line['total_pa']"/></td>
+                                                </tr>
+                                            </t>
+
+                                            <!-- Sous-total -->
+                                            <t t-set="reason_qty" t-value="sum([l['quantity'] for l in reason_data['lines']])"/>
+                                            <t t-set="reason_total" t-value="sum([l['total_pa'] for l in reason_data['lines']])"/>
+                                            <tr class="subtotal-row">
+                                                <td colspan="5" class="text-right">Cumuls : <span t-esc="reason_data['reason_name']"/></td>
+                                                <td class="text-right"><span t-esc="'%.2f' % reason_qty"/></td>
+                                                <td class="text-right"><span t-esc="'%.2f' % reason_total"/></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </t>
+
+                                <div class="section-spacing"></div>
+                            </t>
+
+                            <!-- ====== Total général ====== -->
+                            <table style="margin-left: 40%;width: 60%;">
+                                <tbody>
+                                    <tr class="grand-total-row">
+                                        <td style="width:50%; font-size: 15pt;" class="text-right">
+                                            CUMULS Sortie
+                                        </td>
+                                        <td  style="width:25%; font-size: 15pt" class="text-right">
+                                            <strong><span t-esc="'%.2f' % grand_totals['quantity']"/></strong>
+                                        </td>
+                                        <td  style="width:25%; font-size: 15pt" class="text-right">
+                                            <strong><span t-esc="'%.2f' % grand_totals['total_pa']"/></strong>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+    <!-- Action Report -->
+    <record id="action_report_stock_adjustment" model="ir.actions.report">
+        <field name="name">Ajustement de stock</field>
+        <field name="model">stock.adjustment.report.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">custom_reports.report_stock_adjustment</field>
+        <field name="report_file">custom_reports.report_stock_adjustment</field>
+        <field name="binding_model_id" ref="model_stock_adjustment_report_wizard"/>
+        <field name="binding_type">report</field>
+    </record>
+</odoo>

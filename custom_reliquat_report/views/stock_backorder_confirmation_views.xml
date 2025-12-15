@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Modification de la vue de confirmation reliquat pour adapter le comportement -->
+    <record id="view_stock_backorder_confirmation_form" model="ir.ui.view">
+        <field name="name">stock.backorder.confirmation.form.satisfaction</field>
+        <field name="model">stock.backorder.confirmation</field>
+        <field name="inherit_id" ref="stock.view_backorder_confirmation"/>
+        <field name="arch" type="xml">
+
+            <!-- Masquer le bouton "Create Backorder" -->
+            <xpath expr="//footer/button[@name='process']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            
+            <!-- Modifier le bouton "No Backorder" en "Valider" et le rendre toujours visible -->
+            <xpath expr="//footer/button[@name='process_cancel_backorder']" position="attributes">
+                <attribute name="string">Valider</attribute>
+                <attribute name="invisible">0</attribute>
+                <attribute name="class">oe_highlight</attribute>
+            </xpath>
+
+            <!-- Remplacer le texte explicatif par notre message personnalisé -->
+            <xpath expr="//p[@class='text-muted']" position="replace">
+                <p class="text-muted">
+                    Valider cette opération même si les quantités réceptionnées diffèrent des quantités demandées.
+                    Cette validation nous permettra d'analyser le taux de service et d'identifier les écarts.
+                </p>
+            </xpath>
+        </field>
+    </record>
+</odoo>

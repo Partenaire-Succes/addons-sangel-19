@@ -1,0 +1,40 @@
+<odoo>
+    <record id="view_report_daily_sales_wizard" model="ir.ui.view">
+        <field name="name">report.daily.sales.wizard.form</field>
+        <field name="model">report.daily.sales.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Rapport Journalier des Ventes">
+                <group>
+                    <group string="Période">
+                        <field name="date_from"/>
+                        <field name="date_to"/>
+                    </group>
+                    <group string="Filtres">
+                        <field name="report_type"/>
+                        <field name="company_id" readonly="1"/>
+                    </group>
+
+                </group>
+                <footer>
+                    <button name="action_print_report" string="Imprimer" type="object" class="btn-primary"/>
+                    <button string="Annuler" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_report_daily_sales_wizard" model="ir.actions.act_window">
+        <field name="name">Rapport du chiffre d'affaires</field>
+        <field name="res_model">report.daily.sales.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- ========== MENU ========== -->
+    <menuitem id="menu_report_daily_sales_wizard"
+              name="Rapport du chiffre d'affaires"
+              parent="stock.menu_warehouse_report"
+              action="action_report_daily_sales_wizard"
+              sequence="100"/>
+
+</odoo>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Ajout du taux de satisfaction dans la vue commande d'achat -->
+    <record id="view_purchase_order_form_satisfaction" model="ir.ui.view">
+        <field name="name">purchase.order.form.satisfaction</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='project_id']" position="after">
+                <field name="satisfaction_rate" widget="percentage" readonly="1"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

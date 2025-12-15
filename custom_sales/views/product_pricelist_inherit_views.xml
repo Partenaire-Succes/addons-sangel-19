@@ -1,0 +1,33 @@
+<odoo>
+    <record id="view_product_pricelist_form_inherit_company" model="ir.ui.view">
+        <field name="name">product.pricelist.form.company.m2m</field>
+        <field name="model">product.pricelist</field>
+        <field name="inherit_id" ref="product.product_pricelist_view"/>
+        <field name="arch" type="xml">
+            <field name="company_id" position="replace">
+                <field name="allowed_company_ids" widget="many2many_tags"/>
+            </field>
+            <xpath expr="//notebook" position="before">
+                <group>
+                    <button name="action_open_wizard"
+                        string="Ajouter produits (multiple)"
+                        type="object"
+                        class="btn btn-secondary"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+
+    <record id="product_pricelist_form_inherit_tree_view" model="ir.ui.view">
+        <field name="name">product.pricelist.form.tree</field>
+        <field name="model">product.pricelist</field>
+        <field name="inherit_id" ref="product.product_pricelist_view_tree"/>
+        <field name="arch" type="xml">
+            <field name="company_id" position="replace">
+                <field name="allowed_company_ids" widget="many2many_tags"/>
+            </field>
+        </field>
+    </record>
+
+</odoo>

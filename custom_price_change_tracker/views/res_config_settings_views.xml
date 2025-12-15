@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Ajout dans la section Inventaire des paramètres généraux -->
+    <record id="res_config_settings_view_form_inherit_price_monitor" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.price.monitor</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="stock.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <!-- cibler le block Operations -->
+            <xpath expr="//app[@name='stock']/block[@name='operations_setting_container']" position="after">
+                <block title="Surveillance des Prix" name="price_monitoring_block">
+                    <setting id="price_notification_setting" string="Notifications de prix">
+                        <field name="price_notification_active"/>
+                        <label for="price_notification_active"/>
+                        <div class="text-muted">
+                            Surveiller automatiquement les changements de prix et envoyer des notifications quotidiennes
+                        </div>
+                    </setting>
+
+                    <setting id="price_notification_user_setting" string="Utilisateur à notifier"
+                             invisible="not price_notification_active">
+                        <field name="price_notification_user_ids" widget="many2many_tags" placeholder="Sélectionner un utilisateur..."/>
+                        <label for="price_notification_user_ids"/>
+                        <div class="text-muted">
+                            Sélectionnez les utilisateurs qui recevront les notifications de changement de prix
+                        </div>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+
+
+</odoo>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vue formulaire pour l'assistant -->
+    <record id="view_reliquat_report_wizard_form" model="ir.ui.view">
+        <field name="name">reliquat.report.wizard.form</field>
+        <field name="model">reliquat.report.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Créer un Rapport de Non livrés">
+                <group >
+                    <field name="period_type"/>
+                    <label for="date_from" string="Période"/>
+                    <div>
+                        <field name="date_from" class="oe_inline" required="('period_type', '!=', False)"/>
+                        -
+                        <field name="date_to" class="oe_inline" required="('period_type', '!=', False)"/>
+                    </div>
+                </group>
+                <footer>
+                    <button name="action_generate_report" type="object"
+                            string="Générer le Rapport" class="btn-primary"/>
+                    <button string="Annuler" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action pour l'assistant -->
+    <record id="action_reliquat_report_wizard" model="ir.actions.act_window">
+        <field name="name">Créer un Rapport de non livré</field>
+        <field name="res_model">reliquat.report.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Menu pour l'assistant -->
+    <menuitem id="menu_reliquat_wizard"
+              name="Créer un Rapport"
+              parent="menu_reliquat_main"
+              action="action_reliquat_report_wizard"
+              sequence="5"/>
+</odoo>

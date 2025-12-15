@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <template id="report_simple_label2x7_with_datetime" inherit_id="product.report_simple_label2x7">
+            <!-- Remplacer la div du nom pour ajouter la date à droite -->
+            <xpath expr="//div[@class='o_label_name']" position="replace">
+                <div class="o_label_name"
+                     style="display: flex; justify-content: space-between; align-items: start; width: 100%;">
+                    <strong t-field="product.display_name" style="flex: 1; max-width: 60%;"/>
+                    <br/>
+                    <span style="font-size: 10px; color: #666; white-space: nowrap; font-weight: bold; margin-left: 60%;">
+                        imprimé le <t t-esc="datetime.datetime.now().strftime('%d/%m/%Y %H:%M')"/>
+                    </span>
+                </div>
+            </xpath>
+        </template>
+
+    </data>
+</odoo>

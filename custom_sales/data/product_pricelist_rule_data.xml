@@ -1,0 +1,25 @@
+<odoo>
+    <data>
+        <!-- Remplacer la règle pour product.pricelist -->
+        <record id="product_pricelist_comp_rule" model="ir.rule">
+            <field name="name">product pricelist company rule</field>
+            <field name="model_id" ref="product.model_product_pricelist"/>
+            <field name="domain_force">
+                ['|', ('allowed_company_ids', '=', False),
+                ('allowed_company_ids', 'in', company_ids)]
+            </field>
+        </record>
+
+        <!-- Remplacer la règle pour product.pricelist.item -->
+        <record id="product_pricelist_item_comp_rule" model="ir.rule">
+            <field name="name">product pricelist item company rule</field>
+            <field name="model_id" ref="product.model_product_pricelist_item"/>
+            <field name="domain_force">
+                ['|', ('pricelist_id.allowed_company_ids', '=', False),
+                ('pricelist_id.allowed_company_ids', 'in', company_ids)]
+            </field>
+        </record>
+
+
+    </data>
+</odoo>

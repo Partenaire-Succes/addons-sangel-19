@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ========================================== -->
+    <!-- Action du rapport -->
+    <!-- ========================================== -->
+    <record id="action_report_product_price_history" model="ir.actions.report">
+        <field name="name">Rapport Historique des Prix</field>
+        <field name="model">product.price.history.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">custom_price_change_tracker.report_product_price_history</field>
+        <field name="report_file">custom_price_change_tracker.report_product_price_history</field>
+        <field name="print_report_name">'Historique des prix'</field>
+        <field name="binding_model_id" eval="False"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <!-- ========================================== -->
+    <!-- Template QWeb du rapport -->
+    <!-- ========================================== -->
+    <template id="report_product_price_history">
+        <t t-call="web.html_container">
+            <t t-call="web.external_layout">
+                <t t-foreach="docs" t-as="doc">
+                    <div class="page">
+                        <div style="font-size: 13px; margin-left:75% ; margin-bottom: 50px;">
+                            <strong>Imprimé le :
+                                <t t-esc="datetime.datetime.now().strftime('%d/%m/%Y  %H:%M:%S')"/>
+                            </strong>
+                            <br/>
+                        </div>
+                        <!-- En-tête du rapport -->
+                        <div class="text-center mb-4">
+                            <h2>Historique des changements de prix</h2>
+                            <h4 class="text-muted">
+                                Période du :
+                                <span t-esc="doc.date_from.strftime('%d/%m/%Y') if doc.date_from else ''"/>
+                                au
+                                <span t-esc="doc.date_to.strftime('%d/%m/%Y') if doc.date_to else ''"/>
+                            </h4>
+                        </div>
+
+
+                        <table class="table table-sm table-striped table-bordered mt-3">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th>Produit</th>
+                                    <th class="text-right">Ancien Prix</th>
+                                    <th class="text-right">Nouveau Prix</th>
+                                    <th class="text-right">Différence</th>
+                                    <th class="text-right">Variation (%)</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="doc.price_history_ids" t-as="line">
+                                    <tr t-att-class="'table-success' if line.price_difference &gt; 0 else ('table-danger' if line.price_difference &lt; 0 else '')">
+                                        <td>
+                                            <span t-field="line.product_id"/>
+                                        </td>
+                                        <td class="text-right">
+                                            <span t-field="line.old_price"
+                                                  t-options='{"widget": "monetary", "display_currency": line.currency_id}'/>
+
+                                        </td>
+                                        <td class="text-right">
+                                            <span t-field="line.new_price"
+                                                  t-options='{"widget": "monetary", "display_currency": line.currency_id}'/>
+                                        </td>
+                                        <td class="text-right"
+                                            t-att-class="'text-success font-weight-bold' if line.price_difference &gt; 0 else ('text-danger font-weight-bold' if line.price_difference &lt; 0 else '')">
+                                            <span t-if="line.price_difference &gt; 0">+</span>
+                                            <span t-field="line.price_difference"
+                                                  t-options='{"widget": "monetary", "display_currency": line.currency_id}'/>
+                                        </td>
+                                        <td class="text-right"
+                                            t-att-class="'text-success' if line.price_change_percent &gt; 0 else ('text-danger' if line.price_change_percent &lt; 0 else '')">
+                                            <span t-if="line.price_change_percent &gt; 0">+</span>
+                                            <span t-esc="'%.2f' % line.price_change_percent"/>%
+                                        </td>
+                                        <td>
+                                            <span t-esc="line.date_changed.strftime('%d/%m/%Y %H:%M')"/>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+</odoo>

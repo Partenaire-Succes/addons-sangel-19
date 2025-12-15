@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vue formulaire du wizard -->
+    <record id="view_supplier_return_report_wizard_form" model="ir.ui.view">
+        <field name="name">supplier.return.report.wizard.form</field>
+        <field name="model">supplier.return.report.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Rapport Retours Fournisseurs">
+                <sheet>
+                    <group>
+                        <group string="Période">
+                            <field name="date_from" required="1"/>
+                            <field name="date_to" required="1"/>
+                        </group>
+                        <group string="Filtres">
+                            <field name="company_id"
+                                   options="{'no_create': True}"
+                                   groups="base.group_multi_company"
+                                   readonly="1"
+                            />
+                        </group>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_print_report"
+                            string="Imprimer PDF"
+                            type="object"
+                            class="btn-primary"
+                            icon="fa-print"/>
+
+                    <button string="Annuler"
+                            class="btn-secondary"
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action du wizard -->
+    <record id="action_supplier_return_report_wizard" model="ir.actions.act_window">
+        <field name="name">Rapport Retours Fournisseurs</field>
+        <field name="res_model">supplier.return.report.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="view_id" ref="view_supplier_return_report_wizard_form"/>
+    </record>
+
+    <!-- Menu dans Inventaire > Analyse -->
+    <menuitem id="menu_supplier_return_report"
+              name="Rapports Retours Fournisseurs"
+              parent="stock.menu_warehouse_report"
+              action="action_supplier_return_report_wizard"
+              sequence="100"
+              groups="stock.group_stock_user"/>
+</odoo>

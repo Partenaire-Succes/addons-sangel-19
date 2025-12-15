@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Template du rapport PDF -->
+    <template id="report_supplier_returns_document">
+        <t t-call="web.external_layout">
+            <t t-foreach="docs" t-as="o">
+                <t t-set="data" t-value="o._get_report_data()"/>
+                <div class="page">
+                    <main>
+                        <!-- En-tête du rapport -->
+                        <div class="text-center" style="margin-bottom: 30px;">
+
+                            <h3 style="margin: 10px 0; color: #2c3e50;">Récapitulatif Retours Fournisseurs</h3>
+                            <p style="font-size: 16px; color: black;">
+                                <strong>Du</strong>
+                                <span t-esc="data['date_from']" t-options="{'widget': 'date', 'format': 'dd/MM/yyyy'}"/>
+                                <strong>Au</strong>
+                                <span t-esc="data['date_to']" t-options="{'widget': 'date', 'format': 'dd/MM/yyyy'}"/>
+                            </p>
+                        </div>
+
+                        <!-- Boucle sur chaque fournisseur avec tableaux séparés -->
+                        <t t-foreach="data['suppliers']" t-as="supplier">
+                            <div style="margin-bottom: 25px;">
+                                <!-- Tableau des retours -->
+                                <table class="table table-sm table-bordered" style="margin-bottom: 10px;">
+                                    <thead style="background-color: #ecf0f1;">
+                                        <tr>
+                                            <th style="width: 13%; text-align: center;">Type Mvt</th>
+                                            <th style="width: 12%; text-align: center;">Date</th>
+                                            <th style="width: 15%; text-align: center;">N° Doc.</th>
+                                            <th style="width: 40%; text-align: center;">Fournisseur</th>
+                                            <th style="width: 20%; text-align: right;">Montant Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="supplier['returns']" t-as="return_data">
+                                            <tr>
+                                                <td style="text-align: center; font-weight: bold;">BRF</td>
+                                                <td style="text-align: center;">
+                                                    <span t-esc="return_data['date']"
+                                                          t-options="{'widget': 'date', 'format': 'dd/MM/yyyy'}"/>
+                                                </td>
+                                                <td style="text-align: center;">
+                                                    <span t-esc="return_data['reference']"/>
+                                                </td>
+                                                <td>
+                                                    <span t-esc="supplier['supplier_name']"/>
+                                                </td>
+                                                <td style="text-align: right; font-weight: bold;">
+                                                    <span t-esc="'{:,.0f}'.format(return_data['amount']).replace(',', ' ')"/>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+
+                                <table class="table table-sm" style="width: 50%; border-top: 2px solid #2c3e50; margin-left: 50%;">
+                                    <tr style="background-color: #f8f9fa;">
+                                        <td style="padding: 10px; width: 45%; text-align: right; font-weight: bold; color: #3498db; font-size: 14pt;">
+                                            <span t-esc="supplier['supplier_name']"/>
+                                        </td>
+                                        <td style="padding: 10px; width: 50%; text-align: right; font-weight: bold; font-size: 14pt; color: black;">
+                                            <span t-esc="'{:,.0f}'.format(supplier['total_amount']).replace(',', ' ')"/>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                            </div>
+                        </t>
+
+                        <!-- Total général -->
+                        <div style="margin-top: 20px; padding: 20px; color: black; border-radius: 5px; background-color: #f8f9fa;">
+                            <div class="row">
+                                <div class="col-6">
+                                    <h4 style="margin: 0;">TOTAL GÉNÉRAL</h4>
+                                </div>
+                                <div class="col-6 text-end">
+                                    <h3 style="margin: 0; font-size: 24px;">
+                                        <span t-esc="'{:,.0f}'.format(data['grand_total']).replace(',', ' ')"/>
+                                    </h3>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pied de page avec informations -->
+                        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #bdc3c7; font-size: 12px; color: #7f8c8d;">
+                            <div class="row">
+                                <div class="col-6">
+                                    <p>Imprimé le:
+                                        <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y %H:%M')"/>
+                                    </p>
+                                </div>
+                                <div class="col-6 text-end">
+                                    <p>Nombre de fournisseurs:
+                                        <span t-esc="len(data['suppliers'])"/>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <!-- Déclaration du rapport -->
+    <record id="action_report_supplier_returns" model="ir.actions.report">
+        <field name="name">Retours Fournisseurs</field>
+        <field name="model">supplier.return.report.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">custom_reports.report_supplier_returns_document</field>
+        <field name="report_file">custom_reports.report_supplier_returns_document</field>
+        <field name="binding_model_id" ref="model_supplier_return_report_wizard"/>
+        <field name="binding_type">report</field>
+        <field name="print_report_name">'Retours_Fournisseurs_%s_%s' % (object.date_from.strftime('%Y%m%d'),
+            object.date_to.strftime('%Y%m%d'))
+        </field>
+        <field name="paperformat_id" ref="base.paperformat_euro"/>
+    </record>
+</odoo>
+
+        <!--<?xml version="1.0" encoding="utf-8"?>-->
+        <!--<odoo>-->
+        <!--    &lt;!&ndash; Template du rapport PDF &ndash;&gt;-->
+        <!--    <template id="report_supplier_returns_document">-->
+        <!--        <t t-call="web.external_layout">-->
+        <!--            <t t-foreach="docs" t-as="o" >-->
+        <!--            <t t-set="data" t-value="o._get_report_data()"/>-->
+        <!--            <div class="page">-->
+        <!--                <main>-->
+        <!--                &lt;!&ndash; En-tête du rapport &ndash;&gt;-->
+        <!--                <div class="text-center" style="margin-bottom: 30px;">-->
+        <!--                    <div style="margin-bottom: 10px;">-->
+        <!--                        <img t-if="o.company_id.logo"-->
+        <!--                             t-att-src="image_data_uri(o.company_id.logo)"-->
+        <!--                             style="max-height: 80px;"-->
+        <!--                             alt="Logo"/>-->
+        <!--                    </div>-->
+        <!--                    <h2 style="margin: 10px 0;">MAGASIN DEMI GROS YOPOUGON</h2>-->
+        <!--                    <h3 style="margin: 10px 0; color: #2c3e50;">Récapitulatif Retours Fournisseurs</h3>-->
+        <!--                    <p style="font-size: 14px; color: #7f8c8d;">-->
+        <!--                        <strong>Du</strong>-->
+        <!--                        <span t-esc="data['date_from']" t-options="{'widget': 'date', 'format': 'dd/MM/yyyy'}"/>-->
+        <!--                        <strong>Au</strong>-->
+        <!--                        <span t-esc="data['date_to']" t-options="{'widget': 'date', 'format': 'dd/MM/yyyy'}"/>-->
+        <!--                    </p>-->
+        <!--                </div>-->
+
+        <!--                &lt;!&ndash; Boucle sur chaque fournisseur &ndash;&gt;-->
+        <!--                <t t-foreach="data['suppliers']" t-as="supplier">-->
+        <!--                    <div style="margin-top: 30px; page-break-inside: avoid;">-->
+        <!--                        &lt;!&ndash; Nom du fournisseur &ndash;&gt;-->
+        <!--                        <div style="background-color: #3498db; color: white; padding: 10px; margin-bottom: 15px; border-radius: 5px;">-->
+        <!--                            <h4 style="margin: 0; font-size: 16px;">-->
+        <!--                                <i class="fa fa-user"/> Fournisseur: <span t-esc="supplier['supplier_name']"/>-->
+        <!--                            </h4>-->
+        <!--                        </div>-->
+
+        <!--                        &lt;!&ndash; Tableau des retours &ndash;&gt;-->
+        <!--                        <table class="table table-sm table-bordered" style="margin-bottom: 20px;">-->
+        <!--                            <thead style="background-color: #ecf0f1;">-->
+        <!--                                <tr>-->
+        <!--                                    <th style="width: 10%; text-align: center;">Type Mvt</th>-->
+        <!--                                    <th style="width: 12%; text-align: center;">Date</th>-->
+        <!--                                    <th style="width: 15%; text-align: center;">N° Doc.</th>-->
+        <!--                                    <th style="width: 43%; text-align: center;">Fournisseur</th>-->
+        <!--                                    <th style="width: 20%; text-align: right;">Montant Total</th>-->
+        <!--                                </tr>-->
+        <!--                            </thead>-->
+        <!--                            <tbody>-->
+        <!--                                <t t-foreach="supplier['returns']" t-as="return_data">-->
+        <!--                                    <tr>-->
+        <!--                                        <td style="text-align: center; font-weight: bold;">BRF</td>-->
+        <!--                                        <td style="text-align: center;">-->
+        <!--                                            <span t-esc="return_data['date']" t-options="{'widget': 'date', 'format': 'dd/MM/yyyy'}"/>-->
+        <!--                                        </td>-->
+        <!--                                        <td style="text-align: center;">-->
+        <!--                                            <span t-esc="return_data['reference']"/>-->
+        <!--                                        </td>-->
+        <!--                                        <td style="padding: 8px;">-->
+        <!--                                            <div style="font-weight: bold; color: #2c3e50;">YOP DETAIL</div>-->
+        <!--                                            <t t-if="return_data['origin']">-->
+        <!--                                                <div style="font-size: 12px; color: #7f8c8d;">-->
+        <!--                                                    <span t-esc="return_data['origin']"/>-->
+        <!--                                                </div>-->
+        <!--                                            </t>-->
+        <!--                                        </td>-->
+        <!--                                        <td style="text-align: right; font-weight: bold;">-->
+        <!--                                            <span t-esc="return_data['amount']"-->
+        <!--                                                  t-options="{'widget': 'monetary', 'display_currency': o.company_id.currency_id}"/>-->
+        <!--                                        </td>-->
+        <!--                                    </tr>-->
+        <!--                                </t>-->
+        <!--                            </tbody>-->
+        <!--                        </table>-->
+
+        <!--                        &lt;!&ndash; Total par fournisseur &ndash;&gt;-->
+        <!--                        <div class="row">-->
+        <!--                            <div class="col-12">-->
+        <!--                                <table class="table table-sm" style="width: 100%; border-top: 2px solid #2c3e50;">-->
+        <!--                                    <tr style="background-color: #f8f9fa;">-->
+        <!--                                        <td style="padding: 10px; width: 40%; font-weight: bold; font-size: 14px;">-->
+        <!--                                            TOTAL RECEPTION-->
+        <!--                                        </td>-->
+        <!--                                        <td style="padding: 10px; width: 40%; text-align: right; font-weight: bold; color: #3498db;">-->
+        <!--                                            <span t-esc="supplier['supplier_name']"/>-->
+        <!--                                        </td>-->
+        <!--                                        <td style="padding: 10px; width: 20%; text-align: right; font-weight: bold; font-size: 16px; color: #e74c3c;">-->
+        <!--                                            <span t-esc="supplier['total_amount']"-->
+        <!--                                                  t-options="{'widget': 'monetary', 'display_currency': o.company_id.currency_id}"/>-->
+        <!--                                        </td>-->
+        <!--                                    </tr>-->
+        <!--                                </table>-->
+        <!--                            </div>-->
+        <!--                        </div>-->
+        <!--                    </div>-->
+
+        <!--                    &lt;!&ndash; Saut de page après chaque fournisseur sauf le dernier &ndash;&gt;-->
+        <!--                    <t t-if="not supplier_last">-->
+        <!--                        <div style="page-break-after: always;"/>-->
+        <!--                    </t>-->
+        <!--                </t>-->
+
+        <!--                &lt;!&ndash; Total général &ndash;&gt;-->
+        <!--                <div style="margin-top: 40px; padding: 20px; background-color: #2c3e50; color: white; border-radius: 5px;">-->
+        <!--                    <div class="row">-->
+        <!--                        <div class="col-6">-->
+        <!--                            <h4 style="margin: 0;">TOTAL GÉNÉRAL</h4>-->
+        <!--                        </div>-->
+        <!--                        <div class="col-6 text-end">-->
+        <!--                            <h3 style="margin: 0; font-size: 24px;">-->
+        <!--                                <span t-esc="data['grand_total']"-->
+        <!--                                      t-options="{'widget': 'monetary', 'display_currency': o.company_id.currency_id}"/>-->
+        <!--                            </h3>-->
+        <!--                        </div>-->
+        <!--                    </div>-->
+        <!--                </div>-->
+
+        <!--                &lt;!&ndash; Pied de page avec informations &ndash;&gt;-->
+        <!--                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #bdc3c7; font-size: 12px; color: #7f8c8d;">-->
+        <!--                    <div class="row">-->
+        <!--                        <div class="col-6">-->
+        <!--                            <p>Imprimé le: <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y %H:%M')"/> </p>-->
+        <!--                        </div>-->
+        <!--                        <div class="col-6 text-end">-->
+        <!--                            <p>Nombre de fournisseurs: <span t-esc="len(data['suppliers'])"/></p>-->
+        <!--                        </div>-->
+        <!--                    </div>-->
+        <!--                </div>-->
+        <!--                </main>-->
+        <!--            </div>-->
+        <!--        </t>-->
+        <!--        </t>-->
+        <!--    </template>-->
+
+        <!--    &lt;!&ndash; Déclaration du rapport &ndash;&gt;-->
+        <!--    <record id="action_report_supplier_returns" model="ir.actions.report">-->
+        <!--        <field name="name">Retours Fournisseurs</field>-->
+        <!--        <field name="model">supplier.return.report.wizard</field>-->
+        <!--        <field name="report_type">qweb-pdf</field>-->
+        <!--        <field name="report_name">custom_reports.report_supplier_returns_document</field>-->
+        <!--        <field name="report_file">custom_reports.report_supplier_returns_document</field>-->
+        <!--        <field name="binding_model_id" ref="model_supplier_return_report_wizard"/>-->
+        <!--        <field name="binding_type">report</field>-->
+        <!--        <field name="print_report_name">'Retours_Fournisseurs_%s_%s' % (object.date_from.strftime('%Y%m%d'), object.date_to.strftime('%Y%m%d'))</field>-->
+        <!--        <field name="paperformat_id" ref="base.paperformat_euro"/>-->
+        <!--    </record>-->
+        <!--</odoo>-->

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="product_product_inherit_form_view" model="ir.ui.view">
+            <field name="name">product.product.inherit.form.view</field>
+            <field name="model">product.product</field>
+            <field name="inherit_id" ref="product.product_normal_form_view"/>
+            <field name="arch" type="xml">
+                <xpath expr="//form[1]/sheet[@name='product_form']/notebook[1]/page[@name='general_information']/group[1]/group[@name='group_standard_price']/field[@name='categ_id']"
+                       position="after">
+                    <field name="all_company_ids" widget="many2many_tags"/>
+                </xpath>
+
+                <xpath expr="//form[1]/sheet[@name='product_form']/notebook[1]/page[@name='general_information']/group[1]/group[@name='group_standard_price']/field[@name='company_id']"
+                       position="attributes">
+                    <attribute name="invisible">True</attribute>
+                </xpath>
+
+            </field>
+        </record>
+
+    </data>
+</odoo>

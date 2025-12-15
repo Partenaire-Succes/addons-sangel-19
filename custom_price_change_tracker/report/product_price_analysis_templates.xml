@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="action_report_product_price_analysis" model="ir.actions.report">
+        <field name="name">Analyse des Prix Produits</field>
+        <field name="model">product.price.analysis.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">custom_price_change_tracker.report_product_price_analysis</field>
+        <field name="report_file">custom_price_change_tracker.report_product_price_analysis</field>
+        <field name="binding_model_id" eval="False"/>
+        <field name="binding_type">report</field>
+        <field name="print_report_name">'Analyse_Prix_Produits_%s' % (object.date_from.strftime('%Y%m%d'))</field>
+    </record>
+
+
+    <!-- Template principal du rapport -->
+    <template id="report_product_price_analysis">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <!-- En-tête du rapport -->
+                        <div class="row mb-4">
+                            <div class="col-12 text-center">
+                                <h2 class="mt-0 mb-2">
+                                    <strong>RAPPORT DE VARIATION DES PRIX PRODUITS</strong>
+                                </h2>
+
+                                <p class="mb-0">
+                                    Du <strong><t t-esc="doc.date_from" t-options="{'widget': 'date'}"/></strong>
+                                    au <strong><t t-esc="doc.date_to" t-options="{'widget': 'date'}"/></strong>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Filtres appliqués - basés sur price_history_ids -->
+                        <t t-set="unique_products" t-value="doc.price_history_ids.mapped('product_id')"/>
+                        <t t-set="unique_categories" t-value="unique_products.mapped('categ_id')"/>
+
+
+                        <!-- Tableau des résultats -->
+                        <div class="row">
+                            <div class="col-12">
+                                <h4 class="mb-3">Liste des produits et nombre de changement de prix</h4>
+
+                                <t t-if="doc.price_history_ids">
+                                    <!-- Grouper les produits et compter les occurrences -->
+                                    <t t-set="product_counts" t-value="{}"/>
+                                    <t t-foreach="doc.price_history_ids" t-as="history">
+                                        <t t-set="product_name" t-value="history.product_id.name"/>
+                                        <t t-set="current_count" t-value="product_counts.get(product_name, 0)"/>
+                                        <t t-set="dummy" t-value="product_counts.update({product_name: current_count + 1})"/>
+                                    </t>
+
+                                    <!-- Convertir en liste triée -->
+                                    <t t-set="sorted_products" t-value="sorted(product_counts.items(), key=lambda x: x[1], reverse=True)"/>
+
+                                    <table class="table table-sm table-bordered table-hover">
+                                        <thead class="thead-dark">
+                                            <tr>
+                                                <th width="10%" class="text-center">#</th>
+                                                <th width="60%">Nom du Produit</th>
+                                                <th width="30%" class="text-center">Nombre de changement</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-foreach="sorted_products" t-as="product_item">
+                                                <tr>
+                                                    <td class="text-center">
+                                                        <strong><t t-esc="product_item_index + 1"/></strong>
+                                                    </td>
+                                                    <td>
+                                                        <t t-esc="product_item[0]"/>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <span class="badge badge-primary badge-pill" style="font-size: 14px;">
+                                                            <t t-esc="product_item[1]"/>
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                        <tfoot class="thead-light">
+                                            <tr>
+                                                <th colspan="2" class="text-right">Total produits :</th>
+                                                <th class="text-center">
+                                                    <span class="badge badge-success badge-pill" style="font-size: 14px;">
+                                                        <t t-esc="len(sorted_products)"/>
+                                                    </span>
+                                                </th>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </t>
+                                <t t-else="">
+                                    <div class="alert alert-warning">
+                                        <strong>Aucune donnée trouvée</strong> pour les critères sélectionnés.
+                                    </div>
+                                </t>
+                            </div>
+                        </div>
+
+                        <!-- Section : TOP 5 des produits les plus fréquents -->
+                        <t t-if="doc.price_history_ids">
+                            <t t-set="product_counts" t-value="{}"/>
+                            <t t-foreach="doc.price_history_ids" t-as="history">
+                                <t t-set="product_name" t-value="history.product_id.name"/>
+                                <t t-set="current_count" t-value="product_counts.get(product_name, 0)"/>
+                                <t t-set="dummy" t-value="product_counts.update({product_name: current_count + 1})"/>
+                            </t>
+                            <t t-set="top_5_products" t-value="sorted(product_counts.items(), key=lambda x: x[1], reverse=True)[:5]"/>
+
+                            <t t-if="len(top_5_products) > 0">
+                                <div class="row mt-4">
+                                    <div class="col-12">
+                                        <h4 class="mb-3">TOP 5 - Produits les plus fréquents</h4>
+                                        <table class="table table-sm table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th width="15%" class="text-center">Rang</th>
+                                                    <th width="55%">Nom du Produit</th>
+                                                    <th width="30%" class="text-center">Nombre de changement</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <t t-foreach="top_5_products" t-as="top_item">
+                                                    <tr>
+                                                        <td class="text-center">
+                                                            <h5 class="mb-0">
+                                                                <span class="badge badge-warning badge-pill">
+                                                                    #<t t-esc="top_item_index + 1"/>
+                                                                </span>
+                                                            </h5>
+                                                        </td>
+                                                        <td><strong><t t-esc="top_item[0]"/></strong></td>
+                                                        <td class="text-center">
+                                                            <span class="badge badge-success badge-pill" style="font-size: 16px;">
+                                                                <t t-esc="top_item[1]"/>
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                </t>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </t>
+                        </t>
+
+                        <!-- Pied de page avec informations -->
+                        <div class="row mt-5">
+                            <div class="col-12">
+                                <hr/>
+                                <p class="text-muted small">
+                                    <strong>Rapport généré le :</strong>
+                                    <t t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y %H:%M:%S')"/>
+                                    <br/>
+                                    <strong>Par :</strong> <t t-esc="user.name"/>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+</odoo>

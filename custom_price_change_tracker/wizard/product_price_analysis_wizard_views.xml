@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vue formulaire du wizard -->
+    <record id="view_product_price_analysis_wizard_form" model="ir.ui.view">
+        <field name="name">product.price.analysis.wizard.form</field>
+        <field name="model">product.price.analysis.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Analyse des Prix Produits">
+                <group>
+                    <field name="period_type"/>
+                    <label for="date_from" string="Période"/>
+                    <div>
+                        <field name="date_from" class="oe_inline" required="('period_type', '!=', False)"/>
+                        -
+                        <field name="date_to" class="oe_inline" required="('period_type', '!=', False)"/>
+                    </div>
+
+                </group>
+
+                <notebook>
+                    <page string="Aperçu des données" name="preview">
+                        <group>
+                            <field name="price_history_ids" nolabel="1">
+                                <list string="Historique des prix" decoration-success="price_difference &gt; 0" decoration-danger="price_difference &lt; 0">
+                                    <field name="date_changed"/>
+                                    <field name="product_id"/>
+                                    <field name="old_price" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                                    <field name="new_price" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                                    <field name="price_difference" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                                    <field name="price_change_percent" widget="percentage"/>
+                                    <field name="user_id"/>
+                                    <field name="currency_id" column_invisible="1"/>
+                                </list>
+                            </field>
+                        </group>
+                    </page>
+                </notebook>
+
+                <footer>
+                    <button name="action_print" string="Imprimer le rapport" type="object" class="oe_highlight"/>
+                    <button string="Annuler" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action pour ouvrir le wizard -->
+    <record id="action_product_price_analysis_wizard" model="ir.actions.act_window">
+        <field name="name">Analyse des Prix Produits</field>
+        <field name="res_model">product.price.analysis.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="view_id" ref="view_product_price_analysis_wizard_form"/>
+    </record>
+
+    <!-- Menu pour accéder au wizard -->
+    <menuitem id="menu_product_price_analysis_wizard"
+              name="Analyse des Prix"
+              parent="menu_product_price_monitor_root"
+              action="action_product_price_analysis_wizard"
+              sequence="30"/>
+
+</odoo>

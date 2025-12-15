@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Vue formulaire pour le rapport de non livrés -->
+        <record id="view_reliquat_report_form" model="ir.ui.view">
+            <field name="name">non.livrés.report.form</field>
+            <field name="model">reliquat.report</field>
+            <field name="arch" type="xml">
+                <form string="Rapport de non livrés" create="0" edit="1">
+                    <header>
+                        <button name="generate_report_data" type="object" string="Générer les données"
+                                class="btn-primary" invisible="1"/>
+                        <button name="action_print" type="object" string="Imprimer"
+                                class="btn-primary" icon="fa-print"/>
+                        <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,printed"
+                               invisible="1"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name" class="oe_edit_only"/>
+                            <h1>
+                                <field name="name" placeholder="Nom du rapport" readonly="1"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="period_type" readonly="1"/>
+                                <field name="active" invisible="1"/>
+                                <field name="company_id" invisible="0"/>
+                                <label for="date_from" string="Période"/>
+                                <div>
+                                    <field name="date_from" class="oe_inline" readonly="1"/>
+                                    -
+                                    <field name="date_to" class="oe_inline" readonly="1"/>
+                                </div>
+                            </group>
+                            <group>
+                                <field name="created_by" readonly="1"/>
+                                <field name="creation_date" readonly="1"/>
+                            </group>
+                        </group>
+
+                        <!-- Statistiques -->
+                        <group>
+                            <group string="Les quantités">
+                                <field name="total_qty_ordered" readonly="1"/>
+                                <field name="total_qty_received" readonly="1"/>
+                                <field name="total_qty_pending" readonly="1"/>
+                            </group>
+                            <group string="Les satisfactions">
+                                <field name="total_orders" readonly="1"/>
+                                <field name="satisfaction_rate" readonly="1" widget="percentage"/>
+                            </group>
+                        </group>
+
+                        <!-- Lignes de non livrés -->
+                        <notebook>
+                            <page string="Lignes de non livrés">
+                                <field name="line_ids" readonly="1">
+                                    <list>
+                                        <field name="order_date" optional="hide"/>
+                                        <field name="purchase_order_id" optional="show"/>
+                                        <field name="partner_name" optional="show"/>
+                                        <field name="product_name" optional="show"/>
+                                        <field name="qty_ordered" optional="show"/>
+                                        <field name="qty_received" optional="show"/>
+                                        <field name="qty_pending" optional="show"/>
+                                        <field name="satisfaction_rate" widget="percentage" optional="show"/>
+                                    </list>
+                                </field>
+                            </page>
+                        </notebook>
+                    </sheet>
+                    <chatter reload_on_follower="True"/>
+                </form>
+            </field>
+        </record>
+
+        <!-- Vue liste pour les rapports -->
+        <record id="view_reliquat_report_tree" model="ir.ui.view">
+            <field name="name">reliquat.report.tree</field>
+            <field name="model">reliquat.report</field>
+            <field name="arch" type="xml">
+                <list string="Rapports de non livrés" create="0" edit="0">
+                    <field name="name" optional="show"/>
+                    <field name="period_type" optional="show"/>
+                    <field name="date_from" optional="show"/>
+                    <field name="date_to" optional="show"/>
+                    <field name="total_orders" optional="show"/>
+                    <field name="satisfaction_rate" widget="percentage" optional="show"/>
+                    <field name="created_by" optional="hide"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- Action pour les rapports -->
+        <record id="action_reliquat_report" model="ir.actions.act_window">
+            <field name="name">Rapports de non livrés</field>
+            <field name="res_model">reliquat.report</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Créer votre premier rapport de non livrés
+                </p>
+                <p>
+                    Les rapports de reliquats vous permettent de suivre les quantités en attente
+                    et de calculer le taux de satisfaction de vos commandes.
+                </p>
+            </field>
+        </record>
+
+
+        <record id="view_picking_internals_search_inherit" model="ir.ui.view">
+            <field name="name">stock.picking.internal.search.inherit</field>
+            <field name="model">stock.picking</field>
+            <field name="inherit_id" ref="stock.view_picking_internal_search"/>
+            <field name="arch" type="xml">
+                <!-- Ajouter le filtre après les filtres existants -->
+                <xpath expr="//filter[@name='available']" position="after">
+                    <filter string="Terminés"
+                            name="backorder_done"
+                            domain="[('backorder_id', '!=', False), ('state', '=', 'done')]"/>
+                </xpath>
+
+            </field>
+        </record>
+
+        <record id="stock.action_picking_tree_ready" model="ir.actions.act_window">
+            <field name="domain">[('backorder_id', '=', False)]</field>
+        </record>
+
+
+        <record id="action_picking_tree_ready" model="ir.actions.act_window">
+            <field name="name">Non livrés</field>
+            <field name="res_model">stock.picking</field>
+            <field name="view_mode">list,kanban,form,calendar</field>
+            <field name="domain">[('backorder_id','!=',False)]</field>
+            <field name="context">{
+                'search_default_filter_assigned': 1,
+                'default_picking_type_code': 'outgoing'
+                }
+            </field>
+        </record>
+
+
+        <!-- Menu principal -->
+        <menuitem id="menu_reliquat_main"
+                  name="Non livré"
+                  parent="stock.menu_stock_root"
+                  sequence="20"/>
+
+        <menuitem id="menu_reliquat_reports"
+                  name="Rapports des Non livrés"
+                  parent="menu_reliquat_main"
+                  action="action_reliquat_report"
+                  sequence="10"/>
+
+        <!-- <menuitem id="menu_reliquat_tree_view"
+                  name="Reliquats"
+                  parent="menu_reliquat_main"
+                  action="action_picking_tree_ready"
+                  sequence="15"/> -->
+
+    </data>
+
+</odoo>

@@ -1,0 +1,8 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_product_price_history_user,product.price.history.user,model_product_price_history,base.group_user,1,1,1,0
+access_product_price_history_manager,product.price.history.manager,model_product_price_history,base.group_system,1,1,1,1
+access_product_price_history_stock_user,product.price.history.stock.user,model_product_price_history,stock.group_stock_user,1,1,1,1
+access_product_price_history_stock_manager,product.price.history.stock.manager,model_product_price_history,stock.group_stock_manager,1,1,1,1
+
+access_product_price_history_wizard_user,product.price.history.wizard.user,model_product_price_history_wizard,stock.group_stock_user,1,1,1,1
+access_product_price_analysis_wizard_user,product.price.analysis.wizard.user,model_product_price_analysis_wizard,stock.group_stock_user,1,1,1,1

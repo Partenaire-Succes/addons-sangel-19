@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Menu Principal -->
+    <menuitem id="menu_product_price_monitor_root"
+              name="Surveillance Prix"
+              parent="stock.menu_stock_inventory_control"
+              sequence="100"/>
+
+    <!-- Menu Historique -->
+    <menuitem id="menu_product_price_history"
+              name="Historique des prix"
+              parent="menu_product_price_monitor_root"
+              action="action_products_price_history"
+              sequence="10"/>
+</odoo>

@@ -1,0 +1,424 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Template PDF du rapport de statistiques de ventes -->
+    <template id="report_sale_statistics_document">
+        <t t-call="web.external_layout">
+            <t t-foreach="docs" t-as="doc">
+                <div class="page">
+                    <main>
+                        <!-- CSS Styles -->
+                        <style>
+                            .stat-table {
+                            width: 100%;
+                            font-size: 7pt;
+                            margin-bottom: 20px;
+                            border-collapse: collapse;
+                            }
+                            .stat-table th {
+                            background-color: #875A7B;
+                            color: white;
+                            padding: 4px 3px;
+                            text-align: center;
+                            font-weight: bold;
+                            border: 1px solid #666;
+                            font-size: 7pt;
+                            }
+                            .stat-table td {
+                            padding: 2px 3px;
+                            border: 1px solid #ddd;
+                            font-size: 7pt;
+                            }
+                            .stat-table .total-row {
+                            background-color: #e0e0e0;
+                            font-weight: bold;
+                            }
+                            .stat-table .grand-total-row {
+                            background-color: #875A7B;
+                            color: white;
+                            font-weight: bold;
+                            }
+                            .text-right { text-align: right; }
+                            .text-center { text-align: center; }
+                            .text-left { text-align: left; }
+                            .category-title {
+                            background-color: #875A7B;
+                            color: white;
+                            padding: 5px 10px;
+                            font-weight: bold;
+                            margin-top: 15px;
+                            margin-bottom: 5px;
+                            font-size: 9pt;
+                            }
+                            .page-header h3 {
+                            font-size: 12pt;
+                            margin: 5px 0;
+                            }
+                            .page-header h4 {
+                            font-size: 10pt;
+                            margin: 3px 0;
+                            }
+                            /* Couleurs des colonnes */
+                            .col-period1 { background-color: #4a90e2 !important; }
+                            .col-period2 { background-color: #e74c3c !important; }
+                            .col-progress { background-color: #27ae60 !important; }
+                            .col-progress-pct { background-color: #f39c12 !important; }
+
+                            .total-section {
+                            margin: 10px 0;
+                            font-size: 8pt;
+                            }
+                        </style>
+
+                        <!-- En-tête du rapport -->
+                        <div class="text-center page-header">
+                            <h3>
+                                <strong>Statistiques ventes - Fact. manu - Fact. bl - du
+                                    <span t-esc="doc.date_start_period1.strftime('%d/%m/%Y')"/>
+                                    au
+                                    <span t-esc="doc.date_end_period1.strftime('%d/%m/%Y')"/>
+                                </strong>
+                            </h3>
+                            <h4>
+                                Trié par FAM_CLI puis CLIENT
+                                <t t-if="doc.partner_ids">
+                                    (
+                                    <t t-foreach="doc.partner_ids[:3]" t-as="p">
+                                        <span t-esc="p.name"/>
+                                        <t t-if="not p_last">,</t>
+                                    </t>
+                                    <t t-if="len(doc.partner_ids) > 3">...</t>
+                                    )
+                                </t>
+                                <t t-else="">(9999 prem. en CA)</t>
+                            </h4>
+                        </div>
+
+                        <!-- Données groupées par catégorie -->
+                        <t t-set="categories_data" t-value="doc.get_sale_data_by_category()"/>
+
+                        <!-- Initialisation des totaux généraux -->
+                        <t t-set="grand_total_p1_qty" t-value="0"/>
+                        <t t-set="grand_total_p1_ca" t-value="0.0"/>
+                        <t t-set="grand_total_p1_margin" t-value="0.0"/>
+                        <t t-set="grand_total_p2_qty" t-value="0"/>
+                        <t t-set="grand_total_p2_ca" t-value="0.0"/>
+                        <t t-set="grand_total_p2_margin" t-value="0.0"/>
+
+                        <!-- Boucle sur chaque catégorie -->
+                        <t t-foreach="categories_data.items()" t-as="cat_item">
+                            <t t-set="cat_key" t-value="cat_item[0]"/>
+                            <t t-set="cat_data" t-value="cat_item[1]"/>
+
+                            <div class="category-title">
+                                FAM_CLI&#160;&#160;<t t-esc="cat_key"/>
+                            </div>
+
+                            <!-- Tableau par catégorie -->
+                            <table class="stat-table">
+                                <thead>
+                                    <tr>
+                                        <th rowspan="2" style="width: 20%;">CLIENT</th>
+                                        <th colspan="4" class="col-period1">Période 1</th>
+                                        <th colspan="4" class="col-period2">Période 2</th>
+                                        <th colspan="4" class="col-progress">Progression</th>
+                                        <th colspan="3" class="col-progress-pct">% Progression</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- Période 1 -->
+                                        <th class="col-period1">Qté</th>
+                                        <th class="col-period1">CA</th>
+                                        <th class="col-period1">Marge</th>
+                                        <th class="col-period1">Mge %</th>
+                                        <!-- Période 2 -->
+                                        <th class="col-period2">Qté</th>
+                                        <th class="col-period2">CA</th>
+                                        <th class="col-period2">Marge</th>
+                                        <th class="col-period2">Mge %</th>
+                                        <!-- Progression -->
+                                        <th class="col-progress">Qté</th>
+                                        <th class="col-progress">CA</th>
+                                        <th class="col-progress">Marge</th>
+                                        <th class="col-progress">Mge %</th>
+                                        <!-- % Progression -->
+                                        <th class="col-progress-pct">Qté</th>
+                                        <th class="col-progress-pct">CA</th>
+                                        <th class="col-progress-pct">Marge</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Lignes clients -->
+                                    <t t-foreach="sorted(cat_data['clients'].values(), key=lambda x: x['partner_name'])"
+                                       t-as="client">
+                                        <tr>
+                                            <td class="text-left">
+                                                <t t-if="client['customer_id']">
+                                                    <span t-esc="client['customer_id']"/>
+                                                    -
+                                                </t>
+                                                <span t-esc="client['partner_name']"/>
+                                            </td>
+
+                                            <!-- Période 1 -->
+                                            <td class="text-right">
+                                                <span t-esc="client['qty_p1']"/>
+                                            </td>
+                                            <td class="text-right">
+                                                <span t-esc="'{:,.2f}'.format(client['ca_p1']).replace(',', ' ')"/>
+                                            </td>
+                                            <td class="text-right">
+                                                <span t-esc="'{:,.2f}'.format(client['margin_p1']).replace(',', ' ')"/>
+                                            </td>
+                                            <td class="text-right">
+                                                <span t-esc="'%.2f' % client['margin_pct_p1']"/>
+                                            </td>
+
+                                            <!-- Période 2 -->
+                                            <td class="text-right">
+                                                <span t-esc="client['qty_p2']"/>
+                                            </td>
+                                            <td class="text-right">
+                                                <span t-esc="'{:,.2f}'.format(client['ca_p2']).replace(',', ' ')"/>
+                                            </td>
+                                            <td class="text-right">
+                                                <span t-esc="'{:,.2f}'.format(client['margin_p2']).replace(',', ' ')"/>
+                                            </td>
+                                            <td class="text-right">
+                                                <span t-esc="'%.2f' % client['margin_pct_p2']"/>
+                                            </td>
+
+                                            <!-- Progression -->
+                                            <td class="text-right">
+                                                <span t-esc="client['prog_qty']"/>
+                                            </td>
+                                            <td class="text-right">
+                                                <span t-esc="'{:,.2f}'.format(client['prog_ca']).replace(',', ' ')"/>
+                                            </td>
+                                            <td class="text-right">
+                                                <span t-esc="'{:,.2f}'.format(client['prog_margin']).replace(',', ' ')"/>
+                                            </td>
+                                            <td class="text-right">0.00</td>
+
+                                            <!-- % Progression -->
+                                            <td class="text-right">
+                                                <span t-esc="'%.2f' % ((client['prog_qty'] / client['qty_p1'] * 100) if client['qty_p1'] else 0)"/>
+                                            </td>
+                                            <td class="text-right">
+                                                <span t-esc="'%.2f' % client['prog_ca_pct']"/>
+                                            </td>
+                                            <td class="text-right">
+                                                <span t-esc="'%.2f' % client['prog_margin_pct']"/>
+                                            </td>
+                                        </tr>
+                                    </t>
+
+                                    <!-- Total sélection -->
+                                    <tr class="total-row">
+                                        <td class="text-left">
+                                            <strong>Total sélection</strong>
+                                        </td>
+
+                                        <!-- Période 1 -->
+                                        <td class="text-right">
+                                            <strong>
+                                                <span t-esc="cat_data['total_p1_qty']"/>
+                                            </strong>
+                                        </td>
+                                        <td class="text-right">
+                                            <strong>
+                                                <span t-esc="'{:,.2f}'.format(cat_data['total_p1_ca']).replace(',', ' ')"/>
+                                            </strong>
+                                        </td>
+                                        <td class="text-right">
+                                            <strong>
+                                                <span t-esc="'{:,.2f}'.format(cat_data['total_p1_margin']).replace(',', ' ')"/>
+                                            </strong>
+                                        </td>
+                                        <td class="text-right">
+                                            <strong>
+                                                <span t-esc="'%.2f' % cat_data['total_p1_margin_pct']"/>
+                                            </strong>
+                                        </td>
+
+                                        <!-- Période 2 -->
+                                        <td class="text-right">
+                                            <strong>
+                                                <span t-esc="cat_data['total_p2_qty']"/>
+                                            </strong>
+                                        </td>
+                                        <td class="text-right">
+                                            <strong>
+                                                <span t-esc="'{:,.2f}'.format(cat_data['total_p2_ca']).replace(',', ' ')"/>
+                                            </strong>
+                                        </td>
+                                        <td class="text-right">
+                                            <strong>
+                                                <span t-esc="'{:,.2f}'.format(cat_data['total_p2_margin']).replace(',', ' ')"/>
+                                            </strong>
+                                        </td>
+                                        <td class="text-right">
+                                            <strong>
+                                                <span t-esc="'%.2f' % cat_data['total_p2_margin_pct']"/>
+                                            </strong>
+                                        </td>
+
+                                        <!-- Progression -->
+                                        <td class="text-right">
+                                            <strong>
+                                                <span t-esc="cat_data['total_prog_qty']"/>
+                                            </strong>
+                                        </td>
+                                        <td class="text-right">
+                                            <strong>
+                                                <span t-esc="'{:,.2f}'.format(cat_data['total_prog_ca']).replace(',', ' ')"/>
+                                            </strong>
+                                        </td>
+                                        <td class="text-right">
+                                            <strong>
+                                                <span t-esc="'{:,.2f}'.format(cat_data['total_prog_margin']).replace(',', ' ')"/>
+                                            </strong>
+                                        </td>
+                                        <td class="text-right">
+                                            <strong>0.00</strong>
+                                        </td>
+
+                                        <!-- % Progression -->
+                                        <td class="text-right">
+                                            <strong>
+                                                <span t-esc="'%.2f' % ((cat_data['total_prog_qty'] / cat_data['total_p1_qty'] * 100) if cat_data['total_p1_qty'] else 0)"/>
+                                            </strong>
+                                        </td>
+                                        <td class="text-right">
+                                            <strong>
+                                                <span t-esc="'%.2f' % cat_data['total_prog_ca_pct']"/>
+                                            </strong>
+                                        </td>
+                                        <td class="text-right">
+                                            <strong>0.00</strong>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <!-- Mise à jour des totaux généraux -->
+                            <t t-set="grand_total_p1_qty" t-value="grand_total_p1_qty + cat_data['total_p1_qty']"/>
+                            <t t-set="grand_total_p1_ca" t-value="grand_total_p1_ca + cat_data['total_p1_ca']"/>
+                            <t t-set="grand_total_p1_margin"
+                               t-value="grand_total_p1_margin + cat_data['total_p1_margin']"/>
+                            <t t-set="grand_total_p2_qty" t-value="grand_total_p2_qty + cat_data['total_p2_qty']"/>
+                            <t t-set="grand_total_p2_ca" t-value="grand_total_p2_ca + cat_data['total_p2_ca']"/>
+                            <t t-set="grand_total_p2_margin"
+                               t-value="grand_total_p2_margin + cat_data['total_p2_margin']"/>
+                        </t>
+
+                        <!-- Total général final -->
+                        <table class="stat-table" style="margin-top: 20px;">
+                            <tr class="grand-total-row">
+                                <td style="width: 20%;" class="text-left">
+                                    <strong>TOTAL GÉNÉRAL</strong>
+                                </td>
+
+                                <!-- Période 1 -->
+                                <td class="text-right">
+                                    <strong>
+                                        <span t-esc="grand_total_p1_qty"/>
+                                    </strong>
+                                </td>
+                                <td class="text-right">
+                                    <strong>
+                                        <span t-esc="'{:,.2f}'.format(grand_total_p1_ca).replace(',', ' ')"/>
+                                    </strong>
+                                </td>
+                                <td class="text-right">
+                                    <strong>
+                                        <span t-esc="'{:,.2f}'.format(grand_total_p1_margin).replace(',', ' ')"/>
+                                    </strong>
+                                </td>
+                                <td class="text-right">
+                                    <strong>
+                                        <span t-esc="'%.2f' % ((grand_total_p1_margin / grand_total_p1_ca * 100) if grand_total_p1_ca else 0)"/>
+                                    </strong>
+                                </td>
+
+                                <!-- Période 2 -->
+                                <td class="text-right">
+                                    <strong>
+                                        <span t-esc="grand_total_p2_qty"/>
+                                    </strong>
+                                </td>
+                                <td class="text-right">
+                                    <strong>
+                                        <span t-esc="'{:,.2f}'.format(grand_total_p2_ca).replace(',', ' ')"/>
+                                    </strong>
+                                </td>
+                                <td class="text-right">
+                                    <strong>
+                                        <span t-esc="'{:,.2f}'.format(grand_total_p2_margin).replace(',', ' ')"/>
+                                    </strong>
+                                </td>
+                                <td class="text-right">
+                                    <strong>
+                                        <span t-esc="'%.2f' % ((grand_total_p2_margin / grand_total_p2_ca * 100) if grand_total_p2_ca else 0)"/>
+                                    </strong>
+                                </td>
+
+                                <!-- Progression -->
+                                <td class="text-right">
+                                    <strong>
+                                        <span t-esc="grand_total_p2_qty - grand_total_p1_qty"/>
+                                    </strong>
+                                </td>
+                                <td class="text-right">
+                                    <strong>
+                                        <span t-esc="'{:,.2f}'.format(grand_total_p2_ca - grand_total_p1_ca).replace(',', ' ')"/>
+                                    </strong>
+                                </td>
+                                <td class="text-right">
+                                    <strong>
+                                        <span t-esc="'{:,.2f}'.format(grand_total_p2_margin - grand_total_p1_margin).replace(',', ' ')"/>
+                                    </strong>
+                                </td>
+                                <td class="text-right">
+                                    <strong>0.00</strong>
+                                </td>
+
+                                <!-- % Progression -->
+                                <td class="text-right">
+                                    <strong>
+                                        <span t-esc="'%.2f' % (((grand_total_p2_qty - grand_total_p1_qty) / grand_total_p1_qty * 100) if grand_total_p1_qty else 0)"/>
+                                    </strong>
+                                </td>
+                                <td class="text-right">
+                                    <strong>
+                                        <span t-esc="'%.2f' % (((grand_total_p2_ca - grand_total_p1_ca) / grand_total_p1_ca * 100) if grand_total_p1_ca else 0)"/>
+                                    </strong>
+                                </td>
+                                <td class="text-right">
+                                    <strong>
+                                        <span t-esc="'%.2f' % (((grand_total_p2_margin - grand_total_p1_margin) / grand_total_p1_margin * 100) if grand_total_p1_margin else 0)"/>
+                                    </strong>
+                                </td>
+                            </tr>
+                        </table>
+                    </main>
+
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <!-- Action du rapport PDF -->
+    <record id="action_report_sale_statistics" model="ir.actions.report">
+        <field name="name">Statistiques de Ventes</field>
+        <field name="model">sale.stat.report.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">custom_reports.report_sale_statistics_document</field>
+        <field name="report_file">custom_reports.report_sale_statistics_document</field>
+        <field name="binding_model_id" ref="model_sale_stat_report_wizard"/>
+        <field name="binding_type">report</field>
+        <field name="print_report_name">'Stats_Ventes_%s_%s' % (object.date_start_period1.strftime('%Y%m%d'),
+            object.date_end_period2.strftime('%d%m%Y'))
+        </field>
+        <field name="paperformat_id" ref="base.paperformat_euro"/>
+    </record>
+
+</odoo>

@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Template de rapport imprimable -->
+    <template id="report_reliquat_document">
+        <t t-call="web.basic_layout">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="doc">
+                    <div class="page">
+                        <!-- En-tête : Société à gauche / Date à droite -->
+                        <div class="row" style="margin-bottom: 20px;">
+                            <!-- Infos société -->
+                            <div class="col-8">
+                                <div style="display: flex; align-items: center;">
+                                    <div style="margin-right: 15px;">
+                                        <img t-if="doc.company_id.logo"
+                                             t-att-src="'data:image/png;base64,%s' % doc.company_id.logo.decode()"
+                                             style="max-height:70px;"/>
+                                    </div>
+                                    <div>
+                                        <h3 style="margin: 0; font-weight: bold;color: #5578ab;">
+                                            <span t-field="doc.company_id.name" />
+                                        </h3>
+                                        <div>
+                                            <span t-field="doc.company_id.street"/>
+                                        </div>
+                                        <div>
+                                            <span t-field="doc.company_id.zip"/>
+                                            <span t-field="doc.company_id.city"/>
+                                        </div>
+                                        <div>
+                                            <span t-field="doc.company_id.country_id.name"/>
+                                        </div>
+                                        <div>Email :
+                                            <span t-field="doc.company_id.email"/>
+                                        </div>
+                                        <div>Tél :
+                                            <span t-field="doc.company_id.phone"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Date d'impression -->
+                            <div class="col-4 text-right" style="font-size: 12px;">
+                                <strong>Date d'impression :
+                                    <t t-esc="datetime.datetime.now().strftime('%d/%m/%Y  %H:%M:%S')"/>
+                                </strong>
+                                <br/>
+                            </div>
+                        </div>
+
+                        <!-- Titre du rapport -->
+                        <h2 class="text-center"
+                            style="border-bottom: 2px solid #000; padding-bottom: 5px; margin-top: 10px;">
+                            <span t-field="doc.name" class="text-center"/>
+                        </h2>
+
+                        <!-- Infos période -->
+                        <div class="row mt16 mb32">
+                            <div class="col-6 text-left">
+                                <strong>Période :</strong>
+                                <span t-field="doc.period_type"/>
+                            </div>
+
+                            <div class="col-6 text-right" style="margin-left: 10px;">
+                                <strong>Créé par :</strong>
+                                <span t-field="doc.created_by.name"/>
+                            </div>
+                        </div>
+
+                        <!-- Statistiques globales -->
+                        <h3>Résumé</h3>
+                        <table class="table table-sm table-bordered">
+                            <tr>
+                                <td>
+                                    <strong>Total des commandes :</strong>
+                                </td>
+                                <td class="text-center">
+                                    <span t-field="doc.total_orders"/>
+                                </td>
+                                <td>
+                                    <strong>Quantité commandée :</strong>
+                                </td>
+                                <td class="text-center">
+                                    <span t-field="doc.total_qty_ordered"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <strong>Quantité reçue :</strong>
+                                </td>
+                                <td class="text-center">
+                                    <span t-field="doc.total_qty_received"/>
+                                </td>
+                                <td>
+                                    <strong>Quantité en attente :</strong>
+                                </td>
+                                <td class="text-center">
+                                    <span t-field="doc.total_qty_pending"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <strong>Taux de satisfaction :</strong>
+                                </td>
+                                <td colspan="3" class="text-center">
+                                    <span t-esc="doc.satisfaction_rate * 100"
+                                          t-options='{"widget": "float", "precision": 2}'/>
+                                    %
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- Détails des reliquats -->
+                        <h3>Détail des Reliquats</h3>
+                        <table class="table table-sm table-bordered o_main_table"
+                               style="border: 1px solid black; border-collapse: collapse; width: 100%; margin-bottom: 15px; margin-top: 12px;">
+                            <thead style="background-color: lightgray;">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Commande</th>
+                                    <th>Fournisseur</th>
+                                    <th style="width: auto">Produit </th>
+                                    <th class="text-right">Qté Cdé.</th>
+                                    <th class="text-right">Qté Reçue</th>
+                                    <th class="text-right">Reliquat</th>
+                                    <th class="text-right">Taux Sat.</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="doc.line_ids" t-as="line">
+                                    <td style="font-size: 12px;">
+                                        <span t-field="line.order_date"/>
+                                    </td>
+                                    <td style="font-size: 12px;">
+                                        <span t-field="line.purchase_order_id.name"/>
+                                    </td>
+                                    <td style="font-size: 12px;">
+                                        <span t-field="line.partner_name"/>
+                                    </td>
+                                    <td style="font-size: 12px;">
+                                        <span t-field="line.product_name"/>
+                                    </td>
+                                    <td style="font-size: 12px;" class="text-right">
+                                        <span t-field="line.qty_ordered"/>
+                                    </td>
+                                    <td class="text-right" style="font-size: 12px;">
+                                        <span t-field="line.qty_received"/>
+                                    </td>
+                                    <td class="text-right" style="font-size: 12px;">
+                                        <span t-field="line.qty_pending"/>
+                                    </td>
+                                    <td class="text-right" style="font-size: 12px;">
+                                        <span t-esc="line.satisfaction_rate * 100"
+                                              t-options='{"widget": "float", "precision": 2}'/>
+                                        %
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+
+    <!--    <record id="paperformat_reliquat_report" model="report.paperformat">-->
+    <!--            <field name="name">Raport de Reliquats</field>-->
+    <!--            <field name="default" eval="True"/>-->
+    <!--            <field name="format">A4</field>-->
+    <!--            <field name="orientation">Landscape</field>-->
+    <!--            <field name="margin_top">0</field>-->
+    <!--            <field name="margin_bottom">0</field>-->
+    <!--            <field name="margin_left">0</field>-->
+    <!--            <field name="margin_right">0</field>-->
+    <!--            <field name="header_line" eval="False"/>-->
+    <!--            <field name="header_spacing">0</field>-->
+    <!--            <field name="disable_shrinking" eval="True"/>-->
+    <!--            <field name="dpi">96</field>-->
+    <!--        </record>-->
+
+    <record id="paperformat_reliquat_report" model="report.paperformat">
+        <field name="name">Reliquat Report A4</field>
+        <field name="default" eval="False"/>
+        <field name="format">A4</field>
+        <field name="page_height">0</field> <!-- 0 = auto selon format -->
+        <field name="page_width">0</field>
+        <field name="orientation">Portrait</field> <!-- ou Landscape -->
+        <field name="margin_top">7</field>
+        <field name="margin_bottom">7</field>
+        <field name="margin_left">0</field>
+        <field name="margin_right">0</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">2</field>
+        <field name="dpi">100</field>
+    </record>
+
+    <!-- Lier le format papier à ton rapport -->
+    <record id="action_report_reliquat" model="ir.actions.report">
+        <field name="name">Rapport Reliquats</field>
+        <field name="model">reliquat.report</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">custom_reliquat_report.report_reliquat_document</field>
+        <field name="paperformat_id" ref="paperformat_reliquat_report"/>
+    </record>
+
+
+    <record id="paperformat_rdc_a6" model="report.paperformat">
+        <field name="name">A4 RDC</field>
+        <field name="default" eval="True"/>
+        <field name="format">A4</field>
+        <field name="orientation">Landscape</field>
+        <field name="margin_top">5</field>
+        <field name="margin_bottom">5</field>
+        <field name="margin_left">5</field>
+        <field name="margin_right">5</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">3</field>
+        <field name="dpi">100</field>
+    </record>
+
+
+    <!-- Action de rapport -->
+    <record id="action_report_reliquat" model="ir.actions.report">
+        <field name="name">Rapport de Reliquats</field>
+        <field name="model">reliquat.report</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">custom_reliquat_report.report_reliquat_document</field>
+        <field name="report_file">custom_reliquat_report.report_reliquat_document</field>
+        <field name="print_report_name">'Reliquats - %s' % (object.name)</field>
+        <field name="paperformat_id" ref="custom_reliquat_report.paperformat_reliquat_report"/>
+        <!--        <field name="binding_model_id" ref="model_reliquat_report"/>-->
+        <field name="binding_model_id" eval="False"/>
+        <field name="binding_type">report</field>
+    </record>
+</odoo>

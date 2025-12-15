@@ -1,0 +1,12 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_stock_valorise_report_user,stock.valorise.report.user,model_stock_valorise_report,stock.group_stock_user,1,1,1,1
+access_sale_stat_report_wizard_user,sale.stat.report.wizard.user,model_sale_stat_report_wizard,,1,1,1,1
+
+access_reception_fournisseur_wizard_user,sale.reception.fournisseur.wizard.user,model_reception_fournisseur_wizard,,1,1,1,1
+
+access_supplier_return_report_wizard_user,supplier.return.report.wizard.user,model_supplier_return_report_wizard,,1,1,1,1
+access_cumul_inventary_report_wizard_user,cumul.inventary.report.wizard.user,model_cumul_inventary_report_wizard,,1,1,1,1
+
+access_stock_adjustment_report_wizard_user,stock.adjustment.report.wizard.user,model_stock_adjustment_report_wizard,,1,1,1,1
+
+access_report_daily_sales_wizard_user,report.daily.sales.wizard.user,model_report_daily_sales_wizard,,1,1,1,1

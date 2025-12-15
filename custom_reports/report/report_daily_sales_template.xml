@@ -1,0 +1,114 @@
+<odoo>
+    <template id="report_daily_sales">
+        <t t-call="web.html_container">
+            <t t-call="web.external_layout">
+                <t t-foreach="docs" t-as="o">
+                    <div class="page">
+                        <style>
+                            .sales-report { font-family: Arial, sans-serif; font-size: 9pt; }
+                            .sales-report table { width: 100%; border-collapse: collapse; }
+                            .sales-report th, .sales-report td {
+                                border: 1px solid #000;
+                                padding: 4px;
+                                font-size: 8pt;
+                            }
+                            .sales-report th {
+                                background-color: #f2f2f2;
+                                text-align: center;
+                                font-weight: bold;
+                            }
+                            .sales-report .title { text-align: center; font-weight: bold; margin-bottom: 8px; }
+                            .sales-report .header-info { margin-bottom: 10px; }
+                            .sales-report .totaux td { font-weight: bold; background-color: #ddd; }
+                            .sales-report .text-right { text-align: right; }
+                        </style>
+
+                        <div class="sales-report">
+                            <div class="header-info">
+                                <div class="title" style="text-align: center; font-weight: bold; margin-bottom: 8px; font-size: 14pt;">
+                                    Résumé du
+                                    <span t-esc="o.date_from.strftime('%d/%m/%Y')"/>
+                                    au
+                                    <span t-esc="o.date_to.strftime('%d/%m/%Y')"/>
+                                </div>
+                                <div><strong>Posté(s):</strong> Tous les postes</div>
+                                <div style="display:flex;justify-content:space-between;">
+                                    <div><strong>Dépôt :</strong> <span t-esc="o.company_id.name"/></div>
+                                    <div><strong>Utilisateur(s):</strong> Tous les utilisateurs</div>
+                                </div>
+                                <div><strong>Édition faite le :</strong>
+                                    <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y à %H:%M')"/>
+                                </div>
+                            </div>
+
+                            <t t-set="lignes" t-value="o.get_daily_sales()"/>
+                            <t t-set="totaux" t-value="o.get_totaux(lignes)"/>
+
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Jour</th>
+                                        <th>Date</th>
+                                        <th>CA HT</th>
+                                        <th>CA TTC</th>
+                                        <th>Marge</th>
+                                        <th>% marge</th>
+                                        <th>Nb clients</th>
+                                        <th>Panier Valeur</th>
+                                        <th>Panier Qté</th>
+                                        <th>Valeur remises</th>
+                                        <th>Météo</th>
+                                        <th>Observations</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="lignes" t-as="l">
+                                        <tr>
+                                            <td><span t-esc="l['jour'].capitalize()"/></td>
+                                            <td><span t-esc="l['date'].strftime('%d/%m/%Y')"/></td>
+                                            <td class="text-right"><span t-esc="'%.0f' % l['ca_ht']"/></td>
+                                            <td class="text-right"><span t-esc="'%.0f' % l['ca_ttc']"/></td>
+                                            <td class="text-right"><span t-esc="'%.0f' % l['marge']"/></td>
+                                            <td class="text-right"><span t-esc="'%.2f' % l['pct_marge']"/>%</td>
+                                            <td class="text-right"><span t-esc="l['nb_clients']"/></td>
+                                            <td class="text-right"><span t-esc="'%.0f' % l['panier_valeur']"/></td>
+                                            <td class="text-right"><span t-esc="'%.2f' % l['panier_qte']"/></td>
+                                            <td class="text-right"><span t-esc="'%.0f' % l['remises']"/></td>
+                                            <td></td>
+                                            <td></td>
+                                        </tr>
+                                    </t>
+
+                                    <tr class="totaux">
+                                        <td colspan="2">Totaux / Moyennes</td>
+                                        <td class="text-right"><span t-esc="'%.0f' % totaux['ca_ht']"/></td>
+                                        <td class="text-right"><span t-esc="'%.0f' % totaux['ca_ttc']"/></td>
+                                        <td class="text-right"><span t-esc="'%.0f' % totaux['marge']"/></td>
+                                        <td class="text-right">
+                                            <span t-esc="'%.2f' % totaux.get('pct_marge', 0)"/>%
+                                        </td>
+                                        <td class="text-right"><span t-esc="totaux['nb_clients']"/></td>
+                                        <td class="text-right"><span t-esc="'%.0f' % totaux['panier_valeur']"/></td>
+                                        <td class="text-right"><span t-esc="'%.2f' % totaux['panier_qte']"/></td>
+                                        <td class="text-right"><span t-esc="'%.0f' % totaux['remises']"/></td>
+                                        <td colspan="2"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+    <record id="action_report_daily_sales" model="ir.actions.report">
+        <field name="name">Chiffre d'affaire</field>
+        <field name="model">report.daily.sales.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">custom_reports.report_daily_sales</field>
+        <field name="report_file">custom_reports.report_daily_sales</field>
+        <field name="binding_model_id" ref="model_report_daily_sales_wizard"/>
+        <field name="binding_type">report</field>
+    </record>
+</odoo>

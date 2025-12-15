@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vue Liste -->
+    <record id="view_product_price_history_tree" model="ir.ui.view">
+        <field name="name">product.price.history.tree</field>
+        <field name="model">product.price.history</field>
+        <field name="arch" type="xml">
+            <list string="Historique des prix" decoration-success="price_difference &gt; 0"
+                  decoration-danger="price_difference &lt; 0" create="0">
+                <field name="date_changed"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="product_id"/>
+                <field name="old_price" widget="monetary"/>
+                <field name="new_price" widget="monetary"/>
+                <field name="price_difference" widget="monetary"/>
+                <field name="price_change_percent" string="% Change"/>
+                <field name="user_id"/>
+                <field name="notified" widget="boolean_toggle" column_invisible="1"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'notified'"
+                       decoration-primary="state == 'draft'"
+                />
+                <field name="print_state" widget="badge"
+                       decoration-success="print_state == 'printed'"
+                       decoration-primary="print_state == 'printed'"
+                />
+            </list>
+        </field>
+    </record>
+
+    <!-- Vue Formulaire -->
+    <record id="view_product_price_history_form" model="ir.ui.view">
+        <field name="name">product.price.history.form</field>
+        <field name="model">product.price.history</field>
+        <field name="arch" type="xml">
+            <form string="Historique des prix">
+                <header>
+                    <button name="send_daily_price_notifications" string="Notifier" type="object" class="oe_highlight"
+                            invisible="1"/>
+                    <button name="action_print_product_label" string="Imprimer étiquette" type="object"
+                            class="oe_highlight" invisible="not notified"/>
+                    <button name="action_mark_as_notified" string="Marquer comme notifié" type="object"
+                            class="btn-success" invisible="notified"/>
+                    <button name="action_mark_as_not_notified" string="Mettre en attente" type="object"
+                            class="btn-secondary" invisible=" not notified"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,notified"/>
+                </header>
+
+                <sheet>
+                    <group>
+                        <group readonly="1">
+                            <field name="product_id" readonly="1"/>
+                            <field name="date_changed" readonly="1"/>
+                            <field name="user_id" readonly="1"/>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="notified" readonly="1"/>
+                        </group>
+
+                        <group>
+                            <field name="old_price" widget="monetary" readonly="1"/>
+                            <field name="new_price" widget="monetary" readonly="1"/>
+                            <field name="price_difference" widget="monetary" readonly="1"/>
+                            <field name="price_change_percent" readonly="1"/>
+                        </group>
+                    </group>
+                </sheet>
+                <chatter reload_on_follower="True"/>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vue recherche avec filtres avancés -->
+    <record id="view_product_price_tracker_search" model="ir.ui.view">
+        <field name="name">product.price.history.search</field>
+        <field name="model">product.price.history</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="product_id"/>
+                <field name="user_id"/>
+                <field name="user_id"/>
+
+                <separator/>
+
+                <!-- Filtres de notification -->
+                <filter string="Non notifiés" name="not_notified" domain="[('notified', '=', False)]"/>
+                <filter string="Notifiés" name="notified" domain="[('notified', '=', True)]"/>
+
+                <separator/>
+
+                <!-- Filtres de variation -->
+                <filter string="Hausses de prix" name="price_increase" domain="[('price_change_percent', '&gt;', 0)]"/>
+                <filter string="Baisses de prix" name="price_decrease" domain="[('price_change_percent', '&lt;', 0)]"/>
+                <filter string="Variations importantes (&gt;10%)" name="big_changes"
+                        domain="['|', ('price_change_percent', '&gt;', 10), ('price_change_percent', '&lt;', -10)]"/>
+
+                <separator/>
+
+                <!-- Filtres de date personnalisés -->
+                <filter string="Aujourd'hui" name="today"
+                        domain="[('date_changed', '&gt;=', datetime.datetime.now().strftime('%Y-%m-%d 00:00:00')),
+                                ('date_changed', '&lt;', (datetime.datetime.now() + datetime.timedelta(days=1)).strftime('%Y-%m-%d 00:00:00'))]"/>
+
+                <filter string="Hier" name="yesterday"
+                        domain="[('date_changed', '&gt;=', (datetime.datetime.now() - datetime.timedelta(days=1)).strftime('%Y-%m-%d 00:00:00')),
+                                ('date_changed', '&lt;', datetime.datetime.now().strftime('%Y-%m-%d 00:00:00'))]"/>
+
+                <filter string="Semaine passée" name="last_week"
+                        domain="[('date_changed', '&gt;=', (datetime.datetime.now() - datetime.timedelta(days=7)).strftime('%Y-%m-%d 00:00:00')),
+                                ('date_changed', '&lt;', datetime.datetime.now().strftime('%Y-%m-%d 00:00:00'))]"/>
+
+                <filter string="Mois passé" name="last_month"
+                        domain="[('date_changed', '&gt;=', (datetime.datetime.now() - datetime.timedelta(days=30)).strftime('%Y-%m-%d 00:00:00')),
+                                ('date_changed', '&lt;', datetime.datetime.now().strftime('%Y-%m-%d 00:00:00'))]"/>
+
+                <!-- <separator/>
+
+
+                <group name="group_by" expand="0" string="Grouper par">
+                    <filter string="Produit" name="group_product" context="{'group_by': 'product_id'}"/>
+                    <filter string="Dernier modificateur" name="group_last_user" context="{'group_by': 'user_id'}"/>
+                    <filter string="Créateur" name="group_creator" context="{'group_by': 'user_id'}"/>
+                    <filter string="Date (jour)" name="group_date_day" context="{'group_by': 'date_changed:day'}"/>
+                    <filter string="Date (semaine)" name="group_date_week" context="{'group_by': 'date_changed:week'}"/>
+                    <filter string="Date (mois)" name="group_date_month" context="{'group_by': 'date_changed:month'}"/>
+                </group> -->
+            </search>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_products_price_history" model="ir.actions.act_window">
+        <field name="name">Historique des prix</field>
+        <field name="res_model">product.price.history</field>
+        <field name="view_mode">list,form,search</field>
+        <!--        <field name="context">{'search_default_today': 1}</field>-->
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Aucun changement de prix enregistré
+            </p>
+            <p>
+                Les modifications de prix des produits seront automatiquement enregistrées ici.
+            </p>
+        </field>
+    </record>
+
+
+</odoo>

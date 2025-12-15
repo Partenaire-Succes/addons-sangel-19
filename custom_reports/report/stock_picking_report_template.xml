@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- TEMPLATE DU RAPPORT -->
+    <template id="report_stock_valorise_document">
+        <t t-call="web.external_layout">
+            <t t-foreach="docs" t-as="o">
+                <div class="page">
+                    <main>
+                        <div class="text-center">
+                            <h2>
+                                <strong>Stock valorisé au
+                                    <span t-esc="o.date_report.strftime('%d/%m/%Y')"/>
+                                </strong>
+                            </h2>
+                            <h4>Tous les articles</h4>
+                            <h5>Dépôt :
+                                <span t-field="o.location_id.complete_name"/>
+                            </h5>
+                            <p>
+                                <strong>Édition faite le
+                                    <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y à %H:%M')"/>
+                                    - Dép
+                                    <span t-esc="o.location_id.name[:2].upper()"/>
+                                </strong>
+                            </p>
+                        </div>
+
+                        <br/>
+
+                        <t t-set="grand_total_valorisation" t-value="0"/>
+                        <t t-set="data" t-value="o._get_stock_by_category()"/>
+                        <t t-set="categories" t-value="data['categories']"/>
+
+
+                        <t t-foreach="categories" t-as="category">
+                            <t t-set="products" t-value="category['products']"/>
+
+                            <table class="table table-sm table-bordered">
+                                <thead style="background-color: #f0f0f0;">
+                                    <tr>
+                                        <th>CODE ARTICLE</th>
+                                        <th>ARTICLE</th>
+                                        <th>CATÉGORIE</th>
+                                        <th class="text-end">STOCK</th>
+                                        <th class="text-end">PAMP</th>
+                                        <th class="text-end">VALORISATION</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="products" t-as="product">
+                                        <tr>
+                                            <td>
+                                                <t t-esc="product['code_article'] or ''"/>
+                                            </td>
+                                            <td>
+                                                <t t-esc="product['name'] or ''"/>
+                                            </td>
+                                            <td>
+                                                <t t-esc="product['category_code'] or ''"/>
+                                            </td>
+                                            <td class="text-end">
+                                                <t t-esc="'%.2f' % product['qty']"/>
+                                            </td>
+                                            <td class="text-end">
+                                                <t t-esc="'%.2f' % product['pamp']"/>
+                                            </td>
+                                            <td class="text-end">
+                                                <t t-esc="'{:,.2f}'.format(product['valorisation']).replace(',', ' ')"/>
+                                            </td>
+                                        </tr>
+                                    </t>
+
+                                    <!-- Ligne de sous-total -->
+                                    <tr style="background-color: #d0d0d0;">
+                                        <td class="text-center" colspan="5"><t t-esc="product['category_code'] or ''"/></td>
+                                        <td class="text-end fw-bold">
+                                            <t t-esc="'{:,.2f}'.format(category['total']).replace(',', ' ')"/>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <t t-set="grand_total_valorisation" t-value="grand_total_valorisation + category['total']"/>
+                        </t>
+
+                        <!-- Total général -->
+                        <div class="row" style="margin-top: 20px;">
+                            <div class="col-12">
+                                <table class="table table-sm table-bordered" style="font-weight:bold;">
+                                    <tr style="background-color:#d0d0d0;">
+                                        <td style="width:30%;">
+                                            <strong>Total général</strong>
+                                        </td>
+                                        <td class="text-center" style="width:10%;">
+                                            <t t-esc="data['total_articles']"/>
+                                            articles
+                                        </td>
+                                        <td class="text-end" style="width:15%;">
+                                            <t t-esc="'{:,.0f}'.format(data['total_qty']).replace(',', ' ')"/>
+                                        </td>
+                                        <td class="text-end" style="width:15%;">
+                                            <t t-esc="'{:,.2f}'.format(data['pamp_moyen']).replace(',', ' ')"/>
+                                        </td>
+                                        <td class="text-end" style="width:20%;">
+                                            <t t-esc="'{:,.2f}'.format(data['total_valorisation']).replace(',', ' ')"/>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+
+                    </main>
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <!-- ACTION REPORT -->
+    <record id="action_report_stock_valorise" model="ir.actions.report">
+        <field name="name">Inventaire Valorisé</field>
+        <field name="model">stock.valorise.report</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">custom_reports.report_stock_valorise_document</field>
+        <field name="report_file">custom_reports.report_stock_valorise_document</field>
+        <field name="binding_model_id" eval="False"/>
+        <field name="binding_type">report</field>
+    </record>
+</odoo>

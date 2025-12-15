@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Héritage du template POS pour masquer le title -->
+        <template id="custom_pos_index" name="POS Index Custom" inherit_id="point_of_sale.index">
+            <!-- Remplacer la balise title par un titre invisible -->
+            <xpath expr="//title" position="replace">
+                <title>&#8203;</title>
+            </xpath>
+        </template>
+    </data>
+</odoo>

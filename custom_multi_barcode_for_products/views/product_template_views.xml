@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <!-- Searching the product with multi-barcodes -->
+    <record id="product_template_search_view" model="ir.ui.view">
+        <field name="name">
+            product.template.view.search.inherit.multi.barcode.for.products
+        </field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_search_view"/>
+        <field name="arch" type="xml">
+            <field name="name" position="replace">
+                <field name="name" string="Product"
+                       filter_domain="['|', '|', '|','|', ('code_article', 'ilike', self),('default_code', 'ilike', self), ('product_variant_ids.default_code', 'ilike', self),('name', 'ilike', self), ('template_multi_barcode_ids', 'ilike', self)]"/>
+            </field>
+            <field name="name" position="after">
+                <field name="template_multi_barcode_ids" string="Multi Barcodes"/>
+                <field name="code_article" string="Code Article"/>
+            </field>
+        </field>
+    </record>
+    <!--    Adding the field product_multi_barcode in product template-->
+    <record id="product_template_only_form_view" model="ir.ui.view">
+        <field name="name">
+            product.template.view.form.multi.barcode.for.products
+        </field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_only_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='general_information']//field[@name='barcode']" position="attributes">
+                <attribute name="readonly">1</attribute>
+            </xpath>
+            <xpath expr="//page[@name='general_information']//field[@name='default_code']" position="attributes">
+                <attribute name="string">Code article</attribute>
+                <attribute name="required">1</attribute>
+            </xpath>
+            <xpath expr="//page[@name='general_information']" position="after">
+                <page string="Code-barres"
+                      invisible="product_variant_count > 1">
+                    <field name="template_multi_barcode_ids">
+                        <list editable="bottom">
+                            <field name="product_multi_barcode"/>
+                            <field name="is_active_barcode" widget="boolean_toggle"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Template principal du document -->
+    <template id="report_reception_fournisseur_document">
+        <t t-call="web.external_layout">
+            <t t-set="o" t-value="doc"/>
+            <div class="page">
+                <style>
+                    .page {
+                        font-family: Arial, sans-serif;
+                        font-size: 10pt;
+                    }
+                    .header-section {
+                        margin-bottom: 20px;
+                        border-bottom: 2px solid #000;
+                        padding-bottom: 10px;
+                    }
+                    .company-name {
+                        font-size: 14pt;
+                        font-weight: bold;
+                        text-transform: uppercase;
+                    }
+                    .report-title {
+                        text-align: center;
+                        font-size: 12pt;
+                        font-weight: bold;
+                        margin: 20px 0;
+                        border: 2px solid #000;
+                        padding: 8px;
+                        background-color: #f5f5f5;
+                    }
+                    .date-range {
+                        text-align: right;
+                        font-weight: bold;
+                        margin-bottom: 10px;
+                    }
+                    .table-receptions {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-bottom: 15px;
+                        font-size: 9pt;
+                    }
+                    .table-receptions th {
+                        background-color: #e0e0e0;
+                        border: 1px solid #000;
+                        padding: 5px;
+                        font-weight: bold;
+                        text-align: left;
+                    }
+                    .table-receptions td {
+                        border: 1px solid #000;
+                        padding: 4px 5px;
+                    }
+                    .subtotal-row {
+                        background-color: #f0f0f0;
+                        font-weight: bold;
+                    }
+                    .total-row {
+                        background-color: #d0d0d0;
+                        font-weight: bold;
+                        font-size: 11pt;
+                    }
+                    .text-right {
+                        text-align: right;
+                    }
+                    .text-center {
+                        text-align: center;
+
+                    }
+                    .fournisseur-name {
+                        font-weight: bold;
+                        color: #000;
+                    }
+                </style>
+
+                <!-- En-tête du rapport -->
+                <div class="header-section">
+                    <div class="row">
+                        <div class="col-8">
+                            <div class="company-name">
+                                <span t-field="o.company_id.name"/>
+                            </div>
+                            <div t-if="o.company_id.street">
+                                <span t-field="o.company_id.street"/>
+                            </div>
+                            <div t-if="o.company_id.city">
+                                <span t-field="o.company_id.city"/>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="date-range">
+                                Du <span t-esc="o.date_debut.strftime('%d/%m/%Y')"/>
+                                Au <span t-esc="o.date_fin.strftime('%d/%m/%Y')"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Titre du rapport -->
+                <div class="report-title">
+                    Récapitulatif Réceptions Fournisseurs
+                </div>
+
+                <!-- Récupération des données -->
+                <t t-set="fournisseurs_data" t-value="o._get_pickings_data()"/>
+                <t t-set="grand_total" t-value="0"/>
+
+                <!-- Boucle sur chaque fournisseur -->
+                <t t-foreach="fournisseurs_data" t-as="fournisseur_data">
+                    <t t-set="grand_total" t-value="grand_total + fournisseur_data['total']"/>
+
+                    <table class="table-receptions">
+                        <thead>
+                            <tr>
+                                <th style="width: 8%;">Type Mvt</th>
+                                <th style="width: 12%;">Date</th>
+                                <th style="width: 15%;">N° Rec.</th>
+                                <th style="width: 25%;">Fournisseur</th>
+                                <th style="width: 20%;">N° Fact / BL</th>
+                                <th style="width: 20%;" class="text-right">Montant Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Lignes de réceptions pour ce fournisseur -->
+                            <t t-foreach="fournisseur_data['receptions']" t-as="reception">
+                                <tr>
+                                    <td class="text-center">
+                                        <span t-esc="reception['type']"/>
+                                    </td>
+                                    <td class="text-center">
+                                        <span t-esc="reception['date'].strftime('%d-%m-%Y')"/>
+                                    </td>
+                                    <td>
+                                        <span t-esc="reception['numero']"/>
+                                    </td>
+                                    <td>
+                                        <span class="fournisseur-name" t-esc="fournisseur_data['partner'].name"/>
+                                    </td>
+                                    <td>
+                                        <span t-esc="reception['ref']"/>
+                                    </td>
+                                    <td class="text-right">
+                                        <span t-esc="'{:,.0f}'.format(reception['total']).replace(',', ' ')"/>
+                                    </td>
+                                </tr>
+                            </t>
+
+                            <!-- Ligne de sous-total par fournisseur -->
+                            <tr class="subtotal-row">
+                                <td class="text-right" style="font-size: 13pt;" colspan="5">
+                                    <span t-esc="fournisseur_data['partner'].name"/>
+                                </td>
+                                <td class="text-right" style="font-size: 13pt;">
+                                    <span t-esc="'{:,.0f}'.format(fournisseur_data['total']).replace(',', ' ')"/>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </t>
+
+                <!-- Total général (si plusieurs fournisseurs) -->
+                <t t-if="len(fournisseurs_data) > 1">
+                    <table class="table-receptions" style="margin-top: 20px; width: 50%; margin-left: 50%;">
+                        <tr class="total-row">
+                            <td style="width: 60%; border: 2px solid #000; font-size: 15pt;" class="text-center">
+                                TOTAL RECEPTION
+                            </td>
+                            <td style="width: 40%; border: 2px solid #000; font-size: 15pt;" class="text-right">
+                                <span t-esc="'{:,.0f}'.format(grand_total).replace(',', ' ')"/>
+                            </td>
+                        </tr>
+                    </table>
+                </t>
+
+                <!-- Pied de page avec informations complémentaires -->
+                <div style="margin-top: 30px; font-size: 8pt;">
+                    <div class="row">
+                        <div class="col-6">
+                            <strong>Nombre de fournisseurs:</strong>
+                            <span t-esc="len(fournisseurs_data)"/>
+                        </div>
+                        <div class="col-6 text-right">
+                            <strong>Date d'impression:</strong>
+                            <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y %H:%M')"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Template conteneur -->
+    <template id="report_reception_fournisseur">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="custom_reports.report_reception_fournisseur_document"/>
+            </t>
+        </t>
+    </template>
+
+    <!-- Déclaration de l'action de rapport -->
+    <record id="action_report_reception_fournisseur" model="ir.actions.report">
+        <field name="name">Rapport Réceptions Fournisseurs</field>
+        <field name="model">reception.fournisseur.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">custom_reports.report_reception_fournisseur</field>
+        <field name="report_file">custom_reports.report_reception_fournisseur</field>
+        <field name="binding_model_id" ref="model_reception_fournisseur_wizard"/>
+        <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="base.paperformat_euro"/>
+        <field name="print_report_name">'Receptions_Fournisseurs_%s_%s' % (object.date_debut.strftime('%d%m%Y'), object.date_fin.strftime('%d%m%Y'))</field>
+    </record>
+</odoo>

@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- ========== VUE FORMULAIRE ========== -->
+        <record id="cumul_inventary_report_form_view" model="ir.ui.view">
+            <field name="name">cumul.inventary.report.wizard.form</field>
+            <field name="model">cumul.inventary.report.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Rapport de Cumul Inventaire">
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="date_from"/>
+                                <field name="date_to"/>
+                            </group>
+                            <group>
+                                <field name="company_id" readonly="1"/>
+                            </group>
+                        </group>
+                        <notebook>
+                            <page string="Aperçu des données" name="preview">
+                                <group>
+                                    <field name="physical_lines_ids" nolabel="1">
+                                        <list string="Cumul Inventaire">
+                                            <field name="code_article" string="Code Article"/>
+                                            <field name="product_tmpl_id" string="Désignation"/>
+                                            <field name="id" string="Inv"/>
+                                            <field name="create_date" string="Date"/>
+                                            <field name="qty_diff" string="Ecart"/>
+                                            <field name="standard_price" string="PAMP"/>
+                                            <field name="valorisation" string="Montant"/>
+                                        </list>
+                                    </field>
+                                </group>
+                            </page>
+                        </notebook>
+                    </sheet>
+                    <footer>
+                        <button string="Imprimer" name="action_print_report" type="object" class="btn-primary"/>
+                        <button string="Annuler" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <!-- ========== ACTION FENÊTRE ========== -->
+        <record id="action_cumul_inventary_report" model="ir.actions.act_window">
+            <field name="name">Rapport de Cumul Inventaire</field>
+            <field name="res_model">cumul.inventary.report.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+            <field name="binding_model_id" ref="stock.model_stock_location"/>
+        </record>
+
+
+        <!-- ========== MENU ========== -->
+        <menuitem id="menu_cumul_inventary_report"
+                  name="Rapport de Cumul Inventaire"
+                  parent="stock.menu_warehouse_report"
+                  action="action_cumul_inventary_report"
+                  sequence="100"/>
+
+
+    </data>
+</odoo>

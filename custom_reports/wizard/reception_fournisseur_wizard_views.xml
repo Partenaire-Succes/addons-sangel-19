@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vue formulaire du wizard -->
+    <record id="view_reception_fournisseur_wizard_form" model="ir.ui.view">
+        <field name="name">reception.fournisseur.wizard.form</field>
+        <field name="model">reception.fournisseur.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Rapport Réceptions Fournisseurs">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="company_id" invisible="1"/>
+                            Rapport des Réceptions par Fournisseur
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Période">
+                            <field name="date_debut" widget="date" required="1"/>
+                            <field name="date_fin" widget="date" required="1"/>
+                        </group>
+                        <group string="Filtres">
+                            <field name="company_id"
+                                   options="{'no_create': True, 'no_open': True}"
+                                   readonly="1"/>
+                            <field name="fournisseur_ids"
+                                   widget="many2many_tags"
+                                   options="{'no_create': True}"
+                                   placeholder="Tous les fournisseurs" invisible="1"/>
+                        </group>
+                    </group>
+<!--                    <notebook>-->
+<!--                        <page string="Aperçu des données" name="preview">-->
+<!--                            <group>-->
+<!--                                <field name="picking_ids" nolabel="1">-->
+<!--                                    <list string="Réceptions Fournisseurs">-->
+<!--                                        <field name="name"/>-->
+<!--                                        <field name="location_id"/>-->
+<!--                                        <field name="location_dest_id"/>-->
+<!--                                        <field name="partner_id" string="Fournisseur"/>-->
+<!--                                        <field name="scheduled_date"/>-->
+<!--                                        <field name="origin"/>-->
+<!--                                    </list>-->
+<!--                                </field>-->
+<!--                            </group>-->
+<!--                        </page>-->
+<!--                    </notebook>-->
+                </sheet>
+                <footer>
+                    <button name="action_print_report"
+                            string="Imprimer PDF"
+                            type="object"
+                            class="btn-primary"
+                            icon="fa-print"/>
+                    <button string="Annuler"
+                            class="btn-secondary"
+                            special="cancel"
+                            icon="fa-times"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action pour ouvrir le wizard -->
+    <record id="action_reception_fournisseur_wizard" model="ir.actions.act_window">
+        <field name="name">Rapport Réceptions Fournisseurs</field>
+        <field name="res_model">reception.fournisseur.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="view_id" ref="view_reception_fournisseur_wizard_form"/>
+    </record>
+
+    <!-- Menu dans Rapports -->
+    <menuitem id="menu_reception_fournisseur_report"
+              name="Rapports Réceptions Fournisseurs"
+              parent="stock.menu_warehouse_report"
+              action="action_reception_fournisseur_wizard"
+              sequence="20"
+              groups="stock.group_stock_user"/>
+</odoo>

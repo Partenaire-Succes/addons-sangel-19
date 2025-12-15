@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+        <!-- Cron Job pour les notifications quotidiennes -->
+        <record id="ir_cron_price_change_notification" model="ir.cron">
+            <field name="name">Notification des changements de prix des produits</field>
+            <field name="model_id" ref="model_product_price_history"/>
+            <field name="state">code</field>
+            <field name="code">model.send_daily_price_notifications()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="nextcall" eval="(DateTime.now() + timedelta(days=1)).replace(hour=8, minute=0, second=0)"/>
+            <field name="active" eval="True"/>
+        </record>
+
+    <!-- Action serveur: Imprimer étiquette (formulaire) -->
+    <record id="action_server_print_label" model="ir.actions.server">
+        <field name="name">Imprimer Étiquette</field>
+        <field name="model_id" ref="model_product_price_history"/>
+        <field name="binding_model_id" ref="model_product_price_history"/>
+        <field name="binding_view_types">form</field>
+        <field name="state">code</field>
+        <field name="code">action = records.action_print_product_label()</field>
+    </record>
+
+    <!-- Action serveur: Imprimer étiquettes multiples (liste) -->
+    <record id="action_server_print_labels_multi" model="ir.actions.server">
+        <field name="name">Imprimer Étiquettes</field>
+        <field name="model_id" ref="model_product_price_history"/>
+        <field name="binding_model_id" ref="model_product_price_history"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">
+    if records:
+            action = records.action_print_product_label()</field>
+    </record>
+
+
+    </data>
+</odoo>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="product_pricelist_item_wizard_form_view" model="ir.ui.view">
+            <field name="name">product.pricelist.item.wizard.form</field>
+            <field name="model">product.pricelist.item.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Sélectionner des Produits">
+                    <group >
+                        <field name="display_applied_on"
+                                string="Appliquer à"
+                                widget="radio"
+                                options="{'horizontal': true}"/>
+                    </group>
+                    <group>
+                        <group>
+                            <field name="products_tmpl_ids" widget="many2many_tags" options="{'no_create': True}" 
+                                string='Produits' invisible="display_applied_on != '1_product'"/>
+
+                            <field name="category_ids" widget="many2many_tags" options="{'no_create': True}" 
+                                string='Categories' invisible="display_applied_on != '2_product_category'"/>
+                                
+                            <field name="price" string="Prix fixe"/>
+                            <field name="pricelist_id" string="Liste de prix"/>
+                        </group>
+                        <group name="pricelist_rule_limits">
+                            <field name="min_quantity" string="Quantité Min"/>
+                            <field name="date_start"
+                                string="Période de validité"
+                                widget="daterange"
+                                options="{'end_date_field': 'date_end'}"/>
+                            <field name="date_end" invisible="1"/>
+                        </group>
+                    </group>
+                    <footer>
+                        <button name="action_add_products" string="Ajouter Produits" type="object" class="btn-primary"/>
+                        <button string="Annuler" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </form>
+            </field> 
+        </record>
+
+        <record id="action_product_pricelist_item_wizard" model="ir.actions.act_window">
+            <field name="name">Sélectionner Produits</field>
+            <field name="res_model">product.pricelist.item.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+        </record>
+    </data>
+</odoo>

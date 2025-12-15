@@ -1,0 +1,144 @@
+<odoo>
+    <data>
+        <!-- Template du rapport PDF -->
+        <template id="report_cumul_inventaire_document">
+            <t t-call="web.external_layout">
+                <t t-foreach="docs" t-as="doc">
+                    <t t-set="doc" t-value="doc.with_context(lang=doc.company_id.partner_id.lang)"/>
+                    <div class="page">
+                        <main>
+                        <div class="row">
+                            <div class="col-8">
+                                <h2>Cumul d'inventaire</h2>
+                            </div>
+                            <div class="col-4 text-end">
+                                <p>
+                                    <strong>Date:</strong>
+                                    <span t-field="doc.date_to"/>
+                                    <br/>
+                                </p>
+                            </div>
+                        </div>
+
+                        <p>
+                            <em>Cumul du
+                                <span t-field="doc.date_from"/>
+                                au
+                                <span t-field="doc.date_to"/>
+                            </em>
+                        </p>
+
+                        <t t-set="grouped_lines" t-value="doc._get_grouped_lines()"/>
+                        <t t-set="grand_total_ecart" t-value="0"/>
+                        <t t-set="grand_total_montant" t-value="0"/>
+
+                        <t t-foreach="grouped_lines" t-as="article_group">
+                            <t t-set="code_article" t-value="article_group['code_article']"/>
+                            <t t-set="designation" t-value="article_group['designation']"/>
+                            <t t-set="lines" t-value="article_group['lines']"/>
+                            <t t-set="total_ecart" t-value="article_group['total_ecart']"/>
+                            <t t-set="total_montant" t-value="article_group['total_montant']"/>
+
+                            <t t-set="grand_total_ecart" t-value="grand_total_ecart + total_ecart"/>
+                            <t t-set="grand_total_montant" t-value="grand_total_montant + total_montant"/>
+
+                            <table class="table table-sm table-bordered mt-3">
+                                <thead>
+                                    <tr style="background-color: #f0f0f0;">
+                                        <th>Article</th>
+                                        <th>Désignation</th>
+                                        <th class="text-center">Inv.</th>
+                                        <th class="text-center">Date</th>
+                                        <th class="text-end">Ecart</th>
+                                        <th class="text-end">PAMP</th>
+                                        <th class="text-end">Montant</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="lines" t-as="line">
+                                        <tr>
+                                            <td>
+                                                <span t-field="line.code_article"/>
+                                            </td>
+                                            <td>
+                                                <span t-field="line.product_tmpl_id.name"/>
+                                            </td>
+                                            <td class="text-center">
+                                                <span t-field="line.id"/>
+                                            </td>
+                                            <td class="text-center">
+                                                <span t-field="line.create_date" t-options='{"widget": "date"}'/>
+                                            </td>
+                                            <td class="text-end">
+                                                <span t-field="line.qty_diff"
+                                                      t-options='{"widget": "float", "precision": 2}'/>
+                                            </td>
+                                            <td class="text-end">
+                                                <span t-field="line.standard_price"/>
+                                            </td>
+                                            <td class="text-end">
+                                                <span t-field="line.valorisation"/>
+                                            </td>
+                                        </tr>
+                                    </t>
+
+                                    <!-- Ligne de total par article -->
+                                    <tr style="background-color: #e8e8e8; font-weight: bold;">
+                                        <td colspan="2">
+                                            <strong>Total
+                                                <span t-esc="code_article"/>
+                                                /
+                                                <span t-esc="designation"/>
+                                                :
+                                            </strong>
+                                        </td>
+                                        <td colspan="2"></td>
+                                        <td class="text-end">
+                                            <span t-esc="'%.2f' % total_ecart"/>
+                                        </td>
+                                        <td></td>
+                                        <td class="text-end">
+                                            <span t-esc="'%.2f' % total_montant"/>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </t>
+
+                        <!-- Grand Total -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <table class="table table-sm" style="width: auto; float: right;">
+                                    <tr style="background-color: #d0d0d0; font-weight: bold; font-size: 1.1em;">
+                                        <td style="padding: 10px;">
+                                            <strong>TOTAL GÉNÉRAL:</strong>
+                                        </td>
+                                        <td class="text-end" style="padding: 10px; min-width: 150px;">
+                                            <span t-esc="'%.2f' % grand_total_ecart"/>
+                                        </td>
+                                        <td class="text-end" style="padding: 10px; min-width: 150px;">
+                                            <span t-esc="'%.2f' % grand_total_montant"/>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                        </main>
+                    </div>
+                </t>
+            </t>
+        </template>
+
+        <!-- Définition du rapport -->
+        <record id="action_report_cumul_inventaire" model="ir.actions.report">
+            <field name="name">Cumul d'inventaire</field>
+            <field name="model">cumul.inventary.report.wizard</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">custom_reports.report_cumul_inventaire_document</field>
+            <field name="report_file">custom_reports.report_cumul_inventaire_document</field>
+            <field name="binding_model_id" ref="model_cumul_inventary_report_wizard"/>
+            <field name="binding_type">report</field>
+            <field name="print_report_name">'Cumul_Inventaire_%s_%s' % (object.date_from, object.date_to)</field>
+        </record>
+    </data>
+</odoo>
