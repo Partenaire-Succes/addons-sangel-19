@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="res_partner_form_view_api" model="ir.ui.view">
+            <field name="name">res.partner.form.composite</field>
+            <field name="model">res.partner</field>
+            <field name="inherit_id" ref="base.view_partner_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//div[@class='oe_button_box']" position="inside">
+                    <button name="import_contacts"
+                            string="Importer Clients SAGE X3"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-history"/>
+                </xpath>
+
+            </field>
+        </record>
+    </data>
+</odoo>

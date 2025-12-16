@@ -9,9 +9,9 @@
 #############################################################################
 {
     'name': 'Personnalisation du Module Inventaire',
-    'version': '18.0',
+    'version': '1.1.0',
     'category': 'Stock',
-    'summary': """Customisation de Inventaire pour Odoo 18.0""",
+    'summary': """Customisation de Inventaire pour Odoo 19.0""",
     'description': """Adaptation du module Inventaire pour répondre aux besoins 
         spécifiques des utilisateurs d'Odoo 18.0.""",
     'author': 'Adams KONE',

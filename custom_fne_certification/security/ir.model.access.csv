@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_fne_certification_wizard,access_fne_certification_wizard,model_fne_certification_wizard,,1,1,1,1
+access_fne_config_settings,access_fne_config_settings,model_fne_config_settings,,1,1,1,1

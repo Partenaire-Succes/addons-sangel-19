@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Vue formulaire Code Inventaire -->
+        <record id="view_fne_config_settings_form" model="ir.ui.view">
+            <field name="name">fne.config.settings.form</field>
+            <field name="model">fne.config.settings</field>
+            <field name="arch" type="xml">
+                <form string="Configuration connexion FNE" create="1" edit="1" delete="0">
+                    <header>
+                        <button name="test_fne_connection" 
+                                type="object" string="Tester la connexion FNE" icon="fa-lock"
+                                class="btn-success" invisible="state == 'validated'"/>
+                        <field name="state" widget="statusbar" options="{'clickable': '1'}" statusbar_visible="draft,non_validated,validated"/>
+                    </header>
+                    <sheet>
+                        <group>
+                            <group name="fne_activation_group">
+                                <field name="is_fne"/>
+                            </group>
+                        </group> 
+                        <group name="auth_fne_group" invisible="not is_fne" >
+                            <group>
+                                <field name="fne_point_of_sale" required="'is_fne', '=', True"/>
+                                <field name="fne_establishment" required="'is_fne', '=', True"/>
+                            </group>
+                            <group name="condition">
+                                <field name="fne_api_token" required="'is_fne', '=', True"/>
+                                <field name="footer"/>
+                            </group>
+                        </group> 
+                                            
+                    </sheet>
+                    <chatter reload_on_follower="True"/>
+                </form>
+            </field>
+        </record>
+
+        <!-- Vue liste Limite credit -->
+        <record id="view_fne_config_settings_list" model="ir.ui.view">
+            <field name="name">fne.config.settings.list</field>
+            <field name="model">fne.config.settings</field>
+            <field name="arch" type="xml">
+                <list string="Configuration connexion FNE" create="1" edit="1" delete="0">
+                    <field name="is_fne" column_invisible='1'/>
+                    <field name="fne_establishment" />
+                    <field name="fne_point_of_sale" />
+                    <field name="fne_api_token" widget="password"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- Action family name Inventaire -->
+        <record id="action_fne_config_settings" model="ir.actions.act_window">
+            <field name="name">Configuration connexion FNE</field>
+            <field name="res_model">fne.config.settings</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Créer votre connexion FNE
+                </p>
+            </field>
+        </record>
+
+
+        <!-- Menu principal -->
+
+        <menuitem id="menu_fne_config_settings"
+                  name="Configuration FNE"
+                  parent="account.account_invoicing_menu"
+                  action="action_fne_config_settings"
+                  sequence="10"/>
+
+
+    </data>
+
+</odoo>

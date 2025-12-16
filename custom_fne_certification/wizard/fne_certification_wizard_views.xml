@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Vue du wizard -->
+        <record id="view_fne_certification_wizard" model="ir.ui.view">
+            <field name="name">fne.certification.wizard.form</field>
+            <field name="model">fne.certification.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Certification FNE">
+                    <group>
+                        <group>
+                            <field name="partner_id"/>
+                            <field name="move_id"/>
+                            <field name="invoice_type"/>
+                            <field name="fne_config_id"/>
+                            <field name="company_id" invisible="1"/>
+                            
+                        </group>
+                        <group>
+                            <field name="payment_mode"/>
+                            <field name="template_type"/>
+                            <field name="taxe_type"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                    </group>
+                    
+                    <footer>
+                        <button string="Normaliser FNE" type="object" name="action_certify_fne" class="btn-primary"/>
+                        <button string="Annuler" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <!-- Action pour ouvrir le wizard -->
+        <record id="action_fne_certification_wizard" model="ir.actions.act_window">
+            <field name="name">Mise a jours des factures FNE</field>
+            <field name="res_model">fne.certification.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+        </record>
+    </data>
+</odoo>
