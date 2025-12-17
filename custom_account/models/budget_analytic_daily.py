@@ -1,8 +1,9 @@
-from odoo import fields, models, api, _
-from odoo.exceptions import ValidationError
-from datetime import timedelta, datetime, time
-import re
 import logging
+import re
+from datetime import datetime, time, timedelta
+
+from odoo import _, api, fields, models
+from odoo.exceptions import ValidationError
 
 _logger = logging.getLogger(__name__)
 
@@ -120,7 +121,7 @@ class BudgetAnalyticDaily(models.Model):
 
     def action_close(self):
         if self.budget_id:
-                self.budget_id.action_budget_done()
+            self.budget_id.with_context(skip_daily_budget_sync=True).action_budget_done()
         self.write({'state': 'done'})
 
     def action_draft(self):
@@ -281,12 +282,17 @@ class BudgetAnalyticDailyLine(models.Model):
             if not line.account_analytic_id or not line.date_from or not line.date_to:
                 line.actual_amount = 0.0
                 continue
+
+            # account.move.line.date is a Date field; ensure we compare with dates,
+            # not datetimes.
+            date_from = line.date_from.date() if isinstance(line.date_from, datetime) else line.date_from
+            date_to = line.date_to.date() if isinstance(line.date_to, datetime) else line.date_to
             
             move_lines = self.env['account.move.line'].sudo().search([
                 ('distribution_analytic_account_ids', 'in', [line.account_analytic_id.id]),
                 ('parent_state', '=', 'posted'),
-                ('date', '>=', line.date_from),
-                ('date', '<=', line.date_to),
+                ('date', '>=', date_from),
+                ('date', '<=', date_to),
             ])
             
             line.actual_amount = sum(move_lines.mapped('credit'))
