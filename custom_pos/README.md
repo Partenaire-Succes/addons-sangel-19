@@ -67,9 +67,22 @@ Dans la fenêtre d’ouverture :
 
 > Selon votre configuration, un montant initial peut apparaître : si ce montant ne correspond pas à vos procédures, saisissez votre fond réel.
 
----
+### E. Boutons rapides de remise (Preset Remise)
 
-## 3) Paramétrage (Back-office)
+Sur l'écran de paiement, sous le bouton **Client**, des boutons rapides permettent d'appliquer rapidement des remises prédéfinies :
+
+- Boutons affichant des pourcentages (ex: **10%**, **20%**, **45%**)
+- Un clic applique directement le remise au produit sélectionné
+- Évite de devoir taper manuellement la percentage
+- Configurable par la direction (ajouter/retirer des percentages)
+
+✅ Avantage :
+
+- Gain de temps au caisse
+- Remises cohérentes et configurées
+- Facilité d'accès pour les remises fréquentes
+
+---
 
 ### A. Définir le code d’accès “rupture de stock / remises”
 
@@ -90,7 +103,24 @@ Bonnes pratiques :
 
 ---
 
-### B. Droits (qui peut contourner le contrôle)
+### B. Configurer les boutons rapides de remise
+
+1. Aller dans **Point de Vente → Configuration → Points de vente**
+2. Ouvrir la caisse concernée
+3. Rechercher le paramètre **Quick Remise Buttons** (sous "Code d'accès pour rupture de stock")
+4. Modifier les valeurs (ex: `10,20,45` pour avoir des boutons 10%, 20%, 45%)
+5. **Enregistrer**
+
+Bonnes pratiques :
+
+- Utiliser des valeurs entre 0 et 100
+- Séparer par des virgules (ex: `5,10,20,45`)
+- Les doublons sont automatiquement supprimés et triés
+- Laisser vide pour désactiver les boutons rapides
+
+---
+
+### C. Droits (qui peut contourner le contrôle)
 
 Le module ajoute des profils liés au POS (exemples) :
 
@@ -151,7 +181,18 @@ Une remise peut être détectée par :
 
 ---
 
-### Workflow 3 — Erreur “Double remise interdite” (comment corriger)
+### Workflow 2b — Appliquer une remise rapide via boutons prédéfinis
+
+1. Au POS, ajouter un produit à la commande
+2. Sur l'écran de **Paiement**, cliquer sur le bouton de remise désiré (ex: **45%**)
+
+✅ Résultat attendu :
+
+- la remise est appliquée au produit sélectionné (ou le dernier produit ajouté)
+- le total se met à jour automatiquement
+- le produit est marqué comme ayant une remise
+
+---
 
 Symptôme : au moment de **Paiement**, message : **❌ Double remise interdite**.
 
@@ -256,8 +297,8 @@ Le module contient une base technique pour une promo type **“3 achetés = 1 of
 
 ## 7) Emplacements pour captures d’écran
 
-- [CAPTURE] Configuration POS : champ “Code d’accès pour rupture de stock”
-- [CAPTURE] POS : message de rupture de stock + demande de code
+- [CAPTURE] Configuration POS : champ “Code d’accès pour rupture de stock”- [CAPTURE] Configuration POS : champ "Quick Remise Buttons"
+- [CAPTURE] POS Paiement : boutons rapides de remise (10%, 20%, 45%)- [CAPTURE] POS : message de rupture de stock + demande de code
 - [CAPTURE] POS : message “Double remise interdite”
 - [CAPTURE] POS : message “Quantité nulle non autorisée”
 - [CAPTURE] POS : encart solde fidélité sur écran paiement

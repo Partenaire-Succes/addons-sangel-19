@@ -12,6 +12,11 @@
                     <setting id="code_acces" string="Code d'accès pour rupture de stock">
                         <field name="code_acces"/>
                     </setting>
+                    <setting id="preset_remise" string="Quick Remise Buttons">
+                        <field name="preset_remise_percentages" 
+                               placeholder="10,20,45"
+                               help="Comma-separated values for preset remise buttons"/>
+                    </setting>
                 </xpath>
             </field>
         </record>
