@@ -305,25 +305,27 @@ class ProductTemplateInherit(models.Model):
                         self.pack_child_product_id.qty_available / self.pack_qty) if self.pack_qty > 0 else 0,
         }
 
-    # @api.model_create_multi
-    # def create(self, vals_list):
-    #     """
-    #     Contrôle la création de produits - seuls les administrateurs produits peuvent créer
-    #     """
-    #     # Vérifier si l'utilisateur a le droit d'admin produit
-    #     if not self.env.user.has_group('custom_stock.group_product_admin'):
-    #         context = self.env.context
-    #         if not (context.get('install_mode') or
-    #                 context.get('import_file') or
-    #                 context.get('tracking_disable') or
-    #                 context.get('create_product_product') or
-    #                 self.env.context.get('skip_create_check')):
-    #             raise AccessError(
-    #                 "Seuls les administrateurs produits peuvent créer des produits manuellement. "
-    #                 "Contactez votre administrateur système pour obtenir les droits nécessaires."
-    #             )
+    @api.model_create_multi
+    def create(self, vals_list):
+        """
+        Contrôle la création de produits - seuls les administrateurs produits peuvent créer
+        """
+        # Vérifier si l'utilisateur a le droit d'admin produit
+        if not self.env.user.has_group('custom_stock.group_product_admin'):
+            # Permettre la création automatique (import, synchronisation, etc.)
+            # mais pas la création manuelle depuis l'interface
+            context = self.env.context
+            if not (context.get('install_mode') or
+                    context.get('import_file') or
+                    context.get('tracking_disable') or
+                    context.get('create_product_product') or
+                    self.env.context.get('skip_create_check')):
+                raise AccessError(
+                    "Seuls les administrateurs produits peuvent créer des produits manuellement. "
+                    "Contactez votre administrateur système pour obtenir les droits nécessaires."
+                )
 
-    #     return super(ProductTemplateInherit, self).create(vals_list)
+        return super(ProductTemplateInherit, self).create(vals_list)
 
     @api.model
     def check_access_rights(self, operation, raise_exception=True):

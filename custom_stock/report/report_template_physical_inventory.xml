@@ -25,11 +25,11 @@
                     <div class="row mt-3">
                         <div class="col-12">
                             <table class="table table-borderless">
-                                <tr>
+                                    <tr>
                                     <td><strong>Categorie:</strong></td>
                                     <td><span t-field="doc.code_category_id.name"/></td>
                                     <td><strong>Code Inventaire:</strong></td>
-                                    <td><span t-field="doc.code_inventory_id.name"/></td>
+                                    <td><span t-esc="', '.join(doc.code_inventory_id.mapped('name'))"/></td>
                                 </tr>
                                 <tr>
                                     <td><strong>Societe:</strong></td>

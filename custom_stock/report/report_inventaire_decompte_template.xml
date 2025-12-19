@@ -11,7 +11,7 @@
                     <div class="row">
                         <div class="col-4"> </div>
                         <div class="col-4 text-center">
-                            <span>Code Inv. : </span><span t-field="doc.code_inventory_id.name"/>
+                            <span>Code Inv. : </span><span t-esc="', '.join(doc.code_inventory_id.mapped('name'))"/>
                         </div>
                     </div>
 
