@@ -3,6 +3,7 @@ access_stock_valorise_report_user,stock.valorise.report.user,model_stock_valoris
 access_sale_stat_report_wizard_user,sale.stat.report.wizard.user,model_sale_stat_report_wizard,,1,1,1,1
 
 access_reception_fournisseur_wizard_user,sale.reception.fournisseur.wizard.user,model_reception_fournisseur_wizard,,1,1,1,1
+access_stock_casse_report_user,stock.casse.report.user,model_stock_casse_report,stock.group_stock_user,1,1,1,1
 
 access_supplier_return_report_wizard_user,supplier.return.report.wizard.user,model_supplier_return_report_wizard,,1,1,1,1
 access_cumul_inventary_report_wizard_user,cumul.inventary.report.wizard.user,model_cumul_inventary_report_wizard,,1,1,1,1

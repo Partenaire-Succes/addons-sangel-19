@@ -28,6 +28,8 @@
         'report/report_cumul_inventary_template.xml',
         'wizard/stock_adjustment_report_wizard.xml',
         'report/report_stock_scrap_template.xml',
+        'wizard/stock_casse_report_wizard.xml',
+        'report/report_casse_template.xml',
         'wizard/report_daily_sales_wizard_view.xml',
         'report/report_daily_sales_template.xml',
     ],

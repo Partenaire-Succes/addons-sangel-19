@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <template id="report_casse_document">
+            <t t-call="web.html_container">
+                <t t-call="web.external_layout">
+                    <t t-foreach="docs" t-as="o">
+                    <div class="page">
+                        <div class="text-center">
+                            <h2>Rapport de casse</h2>
+                            <p>Du <span t-esc="o.date_from.strftime('%d/%m/%Y')"/> au <span t-esc="o.date_to.strftime('%d/%m/%Y')"/></p>
+                            <p><strong>Société:</strong> <span t-field="o.company_id.name"/></p>
+                            <p><strong>Édition faite le:</strong> <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y à %H:%M')"/></p>
+                        </div>
+
+                        <t t-if="o.scrap_lines_ids">
+                            <table class="table table-sm table-bordered" style="width:100%; margin-top:10px;">
+                                <thead style="background-color:#f0f0f0;">
+                                    <tr>
+                                        <th>Code article</th>
+                                        <th>Nom de l'article</th>
+                                        <th>Coût</th>
+                                        <th class="text-right">Quantité casse</th>
+                                        <th class="text-right">Valorisation casse</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="o.scrap_lines_ids" t-as="scrap">
+                                        <tr>
+                                            <td><span t-esc="scrap.product_id.code_article or scrap.product_id.default_code or ''"/></td>
+                                            <td><span t-esc="scrap.product_id.name"/></td>
+                                            <td class="text-right"><span t-esc="'%.2f' % (scrap.product_id.standard_price or 0.0)"/></td>
+                                            <td class="text-right"><span t-esc="'%.2f' % scrap.scrap_qty"/></td>
+                                            <td class="text-right"><span t-esc="'%.2f' % (scrap.scrap_qty * (scrap.product_id.standard_price or 0.0))"/></td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                                <tfoot>
+                                    <tr style="background-color:#e9ecef; font-weight:bold;">
+                                        <td colspan="3">TOTAL</td>
+                                        <td class="text-right"><span t-esc="'%.2f' % sum([s.scrap_qty for s in o.scrap_lines_ids])"/></td>
+                                        <td class="text-right"><span t-esc="'%.2f' % sum([s.scrap_qty * (s.product_id.standard_price or 0.0) for s in o.scrap_lines_ids])"/></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </t>
+                        <t t-else="">
+                            <div class="alert alert-warning">Aucune donnée pour la période sélectionnée.</div>
+                        </t>
+                    </div>
+                    </t>
+                </t>
+            </t>
+        </template>
+
+        <!-- Report action -->
+        <record id="action_report_casse" model="ir.actions.report">
+            <field name="name">Rapport de casse</field>
+            <field name="model">stock.casse.report</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">custom_reports.report_casse_document</field>
+            <field name="report_file">custom_reports.report_casse_document</field>
+            <field name="binding_model_id" eval="False"/>
+            <field name="binding_type">report</field>
+        </record>
+    </data>
+</odoo>
