@@ -2,7 +2,8 @@
 <odoo>
     <data>
 
-        <!-- Vue du wizard -->
+        <!-- Vue du wizard - Simple input form for rendu monnaie amount -->
+        <!-- Points are NOT updated here - only when payment is validated -->
         <record id="view_update_loyalty_card_wizard" model="ir.ui.view">
             <field name="name">update.loyalty.card.wizard.form</field>
             <field name="model">update.loyalty.card.wizard</field>
@@ -25,7 +26,8 @@
                         </group>
                     </group>
                     <footer>
-                        <button string="Mettre a jours les points" type="object" name="update_loyalty_card" class="btn-primary"/>
+                        <!-- Confirmer returns the entered amount - points updated on payment validation -->
+                        <button string="Confirmer" type="object" name="action_confirm_rendu_monnaie" class="btn-primary"/>
                         <button string="Annuler" special="cancel"/>
                     </footer>
                 </form>

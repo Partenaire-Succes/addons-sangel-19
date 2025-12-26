@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Default loyalty families - equivalent to the old Selection options -->
+    
+    <record id="loyalty_family_200" model="loyalty.family">
+        <field name="points_earned">1</field>
+        <field name="price_threshold">200</field>
+    </record>
+
+    <record id="loyalty_family_1000" model="loyalty.family">
+        <field name="points_earned">1</field>
+        <field name="price_threshold">1000</field>
+    </record>
+
+</odoo>

@@ -1,10 +1,10 @@
 /** @odoo-module **/
 
-import { patch } from "@web/core/utils/patch";
 import { PosStore } from "@point_of_sale/app/services/pos_store";
-import { _t } from "@web/core/l10n/translation";
 import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
+import { _t } from "@web/core/l10n/translation";
 import { rpc } from "@web/core/network/rpc";
+import { patch } from "@web/core/utils/patch";
 
 patch(PosStore.prototype, {
     async pay() {
@@ -40,13 +40,17 @@ patch(PosStore.prototype, {
         });
 
         // Collecter les produits avec ligne de promotion
+        // IMPORTANT: is_reward_line est sur la LIGNE, pas sur le produit
         orderLines.forEach(line => {
             if (!line) return;
             const product = line.product_id;
-            if (product && (line.price < 0 || product.is_reward_line)) {
-                promoProducts.set(product.id, {
-                    name: product.display_name
-                });
+            // is_reward_line est sur la ligne, price_unit contient le prix
+            if (line.is_reward_line || (line.price_unit !== undefined && line.price_unit < 0)) {
+                if (product) {
+                    promoProducts.set(product.id, {
+                        name: product.display_name
+                    });
+                }
             }
         });
 
@@ -72,28 +76,57 @@ patch(PosStore.prototype, {
             return;
         }
 
-        // ========== Détection des remises ==========
-        // Type 1: Remise sur la ligne (discount > 0)
-        const hasLineDiscount = orderLines.some(line => line && line.discount > 0);
+        // ========== Détection des remises MANUELLES uniquement ==========
+        // Seules les remises manuelles (discount > 0 sur la ligne) nécessitent un code d'accès
+        // Les lignes de récompense Odoo (via "Saisir un code" natif) ne nécessitent PAS de code d'accès
         
-        // Type 2: Ligne de remise/promotion (prix négatif ou programme promo)
-        const hasPromoLine = orderLines.some(line => {
-            if (!line) return false;
-            const product = line.product_id;
-            return line.price < 0 || 
-                   (product && product.is_reward_line) ||
-                   (product && product.name && product.name.toLowerCase().includes('remise'));
+        // Type 1: Remise manuelle sur la ligne (discount > 0) - NÉCESSITE code d'accès
+        const hasManualLineDiscount = orderLines.some(line => line && line.discount > 0);
+
+        // Collecter les infos des produits avec remise manuelle pour affichage dans le popup
+        const discountedProducts = [];
+        orderLines.forEach(line => {
+            if (line && line.discount > 0) {
+                const product = line.product_id;
+                if (product) {
+                    const code = product.default_code || product.barcode || '';
+                    discountedProducts.push({
+                        code: code,
+                        name: product.name,  // Utiliser name (pas display_name qui inclut déjà le code)
+                        discount: line.discount
+                    });
+                }
+            }
         });
 
-        const hasDiscount = hasLineDiscount || hasPromoLine;
+        // Type 2: Ligne de récompense Odoo (is_reward_line ou price_unit négatif) - NE nécessite PAS de code
+        // Ces lignes proviennent du workflow natif Odoo (Actions → Saisir un code)
+        // IMPORTANT: is_reward_line est sur la LIGNE, pas sur le produit!
+        const hasOdooRewardLine = orderLines.some(line => {
+            if (!line) return false;
+            // is_reward_line est une propriété de la ligne (pas du produit)
+            return line.is_reward_line || (line.price_unit !== undefined && line.price_unit < 0);
+        });
 
-        console.log("Remise sur ligne:", hasLineDiscount);
-        console.log("Ligne de promotion:", hasPromoLine);
-        console.log("A une remise:", hasDiscount);
+        // Seules les remises MANUELLES déclenchent la demande de code d'accès
+        const hasDiscount = hasManualLineDiscount;
+
+        console.log("Remise manuelle sur ligne:", hasManualLineDiscount);
+        console.log("Ligne de récompense Odoo:", hasOdooRewardLine);
+        console.log("Code d'accès requis:", hasDiscount);
 
         // ========== Stock et code d'accès ==========
+        // IMPORTANT: Exclure les lignes de récompense Odoo du contrôle de stock
+        // (elles sont virtuelles et n'ont pas de stock)
         const product_ids = orderLines
-            .filter(line => line && line.product_id)
+            .filter(line => {
+                if (!line || !line.product_id) return false;
+                // Exclure les lignes de récompense Odoo (is_reward_line est sur la LIGNE)
+                if (line.is_reward_line) return false;
+                // Exclure les lignes avec prix négatif (réductions)
+                if (line.price_unit !== undefined && line.price_unit < 0) return false;
+                return true;
+            })
             .map(line => line.product_id.id);
 
         if (!product_ids.length) {
@@ -111,7 +144,7 @@ patch(PosStore.prototype, {
         
         if (result.error) {
             if (result.access_required && result.code_acces) {
-                const codeInput = await this._showPasswordPrompt(result.message);
+                const codeInput = await this._showPasswordPrompt(result.message, discountedProducts);
                 if (codeInput !== result.code_acces) {
                     this.dialog.add(AlertDialog, {
                         title: _t("Code incorrect"),
@@ -131,7 +164,7 @@ patch(PosStore.prototype, {
         return super.pay(...arguments);
     },
 
-    async _showPasswordPrompt(message) {
+    async _showPasswordPrompt(message, discountedProducts = []) {
         return new Promise((resolve) => {
             const overlay = document.createElement("div");
             overlay.style.position = "fixed";
@@ -151,6 +184,7 @@ patch(PosStore.prototype, {
             box.style.borderRadius = "8px";
             box.style.boxShadow = "0 0 10px rgba(0,0,0,0.3)";
             box.style.minWidth = "300px";
+            box.style.maxWidth = "500px";
 
             const title = document.createElement("h3");
             title.innerText = "🔐 Code d'accès requis";
@@ -159,6 +193,30 @@ patch(PosStore.prototype, {
             const msg = document.createElement("p");
             msg.innerText = message;
             box.appendChild(msg);
+
+            // Afficher la liste des produits avec remises manuelles
+            if (discountedProducts.length > 0) {
+                const discountSection = document.createElement("div");
+                discountSection.style.marginTop = "10px";
+                discountSection.style.marginBottom = "10px";
+
+                const discountTitle = document.createElement("p");
+                discountTitle.style.fontWeight = "bold";
+                discountTitle.style.marginBottom = "5px";
+                discountTitle.innerText = "Produits avec remise :";
+                discountSection.appendChild(discountTitle);
+
+                discountedProducts.forEach(p => {
+                    const line = document.createElement("p");
+                    line.style.margin = "2px 0";
+                    line.style.paddingLeft = "10px";
+                    const codeDisplay = p.code ? `[${p.code}] ` : '';
+                    line.innerText = `• ${codeDisplay}${p.name} (${p.discount}%)`;
+                    discountSection.appendChild(line);
+                });
+
+                box.appendChild(discountSection);
+            }
 
             const input = document.createElement("input");
             input.type = "password";

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<!-- <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
 
@@ -8,7 +8,7 @@
             <field name="inherit_id" ref="sale.view_order_form"/>
             <field name="arch" type="xml">
 
-                <xpath expr="//button[@name='action_cancel']" position="after">
+                 <xpath expr="//button[@name='action_cancel']" position="after">
                     <button name="%(custom_loyalty.action_update_loyalty_card_wizard)d" 
                         invisible="state != 'sale'"
                         string="Rendu monnaie"
@@ -16,9 +16,9 @@
                         icon="fa-edit"
                         class="btn btn-warning"
                         context="{'default_order_id': id, 'default_partner_id': partner_id}"/>
-                </xpath>
+                </xpath> 
             </field>
         </record>
 
     </data>
-</odoo>
+</odoo> -->

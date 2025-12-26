@@ -1,7 +1,8 @@
-from odoo import fields, models, api, _
-from odoo.exceptions import ValidationError
-import re
 import logging
+import re
+
+from odoo import _, api, fields, models
+from odoo.exceptions import ValidationError
 
 _logger = logging.getLogger(__name__)
 
@@ -39,12 +40,12 @@ class SaleOrderInherit(models.Model):
     
     def _calculate_custom_loyalty_points_sale(self, program):
         """
-        Calcule les points personnalisés basés sur family_loyalty
+        Calcule les points personnalisés basés sur family_loyalty_id (Many2one dynamique)
         """
         self.ensure_one()
         
-        points_200 = 0.0
-        points_1000 = 0.0
+        # Group totals by loyalty family ID for dynamic calculation
+        totals_by_family = {}
         
         # Récupérer les produits valides pour le programme
         products_per_rule = program._get_valid_products(self.order_line.product_id)
@@ -63,9 +64,9 @@ class SaleOrderInherit(models.Model):
             if not product.is_eligible:
                 continue
             
-            # Vérifier family_loyalty
-            family_loyalty = product.family_loyalty
-            if not family_loyalty or family_loyalty == 'none':
+            # Vérifier family_loyalty_id (Many2one)
+            family = product.family_loyalty_id
+            if not family:
                 continue
             
             # Vérifier si le produit est valide pour le programme
@@ -75,15 +76,30 @@ class SaleOrderInherit(models.Model):
             # Montant de la ligne
             line_total = self._get_order_line_price(line, 'price_total')
             
-            # Accumuler par famille
-            if family_loyalty == '200':
-                points_200 += line_total
-            elif family_loyalty == '1000':
-                points_1000 += line_total
+            # Accumuler par famille ID
+            family_id = family.id
+            if family_id not in totals_by_family:
+                totals_by_family[family_id] = {
+                    'total': 0.0,
+                    'family': family,
+                }
+            totals_by_family[family_id]['total'] += line_total
         
-        # Calculer les points totaux
-        total_points = int(points_200 / 200) + int(points_1000 / 1000)
+        # Calculer les points totaux en utilisant les valeurs dynamiques de chaque famille
+        total_points = 0
+        for family_id, data in totals_by_family.items():
+            family = data['family']
+            if family.price_threshold > 0:
+                # Dynamic calculation: floor(total / price_threshold) * points_earned
+                points = int(data['total'] / family.price_threshold) * family.points_earned
+                total_points += points
+                _logger.info(
+                    'Famille "%s": %.2f FCFA -> %d points (%d pts / %.0f F)',
+                    family.name, data['total'], points, 
+                    family.points_earned, family.price_threshold
+                )
         
+        _logger.info('TOTAL POINTS SALE ORDER: %d', total_points)
         return total_points
     
     def _check_loyalty_card(self):

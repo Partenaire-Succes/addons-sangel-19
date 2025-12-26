@@ -8,7 +8,7 @@
             <xpath expr="//group[@name='code_article']" position="after">
                 <group name="loyalty" string="Fidélité">
                     <field name="is_eligible"/>
-                    <field name="family_loyalty"/>
+                    <field name="family_loyalty_id"/>
                 </group>
             </xpath>
             
@@ -23,7 +23,7 @@
 
             <xpath expr="//group[@name='group_info']" position="inside">
                 <group name="loyalty" string="Fidélité">
-                    <field name="family_loyalty" />
+                    <field name="family_loyalty_id" options="{'no_create': False, 'no_quick_create': False}"/>
                 </group>
             </xpath>
         </field>

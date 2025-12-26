@@ -1,12 +1,68 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates id="template" xml:space="preserve">
-    <t t-name="custom_loyalty.ControlButtons" t-inherit="point_of_sale.ControlButtons" t-inherit-mode="extension">
-        <!-- Add loyalty button inside the control-buttons modal div -->
-        <xpath expr="//t[@t-if='props.showRemainingButtons']/div[hasclass('control-buttons')]/NoteButton" position="after">
-             <button class="btn btn-secondary btn-lg py-5" t-on-click="() => this.onClickLoyalty()">
-                 <i class="fa fa-pencil-square me-1" role="img" aria-label="Custom Alert" title="Custom Alert"/>
-                    Rendu monnaie (FCFA)
-             </button>
+
+    <!-- 1. ADD BUTTON TO PAYMENT SCREEN -->
+    <t t-name="custom_loyalty.PaymentScreenButton" t-inherit="point_of_sale.PaymentScreen" t-inherit-mode="extension">
+        <!-- Insert loyalty button after the back button (appears before validate) in PaymentScreen -->
+        <xpath expr="//div[hasclass('w-100 flex-shrink-0')]" position="after">
+            <button class="btn btn-secondary btn-lg py-3 lh-lg mx-1"  t-on-click="() => this.pos.openLoyaltyWizard()">
+                <i class="fa fa-pencil-square me-1" role="img" aria-label="Rendu monnaie" title="Rendu monnaie"/>
+                Rendu monnaie (FCFA)
+            </button>
         </xpath>
     </t>
+
+    <!-- 2. ADD INFO LINE TO PAYMENT STATUS (Above Restant) -->
+      <t t-inherit="point_of_sale.PaymentScreenStatus" t-inherit-mode="extension">
+        
+        <!-- 
+             ⚠️ FIX: Target the 'Restant' (Remaining) line specifically.
+             This class 'payment-status-remaining' is standard in Odoo POS.
+             Using 'before' places it exactly where you want.
+        -->
+        <xpath expr="//div[hasclass('payment-status-container')]" position="before">
+            
+            <t t-if="this.props.order.get_rendu_monnaie() and this.props.order.get_rendu_monnaie() != 0">
+                <div class="payment-status-rendu d-flex justify-content-between text-success fw-bold fs-4 mb-2">
+                    <span class="label">Rendu monnaie</span>
+                    <span class="amount align-self-end me-5 pe-5">
+                        <!-- Use Odoo's built-in currency formatter -->
+                        <t t-esc="env.utils.formatCurrency(this.props.order.get_rendu_monnaie())"/>
+                    </span>
+                </div>
+            </t>
+
+        </xpath>
+
+    </t>
+
+    <!-- 3. UPDATE ORDER RECEIPT: Add Rendu monnaie line and adjust Monnaie (Change) -->
+    <t t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
+        
+        <!-- Insert "Rendu monnaie" line BEFORE the Change line -->
+        <xpath expr="//div[hasclass('receipt-change')]" position="before">
+            <t t-if="order.get_rendu_monnaie and order.get_rendu_monnaie() > 0">
+                <div class="pos-receipt-amount receipt-rendu-monnaie text-success">
+                    <span class="label-rendu-monnaie">Rendu monnaie</span>
+                    <span t-out="formatCurrency(order.get_rendu_monnaie())" class="pos-receipt-right-align font-monospace"/>
+                </div>
+            </t>
+        </xpath>
+
+        <!-- Replace the Change line content to subtract rendu_monnaie -->
+        <xpath expr="//div[hasclass('receipt-change')]/span[hasclass('label-change')]" position="replace">
+            <span class="label-change">Monnaie</span>
+        </xpath>
+        
+        <xpath expr="//div[hasclass('receipt-change')]/span[hasclass('pos-receipt-right-align')]" position="replace">
+            <t t-if="order.get_rendu_monnaie and order.get_rendu_monnaie() > 0">
+                <span t-out="formatCurrency(order.orderChange - order.get_rendu_monnaie())" class="pos-receipt-right-align font-monospace"/>
+            </t>
+            <t t-else="">
+                <span t-out="formatCurrency(order.orderChange)" class="pos-receipt-right-align font-monospace"/>
+            </t>
+        </xpath>
+
+    </t>
+
 </templates>

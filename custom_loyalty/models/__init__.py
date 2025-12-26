@@ -1,6 +1,10 @@
-from . import product
-from . import sale_order
-from . import pos_order
-from . import res_partner_inherit
-from . import pos_payment_method
-from . import pos_payment
+from . import (
+    loyalty_family,
+    pos_order,
+    pos_payment,
+    pos_payment_method,
+    pos_session,
+    product,
+    res_partner_inherit,
+    sale_order,
+)

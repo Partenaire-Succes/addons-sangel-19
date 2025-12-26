@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Loyalty Family Tree View -->
+    <record id="loyalty_family_view_tree" model="ir.ui.view">
+        <field name="name">loyalty.family.tree</field>
+        <field name="model">loyalty.family</field>
+        <field name="arch" type="xml">
+            <list string="Familles de fidélité">
+                <field name="name"/>
+                <field name="points_earned"/>
+                <field name="price_threshold"/>
+                <field name="active" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Loyalty Family Form View -->
+    <record id="loyalty_family_view_form" model="ir.ui.view">
+        <field name="name">loyalty.family.form</field>
+        <field name="model">loyalty.family</field>
+        <field name="arch" type="xml">
+            <form string="Famille de fidélité">
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1>
+                            <field name="name" placeholder="Ex: 1 point / 200 F"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Configuration des points">
+                            <field name="points_earned"/>
+                            <field name="price_threshold"/>
+                        </group>
+                        <group string="Paramètres">
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Catégories associées" name="categories">
+                            <field name="product_category_ids" readonly="1">
+                                <list string="Catégories">
+                                    <field name="display_name"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Loyalty Family Search View -->
+    <record id="loyalty_family_view_search" model="ir.ui.view">
+        <field name="name">loyalty.family.search</field>
+        <field name="model">loyalty.family</field>
+        <field name="arch" type="xml">
+            <search string="Familles de fidélité">
+                <field name="name"/>
+                <field name="points_earned"/>
+                <field name="price_threshold"/>
+                <filter name="active" string="Actif" domain="[('active', '=', True)]"/>
+                <filter name="archived" string="Archivé" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Loyalty Family Action -->
+    <record id="loyalty_family_action" model="ir.actions.act_window">
+        <field name="name">Familles de fidélité</field>
+        <field name="res_model">loyalty.family</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="loyalty_family_view_search"/>
+        <field name="context">{'search_default_active': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Créez votre première famille de fidélité
+            </p>
+            <p>
+                Les familles de fidélité définissent combien de points un client gagne
+                pour un certain montant dépensé. Par exemple: "5 points / 200 F" signifie
+                que le client gagne 5 points pour chaque 200 F dépensés.
+            </p>
+        </field>
+    </record>
+
+    <!-- Loyalty Family Menu (under Point of Sale / Configuration) -->
+    <menuitem 
+        id="loyalty_family_menu"
+        name="Familles de fidélité"
+        parent="point_of_sale.menu_point_config_product"
+        action="loyalty_family_action"
+        sequence="30"/>
+
+</odoo>

@@ -1,9 +1,9 @@
-from odoo import api, fields, models, _
-from odoo.exceptions import UserError, ValidationError
-from datetime import datetime
-from dateutil.relativedelta import relativedelta
-
 import logging
+from datetime import datetime
+
+from dateutil.relativedelta import relativedelta
+from odoo import _, api, fields, models
+from odoo.exceptions import UserError, ValidationError
 
 _logger = logging.getLogger(__name__)
 
@@ -147,7 +147,6 @@ class UpdateLoyaltyCardWizard(models.TransientModel):
             self._process_loyalty_update(existing_loyalty)
             self.env.invalidate_all()
             return {'type': 'ir.actions.act_window_close'}
-            
         except Exception as e:
             _logger.error(f"Erreur lors de la mise à jour des points: {e}")
             raise UserError(f"Une erreur s'est produite: {str(e)}")
@@ -194,6 +193,27 @@ class UpdateLoyaltyCardWizard(models.TransientModel):
             f"Carte de fidélité mise à jour pour {loyalty_card.partner_id.name}: "
             f"{old_points:.2f} + {self.points:.2f} = {loyalty_card.points:.2f} FCFA"
         )
+    
+    def action_confirm_rendu_monnaie(self):
+        """
+        Confirm the rendu monnaie amount WITHOUT updating the loyalty card.
+        Points will be updated when payment is validated.
+        Returns the entered amount to be stored on the POS order.
+        """
+        self.ensure_one()
+        
+        if self.points <= 0:
+            raise UserError("Le montant du rendu monnaie doit être supérieur à zéro.")
+        
+        # Return the amount - will be captured by JS and stored on the order
+        return {
+            'type': 'ir.actions.act_window_close',
+            'infos': {
+                'rendu_monnaie': self.points,
+                'partner_id': self.partner_id.id,
+                'partner_name': self.partner_id.name,
+            }
+        }
     
     def action_cancel(self):
         """Ferme le wizard sans action"""

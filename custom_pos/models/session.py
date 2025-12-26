@@ -1,5 +1,6 @@
-from odoo import models, api
 import logging
+
+from odoo import api, models
 
 _logger = logging.getLogger(__name__)
 
@@ -37,8 +38,7 @@ class PosOrder(models.Model):
                 'code_acces': code_acces,
                 'message': "⚠️ Autorisation requise :\n\n" +
                         "Produits en rupture de stock :\n" +
-                        "\n".join(f"   • {p}" for p in produits_rupture) +
-                        "\n\n. La commande contient des remises.",
+                        "\n".join(f"   • {p}" for p in produits_rupture),
             }
 
         # Si seulement rupture de stock
