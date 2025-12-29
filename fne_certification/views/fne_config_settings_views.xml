@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vue formulaire configuration FNE -->
+    <record id="view_fne_config_settings_form" model="ir.ui.view">
+        <field name="name">fne.config.settings.form</field>
+        <field name="model">fne.config.settings</field>
+        <field name="arch" type="xml">
+            <form string="Configuration FNE">
+                <header>
+                    <button name="test_connection" 
+                            string="Tester la connexion" 
+                            type="object" 
+                            class="btn-primary"
+                            invisible="not fne_api_token or not fne_api_url"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,validated"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="fne_point_of_sale" placeholder="Point de vente..."/>
+                        </h1>
+                    </div>
+                    
+                    <group>
+                        <group string="Activation">
+                            <field name="is_fne_enabled"/>
+                            <field name="auto_certify_on_post" invisible="not is_fne_enabled"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        
+                        <group string="Environnement">
+                            <field name="environment" widget="radio"/>
+                            <field name="fne_api_url" readonly="1"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Authentification API">
+                        <field name="fne_api_token" password="True" placeholder="Bearer token fourni par la DGI..."/>
+                    </group>
+                    
+                    <group>
+                        <group string="Informations établissement">
+                            <field name="fne_point_of_sale" placeholder="Ex: 23"/>
+                            <field name="fne_establishment" placeholder="Ex: Orange Riviera Mpouto"/>
+                        </group>
+                        
+                        <group string="Messages par défaut">
+                            <field name="commercial_message" placeholder="Message commercial..."/>
+                            <field name="footer" placeholder="Pied de page..."/>
+                        </group>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Instructions">
+                            <group>
+                                <div class="alert alert-info" role="alert">
+                                    <h4>Procédure d'intégration:</h4>
+                                    <ol>
+                                        <li>Inscription à l'environnement test: <a href="http://54.247.95.108" target="_blank">http://54.247.95.108</a></li>
+                                        <li>Configuration des paramètres (point de vente, établissement)</li>
+                                        <li>Test de génération de factures en environnement test</li>
+                                        <li>Transmission des spécimens à: <strong>support.fne@dgi.gouv.ci</strong></li>
+                                        <li>Validation par la DGI et réception de l'URL de production</li>
+                                        <li>Récupération de la clé API dans l'espace FNE (onglet Paramétrage)</li>
+                                    </ol>
+                                    <p><strong>Support technique:</strong> support.fne@dgi.gouv.ci</p>
+                                </div>
+                            </group>
+                        </page>
+                        
+                        <page string="Méthodes de paiement">
+                            <group>
+                                <div class="alert alert-success">
+                                    <ul>
+                                        <li><strong>cash:</strong> Espèces</li>
+                                        <li><strong>card:</strong> Carte bancaire</li>
+                                        <li><strong>check:</strong> Chèque</li>
+                                        <li><strong>mobile-money:</strong> Mobile Money</li>
+                                        <li><strong>transfer:</strong> Virement bancaire</li>
+                                        <li><strong>deferred:</strong> À terme</li>
+                                    </ul>
+                                </div>
+                            </group>
+                        </page>
+                        
+                        <page string="Types de TVA">
+                            <group>
+                                <div class="alert alert-success">
+                                    <ul>
+                                        <li><strong>TVA:</strong> TVA normal 18%</li>
+                                        <li><strong>TVAB:</strong> TVA réduit 9%</li>
+                                        <li><strong>TVAC:</strong> TVA exo. conv. 0%</li>
+                                        <li><strong>TVAD:</strong> TVA exo. lég. 0% (TEE et RME)</li>
+                                    </ul>
+                                </div>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <!-- <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="message_ids"/>
+                </div> -->
+            </form>
+        </field>
+    </record>
+
+    <!-- Vue liste -->
+    <record id="view_fne_config_settings_list" model="ir.ui.view">
+        <field name="name">fne.config.settings.list</field>
+        <field name="model">fne.config.settings</field>
+        <field name="arch" type="xml">
+            <list string="Configurations FNE">
+                <field name="fne_point_of_sale"/>
+                <field name="fne_establishment"/>
+                <field name="environment"/>
+                <field name="is_fne_enabled"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="state"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_fne_config_settings" model="ir.actions.act_window">
+        <field name="name">Configuration FNE</field>
+        <field name="res_model">fne.config.settings</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Configurer la certification FNE
+            </p>
+            <p>
+                Configurez les paramètres de connexion à la plateforme FNE de la DGI.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu -->
+    <menuitem id="menu_fne_root" 
+              name="FNE"
+              web_icon="fne_certification,static/description/icon.png"
+              sequence="60"/>
+              
+    <menuitem id="menu_fne_config" 
+              name="Configuration"
+              parent="menu_fne_root"
+              sequence="10"/>
+              
+    <menuitem id="menu_fne_config_settings" 
+              name="Paramètres FNE"
+              parent="menu_fne_config"
+              action="action_fne_config_settings"
+              sequence="10"/>
+</odoo>

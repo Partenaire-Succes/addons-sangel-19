@@ -247,16 +247,15 @@ class ProductTemplateImport(models.Model):
             supplier = self.env['res.partner'].search([
                 '|',
                 ('ref', '=', supplier_code),
-                ('customer_id', '=', supplier_code),
+                ('name', '=', supplier_code),
                 ('supplier_rank', '>', 0)  # Doit être marqué comme fournisseur
             ], limit=1)
             
             if not supplier:
                 # Créer un fournisseur basique si introuvable
                 supplier = self.env['res.partner'].create({
-                    'name': f"Fournisseur {supplier_code}",
+                    'name': supplier_code,
                     'ref': supplier_code,
-                    'customer_id': supplier_code,
                     'supplier_rank': 1,
                     'is_company': True,
                 })

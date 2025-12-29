@@ -1,0 +1,6 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_fne_config_settings_user,fne_config_settings_user,model_fne_config_settings,account.group_account_invoice,1,0,0,0
+access_fne_config_settings_manager,fne_config_settings_manager,model_fne_config_settings,account.group_account_manager,1,1,1,1
+access_fne_refund_wizard_user,fne_refund_wizard_user,model_fne_refund_wizard,account.group_account_invoice,1,1,1,1
+access_fne_refund_wizard_line_user,fne_refund_wizard_line_user,model_fne_refund_wizard_line,account.group_account_invoice,1,1,1,1
+access_fne_certification_wizard_user,fne_certification_wizard_user,model_fne_certification_wizard,account.group_account_invoice,1,1,1,1

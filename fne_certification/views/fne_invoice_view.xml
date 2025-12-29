@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Extension du formulaire de facture -->
+    <record id="view_move_form_fne" model="ir.ui.view">
+        <field name="name">account.move.form.fne</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_move_form"/>
+        <field name="arch" type="xml">
+            
+            <!-- Bouton de certification dans le header -->
+            <xpath expr="//header/button[@name='action_post']" position="after">
+                <!-- Facture normale -->
+                <button name="action_certify_fne" 
+                        string="Certifier FNE" 
+                        type="object" 
+                        class="btn-primary"
+                        invisible="state != 'posted' or fne_certified or move_type not in ['out_invoice', 'out_refund']"/>
+                
+                <!-- Avoir - avec wizard -->
+                <button name="%(action_fne_refund_wizard)d" 
+                        string="Certifier avoir FNE (Wizard)" 
+                        type="action" 
+                        class="btn-success"
+                        invisible="state != 'posted' or fne_certified or move_type != 'out_refund'"
+                        context="{'active_id': id}"/>
+                
+                <!-- Voir QR Code -->
+                <button name="action_open_fne_verification" 
+                        string="Voir QR Code" 
+                        type="object" 
+                        class="btn-secondary"
+                        invisible="not fne_certified"/>
+            </xpath>
+            
+            <!-- Badge de certification -->
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button class="oe_stat_button" 
+                        type="object" 
+                        name="action_open_fne_verification"
+                        icon="fa-check-circle"
+                        invisible="not fne_certified">
+                    <div class="o_field_widget o_stat_info">
+                        <span class="o_stat_text text-success">Certifiée FNE</span>
+                        <span class="o_stat_value">
+                            <field name="fne_reference"/>
+                        </span>
+                    </div>
+                </button>
+                
+                <button class="oe_stat_button" 
+                        type="action" 
+                        icon="fa-ticket"
+                        invisible="not fne_certified">
+                    <div class="o_field_widget o_stat_info">
+                        <span class="o_stat_value">
+                            <field name="fne_sticker_balance"/>
+                        </span>
+                        <span class="o_stat_text">Stickers</span>
+                    </div>
+                </button>
+            </xpath>
+            
+            <!-- Onglet FNE -->
+            <xpath expr="//notebook" position="inside">
+                <page string="Certification FNE" name="fne_certification">
+                    <group>
+                        <group string="Statut">
+                            <field name="fne_certified"/>
+                            <field name="fne_reference" readonly="1"/>
+                            <field name="fne_id" readonly="1"/>
+                            <field name="fne_sticker_balance" readonly="1"/>
+                        </group>
+                        
+                        <group string="Paramètres">
+                            <field name="fne_template" readonly="fne_certified"/>
+                            <field name="fne_payment_method" readonly="fne_certified"/>
+                            <field name="fne_token" readonly="1" widget="url"/>
+                        </group>
+                    </group>
+                    
+                    <group string="QR Code de vérification" invisible="not fne_certified">
+                        <field name="fne_qr_code" widget="qr_code" readonly="1"/>
+                    </group>
+                    
+                    <group string="Réponse complète API" invisible="not fne_response_json">
+                        <!-- <field name="fne_response_json" readonly="1" widget="ace" options="{'mode': 'json'}"/> -->
+                        <field name="fne_response_json" readonly="1"/>
+                    </group>
+                    
+                    <group string="Erreur" invisible="not fne_error_message">
+                        <field name="fne_error_message" readonly="1" class="text-danger"/>
+                    </group>
+                </page>
+            </xpath>
+            
+            <!-- Extension des lignes pour l'ID FNE -->
+            <xpath expr="//field[@name='invoice_line_ids']/list" position="inside">
+                <field name="fne_original_line_id" column_invisible="True"/>
+            </xpath>
+            
+        </field>
+    </record>
+    
+    <!-- Vue liste avec statut FNE -->
+    <record id="view_invoice_list_fne" model="ir.ui.view">
+        <field name="name">account.move.list.fne</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_out_invoice_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="attributes">
+                <attribute name="decoration-success">fne_certified == True</attribute>
+            </xpath>
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="fne_certified" optional="show"/>
+                <field name="fne_reference" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+    
+    <!-- Filtre de recherche -->
+    <record id="view_account_invoice_filter_fne" model="ir.ui.view">
+        <field name="name">account.invoice.search.fne</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_account_invoice_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//filter[@name='draft']" position="after">
+                <separator/>
+                <filter string="Certifiées FNE" 
+                        name="fne_certified" 
+                        domain="[('fne_certified', '=', True)]"/>
+                <filter string="Non certifiées FNE" 
+                        name="not_fne_certified" 
+                        domain="[('fne_certified', '=', False), ('move_type', 'in', ['out_invoice', 'out_refund']), ('state', '=', 'posted')]"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Menu factures FNE -->
+    <record id="action_invoice_fne" model="ir.actions.act_window">
+        <field name="name">Factures FNE</field>
+        <field name="res_model">account.move</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('move_type', 'in', ['out_invoice', 'out_refund'])]</field>
+        <field name="context">{'default_move_type': 'out_invoice', 'search_default_fne_certified': 1}</field>
+    </record>
+    
+    <menuitem id="menu_invoice_fne" 
+              name="Factures certifiées"
+              parent="menu_fne_root"
+              action="action_invoice_fne"
+              sequence="20"/>
+</odoo>

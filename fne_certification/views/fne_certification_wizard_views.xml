@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vue formulaire du wizard avoir FNE -->
+    <record id="view_fne_refund_wizard_form" model="ir.ui.view">
+        <field name="name">fne.refund.wizard.form</field>
+        <field name="model">fne.refund.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Certification FNE - Avoir">
+                <sheet>
+                    <div class="alert alert-info" role="alert">
+                        <h4><i class="fa fa-info-circle"/> Information</h4>
+                        <p>
+                            Vous êtes sur le point de certifier un avoir (note de crédit) via l'API FNE.
+                            L'avoir sera lié à la facture d'origine déjà certifiée.
+                        </p>
+                    </div>
+                    
+                    <group>
+                        <group string="Facture d'avoir">
+                            <field name="move_id" readonly="1"/>
+                        </group>
+                        
+                        <group string="Facture d'origine">
+                            <field name="original_invoice_id" readonly="1"/>
+                            <field name="original_fne_reference" readonly="1"/>
+                        </group>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Lignes à retourner">
+                            <field name="line_ids">
+                                <list editable="bottom" create="false" delete="false">
+                                    <field name="to_refund" widget="boolean_toggle"/>
+                                    <field name="product_id" readonly="1"/>
+                                    <field name="description" readonly="1"/>
+                                    <field name="quantity" readonly="1"/>
+                                    <field name="fne_original_line_id" readonly="1" optional="show"/>
+                                </list>
+                            </field>
+                            
+                            <div class="alert alert-warning mt-3" role="alert">
+                                <p>
+                                    <strong>Important:</strong> Seules les lignes cochées seront envoyées à l'API FNE.
+                                    Assurez-vous que les lignes ont bien un ID FNE origine.
+                                </p>
+                            </div>
+                        </page>
+                    </notebook>
+                </sheet>
+                
+                <footer>
+                    <button string="Certifier FNE" 
+                            name="action_certify_fne_refund" 
+                            type="object" 
+                            class="btn-primary"/>
+                    <button string="Annuler" 
+                            class="btn-secondary" 
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action du wizard -->
+    <record id="action_fne_refund_wizard" model="ir.actions.act_window">
+        <field name="name">Certifier avoir FNE</field>
+        <field name="res_model">fne.refund.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="account.model_account_move"/>
+        <field name="binding_view_types">form</field>
+    </record>
+    
+    <!-- Vue formulaire du wizard certification général -->
+    <record id="view_fne_certification_wizard_form" model="ir.ui.view">
+        <field name="name">fne.certification.wizard.form</field>
+        <field name="model">fne.certification.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Certification FNE">
+                <sheet>
+                    <div class="alert alert-info" role="alert">
+                        <h4><i class="fa fa-shield"/> Certification Facture Normalisée Électronique</h4>
+                        <p>
+                            Cette facture sera certifiée via l'API FNE de la Direction Générale des Impôts.
+                            Un QR Code de vérification sera généré automatiquement.
+                        </p>
+                    </div>
+                    
+                    <field name="warning_message" widget="html"/>
+                    
+                    <group>
+                        <group string="Facture">
+                            <field name="move_id" readonly="1"/>
+                            <field name="partner_id" readonly="1"/>
+                            <field name="move_type" invisible="1"/>
+                        </group>
+                        
+                        <group string="Paramètres FNE">
+                            <field name="fne_template" required="1"/>
+                            <field name="fne_payment_method" required="1"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Messages optionnels">
+                        <field name="commercial_message" placeholder="Message commercial pour le client..."/>
+                        <field name="footer" placeholder="Pied de page personnalisé..."/>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Informations client">
+                            <group>
+                                <group>
+                                    <field name="partner_id" string="Nom" readonly="1"/>
+                                    <label for="partner_id" string="Email"/>
+                                    <div>
+                                        <field name="partner_id" 
+                                               readonly="1" 
+                                               widget="email"
+                                               options="{'field_to_fetch': 'email'}"
+                                               nolabel="1"/>
+                                    </div>
+                                </group>
+                                <group>
+                                    <label for="partner_id" string="Téléphone"/>
+                                    <div>
+                                        <field name="partner_id" 
+                                               readonly="1"
+                                               options="{'field_to_fetch': 'phone'}"
+                                               nolabel="1"/>
+                                    </div>
+                                    <label for="partner_id" string="NCC/TVA"/>
+                                    <div>
+                                        <field name="partner_id" 
+                                               readonly="1"
+                                               options="{'field_to_fetch': 'vat'}"
+                                               nolabel="1"/>
+                                    </div>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                
+                <footer>
+                    <button string="Certifier maintenant" 
+                            name="action_certify" 
+                            type="object" 
+                            class="btn-primary"/>
+                    <button string="Annuler" 
+                            class="btn-secondary" 
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action du wizard certification -->
+    <record id="action_fne_certification_wizard" model="ir.actions.act_window">
+        <field name="name">Certifier FNE</field>
+        <field name="res_model">fne.certification.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="account.model_account_move"/>
+        <field name="binding_view_types">form</field>
+    </record>
+</odoo>
