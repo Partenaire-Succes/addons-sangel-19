@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- =========================== -->
+    <!-- PRODUCT NATURE - TREE VIEW  -->
+    <!-- =========================== -->
+    <record id="product_nature_view_tree" model="ir.ui.view">
+        <field name="name">product.nature.view.tree</field>
+        <field name="model">product.nature</field>
+        <field name="arch" type="xml">
+            <list string="Natures de produits">
+                <field name="name"/>
+                <field name="active" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- =========================== -->
+    <!-- PRODUCT NATURE - FORM VIEW  -->
+    <!-- =========================== -->
+    <record id="product_nature_view_form" model="ir.ui.view">
+        <field name="name">product.nature.view.form</field>
+        <field name="model">product.nature</field>
+        <field name="arch" type="xml">
+            <form string="Nature de produit">
+                <sheet>
+                    <group>
+                        <field name="name" placeholder="ex: Macaron, Eugenie..."/>
+                        <field name="active"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- =========================== -->
+    <!-- PRODUCT NATURE - SEARCH VIEW -->
+    <!-- =========================== -->
+    <record id="product_nature_view_search" model="ir.ui.view">
+        <field name="name">product.nature.view.search</field>
+        <field name="model">product.nature</field>
+        <field name="arch" type="xml">
+            <search string="Rechercher natures">
+                <field name="name"/>
+                <filter string="Archivés" name="inactive" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- =========================== -->
+    <!-- ACTION                      -->
+    <!-- =========================== -->
+    <record id="action_product_nature" model="ir.actions.act_window">
+        <field name="name">Natures de produits</field>
+        <field name="res_model">product.nature</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Créer une nature de produit
+            </p>
+            <p>
+                Les natures permettent de suivre les quantités réelles vendues
+                (ex: COFFRET-4 = 4 macarons).
+            </p>
+        </field>
+    </record>
+
+    <!-- =========================== -->
+    <!-- MENU (under Configuration)  -->
+    <!-- =========================== -->
+    <menuitem id="menu_product_nature"
+              name="Natures de produits"
+              action="action_product_nature"
+              parent="point_of_sale.menu_point_config_product"
+              sequence="30"/>
+
+</odoo>

@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- =========================== -->
+    <!-- POS ORDER REPORT - PIVOT    -->
+    <!-- =========================== -->
+    <record id="view_report_pos_order_pivot_nature" model="ir.ui.view">
+        <field name="name">report.pos.order.pivot.nature</field>
+        <field name="model">report.pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_report_pos_order_pivot"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='price_total']" position="after">
+                <field name="total_nature_qty" type="measure"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- =========================== -->
+    <!-- POS ORDER REPORT - GRAPH    -->
+    <!-- =========================== -->
+    <record id="view_report_pos_order_graph_nature" model="ir.ui.view">
+        <field name="name">report.pos.order.graph.nature</field>
+        <field name="model">report.pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_report_pos_order_graph"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='price_total']" position="after">
+                <field name="total_nature_qty" type="measure"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- =========================== -->
+    <!-- POS ORDER REPORT - LIST     -->
+    <!-- =========================== -->
+    <record id="report_pos_order_view_tree_nature" model="ir.ui.view">
+        <field name="name">report.pos.order.view.list.nature</field>
+        <field name="model">report.pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.report_pos_order_view_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='product_id']" position="after">
+                <field name="nature_id" optional="show"/>
+                <field name="nature_quantity" optional="hide"/>
+                <field name="total_nature_qty" optional="show" string="Qté nature"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- =========================== -->
+    <!-- POS ORDER REPORT - SEARCH   -->
+    <!-- =========================== -->
+    <record id="view_report_pos_order_search_nature" model="ir.ui.view">
+        <field name="name">report.pos.order.search.nature</field>
+        <field name="model">report.pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_report_pos_order_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='product_id']" position="after">
+                <field name="nature_id"/>
+            </xpath>
+            <xpath expr="//filter[@name='product']" position="after">
+                <filter string="Nature" name="nature" context="{'group_by':'nature_id'}"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>
