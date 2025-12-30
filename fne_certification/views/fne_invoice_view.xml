@@ -68,13 +68,13 @@
                             <field name="fne_certified"/>
                             <field name="fne_reference" readonly="1"/>
                             <field name="fne_id" readonly="1"/>
-                            <field name="fne_sticker_balance" readonly="1"/>
+                            <field name="fne_sticker_balance" readonly="1" invisible="1"/>
                         </group>
                         
                         <group string="Paramètres">
                             <field name="fne_template" readonly="fne_certified"/>
                             <field name="fne_payment_method" readonly="fne_certified"/>
-                            <field name="fne_token" readonly="1" widget="url"/>
+                            <field name="fne_token" readonly="1" widget="url" invisible="1"/>
                         </group>
                     </group>
                     
@@ -82,12 +82,12 @@
                         <field name="fne_qr_code" widget="qr_code" readonly="1"/>
                     </group>
                     
-                    <group string="Réponse complète API" invisible="not fne_response_json">
+                    <group string="Réponse complète API" invisible="1">
                         <!-- <field name="fne_response_json" readonly="1" widget="ace" options="{'mode': 'json'}"/> -->
                         <field name="fne_response_json" readonly="1"/>
                     </group>
                     
-                    <group string="Erreur" invisible="not fne_error_message">
+                    <group string="Erreur" invisible="1">
                         <field name="fne_error_message" readonly="1" class="text-danger"/>
                     </group>
                 </page>

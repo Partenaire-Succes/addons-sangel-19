@@ -302,7 +302,7 @@ class ResPartnerImport(models.Model):
             # Création automatique d'une condition de paiement simple
             new_rec = self.env["account.payment.term"].create({
                 "name": name,
-                "note": f"Importé depuis SAGE X3"
+                "note": f"Condition de paiement: {name}",
             })
             _logger.info("➕ Condition de paiement créée : %s", name)
             return new_rec.id

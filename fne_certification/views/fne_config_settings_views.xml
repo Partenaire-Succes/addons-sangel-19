@@ -7,8 +7,8 @@
         <field name="arch" type="xml">
             <form string="Configuration FNE">
                 <header>
-                    <button name="test_connection" 
-                            string="Tester la connexion" 
+                    <button name="action_validate" 
+                            string="Valider la configuration" 
                             type="object" 
                             class="btn-primary"
                             invisible="not fne_api_token or not fne_api_url"/>
@@ -17,28 +17,28 @@
                 <sheet>
                     <div class="oe_title">
                         <h1>
-                            <field name="fne_point_of_sale" placeholder="Point de vente..."/>
+                            <field name="fne_point_of_sale" placeholder="Point de vente..." readonly="state == 'validated'"/>
                         </h1>
                     </div>
                     
                     <group>
-                        <group string="Activation">
+                        <group string="Activation" readonly="state == 'validated'">
                             <field name="is_fne_enabled"/>
                             <field name="auto_certify_on_post" invisible="not is_fne_enabled"/>
                             <field name="company_id" groups="base.group_multi_company"/>
                         </group>
                         
-                        <group string="Environnement">
+                        <group string="Environnement" readonly="state == 'validated'">
                             <field name="environment" widget="radio"/>
                             <field name="fne_api_url" readonly="1"/>
                         </group>
                     </group>
                     
-                    <group string="Authentification API">
+                    <group string="Authentification API" readonly="state == 'validated'">
                         <field name="fne_api_token" password="True" placeholder="Bearer token fourni par la DGI..."/>
                     </group>
                     
-                    <group>
+                    <group readonly="state == 'validated'">
                         <group string="Informations établissement">
                             <field name="fne_point_of_sale" placeholder="Ex: 23"/>
                             <field name="fne_establishment" placeholder="Ex: Orange Riviera Mpouto"/>
@@ -97,10 +97,7 @@
                         </page>
                     </notebook>
                 </sheet>
-                <!-- <div class="oe_chatter">
-                    <field name="message_follower_ids"/>
-                    <field name="message_ids"/>
-                </div> -->
+                <chatter reload_on_attachment="True"/>
             </form>
         </field>
     </record>

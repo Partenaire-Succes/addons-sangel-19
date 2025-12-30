@@ -10,6 +10,7 @@ class FneConfigSettings(models.Model):
     _name = 'fne.config.settings'
     _description = 'Paramètres de connexion FNE'
     _rec_name = 'fne_point_of_sale'
+    _inherit = ['mail.thread', 'mail.activity.mixin']
 
     is_fne_enabled = fields.Boolean(
         string="Activer la certification FNE",
@@ -83,6 +84,9 @@ class FneConfigSettings(models.Model):
             else:
                 # L'URL de production sera fournie par la DGI après validation
                 rec.fne_api_url = ''
+
+    def action_validate(self):
+        self.write({'state': 'validated'})
 
     def test_connection(self):
         """Tester la connexion à l'API FNE"""

@@ -19,7 +19,7 @@
         'views/fne_config_settings_views.xml',
         'views/res_partner_views.xml',
         'views/fne_certification_wizard_views.xml',
-        # 'views/report_invoice_fne.xml',
+        'views/report_invoice_fne.xml',
     ],
 
     'license': 'LGPL-3',
