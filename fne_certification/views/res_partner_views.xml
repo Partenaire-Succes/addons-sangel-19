@@ -1,49 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Extension vue formulaire partenaire -->
-    <record id="view_partner_form_fne" model="ir.ui.view">
-        <field name="name">res.partner.form.fne</field>
-        <field name="model">res.partner</field>
-        <field name="inherit_id" ref="account.view_partner_property_form"/>
-        <field name="arch" type="xml">
-            <!-- Ajouter le type client FNE dans l'onglet Comptabilité -->
-            <xpath expr="//page[@name='accounting']" position="inside">
-                <group string="Facturation FNE" name="fne_info">
-                    <field name="fne_client_type" readonly="1" 
-                           widget="badge" 
-                           decoration-info="fne_client_type == 'B2C'"
-                           decoration-success="fne_client_type == 'B2B'"
-                           decoration-warning="fne_client_type == 'B2G'"
-                           decoration-primary="fne_client_type == 'B2F'"/>
-                </group>
-                
-                <div class="alert alert-info mt-3" role="alert" 
-                     invisible="fne_client_type not in ['B2B', 'B2C']">
-                    <h4>Type de client FNE</h4>
-                    <ul>
-                        <li><strong>B2C</strong> : Particulier (sans NCC)</li>
-                        <li><strong>B2B</strong> : Entreprise avec NCC (TVA requis)</li>
-                        <li><strong>B2G</strong> : Institution gouvernementale</li>
-                        <li><strong>B2F</strong> : Client international</li>
-                    </ul>
-                    <p class="mb-0" invisible="fne_client_type != 'B2B' or vat">
-                        <i class="fa fa-warning text-warning"/> 
-                        <strong>Important :</strong> Pour les clients B2B, veuillez renseigner le NCC dans le champ TVA.
-                    </p>
-                </div>
-            </xpath>
-        </field>
-    </record>
-    
-    <!-- Extension vue liste partenaire -->
-    <record id="view_partner_tree_fne" model="ir.ui.view">
-        <field name="name">res.partner.tree.fne</field>
-        <field name="model">res.partner</field>
-        <field name="inherit_id" ref="base.view_partner_tree"/>
-        <field name="arch" type="xml">
-            <xpath expr="//field[@name='vat']" position="after">
-                <field name="fne_client_type" optional="show"/>
-            </xpath>
-        </field>
-    </record>
+    <data>
+        <!-- Extension vue formulaire partenaire -->
+        <record id="view_partner_form_fne" model="ir.ui.view">
+            <field name="name">res.partner.form.fne</field>
+            <field name="model">res.partner</field>
+            <field name="inherit_id" ref="account.view_partner_property_form"/>
+            <field name="arch" type="xml">
+                <!-- Ajouter le type client FNE dans l'onglet Comptabilité -->
+                <xpath expr="//page[@name='accounting']" position="inside">
+                    <group string="Facturation FNE" name="fne_info">
+                        <field name="fne_client_type" readonly="1" 
+                            widget="badge" 
+                            decoration-info="fne_client_type == 'B2C'"
+                            decoration-success="fne_client_type == 'B2B'"
+                            decoration-warning="fne_client_type == 'B2G'"
+                            decoration-primary="fne_client_type == 'B2F'"/>
+                    </group>
+                    
+                    <div class="alert alert-info mt-3" role="alert" 
+                        invisible="fne_client_type not in ['B2B', 'B2C']">
+                        <h4>Type de client FNE</h4>
+                        <ul>
+                            <li><strong>B2C</strong> : Particulier (sans NCC)</li>
+                            <li><strong>B2B</strong> : Entreprise avec NCC (TVA requis)</li>
+                            <li><strong>B2G</strong> : Institution gouvernementale</li>
+                            <li><strong>B2F</strong> : Client international</li>
+                        </ul>
+                        <p class="mb-0" invisible="fne_client_type != 'B2B' or vat">
+                            <i class="fa fa-warning text-warning"/> 
+                            <strong>Important :</strong> Pour les clients B2B, veuillez renseigner le NCC dans le champ TVA.
+                        </p>
+                    </div>
+                </xpath>
+            </field>
+        </record>
+        
+        <!-- Extension vue liste partenaire -->
+        <record id="view_partner_tree_fne" model="ir.ui.view">
+            <field name="name">res.partner.tree.fne</field>
+            <field name="model">res.partner</field>
+            <field name="inherit_id" ref="base.view_partner_tree"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='vat']" position="after">
+                    <field name="fne_client_type" optional="show"/>
+                </xpath>
+            </field>
+        </record>
+    </data>
 </odoo>
