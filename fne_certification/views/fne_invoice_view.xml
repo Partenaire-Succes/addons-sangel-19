@@ -94,8 +94,8 @@
             </xpath>
             
             <!-- Extension des lignes pour l'ID FNE -->
-            <xpath expr="//field[@name='invoice_line_ids']/list" position="inside">
-                <field name="fne_original_line_id" column_invisible="True"/>
+            <xpath expr="//field[@name='invoice_line_ids']//field[@name='name']" position="after">
+                <field name="fne_original_line_id" column_invisible="1"/>
             </xpath>
             
         </field>
