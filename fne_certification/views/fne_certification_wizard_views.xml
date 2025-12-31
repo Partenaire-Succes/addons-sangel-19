@@ -17,24 +17,29 @@
                     
                     <group>
                         <group string="Facture d'avoir">
-                            <field name="move_id" readonly="1"/>
+                            <field name="move_id" invisible="1"/>
+                            <label for="move_id"/>
+                            <div>
+                                <field name="move_id" readonly="1" nolabel="1"/>
+                            </div>
                         </group>
                         
                         <group string="Facture d'origine">
-                            <field name="original_invoice_id" readonly="1"/>
-                            <field name="original_fne_reference" readonly="1"/>
+                            <field name="original_invoice_id" readonly="1" force_save="1"/>
+                            <field name="original_fne_reference" readonly="1" force_save="1"/>
                         </group>
                     </group>
                     
                     <notebook>
                         <page string="Lignes à retourner">
-                            <field name="line_ids">
-                                <list editable="bottom" create="false" delete="false">
+                            <field name="line_ids" nolabel="1">
+                                <list editable="bottom" create="0" delete="0">
                                     <field name="to_refund" widget="boolean_toggle"/>
-                                    <field name="product_id" readonly="1"/>
-                                    <field name="description" readonly="1"/>
-                                    <field name="quantity" readonly="1"/>
-                                    <field name="fne_original_line_id" readonly="1" optional="show"/>
+                                    <field name="product_id" readonly="1" force_save="1"/>
+                                    <field name="description" readonly="1" force_save="1"/>
+                                    <field name="quantity" readonly="1" force_save="1"/>
+                                    <field name="fne_original_line_id" readonly="1" optional="show" force_save="1"/>
+                                    <field name="move_line_id" column_invisible="1" force_save="1"/>
                                 </list>
                             </field>
                             

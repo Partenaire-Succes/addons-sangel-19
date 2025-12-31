@@ -182,21 +182,19 @@ class AccountMove(models.Model):
             )
             
             _logger.info(f"FNE Response Status: {response.status_code}")
-            _logger.info(f"FNE Response: {response.text}")
             
             if response.status_code in [200, 201]:
                 data = response.json()
                 self._process_fne_success_response(data)
                 
+                self.message_post(
+                    body=f"✅ Facture certifiée FNE: {data.get('reference')}",
+                    subject="Certification FNE"
+                )
+
                 return {
                     'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'title': _('Certification réussie!'),
-                        'message': _('Facture certifiée FNE: %s') % data.get('reference'),
-                        'type': 'success',
-                        'sticky': False,
-                    }
+                    'tag': 'reload',
                 }
             else:
                 error_data = response.json()
@@ -205,7 +203,6 @@ class AccountMove(models.Model):
                 raise UserError(_(f"Erreur FNE: {error_msg}"))
                 
         except requests.exceptions.RequestException as e:
-            _logger.error(f"Erreur de connexion FNE: {str(e)}")
             raise UserError(_(f"Impossible de se connecter à l'API FNE: {str(e)}"))
 
     def _certify_fne_refund(self):
@@ -256,7 +253,6 @@ class AccountMove(models.Model):
         
         try:
             _logger.info(f"FNE Refund Request URL: {url}")
-            _logger.info(f"FNE Refund Payload: {json.dumps(payload, indent=2)}")
             
             response = requests.post(
                 url,
@@ -266,7 +262,6 @@ class AccountMove(models.Model):
             )
             
             _logger.info(f"FNE Refund Response Status: {response.status_code}")
-            _logger.info(f"FNE Refund Response: {response.text}")
             
             if response.status_code in [200, 201]:
                 data = response.json()
@@ -281,16 +276,15 @@ class AccountMove(models.Model):
                     'fne_error_message': False
                 }
                 self.write(values)
-                
+
+                self.message_post(
+                    body=f"✅ Facture Avoir certifiée FNE: {data.get('reference')}",
+                    subject="Certification FNE"
+                )
+
                 return {
                     'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'title': _('Avoir certifié!'),
-                        'message': _('Avoir FNE: %s') % data.get('reference'),
-                        'type': 'success',
-                        'sticky': False,
-                    }
+                    'tag': 'reload',
                 }
             else:
                 error_data = response.json()
@@ -299,7 +293,6 @@ class AccountMove(models.Model):
                 raise UserError(_(f"Erreur FNE: {error_msg}"))
                 
         except requests.exceptions.RequestException as e:
-            _logger.error(f"Erreur de connexion FNE (refund): {str(e)}")
             raise UserError(_(f"Impossible de se connecter à l'API FNE: {str(e)}"))
 
     def _prepare_fne_invoice_data(self):

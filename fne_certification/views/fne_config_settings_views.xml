@@ -23,31 +23,31 @@
                         </div>
                         
                         <group>
-                            <group string="Activation" readonly="state == 'validated'">
-                                <field name="is_fne_enabled"/>
-                                <field name="auto_certify_on_post" invisible="not is_fne_enabled"/>
+                            <group string="Activation">
+                                <field name="is_fne_enabled" readonly="state == 'validated'"/>
+                                <field name="auto_certify_on_post" invisible="not is_fne_enabled" readonly="state == 'validated'"/>
                                 <field name="company_id" groups="base.group_multi_company"/>
                             </group>
                             
-                            <group string="Environnement" readonly="state == 'validated'">
-                                <field name="environment" widget="radio"/>
+                            <group string="Environnement">
+                                <field name="environment" widget="radio" readonly="state == 'validated'"/>
                                 <field name="fne_api_url" readonly="1"/>
                             </group>
                         </group>
                         
-                        <group string="Authentification API" readonly="state == 'validated'">
-                            <field name="fne_api_token" password="True" placeholder="Bearer token fourni par la DGI..."/>
+                        <group string="Authentification API">
+                            <field name="fne_api_token" password="True" placeholder="Bearer token fourni par la DGI..." readonly="state == 'validated'"/>
                         </group>
                         
-                        <group readonly="state == 'validated'">
+                        <group>
                             <group string="Informations établissement">
-                                <field name="fne_point_of_sale" placeholder="Ex: 23"/>
-                                <field name="fne_establishment" placeholder="Ex: Orange Riviera Mpouto"/>
+                                <field name="fne_point_of_sale" placeholder="Ex: 23" readonly="state == 'validated'"/>
+                                <field name="fne_establishment" placeholder="Ex: Orange Riviera Mpouto" readonly="state == 'validated'"/>
                             </group>
                             
                             <group string="Messages par défaut">
-                                <field name="commercial_message" placeholder="Message commercial..."/>
-                                <field name="footer" placeholder="Pied de page..."/>
+                                <field name="commercial_message" placeholder="Message commercial..." readonly="state == 'validated'"/>
+                                <field name="footer" placeholder="Pied de page..." readonly="state == 'validated'"/>
                             </group>
                         </group>
                         

@@ -181,7 +181,7 @@ class ProductTemplateImport(models.Model):
         return {
             "name": item.get("itmdeS1_0") or "Produit sans nom",
             "default_code": item.get("itmreF_0") or False,
-            "barcode": barcode,
+            "barcode": self.update_products_barcodes(barcode),
             "description": item.get("itmdeS2_0", ""),
             "list_price": self._safe_float(item.get("basprI_0")),
             "taxes_id": self._get_taxes_id(item.get("vacitM_0")),
@@ -501,6 +501,52 @@ class ProductTemplateImport(models.Model):
         rec = self.env["product.status.sage"].search([("name", "ilike", name)], limit=1)
         return rec.id or self.env["product.status.sage"].create({"name": name}).id
 
+    def fix_gs1_barcode(self,current_barcode):
+        """
+        Calcule la clé de contrôle GS1 et remplace le dernier chiffre.
+        
+        :param current_barcode: str ou int, le code actuel (ex: '2715180000000')
+        :return: str, le code barres corrigé avec la bonne clé GS1
+        """
+        # Convertir en chaîne et nettoyer
+        barcode_str = str(current_barcode).strip()
+        
+        # Vérifier que la longueur est correcte (13 caractères pour EAN-13)
+        if len(barcode_str) != 13:
+            _logger.info(f"Attention : Le code {barcode_str} n'a pas 13 caractères.")
+            return barcode_str
+
+        # Extraire les 12 premiers chiffres (le préfixe + code article + padding)
+        base_code = barcode_str[:12]
+        
+        even_sum = 0
+        odd_sum = 0
+        
+        for i in range(12):
+            digit = int(base_code[i])
+            if (i + 1) % 2 == 0:
+                even_sum += digit
+            else:
+                odd_sum += digit
+                
+        total = (even_sum * 3) + odd_sum
+        check_digit = (10 - (total % 10)) % 10
+        new_barcode = base_code + str(check_digit)
+        
+        return new_barcode
+    
+    def update_products_barcodes(self, barcode):
+        """Met à jour les codes barres des produits pour corriger la clé GS1."""
+        
+        # 1. Vérifier que le barcode n'est pas vide et fait bien 13 caractères
+        if barcode and len(barcode) == 13:
+            if barcode.startswith('27') and barcode.endswith('0000000'):
+                
+                old_barcode = barcode
+                new_barcode = self.fix_gs1_barcode(old_barcode)
+                if old_barcode != new_barcode:
+                    return new_barcode
+        return barcode
 
 class ProductProduct(models.Model):
     _inherit = 'product.product'

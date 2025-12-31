@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
+import requests
 import json
 import logging
 
@@ -22,13 +23,15 @@ class FNERefundWizard(models.TransientModel):
         'account.move',
         string='Facture d\'origine',
         related='move_id.reversed_entry_id',
-        readonly=True
+        readonly=True,
+        store=False  # Ne pas stocker pour éviter les problèmes
     )
     
     original_fne_reference = fields.Char(
         string='Référence FNE origine',
         related='original_invoice_id.fne_reference',
-        readonly=True
+        readonly=True,
+        store=False  # Ne pas stocker pour éviter les problèmes
     )
     
     line_ids = fields.One2many(
@@ -39,7 +42,7 @@ class FNERefundWizard(models.TransientModel):
     
     @api.model
     def default_get(self, fields_list):
-        """Pré-remplir le wizard avec les lignes de l'avoir"""
+        """Pré-remplir le wizard avec toutes les lignes de l'avoir"""
         res = super().default_get(fields_list)
         
         if self._context.get('active_id'):
@@ -61,19 +64,22 @@ class FNERefundWizard(models.TransientModel):
             for line in move.invoice_line_ids.filtered(lambda l: l.display_type == 'product'):
                 # Chercher la ligne correspondante dans la facture d'origine
                 original_line = move.reversed_entry_id.invoice_line_ids.filtered(
-                    lambda l: l.product_id == line.product_id and 
-                             l.fne_original_line_id and
-                             l.display_type == 'product'
+                    lambda l: l.product_id == line.product_id and l.display_type == 'product'
                 )
                 
-                if original_line:
-                    lines.append((0, 0, {
-                        'product_id': line.product_id.id,
-                        'description': line.name,
-                        'quantity': abs(line.quantity),
-                        'fne_original_line_id': original_line[0].fne_original_line_id,
-                        'move_line_id': line.id,
-                    }))
+                # Récupérer le fne_original_line_id
+                fne_id = ''
+                if original_line and original_line[0].fne_original_line_id:
+                    fne_id = original_line[0].fne_original_line_id
+                
+                lines.append((0, 0, {
+                    'product_id': line.product_id.id,
+                    'description': line.name,
+                    'quantity': abs(line.quantity),
+                    'fne_original_line_id': fne_id,
+                    'move_line_id': line.id,
+                    'to_refund': True if fne_id else False,  # Cocher seulement si ID FNE existe
+                }))
             
             res['line_ids'] = lines
         
@@ -82,6 +88,7 @@ class FNERefundWizard(models.TransientModel):
     def action_certify_fne_refund(self):
         """Certifier l'avoir via l'API FNE"""
         self.ensure_one()
+        _logger.info(f"Nombre de lignes: {len(self.line_ids)}")
         
         if not self.move_id:
             raise UserError(_("Aucune facture d'avoir sélectionnée."))
@@ -89,14 +96,25 @@ class FNERefundWizard(models.TransientModel):
         if self.move_id.fne_certified:
             raise UserError(_("Cet avoir est déjà certifié FNE."))
         
-        if not self.original_invoice_id or not self.original_invoice_id.fne_certified:
+        # Récupérer la facture d'origine directement (pas via related)
+        original_invoice = self.move_id.reversed_entry_id
+        
+        if not original_invoice:
+            raise UserError(_("Aucune facture d'origine trouvée pour cet avoir."))
+        
+        if not original_invoice.fne_certified:
             raise UserError(_("La facture d'origine n'est pas certifiée FNE."))
         
-        if not self.original_invoice_id.fne_invoice_uuid:
+        if not original_invoice.fne_invoice_uuid:
             raise UserError(_("L'identifiant UUID de la facture d'origine est manquant."))
+        
+        # Vérifier qu'il y a des lignes
+        if not self.line_ids:
+            raise UserError(_("Aucune ligne trouvée dans le wizard. Veuillez réessayer."))
         
         # Vérifier qu'il y a des lignes sélectionnées
         selected_lines = self.line_ids.filtered(lambda l: l.to_refund)
+        
         if not selected_lines:
             raise UserError(_("Veuillez sélectionner au moins une ligne à retourner."))
         
@@ -115,6 +133,9 @@ class FNERefundWizard(models.TransientModel):
                 'quantity': line.quantity
             })
         
+        if not items:
+            raise UserError(_("Aucun article à retourner."))
+        
         payload = {'items': items}
         
         headers = {
@@ -123,17 +144,11 @@ class FNERefundWizard(models.TransientModel):
             'Accept': 'application/json'
         }
         
-        url = f"{config.fne_api_url}/external/invoices/{self.original_invoice_id.fne_invoice_uuid}/refund"
+        url = f"{config.fne_api_url}/external/invoices/{original_invoice.fne_invoice_uuid}/refund"
         
         try:
-            _logger.info(f"FNE Refund Request - URL: {url}")
-            _logger.info(f"FNE Refund Request - Payload: {json.dumps(payload, indent=2)}")
             
-            import requests
             response = requests.post(url, headers=headers, json=payload, timeout=30)
-            
-            _logger.info(f"FNE Refund Response - Status: {response.status_code}")
-            _logger.info(f"FNE Refund Response - Body: {response.text}")
             
             data = response.json()
             
@@ -155,16 +170,12 @@ class FNERefundWizard(models.TransientModel):
                             'fne_original_line_id': wizard_line.fne_original_line_id
                         })
                 
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'title': _('Avoir certifié FNE avec succès!'),
-                        'message': _('Référence FNE: %s') % data.get('reference'),
-                        'type': 'success',
-                        'sticky': False,
-                    }
-                }
+                self.move_id.message_post(
+                    body=f"Avoir certifié FNE avec succès. Référence: {data.get('reference')}",
+                    subject="Certification FNE"
+                )
+                return {'type': 'ir.actions.act_window_close'}
+            
             else:
                 error_msg = data.get('message', 'Erreur inconnue')
                 self.move_id.write({
@@ -172,8 +183,9 @@ class FNERefundWizard(models.TransientModel):
                 })
                 raise UserError(_(f"Erreur FNE: {error_msg}\n\nDétails: {response.text}"))
         
+        except requests.exceptions.RequestException as e:
+            raise UserError(_(f"Erreur de connexion à l'API FNE: {str(e)}"))
         except Exception as e:
-            _logger.error(f"Erreur certification FNE refund: {str(e)}")
             raise UserError(_(f"Erreur lors de la certification FNE: {str(e)}"))
 
 

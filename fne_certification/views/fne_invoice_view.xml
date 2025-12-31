@@ -13,6 +13,7 @@
                 <button name="action_certify_fne" 
                         string="Certifier FNE" 
                         type="object" 
+                        confirm="Êtes-vous sûr de vouloir certifier cette facture auprès de la FNE ?"
                         class="btn-primary"
                         invisible="state != 'posted' or fne_certified or move_type not in ['out_invoice', 'out_refund']"/>
                 
