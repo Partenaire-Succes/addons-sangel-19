@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- =========================== -->
+    <!-- POS ORDER REPORT - PIVOT    -->
+    <!-- =========================== -->
+    <record id="view_report_pos_order_pivot_nature" model="ir.ui.view">
+        <field name="name">report.pos.order.pivot.nature</field>
+        <field name="model">report.pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_report_pos_order_pivot"/>
+        <field name="arch" type="xml">
+            <!-- Rename "Quantité de produits" to "Quantité de produits vendus" -->
+            <xpath expr="//field[@name='product_qty']" position="attributes">
+                <attribute name="string">Quantité de produits vendus</attribute>
+            </xpath>
+            <!-- Replace native price_total with our price_total_list for "Prix total TTC" -->
+            <xpath expr="//field[@name='price_total']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <!-- Add our custom measures after the hidden price_total -->
+            <xpath expr="//field[@name='price_total']" position="after">
+                <field name="nature_unit_price" string="Prix unitaire" type="measure"/>
+                <field name="valeur_monetaire" string="Valeur monétaire" type="measure"/>
+                <field name="price_total_list" string="Prix total TTC" type="measure"/>
+                <field name="price_subtotal_excl" string="Prix total HT" type="measure"/>
+                <field name="total_nature_qty" type="measure"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- =========================== -->
+    <!-- POS ORDER REPORT - GRAPH    -->
+    <!-- =========================== -->
+    <record id="view_report_pos_order_graph_nature" model="ir.ui.view">
+        <field name="name">report.pos.order.graph.nature</field>
+        <field name="model">report.pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_report_pos_order_graph"/>
+        <field name="arch" type="xml">
+            <!-- Replace native price_total with price_total_list -->
+            <xpath expr="//field[@name='price_total']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <!-- Add our custom measures -->
+            <xpath expr="//field[@name='price_total']" position="after">
+                <field name="nature_unit_price" string="Prix unitaire" type="measure"/>
+                <field name="valeur_monetaire" string="Valeur monétaire" type="measure"/>
+                <field name="price_total_list" string="Prix total TTC" type="measure"/>
+                <field name="price_subtotal_excl" string="Prix total HT" type="measure"/>
+                <field name="total_nature_qty" type="measure"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- =========================== -->
+    <!-- POS ORDER REPORT - LIST     -->
+    <!-- =========================== -->
+    <record id="report_pos_order_view_tree_nature" model="ir.ui.view">
+        <field name="name">report.pos.order.view.list.nature</field>
+        <field name="model">report.pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.report_pos_order_view_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='product_id']" position="after">
+                <field name="nature_id" optional="show"/>
+                <field name="nature_quantity" optional="hide"/>
+                <field name="total_nature_qty" optional="show" string="Qté nature"/>
+                <field name="nature_unit_price" optional="show" string="Prix unitaire"/>
+                <field name="valeur_monetaire" optional="show" string="Valeur monétaire"/>
+            </xpath>
+            <!-- Hide native price_total, add our custom fields -->
+            <xpath expr="//field[@name='price_total']" position="attributes">
+                <attribute name="optional">hide</attribute>
+                <attribute name="string">Prix réel TTC</attribute>
+            </xpath>
+            <xpath expr="//field[@name='price_total']" position="after">
+                <field name="price_total_list" optional="show" string="Prix total TTC"/>
+                <field name="price_subtotal_excl" optional="show" string="Prix total HT"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- =========================== -->
+    <!-- POS ORDER REPORT - SEARCH   -->
+    <!-- =========================== -->
+    <record id="view_report_pos_order_search_nature" model="ir.ui.view">
+        <field name="name">report.pos.order.search.nature</field>
+        <field name="model">report.pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_report_pos_order_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='product_id']" position="after">
+                <field name="nature_id"/>
+            </xpath>
+            <xpath expr="//filter[@name='product']" position="after">
+                <filter string="Nature" name="nature" context="{'group_by':'nature_id'}"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>
