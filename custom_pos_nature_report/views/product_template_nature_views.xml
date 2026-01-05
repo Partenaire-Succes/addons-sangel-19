@@ -3,11 +3,13 @@
 
     <!-- =========================== -->
     <!-- PRODUCT TEMPLATE FORM EXT   -->
+    <!-- Nature fields on product    -->
     <!-- =========================== -->
     <record id="product_template_form_view_nature" model="ir.ui.view">
         <field name="name">product.template.form.nature</field>
         <field name="model">product.template</field>
         <field name="inherit_id" ref="product.product_template_only_form_view"/>
+        <field name="priority">20</field>
         <field name="arch" type="xml">
             <!-- Add nature fields after category -->
             <xpath expr="//field[@name='categ_id']" position="after">
