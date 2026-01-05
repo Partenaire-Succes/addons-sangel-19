@@ -9,7 +9,7 @@
 #############################################################################
 {
     'name': 'Personnalisation du Point de vente pour nature',
-    'version': '19.0.1.4.0',
+    'version': '19.0.1.5.0',
     'category': 'POS',
     'summary': """Customisation de Point de vente pour Odoo 19.0""",
     'description': """Adaptation du module Point de vente pour répondre aux besoins 
@@ -18,9 +18,9 @@
         Modifications:
         - Prix unitaire = défini sur la Nature (une seule fois par nature)
         - Valeur monétaire = Qté nature totale × Prix unitaire
-        - Prix total TTC = Prix de base × Quantité (prix catalogue)
+        - Prix total HT = Prix de base (list_price) × Quantité de produits vendus
+        - Prix total TTC = Prix de base × (1 + taux taxe) × Quantité de produits vendus
         - Quantité de produits vendus (renommé)
-        - Prix total HT (hors taxes - prix réel de transaction)
     """,
     'author': 'Adams KONE',
     'company': 'Partenaires Succes',

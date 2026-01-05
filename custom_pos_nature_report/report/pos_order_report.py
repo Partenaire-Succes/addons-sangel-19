@@ -4,9 +4,9 @@ from odoo import fields, models, tools
 
 class ReportPosOrderNature(models.Model):
     """
-    Extension of report.pos.order to add nature tracking fields.
-    This allows tracking actual quantities sold by nature
-    (e.g., how many macarons were sold in total from different coffrets)
+    Extension of report.pos.order to add nature tracking fields and custom price calculations.
+    - Nature tracking: tracks actual quantities sold by nature (e.g., macarons from coffrets)
+    - Custom HT/TTC: calculates based on product list_price and taxes, not transaction prices
     """
     _inherit = 'report.pos.order'
 
@@ -38,19 +38,44 @@ class ReportPosOrderNature(models.Model):
         readonly=True,
         help="Valeur monétaire = Qté nature totale × Prix unitaire"
     )
+    price_total_ht = fields.Float(
+        string='Prix total HT',
+        readonly=True,
+        help="Prix total HT = Prix de base (list_price) × Quantité de produits vendus"
+    )
+    price_total_ttc = fields.Float(
+        string='Prix total TTC',
+        readonly=True,
+        help="Prix total TTC = Prix de base × (1 + taux de taxe) × Quantité de produits vendus"
+    )
 
     def _select(self):
-        """Extend SELECT to include nature fields and valeur monetaire calculations"""
+        """Extend SELECT to include nature fields, valeur monetaire, and custom HT/TTC calculations
+        
+        Prix total HT = list_price × qty
+        Prix total TTC = ((list_price × tax_rate) + list_price) × qty
+                       = list_price × (1 + tax_rate) × qty
+        """
         return super()._select() + """,
                 pt.nature_id AS nature_id,
                 COALESCE(pt.nature_quantity, 0) AS nature_quantity,
                 CAST(l.qty * COALESCE(pt.nature_quantity, 0) AS INTEGER) AS total_nature_qty,
                 COALESCE(pn.unit_price, 0) AS nature_unit_price,
-                (l.qty * COALESCE(pt.nature_quantity, 0)) * COALESCE(pn.unit_price, 0) AS valeur_monetaire
+                (l.qty * COALESCE(pt.nature_quantity, 0)) * COALESCE(pn.unit_price, 0) AS valeur_monetaire,
+                pt.list_price * l.qty AS price_total_ht,
+                pt.list_price * (1 + COALESCE(tax_agg.total_tax_percent, 0) / 100) * l.qty AS price_total_ttc
         """
 
     def _from(self):
-        """Extend FROM to join product_nature table for unit_price"""
+        """Extend FROM to join product_nature table and aggregate taxes"""
         return super()._from() + """
                 LEFT JOIN product_nature pn ON (pt.nature_id = pn.id)
+                LEFT JOIN (
+                    SELECT ptr.prod_id, SUM(COALESCE(tax.amount, 0)) AS total_tax_percent
+                    FROM product_taxes_rel ptr
+                    JOIN account_tax tax ON tax.id = ptr.tax_id
+                        AND tax.type_tax_use = 'sale'
+                        AND tax.amount_type = 'percent'
+                    GROUP BY ptr.prod_id
+                ) tax_agg ON (tax_agg.prod_id = pt.id)
         """
