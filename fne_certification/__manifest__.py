@@ -15,6 +15,7 @@
     ],
     'data': [
         'security/ir.model.access.csv',
+        'data/config_fne_data.xml',
         'views/fne_certification_wizard_views.xml',
         'views/fne_config_settings_views.xml',
         'views/fne_invoice_view.xml',

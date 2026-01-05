@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    
+    <data noupdate="1">
+        <!-- Configuration FNE par défaut -->
+        <record id="my_fne_config" model="fne.config.settings">
+            <field name="environment">test</field>
+            <field name="fne_api_token">votre_api_token</field>
+            <field name="fne_point_of_sale">votre_point_de_vente</field>
+            <field name="fne_establishment">votre_etablissement</field>
+            <field name="state">draft</field>
+        </record>
+    </data>
+
+</odoo>

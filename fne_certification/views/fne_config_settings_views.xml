@@ -6,7 +6,7 @@
             <field name="name">fne.config.settings.form</field>
             <field name="model">fne.config.settings</field>
             <field name="arch" type="xml">
-                <form string="Configuration FNE">
+                <form string="Configuration FNE" create="0" edit="1" delete="0">
                     <header>
                         <button name="action_validate" 
                                 string="Valider la configuration" 
@@ -108,7 +108,7 @@
             <field name="name">fne.config.settings.list</field>
             <field name="model">fne.config.settings</field>
             <field name="arch" type="xml">
-                <list string="Configurations FNE">
+                <list string="Configurations FNE" create="0" edit="1" delete="0">
                     <field name="fne_point_of_sale"/>
                     <field name="fne_establishment"/>
                     <field name="environment"/>
