@@ -67,15 +67,17 @@ class ReportPosOrderNature(models.Model):
         """
 
     def _from(self):
-        """Extend FROM to join product_nature table and aggregate taxes"""
+        """Extend FROM to join product_nature table and get first sale tax"""
         return super()._from() + """
                 LEFT JOIN product_nature pn ON (pt.nature_id = pn.id)
-                LEFT JOIN (
-                    SELECT ptr.prod_id, SUM(COALESCE(tax.amount, 0)) AS total_tax_percent
+                LEFT JOIN LATERAL (
+                    SELECT COALESCE(tax.amount, 0) AS total_tax_percent
                     FROM product_taxes_rel ptr
                     JOIN account_tax tax ON tax.id = ptr.tax_id
                         AND tax.type_tax_use = 'sale'
                         AND tax.amount_type = 'percent'
-                    GROUP BY ptr.prod_id
-                ) tax_agg ON (tax_agg.prod_id = pt.id)
+                    WHERE ptr.prod_id = pt.id
+                    ORDER BY tax.id
+                    LIMIT 1
+                ) tax_agg ON true
         """
