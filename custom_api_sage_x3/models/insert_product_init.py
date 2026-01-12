@@ -97,7 +97,6 @@ class ProductTemplateImport(models.Model):
 
                         _logger.info("🔄 Produit existant : %s - Mise à jour des listes de prix", existing.name)
                         self._create_pricelist_items(existing, item)
-                        self.update_products_barcodes(existing, item)
                         supplier_count = self._update_product_suppliers(existing, item)
                         if supplier_count > 0:
                             suppliers_added += supplier_count
@@ -108,7 +107,6 @@ class ProductTemplateImport(models.Model):
                         created += 1
                         _logger.info("✅ Produit créé : %s (%s)", product.name, product.default_code)
                         self._create_pricelist_items(product, item)
-                        self.update_products_barcodes(product, item)
                         supplier_count = self._update_product_suppliers(product, item)
                         if supplier_count > 0:
                             suppliers_added += supplier_count
@@ -169,11 +167,22 @@ class ProductTemplateImport(models.Model):
         """Prépare le dictionnaire de valeurs produit pour la création."""
         barcode = item.get("saN_CB_0", "").strip()
         invalid_barcodes = ["", "0", "00", "000", "0000", "00000"]
+        
+        # Si pas de code-barres ou invalide
         if not barcode or barcode in invalid_barcodes:
             barcode = False
         else:
-            if self.search([("barcode", "=", barcode)], limit=1):
-                _logger.warning(f"Code-barres déjà utilisé ({barcode}) — produit ignoré.")
+            # CORRECTION GS1 : Si c'est un code à 13 chiffres commençant par 27 et finissant par 0000000
+            if len(barcode) == 13 and barcode.startswith('27') and barcode.endswith('0000000'):
+                old_barcode = barcode
+                barcode = self.fix_gs1_barcode(barcode)
+                _logger.info("🔧 Code-barres GS1 corrigé : %s → %s", old_barcode, barcode)
+            
+            # Vérifier si le code-barres (corrigé ou non) existe déjà
+            existing = self.search([("barcode", "=", barcode)], limit=1)
+            if existing:
+                _logger.warning("⚠️ Code-barres déjà utilisé (%s) par %s — barcode ignoré", 
+                            barcode, existing.default_code)
                 barcode = False
 
         return {
@@ -215,7 +224,6 @@ class ProductTemplateImport(models.Model):
             "purchase_ok": True,
             "available_in_pos": True,
             "is_storable": True,
-            # "tracking": 'lot',
         }
 
     # ----------------------------------------------------------
