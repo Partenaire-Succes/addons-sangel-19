@@ -98,6 +98,7 @@ class ProductTemplateImport(models.Model):
                         _logger.info("🔄 Produit existant : %s - Mise à jour des listes de prix", existing.name)
                         self._create_pricelist_items(existing, item)
                         supplier_count = self._update_product_suppliers(existing, item)
+                        self.update_products_barcodes(existing, item)
                         if supplier_count > 0:
                             suppliers_added += supplier_count
                         
@@ -108,6 +109,7 @@ class ProductTemplateImport(models.Model):
                         _logger.info("✅ Produit créé : %s (%s)", product.name, product.default_code)
                         self._create_pricelist_items(product, item)
                         supplier_count = self._update_product_suppliers(product, item)
+                        self.update_products_barcodes(product, item)
                         if supplier_count > 0:
                             suppliers_added += supplier_count
 
@@ -544,44 +546,38 @@ class ProductTemplateImport(models.Model):
     def update_products_barcodes(self, product, item):
         """
         Met à jour les codes barres des produits pour corriger la clé GS1.
-        
-        Args:
-            product: Enregistrement product.template à mettre à jour
-            item: Données de l'API SAGE X3
         """
         barcode = self._safe_string(item.get("saN_CB_0"))
         
-        # Vérifier que le barcode n'est pas vide et fait bien 13 caractères
+        # Vérifier que le barcode fait bien 13 caractères
         if not barcode or len(barcode) != 13:
             return
         
-        # Vérifier si c'est un code-barres à corriger (commence par 27 et finit par 0000000)
+        # Vérifier si c'est un code-barres à corriger
         if barcode.startswith('27') and barcode.endswith('0000000'):
-            old_barcode = barcode
-            new_barcode = self.fix_gs1_barcode(old_barcode)
+            new_barcode = self.fix_gs1_barcode(barcode)
             
-            if old_barcode != new_barcode:
+            # Si le produit n'a PAS de code-barres OU a l'ancien code incorrect
+            if not product.barcode or product.barcode == barcode:
                 try:
-                    # Vérifier si le nouveau code-barres n'est pas déjà utilisé par un autre produit
-                    existing_with_new_barcode = self.search([
+                    # Vérifier si le nouveau code-barres n'est pas déjà utilisé
+                    existing = self.search([
                         ("barcode", "=", new_barcode),
                         ("id", "!=", product.id)
                     ], limit=1)
                     
-                    if existing_with_new_barcode:
+                    if existing:
                         _logger.warning(
-                            "⚠️ Le code-barres corrigé %s est déjà utilisé par le produit %s. "
-                            "Conservation du code-barres original %s pour %s",
-                            new_barcode, existing_with_new_barcode.default_code,
-                            old_barcode, product.default_code
+                            "⚠️ Code-barres %s déjà utilisé par %s",
+                            new_barcode, existing.default_code
                         )
                         return
                     
-                    # Mettre à jour le code-barres du produit
+                    # Mettre à jour
                     product.write({'barcode': new_barcode})
                     _logger.info(
                         "✅ Code-barres corrigé pour %s : %s → %s",
-                        product.default_code, old_barcode, new_barcode
+                        product.default_code, barcode, new_barcode
                     )
                     
                 except Exception as e:
