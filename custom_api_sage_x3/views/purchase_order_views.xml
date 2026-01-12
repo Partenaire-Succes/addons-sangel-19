@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vue formulaire avec onglet SAGE X3 -->
+    <record id="view_purchase_order_form_sage_x3" model="ir.ui.view">
+        <field name="name">purchase.order.form.sage.x3</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_form"/>
+        <field name="arch" type="xml">
+            
+            <!-- Boutons dans le header -->
+            <xpath expr="//button[@name='button_confirm']" position="before">
+                <!-- Bouton Soumettre à SAGE X3 -->
+                <button name="action_submit_to_sage_x3" 
+                        string="Soumettre à SAGE X3" 
+                        type="object" 
+                        class="oe_highlight"
+                        invisible="state not in ['draft', 'sent'] or sage_x3_validated == True"/>
+                
+                <!-- Badge de statut validé -->
+                <button name="action_submit_to_sage_x3" 
+                        string="✅ Validé par SAGE X3" 
+                        type="object" 
+                        class="btn-success"
+                        invisible="sage_x3_validated == False"
+                        disabled="1"/>
+            </xpath>
+            
+            <!-- Message d'avertissement si non validé -->
+            <xpath expr="//sheet" position="before">
+                <div class="alert alert-warning" role="alert" 
+                     invisible="state not in ['draft', 'sent'] or sage_x3_validated == True">
+                    <strong>⚠️ Validation SAGE X3 requise</strong><br/>
+                    Cette commande doit être soumise et validée par SAGE X3 avant de pouvoir être confirmée.
+                    <br/>Utilisez le bouton <strong>"Soumettre à SAGE X3"</strong>.
+                </div>
+                
+                <div class="alert alert-danger" role="alert" 
+                     invisible="sage_x3_submitted == False or sage_x3_error == False">
+                    <strong>❌ Erreur SAGE X3</strong><br/>
+                    <field name="sage_x3_error" readonly="1" nolabel="1"/>
+                </div>
+            </xpath>
+            
+            <!-- Onglet SAGE X3 -->
+            <xpath expr="//notebook" position="inside">
+                <page string="SAGE X3" name="sage_x3">
+                    <group>
+                        <group string="Statut de soumission">
+                            <field name="sage_x3_submitted" readonly="1"/>
+                            <field name="sage_x3_validated" readonly="1"/>
+                            <field name="sage_x3_submitted_date" 
+                                   readonly="1"
+                                   invisible="sage_x3_submitted == False"/>
+                        </group>
+                        <group string="Réponse SAGE X3">
+                            <field name="sage_x3_order_id" 
+                                   readonly="1"
+                                   invisible="sage_x3_order_id == False"/>
+                            <field name="sage_x3_response_message" 
+                                   readonly="1"
+                                   invisible="sage_x3_response_message == False"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Livraison SAGE X3">
+                        <group>
+                            <field name="sage_x3_delivery_received" readonly="1"/>
+                            <field name="sage_x3_delivery_date" 
+                                   readonly="1"
+                                   invisible="sage_x3_delivery_received == False"/>
+                        </group>
+                    </group>
+                    
+                    <group>
+                        <button name="action_reset_sage_x3_validation" 
+                                string="🔄 Réinitialiser statut SAGE X3" 
+                                type="object" 
+                                class="btn-warning"
+                                confirm="Êtes-vous sûr de vouloir réinitialiser le statut SAGE X3 ?"
+                                invisible="state not in ['draft', 'sent']"/>
+                    </group>
+                </page>
+            </xpath>
+            
+            <!-- Ajout d'un statusbar widget -->
+            <xpath expr="//field[@name='state']" position="after">
+                <field name="sage_x3_validated" invisible="1"/>
+            </xpath>
+            
+        </field>
+    </record>
+    
+    <!-- Vue liste avec indicateur SAGE X3 -->
+    <record id="view_purchase_order_tree_sage_x3" model="ir.ui.view">
+        <field name="name">purchase.order.tree.sage.x3</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='state']" position="before">
+                <field name="sage_x3_validated" column_invisible="1"/>
+                <field name="sage_x3_submitted" string="SAGE X3" 
+                       widget="boolean"
+                       optional="show"/>
+            </xpath>
+        </field>
+    </record>
+    
+    <!-- Action serveur pour importer les livraisons -->
+    <record id="action_import_sage_x3_deliveries" model="ir.actions.server">
+        <field name="name">Importer livraisons SAGE X3</field>
+        <field name="model_id" ref="purchase.model_purchase_order"/>
+        <field name="binding_model_id" ref="purchase.model_purchase_order"/>
+        <field name="state">code</field>
+        <field name="code">
+action = model.action_import_deliveries()
+        </field>
+    </record>
+    
+    <!-- Menu pour les actions SAGE X3 -->
+    <menuitem 
+        id="menu_purchase_sage_x3"
+        name="SAGE X3"
+        parent="purchase.menu_purchase_root"
+        sequence="100"/>
+    
+    <menuitem 
+        id="menu_import_deliveries_sage_x3"
+        name="Importer livraisons"
+        parent="menu_purchase_sage_x3"
+        action="action_import_sage_x3_deliveries"
+        sequence="10"/>
+        
+</odoo>

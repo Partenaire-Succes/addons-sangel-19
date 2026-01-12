@@ -9,7 +9,7 @@
             <field name="arch" type="xml">
 
                 <xpath expr="//notebook" position="inside">
-                    <page string="Credt" name="page_credit">
+                    <page string="Credit" name="page_credit">
                         <group name="group_credit">
                             <group string="Credit Alimentaire" invisible="not is_company">
                                 <field name="is_food"/>
