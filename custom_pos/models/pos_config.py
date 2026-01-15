@@ -14,6 +14,10 @@ class PosConfig(models.Model):
         help="Comma-separated remise percentages to display as quick buttons in payment screen. Example: 10,20,45"
     )
 
+    # Note: Les champs code_acces et preset_remise_percentages sont automatiquement chargés
+    # car pos.config charge tous les champs par défaut (pas de _load_pos_data_fields défini)
+    # Ils seront disponibles dans this.config.code_acces en JavaScript
+
     # def get_preset_remise_list(self):
     #     """Parse and validate preset remise percentages."""
     #     if not self.preset_remise_percentages:

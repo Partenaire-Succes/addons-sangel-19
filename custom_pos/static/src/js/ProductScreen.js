@@ -133,32 +133,124 @@ patch(PosStore.prototype, {
             return super.pay(...arguments);
         }
 
-        const result = await rpc("/web/dataset/call_kw/pos.order/check_stock_levels", {
-            model: "pos.order",
-            method: "check_stock_levels",
-            args: [product_ids, hasDiscount],
-            kwargs: {},
-        });
-        
-        console.log("Résultat vérification:", result);
-        
-        if (result.error) {
-            if (result.access_required && result.code_acces) {
-                const codeInput = await this._showPasswordPrompt(result.message, discountedProducts);
-                if (codeInput !== result.code_acces) {
+        // ========== Vérification stock avec gestion mode hors-ligne ==========
+        // En mode hors-ligne, on permet la vente (les données seront synchronisées plus tard)
+        try {
+            const result = await rpc("/web/dataset/call_kw/pos.order/check_stock_levels", {
+                model: "pos.order",
+                method: "check_stock_levels",
+                args: [product_ids, hasDiscount],
+                kwargs: {},
+            });
+            
+            console.log("Résultat vérification:", result);
+            
+            if (result.error) {
+                if (result.access_required && result.code_acces) {
+                    const codeInput = await this._showPasswordPrompt(result.message, discountedProducts);
+                    if (codeInput !== result.code_acces) {
+                        this.dialog.add(AlertDialog, {
+                            title: _t("Code incorrect"),
+                            body: _t("Le code saisi est invalide. La vente est annulée."),
+                        });
+                        return;
+                    }
+                } else {
                     this.dialog.add(AlertDialog, {
-                        title: _t("Code incorrect"),
-                        body: _t("Le code saisi est invalide. La vente est annulée."),
+                        title: _t("Stock indisponible"),
+                        body: _t(result.message),
                     });
                     return;
                 }
-            } else {
-                this.dialog.add(AlertDialog, {
-                    title: _t("Stock indisponible"),
-                    body: _t(result.message),
-                });
-                return;
             }
+        } catch (error) {
+            // Mode hors-ligne détecté - effectuer la vérification localement
+            console.warn("Mode hors-ligne détecté - vérification stock locale:", error.message || error);
+            
+            // ========== Vérification stock LOCALE (mode hors-ligne) ==========
+            // Utiliser les données produits en cache pour vérifier le stock
+            const produitsRupture = [];
+            
+            for (const line of orderLines) {
+                if (!line || !line.product_id) continue;
+                if (line.is_reward_line) continue;
+                if (line.price_unit !== undefined && line.price_unit < 0) continue;
+                
+                const product = line.product_id;
+                // Vérifier qty_available dans les données locales du produit
+                const qtyAvailable = product.qty_available ?? 0;
+                if (qtyAvailable <= 0) {
+                    const code = product.default_code || product.barcode || '';
+                    const displayName = code ? `[${code}] ${product.name}` : product.name;
+                    produitsRupture.push(displayName);
+                }
+            }
+            
+            const accessCode = this.config.code_acces;
+            
+            // Si rupture de stock ET remise
+            if (produitsRupture.length > 0 && hasDiscount) {
+                const message = "⚠️ Autorisation requise (mode hors-ligne) :\n\n" +
+                    "Produits en rupture de stock :\n" +
+                    produitsRupture.map(p => `   • ${p}`).join('\n');
+                
+                if (accessCode) {
+                    const codeInput = await this._showPasswordPrompt(message, discountedProducts);
+                    if (codeInput !== accessCode) {
+                        this.dialog.add(AlertDialog, {
+                            title: _t("Code incorrect"),
+                            body: _t("Le code saisi est invalide. La vente est annulée."),
+                        });
+                        return;
+                    }
+                } else {
+                    this.dialog.add(AlertDialog, {
+                        title: _t("Stock indisponible"),
+                        body: _t(message + "\n\nAucun code d'accès configuré."),
+                    });
+                    return;
+                }
+            }
+            // Si seulement rupture de stock
+            else if (produitsRupture.length > 0) {
+                const message = "Les produits suivants sont en rupture de stock :\n" +
+                    produitsRupture.map(p => `   • ${p}`).join('\n');
+                
+                if (accessCode) {
+                    const codeInput = await this._showPasswordPrompt(message, []);
+                    if (codeInput !== accessCode) {
+                        this.dialog.add(AlertDialog, {
+                            title: _t("Code incorrect"),
+                            body: _t("Le code saisi est invalide. La vente est annulée."),
+                        });
+                        return;
+                    }
+                } else {
+                    this.dialog.add(AlertDialog, {
+                        title: _t("Stock indisponible"),
+                        body: _t(message + "\n\nAucun code d'accès configuré."),
+                    });
+                    return;
+                }
+            }
+            // Si seulement remise
+            else if (hasDiscount) {
+                const message = "⚠️ Cette commande contient des remises.\nUn code d'accès est requis pour continuer.";
+                
+                if (accessCode) {
+                    const codeInput = await this._showPasswordPrompt(message, discountedProducts);
+                    if (codeInput !== accessCode) {
+                        this.dialog.add(AlertDialog, {
+                            title: _t("Code incorrect"),
+                            body: _t("Le code saisi est invalide. La vente est annulée."),
+                        });
+                        return;
+                    }
+                } else {
+                    console.warn("Mode hors-ligne: Pas de code d'accès configuré - vente autorisée sans vérification");
+                }
+            }
+            // Tout est OK - pas de rupture ni remise
         }
 
         return super.pay(...arguments);
