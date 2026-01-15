@@ -23,6 +23,7 @@
         # 'data/import_product_from_x3_job.xml',
         'views/product_template_views.xml',
         'views/res_partner_views.xml',
+        'views/purchase_order_views.xml',
     ],
 
     'license': 'LGPL-3',
