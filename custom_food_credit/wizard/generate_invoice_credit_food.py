@@ -263,7 +263,7 @@ class FoodCreditInvoiceWizard(models.TransientModel):
             #     'type': 'ir.actions.act_window_close',
             #     'name': 'Factures Créées',
             #     'res_model': 'account.move',
-            #     'view_mode': 'tree,form',
+            #     'view_mode': 'list,form',
             #     'domain': [('id', 'in', created_invoices.ids)],
             #     'context': {
             #         'default_move_type': 'out_invoice',

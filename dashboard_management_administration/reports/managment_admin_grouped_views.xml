@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Template pour l'affichage des données groupées -->
+    <template id="managment_admin_grouped_view">
+        <t t-call="web.html_container">
+            <div class="container-fluid mt-4">
+                <div class="row">
+                    <div class="col-12">
+                        <h2>Rapport groupé des ventes et achats</h2>
+                        <div class="mb-3">
+                            <label for="date_from">Date de début:</label>
+                            <input type="date" id="date_from" class="form-control" style="width: 200px; display: inline-block;"/>
+                            
+                            <label for="date_to" class="ml-3">Date de fin:</label>
+                            <input type="date" id="date_to" class="form-control" style="width: 200px; display: inline-block;"/>
+                            
+                            <button class="btn btn-primary ml-3" id="btn_refresh">Actualiser</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Ventes -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-success text-white">
+                                <h4><i class="fa fa-shopping-cart"></i> Ventes</h4>
+                            </div>
+                            <div class="card-body">
+                                <table class="table table-striped" id="ventes_table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date de début</th>
+                                            <th>Date de fin</th>
+                                            <th>Nombre de commandes</th>
+                                            <th>Montant total</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="ventes_tbody">
+                                        <!-- Rempli par JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Achats -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-warning text-white">
+                                <h4><i class="fa fa-shopping-bag"></i> Achats</h4>
+                            </div>
+                            <div class="card-body">
+                                <table class="table table-striped" id="achats_table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date de début</th>
+                                            <th>Date de fin</th>
+                                            <th>Nombre de commandes</th>
+                                            <th>Montant total</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="achats_tbody">
+                                        <!-- Rempli par JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section POS -->
+                <div class="row mt-4 mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-info text-white">
+                                <h4><i class="fa fa-desktop"></i> Point de Vente (POS)</h4>
+                            </div>
+                            <div class="card-body">
+                                <table class="table table-striped" id="pos_table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date de début</th>
+                                            <th>Date de fin</th>
+                                            <th>Point de vente</th>
+                                            <th>Nombre de commandes</th>
+                                            <th>Montant total</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="pos_tbody">
+                                        <!-- Rempli par JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Action pour afficher la vue -->
+    <record id="action_managment_admin_grouped_view" model="ir.actions.client">
+        <field name="name">Rapport Groupé</field>
+        <field name="tag">managment_admin_grouped_view</field>
+        <field name="target">current</field>
+    </record>
+
+    <!-- Menu pour la vue groupée -->
+    <menuitem id="menu_managment_admin_grouped"
+              name="Rapport Groupé"
+              parent="menu_managment_admin_root"
+              action="action_managment_admin_grouped_view"
+              sequence="20"/>
+</odoo>
