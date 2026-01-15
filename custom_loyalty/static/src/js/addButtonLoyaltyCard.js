@@ -27,15 +27,53 @@ patch(PosStore.prototype, {
             return;
         }
 
-        // Check if partner has a loyalty card
-        const loyaltyCards = await this.env.services.orm.searchRead(
-            "loyalty.card",
-            [["partner_id", "=", partner.id]],
-            ["id", "points"],
-            { limit: 1 }
-        );
+        let currentPoints = 0;
+        let hasLoyaltyCard = false;
 
-        if (!loyaltyCards || loyaltyCards.length === 0) {
+        // Essayer de récupérer la carte de fidélité via RPC (mode en ligne)
+        try {
+            const loyaltyCards = await this.env.services.orm.searchRead(
+                "loyalty.card",
+                [["partner_id", "=", partner.id]],
+                ["id", "points"],
+                { limit: 1 }
+            );
+
+            if (loyaltyCards && loyaltyCards.length > 0) {
+                hasLoyaltyCard = true;
+                currentPoints = loyaltyCards[0].points || 0;
+            }
+        } catch (error) {
+            // Mode hors-ligne - utiliser les données locales
+            console.warn("Mode hors-ligne détecté - recherche carte fidélité locale:", error.message || error);
+            
+            // Chercher dans les données de fidélité locales (couponPointChanges de la commande)
+            // ou dans les cartes déjà chargées pour ce partenaire
+            const loyaltyCardsLocal = this.models["loyalty.card"];
+            if (loyaltyCardsLocal) {
+                // Parcourir toutes les cartes en cache pour trouver celle du partenaire
+                for (const card of loyaltyCardsLocal.getAll()) {
+                    const cardPartnerId = card.partner_id?.id || card.partner_id;
+                    if (cardPartnerId === partner.id) {
+                        hasLoyaltyCard = true;
+                        currentPoints = card.points || 0;
+                        console.log("✅ Carte fidélité trouvée localement:", card);
+                        break;
+                    }
+                }
+            }
+            
+            // Si toujours pas trouvé, vérifier si le partenaire a le flag is_loyalty
+            if (!hasLoyaltyCard && partner.is_loyalty) {
+                // Le partenaire a une carte mais elle n'est pas en cache
+                // Permettre quand même la fonctionnalité en mode dégradé
+                hasLoyaltyCard = true;
+                currentPoints = 0; // Points inconnus hors-ligne
+                console.warn("Mode hors-ligne: Carte fidélité supposée (is_loyalty=true), points inconnus");
+            }
+        }
+
+        if (!hasLoyaltyCard) {
             this.dialog.add(AlertDialog, {
                 title: _t("Pas de carte de fidélité"),
                 body: _t("Ce client n'a pas de carte de fidélité. Veuillez en créer une d'abord."),
@@ -43,12 +81,13 @@ patch(PosStore.prototype, {
             return;
         }
 
-        const currentPoints = loyaltyCards[0].points || 0;
+        // Afficher le solde comme "inconnu" si en mode hors-ligne et pas de données
+        const pointsDisplay = currentPoints > 0 ? currentPoints.toFixed(2) : "?";
 
         // Use NumberPopup to get the rendu monnaie amount
         const result = await makeAwaitable(this.dialog, NumberPopup, {
             title: _t("Rendu monnaie (FCFA)"),
-            subtitle: _t(`Client: ${partner.name} | Solde actuel: ${currentPoints.toFixed(2)} pts`),
+            subtitle: _t(`Client: ${partner.name} | Solde actuel: ${pointsDisplay} pts`),
             startingValue: "0",
         });
 

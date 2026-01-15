@@ -1,4 +1,5 @@
 from . import (
+    loyalty_card_inherit,
     loyalty_family,
     pos_order,
     pos_payment,
