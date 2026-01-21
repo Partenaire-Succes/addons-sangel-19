@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <!-- Customize ClosePosPopup: Hide payment summary and make cash input read-only -->
+    <t t-name="custom_pos.ClosePosPopupExtension" t-inherit="point_of_sale.ClosePosPopup" t-inherit-mode="extension">
+        
+        <!-- 1. Hide the payment-methods-overview section using style (not remove, to preserve xpath targets for other modules) -->
+        <xpath expr="//div[hasclass('payment-methods-overview')]" position="attributes">
+            <attribute name="style">display: none !important;</attribute>
+        </xpath>
+        
+        <!-- 2. Hide the hr separator -->
+        <xpath expr="//hr" position="attributes">
+            <attribute name="style">display: none !important;</attribute>
+        </xpath>
+        
+        <!-- 3. Replace Cash Count input with a read-only version -->
+        <xpath expr="//div[hasclass('mb-3')][.//Input[contains(@class, 'cash-input')]]" position="replace">
+            <div t-if="pos.config.cash_control" class="mb-3">
+                <label class="form-label">Comptage de caisse</label>
+                <div class="d-flex w-100 gap-2 mt-1">
+                    <!-- Read-only input: displays the counted value but cannot be edited directly -->
+                    <input type="text" 
+                           class="form-control cash-input w-100 bg-light" 
+                           t-att-value="state.payments[props.default_cash_details.id]?.counted || '0'"
+                           readonly="readonly"
+                           disabled="disabled"/>
+                    <!-- Money details popup button (coins/notes counting) -->
+                    <button class="icon fa fa-money btn btn-secondary" 
+                            t-on-click="openDetailsPopup" 
+                            title="Comptage des billets"/>
+                    <!-- Auto-fill button -->
+                    <button class="icon fa fa-clone btn btn-secondary" 
+                            t-on-click="autoFillCashCount" 
+                            title="Remplir automatiquement"/>
+                </div>
+            </div>
+        </xpath>
+        
+    </t>
+
+</templates>

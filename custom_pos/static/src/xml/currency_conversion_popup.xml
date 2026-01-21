@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <!-- Currency Conversion Popup Template (using Odoo Dialog component) -->
+    <t t-name="custom_pos.CurrencyConversionPopup">
+        <Dialog title="'Conversion de devise'" size="'md'">
+            <!-- Loading state -->
+            <t t-if="state.isLoading">
+                <div class="text-center py-5">
+                    <i class="fa fa-spinner fa-spin fa-3x text-primary"/>
+                    <p class="mt-3 text-muted">Chargement des devises...</p>
+                </div>
+            </t>
+            
+            <!-- Error state -->
+            <t t-elif="state.error and !state.currencies.length">
+                <div class="alert alert-danger">
+                    <i class="fa fa-exclamation-triangle me-2"/>
+                    <t t-esc="state.error"/>
+                </div>
+                <button class="btn btn-outline-primary w-100" t-on-click="loadCurrencies">
+                    <i class="fa fa-refresh me-2"/>
+                    Réessayer
+                </button>
+            </t>
+            
+            <!-- Main form -->
+            <t t-else="">
+                <!-- Currency Selection -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold" for="currency_select">
+                        <i class="fa fa-money me-2 text-primary"/>
+                        Devise du client
+                    </label>
+                    <select id="currency_select" 
+                            name="currency_select"
+                            class="form-select form-select-lg" 
+                            t-on-change="onCurrencyChange"
+                            t-att-value="state.selectedCurrencyId">
+                        <t t-foreach="state.currencies" t-as="currency" t-key="currency.id">
+                            <option t-att-value="currency.id"
+                                    t-att-selected="currency.id === state.selectedCurrencyId">
+                                <t t-esc="currency.name"/> (<t t-esc="currency.symbol"/>)
+                            </option>
+                        </t>
+                    </select>
+                </div>
+                
+                <!-- Foreign Amount Input -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold" for="foreign_amount">
+                        <i class="fa fa-keyboard-o me-2 text-primary"/>
+                        Montant reçu du client
+                    </label>
+                    <div class="input-group input-group-lg">
+                        <input type="text" 
+                               id="foreign_amount"
+                               name="foreign_amount"
+                               class="form-control form-control-lg text-end fs-3"
+                               t-att-value="state.foreignAmount"
+                               t-on-input="onAmountInput"
+                               placeholder="0.00"
+                               inputmode="decimal"/>
+                        <span class="input-group-text bg-light" t-if="state.selectedCurrency">
+                            <t t-esc="state.selectedCurrency.symbol"/>
+                        </span>
+                    </div>
+                    <small class="text-muted">
+                        Entrez le montant dans la devise du client
+                    </small>
+                </div>
+                
+                <!-- Conversion Result -->
+                <div class="bg-light rounded-3 p-4 mb-3">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <small class="text-muted d-block">Montant converti</small>
+                            <span class="fw-bold text-muted">En devise société</span>
+                        </div>
+                        <div class="text-end">
+                            <t t-if="state.isConverting">
+                                <i class="fa fa-spinner fa-spin fa-2x text-primary"/>
+                            </t>
+                            <t t-else="">
+                                <span class="fs-1 fw-bold text-success">
+                                    <t t-esc="formattedConvertedAmount"/>
+                                </span>
+                            </t>
+                        </div>
+                    </div>
+                    
+                    <!-- Rate info -->
+                    <t t-if="showRateInfo">
+                        <hr class="my-3"/>
+                        <div class="text-center text-muted small">
+                            <i class="fa fa-info-circle me-1"/>
+                            Taux: 1 <t t-esc="state.selectedCurrency.name"/> = 
+                            <t t-esc="formattedExchangeRate"/>
+                            <t t-esc="state.companyCurrency?.symbol || 'USD'"/>
+                        </div>
+                    </t>
+                </div>
+                
+                <!-- Conversion error -->
+                <t t-if="state.error">
+                    <div class="alert alert-warning py-2 mb-3">
+                        <i class="fa fa-exclamation-triangle me-2"/>
+                        <t t-esc="state.error"/>
+                    </div>
+                </t>
+            </t>
+            
+            <!-- Footer slot for Dialog component -->
+            <t t-set-slot="footer">
+                <div class="d-flex flex-grow-1 justify-content-center gap-2">
+                    <button type="button" 
+                            class="btn btn-secondary btn-lg"
+                            t-on-click="cancel">
+                        <i class="fa fa-times me-2"/>
+                        Annuler
+                    </button>
+                    <button type="button" 
+                            class="btn btn-primary btn-lg"
+                            t-att-disabled="!canConfirm"
+                            t-on-click="confirm">
+                        <i class="fa fa-check me-2"/>
+                        Confirmer
+                    </button>
+                </div>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>

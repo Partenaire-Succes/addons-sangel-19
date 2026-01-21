@@ -11,6 +11,7 @@
         'base',
         'sale',
         'product',
+        'point_of_sale',
         'custom_stock',
     ],
 
@@ -30,6 +31,12 @@
 
 
     ],
+    "assets": {
+        "point_of_sale._assets_pos": [
+            "/custom_sales/static/src/js/*.js",
+            # "/custom_sales/static/src/xml/*.xml",
+        ],
+    },
 
     'license': 'LGPL-3',
     'installable': True,

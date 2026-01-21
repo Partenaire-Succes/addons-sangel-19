@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <!-- 
+        Currency Conversion Button for Payment Screen
+        This button appears in the payment methods section when
+        a Cash payment method (Espèces) is selected.
+        
+        Button location: Inside PaymentScreenButtons section
+    -->
+    
+    <!-- Extend PaymentScreenButtons to add the currency conversion button -->
+    <t t-name="custom_pos.CurrencyConversionButton" t-inherit="point_of_sale.PaymentScreenButtons" t-inherit-mode="extension">
+        <!-- Insert the currency button at the end of payment-buttons container -->
+        <xpath expr="//div[hasclass('payment-buttons')]" position="inside">
+            <div t-if="showCurrencyConversionButton" class="d-flex flex-column gap-1 w-100 mt-2">
+                <button 
+                    class="button currency-conversion-btn btn btn-lg btn-outline-info d-flex align-items-center justify-content-center w-100 lh-lg"
+                    t-on-click="() => this.openCurrencyConversionPopup()"
+                    title="Convertir une devise étrangère en devise société">
+                    <i class="fa fa-exchange me-2" role="img" aria-label="Currency conversion"/>
+                    <span>💱 Convertir Devise</span>
+                </button>
+            </div>
+        </xpath>
+    </t>
+
+</templates>

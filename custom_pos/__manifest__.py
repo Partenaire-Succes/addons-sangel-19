@@ -18,7 +18,7 @@
     'company': 'Partenaires Succes',
     'maintainer': 'Adams KONE',
     'website': "https://www.partenairesucces.com/",
-    'depends': ['sale','point_of_sale'],
+    'depends': ['sale', 'point_of_sale', 'account'],
     'data': [
         # 'security/ir.model.access.csv',
         'security/security.xml',
@@ -33,8 +33,30 @@
     
     "assets": {
         "point_of_sale._assets_pos": [
-            "/custom_pos/static/src/js/*.js",
-            "/custom_pos/static/src/xml/*.xml",
+            # Currency conversion feature - popup must load before patch
+            "/custom_pos/static/src/js/CurrencyConversionPopup.js",
+            "/custom_pos/static/src/xml/currency_conversion_popup.xml",
+            "/custom_pos/static/src/js/currency_payment_screen_patch.js",
+            "/custom_pos/static/src/xml/currency_payment_screen.xml",
+            # Closing popup customizations
+            "/custom_pos/static/src/js/closing_popup_patch.js",
+            "/custom_pos/static/src/xml/closing_popup_patch.xml",
+            # Money details popup customizations
+            "/custom_pos/static/src/js/money_details_popup_patch.js",
+            "/custom_pos/static/src/xml/money_details_popup_patch.xml",
+            # Other JS files
+            "/custom_pos/static/src/js/opening_control_popup_patch.js",
+            "/custom_pos/static/src/js/OrderlineCustom.js",
+            "/custom_pos/static/src/js/payment_screen_patch.js",
+            "/custom_pos/static/src/js/ProductScreen.js",
+            "/custom_pos/static/src/js/ticket_screen_refund_patch.js",
+            # Other XML files
+            "/custom_pos/static/src/xml/cash_move_hide_cash_in.xml",
+            "/custom_pos/static/src/xml/custom_receipt_header.xml",
+            "/custom_pos/static/src/xml/opening_control_popup_patch.xml",
+            "/custom_pos/static/src/xml/orderline_customization.xml",
+            "/custom_pos/static/src/xml/pos_payment_screen.xml",
+            "/custom_pos/static/src/xml/pos_receipt_custom.xml",
         ],
     },
 }

@@ -7,4 +7,4 @@
 #    Author: Adama KONE
 #
 #############################################################################
-from . import promo
+from . import currency, promo

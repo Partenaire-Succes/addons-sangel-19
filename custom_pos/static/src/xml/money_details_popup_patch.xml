@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <!-- Customize MoneyDetailsPopup: Add direct amount input field -->
+    <t t-name="custom_pos.MoneyDetailsPopupExtension" t-inherit="point_of_sale.MoneyDetailsPopup" t-inherit-mode="extension">
+        
+        <!-- Add a direct amount input after the coins/notes grid -->
+        <xpath expr="//div[@t-attf-style]" position="after">
+            <div class="direct-amount-section mt-3 pt-3 border-top">
+                <div class="d-flex align-items-center justify-content-between">
+                    <label class="form-label fw-bold mb-0" for="direct_amount_input">
+                        <i class="fa fa-plus-circle me-2 text-primary"/>
+                        Montant direct
+                    </label>
+                    <div class="input-group" style="width: 200px;">
+                        <input type="text" 
+                               id="direct_amount_input"
+                               name="direct_amount"
+                               class="form-control text-end"
+                               t-att-value="state.directAmount"
+                               t-on-input="onDirectAmountInput"
+                               placeholder="0.00"
+                               inputmode="decimal"/>
+                        <span class="input-group-text bg-light">
+                            <t t-esc="pos.currency?.symbol || '$'"/>
+                        </span>
+                    </div>
+                </div>
+                <small class="text-muted">
+                    Entrez un montant supplémentaire à ajouter au total
+                </small>
+            </div>
+        </xpath>
+        
+    </t>
+
+</templates>

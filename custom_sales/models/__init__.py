@@ -1,5 +1,8 @@
-from . import product_pricelist
-from . import res_partner
-from . import product_template
-from . import product_product
-from . import sale_order_line
+from . import (
+    pos_data_loaders,
+    product_pricelist,
+    product_product,
+    product_template,
+    res_partner,
+    sale_order_line,
+)
