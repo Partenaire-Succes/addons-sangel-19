@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Form View -->
+    <record id="view_managment_admin_form" model="ir.ui.view">
+        <field name="name">managment.admin.form</field>
+        <field name="model">managment.admin</field>
+        <field name="arch" type="xml">
+            <form string="Gestion Administration">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Nom de la période..."/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="responsible_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group>
+                            <field name="date_from"/>
+                            <field name="date_to"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Ventes" name="sales">
+                            <group>
+                                <button name="action_view_sale_orders" 
+                                        type="object" 
+                                        string="Voir toutes les ventes"
+                                        class="btn-primary"
+                                        icon="fa-eye"/>
+                            </group>
+                            <field name="sale_order_ids" readonly="1">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="partner_id"/>
+                                    <field name="date_order"/>
+                                    <field name="amount_total" sum="Total"/>
+                                    <field name="state"/>
+                                </list>
+                            </field>
+                        </page>
+
+                        <page string="Achats" name="purchases">
+                            <group>
+                                <button name="action_view_purchase_orders" 
+                                        type="object" 
+                                        string="Voir tous les achats"
+                                        class="btn-primary"
+                                        icon="fa-eye"/>
+                            </group>
+                            <field name="purchase_order_ids" readonly="1">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="partner_id"/>
+                                    <field name="date_order"/>
+                                    <field name="amount_total" sum="Total"/>
+                                    <field name="state"/>
+                                </list>
+                            </field>
+                        </page>
+
+                        <page string="Point de Vente" name="pos">
+                            <group>
+                                <button name="action_view_pos_orders" 
+                                        type="object" 
+                                        string="Voir toutes les commandes POS"
+                                        class="btn-primary"
+                                        icon="fa-eye"/>
+                            </group>
+                            <field name="pos_order_ids" readonly="1">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="partner_id"/>
+                                    <field name="session_id"/>
+                                    <field name="config_id"/>
+                                    <field name="date_order"/>
+                                    <field name="amount_total" sum="Total"/>
+                                    <field name="state"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- list View -->
+    <record id="view_managment_admin_tree" model="ir.ui.view">
+        <field name="name">managment.admin.list</field>
+        <field name="model">managment.admin</field>
+        <field name="arch" type="xml">
+            <list string="Gestion Administration">
+                <field name="name"/>
+                <field name="responsible_id"/>
+                <field name="date_from"/>
+                <field name="date_to"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <!-- <record id="view_managment_admin_search" model="ir.ui.view">
+        <field name="name">managment.admin.search</field>
+        <field name="model">managment.admin</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="responsible_id"/>
+                <field name="date_from"/>
+                <field name="date_to"/>
+                <filter string="Mes périodes" name="my_periods" 
+                        domain="[('responsible_id', '=', uid)]"/>
+                <filter string="Mois en cours" name="current_month"
+                        domain="[('date_from', '&gt;=', time.strftime('%Y-%m-01')),
+                                ('date_to', '&lt;=', (context_today() + relativedelta(day=31)).strftime('%Y-%m-%d'))]"/>
+                <group expand="0" string="Grouper par">
+                    <filter string="Responsable" name="group_responsible" context="{'group_by': 'responsible_id'}"/>
+                    <filter string="Société" name="group_company" context="{'group_by': 'company_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record> -->
+
+    <!-- Action -->
+    <record id="action_managment_admin" model="ir.actions.act_window">
+        <field name="name">Gestion Administration</field>
+        <field name="res_model">managment.admin</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_my_periods': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Créer une nouvelle période de gestion
+            </p>
+        </field>
+    </record>
+
+</odoo>

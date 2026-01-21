@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="pos_actions_dashboard.Dashboard">
+        <div class="pos_actions_dashboard">
+            <div class="o_dashboard_header">
+                <h2><i class="fa fa-tachometer"/> Dashboard POS et Actions</h2>
+                <button class="btn btn-primary" t-on-click="onRefresh" t-att-disabled="state.loading">
+                    <i class="fa fa-refresh" t-att-class="{'fa-spin': state.loading}"/>
+                    Actualiser
+                </button>
+            </div>
+
+            <t t-if="state.loading">
+                <div class="o_loading">
+                    <i class="fa fa-spinner fa-spin fa-3x"/>
+                    <p>Chargement des données...</p>
+                </div>
+            </t>
+
+            <t t-if="!state.loading and state.data">
+                <!-- Boutons principaux en surbrillance -->
+                <div class="o_main_actions">
+                    <button class="btn btn-lg btn-highlight btn-import" 
+                            t-on-click="onImportAllData"
+                            t-att-disabled="isActionLoading('action_import_all_data')">
+                        <div class="btn-icon">
+                            <i class="fa fa-download fa-3x" t-att-class="{'fa-spin fa-spinner': isActionLoading('action_import_all_data')}"/>
+                        </div>
+                        <div class="btn-content">
+                            <h3>Import Données</h3>
+                            <p>Mettre à jour les contacts et articles</p>
+                            <div class="btn-stats">
+                                <span><i class="fa fa-users"/> <t t-esc="state.data.statistics.contact_count"/> contacts</span>
+                                <span><i class="fa fa-cube"/> <t t-esc="state.data.statistics.product_count"/> produits</span>
+                            </div>
+                        </div>
+                    </button>
+
+                    <button class="btn btn-lg btn-highlight btn-process" 
+                            t-on-click="onProcessDocuments"
+                            t-att-disabled="isActionLoading('action_process_documents')">
+                        <div class="btn-icon">
+                            <i class="fa fa-check-circle fa-3x" t-att-class="{'fa-spin fa-spinner': isActionLoading('action_process_documents')}"/>
+                        </div>
+                        <div class="btn-content">
+                            <h3>Clôturez votre session du jour</h3>
+                            <p>Valider achats et envoyer factures à X3</p>
+                            <div class="btn-stats">
+                                <span><i class="fa fa-shopping-cart"/> <t t-esc="state.data.statistics.purchase_to_validate"/> achats</span>
+                                <span><i class="fa fa-file-text"/> <t t-esc="state.data.statistics.invoices_to_send"/> factures</span>
+                            </div>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Actions rapides -->
+                <div class="o_quick_actions">
+                    <h3><i class="fa fa-bolt"/> Actions rapides</h3>
+                    <div class="o_action_cards">
+                        <div class="o_action_card">
+                            <div class="o_action_icon bg-primary">
+                                <i class="fa fa-cube fa-2x"/>
+                            </div>
+                            <div class="o_action_content">
+                                <h4>Import Produits Synchro X3</h4>
+                                <p class="text-muted"><t t-esc="state.data.statistics.product_count"/> produits</p>
+                                <button class="btn btn-sm btn-primary" 
+                                        t-on-click="onImportProducts"
+                                        t-att-disabled="isActionLoading('action_import_products')">
+                                    <i class="fa fa-download" t-att-class="{'fa-spin fa-spinner': isActionLoading('action_import_products')}"/>
+                                    Importer
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="o_action_card">
+                            <div class="o_action_icon bg-success">
+                                <i class="fa fa-users fa-2x"/>
+                            </div>
+                            <div class="o_action_content">
+                                <h4>Import Contacts Synchro X3</h4>
+                                <p class="text-muted"><t t-esc="state.data.statistics.contact_count"/> contacts</p>
+                                <button class="btn btn-sm btn-success" 
+                                        t-on-click="onImportContacts"
+                                        t-att-disabled="isActionLoading('action_import_contacts')">
+                                    <i class="fa fa-download" t-att-class="{'fa-spin fa-spinner': isActionLoading('action_import_contacts')}"/>
+                                    Importer
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="o_action_card">
+                            <div class="o_action_icon bg-warning">
+                                <i class="fa fa-shopping-cart fa-2x"/>
+                            </div>
+                            <div class="o_action_content">
+                                <h4>Validation Achats</h4>
+                                <p class="text-muted"><t t-esc="state.data.statistics.purchase_to_validate"/> en attente</p>
+                                <button class="btn btn-sm btn-warning" 
+                                        t-on-click="onValidatePurchases"
+                                        t-att-disabled="isActionLoading('action_validate_purchases')">
+                                    <i class="fa fa-check" t-att-class="{'fa-spin fa-spinner': isActionLoading('action_validate_purchases')}"/>
+                                    Valider
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="o_action_card">
+                            <div class="o_action_icon bg-danger">
+                                <i class="fa fa-file-text fa-2x"/>
+                            </div>
+                            <div class="o_action_content">
+                                <h4>Envoi Factures X3</h4>
+                                <p class="text-muted"><t t-esc="state.data.statistics.invoices_to_send"/> à envoyer</p>
+                                <button class="btn btn-sm btn-danger" 
+                                        t-on-click="onSendInvoicesX3"
+                                        t-att-disabled="isActionLoading('action_send_invoices_x3')">
+                                    <i class="fa fa-send" t-att-class="{'fa-spin fa-spinner': isActionLoading('action_send_invoices_x3')}"/>
+                                    Envoyer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistiques POS -->
+                <div class="o_sessions_stats">
+                    <div class="o_stat_card bg-primary-light">
+                        <i class="fa fa-desktop fa-3x text-primary"/>
+                        <div>
+                            <h3><t t-esc="state.data.statistics.pos_count"/></h3>
+                            <p>Caisse</p>
+                        </div>
+                    </div>
+                    <div class="o_stat_card bg-success-light">
+                        <i class="fa fa-unlock fa-3x text-success"/>
+                        <div>
+                            <h3><t t-esc="state.data.statistics.open_sessions"/></h3>
+                            <p>Sessions ouvertes</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Liste des caisses "points de vente" -->
+                <div class="o_pos_configs">
+                    <h3><i class="fa fa-desktop"/> Caisses</h3>
+                    <div class="pos-cards-grid">
+                        <t t-foreach="state.data.pos_configs" t-as="pos" t-key="pos.id">
+                            <div class="pos-card" t-att-class="pos.state === 'opened' ? 'pos-card-open' : 'pos-card-closed'">
+                                <div class="pos-card-header">
+                                    <div class="pos-card-title">
+                                        <h4 t-esc="pos.name"/>
+                                        <span class="pos-status-badge" 
+                                              t-attf-class="badge-{{pos.state === 'opened' ? 'success' : 'secondary'}}">
+                                            <i t-if="pos.state === 'opened'" class="fa fa-unlock"/>
+                                            <i t-else="" class="fa fa-lock"/>
+                                            <t t-esc="pos.state === 'opened' ? 'Ouvert' : 'Fermé'"/>
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <div class="pos-card-body">
+                                    <div class="pos-info-row">
+                                        <span class="pos-info-label">
+                                            <i class="fa fa-truck"/> Opération:
+                                        </span>
+                                        <span class="pos-info-value" t-esc="pos.picking_type_id or '-'"/>
+                                    </div>
+                                    <div class="pos-info-row">
+                                        <span class="pos-info-label">
+                                            <i class="fa fa-book"/> Journal:
+                                        </span>
+                                        <span class="pos-info-value" t-esc="pos.journal_id or '-'"/>
+                                    </div>
+                                    
+                                    <t t-if="pos.session_info.name">
+                                        <div class="pos-session-info">
+                                            <div class="session-divider"/>
+                                            <h5>
+                                                <i class="fa fa-clock-o"/> 
+                                                <t t-if="pos.state === 'opened'">Session active</t>
+                                                <t t-else="">Dernière session</t>
+                                            </h5>
+                                            <div class="pos-info-row">
+                                                <span class="pos-info-label">Session:</span>
+                                                <span class="pos-info-value" t-esc="pos.session_info.name"/>
+                                            </div>
+                                            <div class="pos-info-row">
+                                                <span class="pos-info-label">Utilisateur:</span>
+                                                <span class="pos-info-value" t-esc="pos.session_info.user"/>
+                                            </div>
+                                            <div class="pos-info-row" t-if="pos.session_info.start_at">
+                                                <span class="pos-info-label">Début:</span>
+                                                <span class="pos-info-value" t-esc="pos.session_info.start_at"/>
+                                            </div>
+                                            <div class="pos-info-row" t-if="pos.session_info.stop_at">
+                                                <span class="pos-info-label">Fin:</span>
+                                                <span class="pos-info-value" t-esc="pos.session_info.stop_at"/>
+                                            </div>
+                                            <div class="pos-stats">
+                                                <div class="pos-stat-item">
+                                                    <i class="fa fa-shopping-cart"/>
+                                                    <strong t-esc="pos.session_info.order_count || 0"/>
+                                                    <span>commandes</span>
+                                                </div>
+                                                <div class="pos-stat-item">
+                                                    <i class="fa fa-money"/>
+                                                    <strong t-esc="formatCurrency(pos.session_info.total_amount || 0)"/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </t>
+                                    <t t-else="">
+                                        <div class="pos-no-session">
+                                            <i class="fa fa-info-circle"/>
+                                            <p>Aucune session disponible</p>
+                                        </div>
+                                    </t>
+                                </div>
+                            </div>
+                        </t>
+                        
+                        <t t-if="!state.data.pos_configs or state.data.pos_configs.length === 0">
+                            <div class="no-data-message">
+                                <i class="fa fa-info-circle fa-3x"/>
+                                <p>Aucun point de vente configuré</p>
+                            </div>
+                        </t>
+                    </div>
+                </div>
+            </t>
+        </div>
+    </t>
+</templates>

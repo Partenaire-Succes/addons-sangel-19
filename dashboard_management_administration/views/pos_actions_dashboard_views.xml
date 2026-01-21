@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_pos_actions_dashboard" model="ir.ui.view">
+        <field name="name">pos.actions.dashboard</field>
+        <field name="model">pos.actions.dashboard</field>
+        <field name="arch" type="xml">
+            <form string="Dashboard POS et Actions">
+                <sheet>
+                    <div class="oe_pos_actions_dashboard">
+                        <!-- Le contenu sera géré par le JS -->
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_pos_actions_dashboard" model="ir.actions.client">
+        <field name="name">Dashboard POS et Actions</field>
+        <field name="tag">pos_actions_dashboard</field>
+    </record>
+</odoo>

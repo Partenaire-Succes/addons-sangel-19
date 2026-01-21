@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="dashboard_management_admin.Dashboard">
+    <div class="dashboard_management_admin">
+
+        <!-- ================= HEADER ================= -->
+        <div class="o_dashboard_header">
+            <h2>Dashboard SANgel</h2>
+            <div class="o_dashboard_filters">
+                <label>Du :</label>
+                <input type="date"
+                       t-att-value="state.dateFrom"
+                       data-field="dateFrom"
+                       t-on-change="onFilterChange"/>
+                <label>Au :</label>
+                <input type="date"
+                       t-att-value="state.dateTo"
+                       data-field="dateTo"
+                       t-on-change="onFilterChange"/>
+            </div>
+        </div>
+
+        <!-- ================= LOADING ================= -->
+        <t t-if="state.loading">
+            <div class="o_loading">
+                <i class="fa fa-spinner fa-spin fa-3x"/>
+                <p>Chargement des données...</p>
+            </div>
+        </t>
+
+        <!-- ================= CONTENT ================= -->
+        <t t-if="!state.loading and state.data">
+
+            <!-- ===== STATS ===== -->
+            <div class="o_dashboard_stats">
+                <div class="o_stat_card o_stat_revenus">
+                    <div class="o_stat_icon"><i class="fa fa-money"/></div>
+                    <div class="o_stat_content">
+                        <h3>Total Revenus</h3>
+                        <p class="o_stat_value" t-esc="formatCurrency(state.data.statistiques.total_revenus)"/>
+                    </div>
+                </div>
+
+                <div class="o_stat_card o_stat_ventes">
+                    <div class="o_stat_icon"><i class="fa fa-shopping-cart"/></div>
+                    <div class="o_stat_content">
+                        <h3>Vente: Gros</h3>
+                        <p class="o_stat_value" t-esc="formatCurrency(state.data.statistiques.total_ventes)"/>
+                        <small t-esc="state.data.statistiques.nb_commandes_ventes + ' Ventes'"/>
+                    </div>
+                </div>
+
+                <div class="o_stat_card o_stat_pos">
+                    <div class="o_stat_icon"><i class="fa fa-desktop"/></div>
+                    <div class="o_stat_content">
+                        <h3>POS: 1/2 Gros</h3>
+                        <p class="o_stat_value" t-esc="formatCurrency(state.data.statistiques.total_pos)"/>
+                        <small t-esc="state.data.statistiques.nb_commandes_pos + ' Ventes'"/>
+                    </div>
+                </div>
+
+                <div class="o_stat_card o_stat_achats">
+                    <div class="o_stat_icon"><i class="fa fa-truck"/></div>
+                    <div class="o_stat_content">
+                        <h3>Achats Commande</h3>
+                        <p class="o_stat_value" t-esc="formatCurrency(state.data.statistiques.total_achats)"/>
+                        <small t-esc="state.data.statistiques.nb_commandes_achats + ' Commandes'"/>
+                    </div>
+                </div>
+
+                <div class="o_stat_card o_stat_marge">
+                    <div class="o_stat_icon"><i class="fa fa-line-chart"/></div>
+                    <div class="o_stat_content">
+                        <h3>Marge Brute</h3>
+                        <p class="o_stat_value" t-esc="formatCurrency(state.data.statistiques.marge_brute)"/>
+                        <small t-esc="state.data.statistiques.taux_marge + '%'"/>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== GRAPHS CÔTE À CÔTE ===== -->
+            <div class="o_dashboard_graphs">
+                <div class="o_graph_card">
+                    <h3><i class="fa fa-area-chart"/> Évolution des ventes</h3>
+                    <div class="o_graph_container">
+                        <canvas t-ref="evolutionChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="o_graph_card">
+                    <h3><i class="fa fa-pie-chart"/> Répartition</h3>
+                    <div class="o_graph_container">
+                        <canvas t-ref="repartitionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+        </t>
+    </div>
+</t>
+
+</templates>

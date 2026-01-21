@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_dashboard_management_admin,access_dashboard_management_admin,model_dashboard_management_admin,base.group_user,1,1,1,1
+access_managment_admin,access_managment_admin,model_managment_admin,base.group_user,1,1,1,1
+access_pos_actions_dashboard,access_pos_actions_dashboard,model_pos_actions_dashboard,base.group_user,1,1,1,1

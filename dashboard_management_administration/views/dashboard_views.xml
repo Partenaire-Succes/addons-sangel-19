@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- <record id="view_demi_gros_dashboard" model="ir.ui.view">
+        <field name="name">dashboard.management.admin</field>
+        <field name="model">dashboard.management.admin</field>
+        <field name="arch" type="xml">
+            <form string="Dashboard Demi Gros" class="o_dashboard_demi_gros">
+                <sheet>
+                    <div class="oe_dashboard_demi_gros">
+                        <div class="date_filters">
+                            <field name="date_from" placeholder="Date début"/>
+                            <field name="date_to" placeholder="Date fin"/>
+                            <field name="company_id" placeholder="Entreprise"/>
+                            <button string="Filtrer" type="object" name="apply_filters" class="btn-primary"/>
+                        </div>
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record> -->
+
+    <record id="action_demi_gros_dashboard" model="ir.actions.client">
+        <field name="name">Dashboard Demi Gros</field>
+        <field name="tag">dashboard_management_admin</field>
+    </record>
+</odoo>
