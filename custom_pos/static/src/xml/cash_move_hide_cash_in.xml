@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <!-- Hide Cash In button - only Cash Out is needed -->
+    <t t-name="point_of_sale.CashMovePopup" t-inherit="point_of_sale.CashMovePopup" t-inherit-mode="extension">
+        <!-- Hide the Cash In button -->
+        <xpath expr="//button[contains(@t-on-click, &quot;'in'&quot;)]" position="attributes">
+            <attribute name="class" add="d-none" separator=" "/>
+        </xpath>
+    </t>
+</templates>

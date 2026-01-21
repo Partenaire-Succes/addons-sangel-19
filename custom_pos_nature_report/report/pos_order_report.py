@@ -4,9 +4,9 @@ from odoo import fields, models, tools
 
 class ReportPosOrderNature(models.Model):
     """
-    Extension of report.pos.order to add nature tracking fields and custom price calculations.
+    Extension of report.pos.order to add nature tracking fields and fix price calculations.
     - Nature tracking: tracks actual quantities sold by nature (e.g., macarons from coffrets)
-    - Custom HT/TTC: calculates based on product list_price and taxes, not transaction prices
+    - Price fix: native price_total doesn't respect refund signs (SIGN(qty) fix)
     """
     _inherit = 'report.pos.order'
 
@@ -43,42 +43,38 @@ class ReportPosOrderNature(models.Model):
         readonly=True,
         help="Prix total HT = Prix de base (list_price) × Quantité de produits vendus"
     )
-    price_total_ttc = fields.Float(
-        string='Prix total TTC',
-        readonly=True,
-        help="Prix total TTC = Prix de base × (1 + taux de taxe) × Quantité de produits vendus"
-    )
 
     def _select(self):
-        """Extend SELECT to include nature fields, valeur monetaire, and custom HT/TTC calculations
+        """Extend SELECT to include nature fields and fix price_total for refunds.
         
-        Prix total HT = list_price × qty
-        Prix total TTC = ((list_price × tax_rate) + list_price) × qty
-                       = list_price × (1 + tax_rate) × qty
-                       → arrondi au millier supérieur avec CEIL()
+        IMPORTANT FIX: Native price_total uses price_subtotal_incl which is always positive,
+        even for refund lines. This breaks pivot aggregation. We override it by multiplying
+        by SIGN(l.qty) so refund lines contribute negative amounts to the total.
+        
+        Also adds custom HT calculation based on list_price.
         """
-        return super()._select() + """,
+        # Get the base SELECT but we need to override price_total
+        base_select = super()._select()
+        
+        # Replace the native price_total calculation with sign-aware version
+        # Native: ROUND((l.price_subtotal_incl) / COALESCE(NULLIF(s.currency_rate, 0), 1.0), cu.decimal_places) AS price_total
+        # Fixed:  Multiply by SIGN(l.qty) to respect refunds
+        base_select = base_select.replace(
+            'ROUND((l.price_subtotal_incl) / COALESCE(NULLIF(s.currency_rate, 0), 1.0), cu.decimal_places) AS price_total',
+            'ROUND((l.price_subtotal_incl * SIGN(COALESCE(l.qty, 1))) / COALESCE(NULLIF(s.currency_rate, 0), 1.0), cu.decimal_places) AS price_total'
+        )
+        
+        return base_select + """,
                 pt.nature_id AS nature_id,
                 COALESCE(pt.nature_quantity, 0) AS nature_quantity,
                 CAST(l.qty * COALESCE(pt.nature_quantity, 0) AS INTEGER) AS total_nature_qty,
                 COALESCE(pn.unit_price, 0) AS nature_unit_price,
                 (l.qty * COALESCE(pt.nature_quantity, 0)) * COALESCE(pn.unit_price, 0) AS valeur_monetaire,
-                pt.list_price * l.qty AS price_total_ht,
-                CEIL(pt.list_price * (1 + COALESCE(tax_agg.total_tax_percent, 0) / 100) * l.qty / 1000) * 1000 AS price_total_ttc
+                pt.list_price * l.qty AS price_total_ht
         """
 
     def _from(self):
-        """Extend FROM to join product_nature table and get first sale tax"""
+        """Extend FROM to join product_nature table"""
         return super()._from() + """
                 LEFT JOIN product_nature pn ON (pt.nature_id = pn.id)
-                LEFT JOIN LATERAL (
-                    SELECT COALESCE(tax.amount, 0) AS total_tax_percent
-                    FROM product_taxes_rel ptr
-                    JOIN account_tax tax ON tax.id = ptr.tax_id
-                        AND tax.type_tax_use = 'sale'
-                        AND tax.amount_type = 'percent'
-                    WHERE ptr.prod_id = pt.id
-                    ORDER BY tax.id
-                    LIMIT 1
-                ) tax_agg ON true
         """

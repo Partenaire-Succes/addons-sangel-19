@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <!-- Extend OrderReceipt to show remaining food credit balance -->
+    <t t-name="custom_food_credit.OrderReceiptFoodCredit" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
+        <!-- Insert food credit balance info before the "before-footer" div -->
+        <xpath expr="//div[hasclass('before-footer')]" position="before">
+            <!-- 
+                Show remaining food credit balance only when:
+                1. Partner is selected and has food_credit_balance
+                2. Credit alimentaire payment method was used (is_food flag)
+                
+                Calculate remaining balance = pre-payment balance - amount paid with food credit
+            -->
+            <t t-set="foodCreditPayment" t-value="paymentLines.find(line => line.payment_method_id.is_food)"/>
+            <t t-if="order.partner_id and foodCreditPayment">
+                <t t-set="foodCreditPaid" t-value="foodCreditPayment.getAmount()"/>
+                <t t-set="remainingBalance" t-value="(order.partner_id.food_credit_balance || 0) - foodCreditPaid"/>
+                <div class="pos-receipt-food-credit-balance text-start pt-2" style="font-size: 90%; border-top: 1px dashed #ccc; margin-top: 8px; padding-top: 8px;">
+                    <span style="font-style: italic;">Solde crédit alimentaire restant: </span>
+                    <span t-out="formatCurrency(remainingBalance)" class="pos-receipt-right-align font-monospace fw-bold"/>
+                </div>
+            </t>
+        </xpath>
+    </t>
+</templates>

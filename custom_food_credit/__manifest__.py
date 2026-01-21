@@ -47,6 +47,8 @@
     'assets': {
         'point_of_sale._assets_pos': [
             'custom_food_credit/static/src/js/paymentScreenCreditFood.js',
+            'custom_food_credit/static/src/xml/partner_line_food_credit.xml',
+            'custom_food_credit/static/src/xml/receipt_food_credit.xml',
         ],
     },
 }

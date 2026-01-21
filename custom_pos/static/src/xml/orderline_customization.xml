@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Extend OrderDisplay to add line count header and line numbers -->
+    <t t-name="custom_pos.OrderDisplayLineCount"
+       t-inherit="point_of_sale.OrderDisplay"
+       t-inherit-mode="extension">
+
+        <!-- Add total line count header above the order list -->
+        <xpath expr="//div[hasclass('order-container')]" position="before">
+            <div t-if="lines.length > 0 and props.mode !== 'receipt'" 
+                 class="order-line-count d-flex justify-content-between align-items-center px-2 py-1 bg-200 border-bottom text-muted"
+                 style="font-size: 0.85em;">
+                <span>
+                    <i class="fa fa-list-ol me-1"/>
+                    <strong><t t-esc="lines.length"/></strong> article<t t-if="lines.length > 1">s</t>
+                </span>
+            </div>
+        </xpath>
+
+        <!-- Replace the Orderline call to include line index -->
+        <xpath expr="//Orderline" position="replace">
+            <Orderline line="line" mode="this.props.mode" lineNumber="line_index + 1"/>
+        </xpath>
+    </t>
+
+    <!-- Extend Orderline to show line number badge and always display unit price -->
+    <t t-name="custom_pos.OrderlineCustomDisplay"
+       t-inherit="point_of_sale.Orderline"
+       t-inherit-mode="extension">
+
+        <!-- Add line number badge before qty -->
+        <xpath expr="//span[hasclass('qty')]" position="before">
+            <span t-if="props.lineNumber and props.mode !== 'receipt'" 
+                  class="line-number-badge d-inline-flex align-items-center justify-content-center rounded-circle bg-primary text-white me-1"
+                  style="width: 1.5em; height: 1.5em; font-size: 0.7em; font-weight: bold;">
+                <t t-esc="props.lineNumber"/>
+            </span>
+        </xpath>
+
+        <!-- Add unit price note under product name (always visible, not just when qty != 1) -->
+        <xpath expr="//div[hasclass('product-name')]" position="after">
+            <div t-if="!line.combo_parent_id and props.mode !== 'receipt'" 
+                 class="unit-price-note text-muted ps-2"
+                 style="font-size: 0.75em; margin-top: -2px;">
+                <t t-esc="formatCurrency(line.unitDisplayPrice)"/> / unité
+            </div>
+        </xpath>
+    </t>
+
+</templates>

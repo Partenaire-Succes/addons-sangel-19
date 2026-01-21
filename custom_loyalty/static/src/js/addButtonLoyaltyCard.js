@@ -85,18 +85,22 @@ patch(PosStore.prototype, {
         const pointsDisplay = currentPoints > 0 ? currentPoints.toFixed(2) : "?";
 
         // Use NumberPopup to get the rendu monnaie amount
+        // Show current rendu_monnaie as starting value so user can see/reset it
+        const currentRendu = order.get_rendu_monnaie() || 0;
         const result = await makeAwaitable(this.dialog, NumberPopup, {
             title: _t("Rendu monnaie (FCFA)"),
             subtitle: _t(`Client: ${partner.name} | Solde actuel: ${pointsDisplay} pts`),
-            startingValue: "0",
+            startingValue: String(currentRendu),
         });
 
-        if (result && parseFloat(result) > 0) {
-            const amount = parseFloat(result);
+        // Allow 0 as valid value to reset the rendu monnaie
+        // result is false/undefined only when popup is cancelled (Ignorer button)
+        if (result !== false && result !== undefined && result !== null) {
+            const amount = parseFloat(result) || 0;
             order.set_rendu_monnaie(amount);
             console.log("✅ Rendu monnaie set on order:", amount, "(Points will be updated on payment validation)");
         } else {
-            console.log("ℹ️ Rendu monnaie cancelled or invalid amount");
+            console.log("ℹ️ Rendu monnaie cancelled");
         }
     },
 });

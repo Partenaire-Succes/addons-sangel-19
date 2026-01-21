@@ -13,14 +13,13 @@
             <xpath expr="//field[@name='product_qty']" position="attributes">
                 <attribute name="string">Quantité de produits vendus</attribute>
             </xpath>
-            <!-- Hide native price_total (we use custom price_total_ttc instead) -->
+            <!-- Rename native price_total to Prix total TTC (we fixed it to respect refunds) -->
             <xpath expr="//field[@name='price_total']" position="attributes">
-                <attribute name="invisible">1</attribute>
+                <attribute name="string">Prix total TTC</attribute>
             </xpath>
             <!-- Add our custom measures after price_total -->
             <xpath expr="//field[@name='price_total']" position="after">
                 <field name="price_total_ht" string="Prix total HT" type="measure"/>
-                <field name="price_total_ttc" string="Prix total TTC" type="measure"/>
                 <field name="nature_unit_price" string="Valeur unitaire" type="measure"/>
                 <field name="valeur_monetaire" string="Valeur monétaire" type="measure"/>
                 <field name="total_nature_qty" type="measure"/>
@@ -36,14 +35,13 @@
         <field name="model">report.pos.order</field>
         <field name="inherit_id" ref="point_of_sale.view_report_pos_order_graph"/>
         <field name="arch" type="xml">
-            <!-- Hide native price_total (we use custom price_total_ttc instead) -->
+            <!-- Rename native price_total to Prix total TTC (we fixed it to respect refunds) -->
             <xpath expr="//field[@name='price_total']" position="attributes">
-                <attribute name="invisible">1</attribute>
+                <attribute name="string">Prix total TTC</attribute>
             </xpath>
             <!-- Add our custom measures -->
             <xpath expr="//field[@name='price_total']" position="after">
                 <field name="price_total_ht" string="Prix total HT" type="measure"/>
-                <field name="price_total_ttc" string="Prix total TTC" type="measure"/>
                 <field name="nature_unit_price" string="Valeur unitaire" type="measure"/>
                 <field name="valeur_monetaire" string="Valeur monétaire" type="measure"/>
                 <field name="total_nature_qty" type="measure"/>
@@ -66,13 +64,12 @@
                 <field name="nature_unit_price" optional="show" string="Prix unitaire"/>
                 <field name="valeur_monetaire" optional="show" string="Valeur monétaire"/>
             </xpath>
-            <!-- Hide native price_total, add custom HT/TTC fields -->
+            <!-- Rename native price_total to Prix total TTC, add HT field -->
             <xpath expr="//field[@name='price_total']" position="attributes">
-                <attribute name="invisible">1</attribute>
+                <attribute name="string">Prix total TTC</attribute>
             </xpath>
             <xpath expr="//field[@name='price_total']" position="after">
                 <field name="price_total_ht" optional="show" string="Prix total HT"/>
-                <field name="price_total_ttc" optional="show" string="Prix total TTC"/>
             </xpath>
         </field>
     </record>

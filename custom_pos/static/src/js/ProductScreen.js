@@ -115,6 +115,92 @@ patch(PosStore.prototype, {
         console.log("Ligne de récompense Odoo:", hasOdooRewardLine);
         console.log("Code d'accès requis:", hasDiscount);
 
+        // ========== Vérification réduction de prix ==========
+        // Collecter les lignes avec prix modifié (pour vérification backend)
+        const priceReductionLines = [];
+        orderLines.forEach(line => {
+            if (!line || !line.product_id) return;
+            if (line.is_reward_line) return;
+            if (line.price_unit !== undefined && line.price_unit < 0) return;
+            
+            const product = line.product_id;
+            const originalPrice = product.lst_price;
+            const currentPrice = line.price_unit;
+            
+            // Vérifier si le prix a été réduit
+            if (currentPrice < originalPrice) {
+                priceReductionLines.push({
+                    product_id: product.id,
+                    unit_price: currentPrice,
+                    product_name: product.display_name,
+                    original_price: originalPrice,
+                });
+            }
+        });
+
+        console.log("Lignes avec réduction de prix:", priceReductionLines);
+
+        // ========== Vérification réduction de prix (avant stock) ==========
+        if (priceReductionLines.length > 0) {
+            try {
+                const priceResult = await rpc("/web/dataset/call_kw/pos.order/check_price_reduction", {
+                    model: "pos.order",
+                    method: "check_price_reduction",
+                    args: [priceReductionLines],
+                    kwargs: {},
+                });
+                
+                console.log("Résultat vérification prix:", priceResult);
+                
+                if (priceResult.error && priceResult.access_required) {
+                    if (priceResult.code_acces) {
+                        const priceCodeInput = await this._showPasswordPrompt(priceResult.message, []);
+                        if (priceCodeInput !== priceResult.code_acces) {
+                            this.dialog.add(AlertDialog, {
+                                title: _t("Code incorrect"),
+                                body: _t("Le code saisi est invalide. La vente est annulée."),
+                            });
+                            return;
+                        }
+                    } else {
+                        this.dialog.add(AlertDialog, {
+                            title: _t("Réduction de prix non autorisée"),
+                            body: _t(priceResult.message + "\n\nAucun code d'accès configuré."),
+                        });
+                        return;
+                    }
+                }
+            } catch (error) {
+                // Mode hors-ligne - vérification locale de réduction de prix
+                console.warn("Mode hors-ligne détecté pour vérification prix:", error.message || error);
+                
+                // En mode hors-ligne, on utilise les données locales
+                const accessCode = this.config.code_acces;
+                
+                if (priceReductionLines.length > 0) {
+                    const productList = priceReductionLines
+                        .map(p => `   • ${p.product_name}: ${p.original_price.toFixed(2)} → ${p.unit_price.toFixed(2)}`)
+                        .join('\n');
+                    
+                    const message = `⚠️ Modification de prix détectée (mode hors-ligne) :\n\n${productList}\n\nUn code d'accès est requis pour valider cette réduction de prix.`;
+                    
+                    if (accessCode) {
+                        const codeInput = await this._showPasswordPrompt(message, []);
+                        if (codeInput !== accessCode) {
+                            this.dialog.add(AlertDialog, {
+                                title: _t("Code incorrect"),
+                                body: _t("Le code saisi est invalide. La vente est annulée."),
+                            });
+                            return;
+                        }
+                    } else {
+                        // Pas de code configuré, on laisse passer en mode hors-ligne
+                        console.warn("Mode hors-ligne: Pas de code d'accès configuré pour réduction prix - vente autorisée");
+                    }
+                }
+            }
+        }
+
         // ========== Stock et code d'accès ==========
         // IMPORTANT: Exclure les lignes de récompense Odoo du contrôle de stock
         // (elles sont virtuelles et n'ont pas de stock)

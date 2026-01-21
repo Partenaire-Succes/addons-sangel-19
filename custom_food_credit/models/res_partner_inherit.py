@@ -1,6 +1,8 @@
-from odoo import fields, models, api, _
-from odoo.exceptions import ValidationError
 import re
+from datetime import datetime
+
+from odoo import _, api, fields, models
+from odoo.exceptions import ValidationError
 
 
 class ResPartnerInherit(models.Model):
@@ -18,6 +20,49 @@ class ResPartnerInherit(models.Model):
     total_due = fields.Float(string="Test", default=0.0)
     currency_id = fields.Many2one('res.currency', string='Currency', default=lambda self: self.env.company.currency_id)
     amount_credit_limit = fields.Float(string="Limite de credit", default=0.0)
+    
+    # Computed field for POS display - current food credit balance
+    food_credit_balance = fields.Float(
+        string="Solde crédit alimentaire",
+        compute='_compute_food_credit_balance',
+        help="Solde disponible du crédit alimentaire pour ce client"
+    )
+    
+    @api.depends('food_id', 'parent_id', 'parent_id.is_food')
+    def _compute_food_credit_balance(self):
+        """Compute the current food credit balance for a partner from active food.credit.line"""
+        now = datetime.now()
+        FoodCreditLine = self.env['food.credit.line'].sudo()
+        
+        for partner in self:
+            balance = 0.0
+            # Check if partner has an active food credit line
+            # Partners with food credit are employees of a company that has is_food=True
+            if partner.parent_id and partner.parent_id.is_food:
+                # Find active food credit line for this partner
+                food_line = FoodCreditLine.search([
+                    ('partner_id', '=', partner.id),
+                    ('state', '=', 'in_progress'),
+                    ('start', '<=', now),
+                    ('end', '>=', now),
+                ], limit=1, order='id desc')
+                
+                if food_line:
+                    balance = food_line.solde
+            
+            partner.food_credit_balance = balance
+    
+    @api.model
+    def _load_pos_data_fields(self, config):
+        """Extend POS data loading to include food credit fields"""
+        fields = super()._load_pos_data_fields(config)
+        # Add food credit related fields
+        fields.extend([
+            'is_food',
+            'is_limit',
+            'food_credit_balance',
+        ])
+        return fields
     
     @api.model_create_multi
     def create(self, vals_list):
