@@ -91,11 +91,11 @@ function applyGlobalDiscountToLine(line, partner) {
     }
 
     const product = line.product_id;
-
+    
     if (shouldApplyGlobalDiscount(partner, product)) {
         const discountPercentage = getGlobalDiscountPercentage(partner);
         const currentDiscount = line.getDiscount() || 0;
-
+        
         // Only apply if no manual discount exists, or if global discount is higher
         // Don't override if line has a manually applied discount that's higher
         if (!line._manualDiscountApplied || currentDiscount < discountPercentage) {
@@ -109,7 +109,7 @@ function applyGlobalDiscountToLine(line, partner) {
         line._globalDiscountApplied = false;
         return true;
     }
-
+    
     return false;
 }
 
@@ -122,7 +122,7 @@ function applyGlobalDiscountToAllLines(order) {
     }
 
     const partner = order.partner_id;
-
+    
     for (const line of order.lines) {
         if (partner) {
             applyGlobalDiscountToLine(line, partner);
@@ -143,25 +143,25 @@ patch(PosOrderline.prototype, {
         const otherHasGlobalDiscount = orderline._globalDiscountApplied === true;
         const thisHasNoDiscount = this.getDiscount() === 0;
         const otherHasNoDiscount = orderline.getDiscount() === 0;
-
+        
         // If both lines qualify for global discount merge (both have global discount or both have no discount)
         // temporarily set discounts to 0 to pass the native merge check
-        const canBypassDiscountCheck = (thisHasGlobalDiscount || thisHasNoDiscount) &&
-            (otherHasGlobalDiscount || otherHasNoDiscount);
-
+        const canBypassDiscountCheck = (thisHasGlobalDiscount || thisHasNoDiscount) && 
+                                        (otherHasGlobalDiscount || otherHasNoDiscount);
+        
         if (canBypassDiscountCheck && thisHasGlobalDiscount) {
             // Temporarily set discount to 0 for the merge check
             const originalDiscount = this.discount;
             this.discount = 0;
-
+            
             const canMerge = super.canBeMergedWith(orderline);
-
+            
             // Restore discount
             this.discount = originalDiscount;
-
+            
             return canMerge;
         }
-
+        
         return super.canBeMergedWith(orderline);
     },
 });
@@ -180,7 +180,7 @@ patch(PosStore.prototype, {
     async addLineToOrder(vals, order, opts = {}, configure = true) {
         // Call original method - this creates line and handles merging
         const result = await super.addLineToOrder(vals, order, opts, configure);
-
+        
         // After line creation and merge, apply global discount to the selected line
         // The selected line is either the newly created line or the merged line
         if (order && order.partner_id) {
@@ -192,7 +192,7 @@ patch(PosStore.prototype, {
                 }
             }
         }
-
+        
         return result;
     },
 });

@@ -19,9 +19,9 @@
         </xpath>
 
         <!-- Replace the Orderline call to include line index -->
-        <xpath expr="//Orderline" position="replace">
+        <!-- <xpath expr="//Orderline" position="replace">
             <Orderline line="line" mode="this.props.mode" lineNumber="line_index + 1"/>
-        </xpath>
+        </xpath> -->
     </t>
 
     <!-- Extend Orderline to show line number badge and always display unit price -->
@@ -30,13 +30,13 @@
        t-inherit-mode="extension">
 
         <!-- Add line number badge before qty -->
-        <xpath expr="//span[hasclass('qty')]" position="before">
+        <!-- <xpath expr="//span[hasclass('qty')]" position="before">
             <span t-if="props.lineNumber and props.mode !== 'receipt'" 
                   class="line-number-badge d-inline-flex align-items-center justify-content-center rounded-circle bg-primary text-white me-1"
                   style="width: 1.5em; height: 1.5em; font-size: 0.7em; font-weight: bold;">
                 <t t-esc="props.lineNumber"/>
             </span>
-        </xpath>
+        </xpath> -->
 
         <!-- Add unit price note under product name (always visible, not just when qty != 1) -->
         <xpath expr="//div[hasclass('product-name')]" position="after">
