@@ -9,7 +9,11 @@
             <field name="arch" type="xml">
 
                 <xpath expr="//field[@name='payment_method_type']" position="after">
-                    <field name="is_progress" />
+                    <field name="is_titre_paiement" />
+                    <field name="is_cheque" />
+                    <field name="is_bank_card" />
+                    <!-- is_loyalty defined in custom_loyalty module -->
+                    <!-- is_food, is_limit defined in custom_food_credit module -->
                 </xpath>
             </field>
         </record>

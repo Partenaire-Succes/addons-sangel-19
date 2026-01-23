@@ -22,8 +22,13 @@
     'data': [
         # 'security/ir.model.access.csv',
         'security/security.xml',
+        'data/ir_sequence_data.xml',
+        'report/prelevement_ticket_report.xml',
+        'report/prelevement_ticket_template.xml',
+        'report/cloture_caisse_report.xml',
+        'report/cloture_caisse_template.xml',
         'views/pos_config_inherit_views.xml',
-        # 'views/product_template_inherit_views.xml',
+        'views/pos_payment_method_inherit_views.xml',
     ],
     'images': ['static/description/banner.png'],
     'license': 'AGPL-3',
@@ -52,6 +57,7 @@
             "/custom_pos/static/src/js/ticket_screen_refund_patch.js",
             # Other XML files
             "/custom_pos/static/src/xml/cash_move_hide_cash_in.xml",
+            "/custom_pos/static/src/xml/cash_move_list_popup_patch.xml",
             "/custom_pos/static/src/xml/custom_receipt_header.xml",
             "/custom_pos/static/src/xml/opening_control_popup_patch.xml",
             "/custom_pos/static/src/xml/orderline_customization.xml",

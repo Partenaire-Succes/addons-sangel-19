@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Paper format for cloture de caisse ticket (80mm thermal printer) -->
+    <record id="paperformat_cloture_caisse_ticket" model="report.paperformat">
+        <field name="name">Clôture de Caisse Ticket (80mm)</field>
+        <field name="default" eval="False"/>
+        <field name="format">custom</field>
+        <field name="page_height">297</field>
+        <field name="page_width">80</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">2</field>
+        <field name="margin_bottom">2</field>
+        <field name="margin_left">2</field>
+        <field name="margin_right">2</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="dpi">96</field>
+    </record>
+
+    <!-- Report action for Cloture de Caisse Ticket -->
+    <record id="action_report_cloture_caisse" model="ir.actions.report">
+        <field name="name">Clôture de Caisse</field>
+        <field name="model">pos.session</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">custom_pos.report_cloture_caisse_ticket</field>
+        <field name="report_file">custom_pos.report_cloture_caisse_ticket</field>
+        <field name="print_report_name">'Cloture_Caisse_%s_%s' % (object.config_id.name, object.start_at.strftime('%Y%m%d') if object.start_at else '')</field>
+        <field name="binding_model_id" ref="point_of_sale.model_pos_session"/>
+        <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="custom_pos.paperformat_cloture_caisse_ticket"/>
+    </record>
+</odoo>

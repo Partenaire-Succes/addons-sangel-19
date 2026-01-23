@@ -17,6 +17,18 @@
                                placeholder="10,20,45"
                                help="Comma-separated values for preset remise buttons"/>
                     </setting>
+                    <setting id="cloture_caisse_info" string="Clôture de caisse - Infos ticket">
+                        <div class="content-group">
+                            <div class="row">
+                                <label for="depot_number" class="col-lg-4 o_light_label"/>
+                                <field name="depot_number" placeholder="02"/>
+                            </div>
+                            <div class="row mt-2">
+                                <label for="poste_number" class="col-lg-4 o_light_label"/>
+                                <field name="poste_number" placeholder="05"/>
+                            </div>
+                        </div>
+                    </setting>
                 </xpath>
             </field>
         </record>

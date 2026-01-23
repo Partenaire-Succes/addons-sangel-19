@@ -7,6 +7,4 @@
 #    Author: Adama KONE
 #
 #############################################################################
-from . import session
-from . import pos_config
-from . import order_pos
+from . import order_pos, pos_config, pos_payment_method, session

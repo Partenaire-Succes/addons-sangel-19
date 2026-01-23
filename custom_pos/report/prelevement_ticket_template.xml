@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Prélèvement Ticket Template - Receipt format for thermal printer -->
+        <template id="report_prelevement_ticket">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="doc">
+                    <t t-call="custom_pos.report_prelevement_ticket_document">
+                        <t t-set="session" t-value="doc"/>
+                    </t>
+                </t>
+            </t>
+        </template>
+
+        <template id="report_prelevement_ticket_document">
+            <t t-set="company" t-value="session.company_id"/>
+            <t t-set="currency" t-value="session.currency_id"/>
+            <t t-set="config_short" t-value="(session.config_id.name or '')[:8]"/>
+            
+            <!-- Get prelevement sequence number -->
+            <t t-set="prelevement_number" t-value="session._get_prelevement_number()"/>
+            
+            <!-- Get cash total and titre_paiement payments -->
+            <t t-set="payment_data" t-value="session._get_prelevement_payment_data()"/>
+            
+            <html>
+            <head>
+                <meta charset="UTF-8"/>
+                <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+            </head>
+            <body>
+            <div class="page" style="font-family: monospace; font-size: 10pt; width: 76mm; padding: 2mm;">
+                <!-- Header: Company Name -->
+                <div style="text-align: center; font-weight: bold; font-size: 12pt; margin-bottom: 3mm;">
+                    <t t-esc="company.name"/>
+                </div>
+                
+                <!-- City/Location if available -->
+                <t t-if="company.city">
+                    <div style="text-align: center; font-size: 10pt; margin-bottom: 4mm;">
+                        <t t-esc="company.city"/>
+                    </div>
+                </t>
+                
+                <!-- Date and Cashier info -->
+                <div style="text-align: right; margin-bottom: 2mm;">
+                    <span>le </span>
+                    <t t-esc="session.start_at.strftime('%d/%m/%Y') if session.start_at else ''"/>
+                </div>
+                
+                <div style="margin-bottom: 2mm;">
+                    <span>Caissier(e): </span>
+                    <t t-esc="session.user_id.name"/>
+                </div>
+                
+                <!-- Prélèvement Reference -->
+                <div style="margin-bottom: 4mm;">
+                    <t t-raw="'Prélèvement n°'"/>
+                    <t t-esc="prelevement_number"/>
+                </div>
+                
+                <!-- Separator line -->
+                <div style="border-top: 1px dashed #000; margin: 3mm 0;"/>
+                
+                <!-- Payment Lines -->
+                <div style="margin-top: 3mm;">
+                    <!-- First line: Cash (Espèces) total - ALWAYS FIRST -->
+                    <!-- Use cash_register_balance_end_real: the amount user entered at closing -->
+                    <div style="margin-bottom: 2mm;">
+                        <span><t t-esc="config_short"/>:<t t-raw="'Espèces'"/></span>
+                        <span style="float: right; font-weight: bold;">
+                            <t t-esc="'{:,.0f}'.format(session.cash_register_balance_end_real or 0).replace(',', ' ')"/> 
+                            <t t-esc="currency.symbol or 'XOF'"/>
+                        </span>
+                    </div>
+                    
+                    <!-- Titre de paiement transactions -->
+                    <t t-foreach="payment_data.get('titre_payments', [])" t-as="payment">
+                        <div style="margin-bottom: 1mm;">
+                            <span><t t-esc="config_short"/>:<t t-esc="payment.get('method_name', '')"/></span>
+                            <span style="float: right;">
+                                <t t-esc="'{:,.0f}'.format(payment.get('amount', 0)).replace(',', ' ')"/> 
+                                <t t-esc="currency.symbol or 'XOF'"/>
+                            </span>
+                        </div>
+                    </t>
+                </div>
+                
+                <!-- Separator line -->
+                <div style="border-top: 1px dashed #000; margin: 4mm 0;"/>
+                
+                <!-- Footer with signature space -->
+                <div style="margin-top: 5mm; text-align: center;">
+                    <div style="margin-top: 15mm; border-top: 1px solid #000; width: 50mm; margin-left: auto; margin-right: auto;"/>
+                    <div style="font-size: 8pt; margin-top: 1mm;">Signature</div>
+                </div>
+            </div>
+            </body>
+            </html>
+        </template>
+    </data>
+</odoo>

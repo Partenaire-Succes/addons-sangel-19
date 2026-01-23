@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <!-- Hide the delete button from Cash Move List Popup (desktop view) -->
+    <t t-name="point_of_sale.CashMoveListPopup" t-inherit="point_of_sale.CashMoveListPopup" t-inherit-mode="extension">
+        <!-- Hide delete column in desktop table view -->
+        <xpath expr="//td[hasclass('delete-row')]" position="attributes">
+            <attribute name="class">text-end delete-row d-none</attribute>
+        </xpath>
+        
+        <!-- Hide delete column in mobile view -->
+        <xpath expr="//div[hasclass('delete-row')]" position="attributes">
+            <attribute name="class">col-2 align-self-center delete-row d-none</attribute>
+        </xpath>
+    </t>
+
+</templates>

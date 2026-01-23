@@ -13,6 +13,15 @@ class PosConfig(models.Model):
         default="10,20,45",
         help="Comma-separated remise percentages to display as quick buttons in payment screen. Example: 10,20,45"
     )
+    # Cloture de caisse report fields
+    depot_number = fields.Char(
+        string="Numéro de dépôt",
+        help="Numéro de dépôt affiché sur le ticket de clôture de caisse (ex: 02)"
+    )
+    poste_number = fields.Char(
+        string="Numéro de poste",
+        help="Numéro de poste affiché sur le ticket de clôture de caisse (ex: 05)"
+    )
 
     # Note: Les champs code_acces et preset_remise_percentages sont automatiquement chargés
     # car pos.config charge tous les champs par défaut (pas de _load_pos_data_fields défini)

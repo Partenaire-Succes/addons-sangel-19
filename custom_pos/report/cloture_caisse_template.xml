@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Clôture de Caisse Ticket Template - Receipt format for thermal printer -->
+        <template id="report_cloture_caisse_ticket">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="doc">
+                    <t t-call="custom_pos.report_cloture_caisse_ticket_document">
+                        <t t-set="session" t-value="doc"/>
+                    </t>
+                </t>
+            </t>
+        </template>
+
+        <template id="report_cloture_caisse_ticket_document">
+            <t t-set="company" t-value="session.company_id"/>
+            <t t-set="config" t-value="session.config_id"/>
+            <t t-set="currency" t-value="session.currency_id"/>
+            
+            <!-- Get cloture data -->
+            <t t-set="cloture_data" t-value="session._get_cloture_caisse_data()"/>
+            <t t-set="ventes_en_compte" t-value="cloture_data.get('ventes_en_compte', {})"/>
+            
+            <div class="article o_report_layout_standard" t-attf-style="width: 76mm; margin: 0 auto; padding: 2mm; font-family: 'Courier New', Courier, monospace; font-size: 10pt;">
+                
+                <!-- ============================================= -->
+                <!-- HEADER -->
+                <!-- ============================================= -->
+                
+                <!-- Signature space for manager (handwritten name at top) -->
+                <div style="border-bottom: 1px solid #000; height: 8mm; margin-bottom: 3mm;"></div>
+                
+                <!-- Depot and Poste info -->
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="text-align: left;">Dépôt N° <t t-esc="config.depot_number or '___'"/></td>
+                        <td style="text-align: right;">Poste N° <t t-esc="config.poste_number or '___'"/></td>
+                    </tr>
+                </table>
+                
+                <!-- Tous caissiers confondus -->
+                <div style="text-align: center; margin: 2mm 0;">
+                    Tous caissiers confondus
+                </div>
+                
+                <!-- Date -->
+                <div style="text-align: center; font-weight: bold; margin-bottom: 3mm;">
+                    Clôture de la journée du <t t-esc="session.stop_at.strftime('%d/%m/%Y') if session.stop_at else (session.start_at.strftime('%d/%m/%Y') if session.start_at else '')"/>
+                </div>
+                
+                <!-- Separator -->
+                <div style="border-bottom: 1px solid #000; margin: 2mm 0;"></div>
+
+                <!-- ============================================= -->
+                <!-- SECTION 1: Ventes en compte (Glovo/Yango) -->
+                <!-- ============================================= -->
+                <div style="font-weight: bold; text-decoration: underline; padding: 2mm 0;">Ventes en compte</div>
+                
+                <table style="width: 100%; border-collapse: collapse; margin-top: 2mm;">
+                    <thead>
+                        <tr>
+                            <th style="width: 40%; text-align: left;"></th>
+                            <th style="width: 20%; text-align: right; font-weight: bold; border-bottom: 1px dashed #000; padding-bottom: 1mm;">Nbre</th>
+                            <th style="width: 40%; text-align: right; font-weight: bold; border-bottom: 1px dashed #000; padding-bottom: 1mm;">Montant</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td></td>
+                            <td style="text-align: right; padding-top: 1mm;"><t t-esc="ventes_en_compte.get('count', 0)"/></td>
+                            <td style="text-align: right; padding-top: 1mm; white-space: nowrap;"><t t-esc="'{:,.0f}'.format(ventes_en_compte.get('total', 0)).replace(',', ' ')"/></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- Separator -->
+                <div style="border-bottom: 1px solid #000; margin: 3mm 0;"></div>
+
+                <!-- ============================================= -->
+                <!-- SECTION 2: Fond de caisse initial -->
+                <!-- ============================================= -->
+                <t t-set="fond_initial" t-value="cloture_data.get('fond_de_caisse_initial', {})"/>
+                
+                <div style="font-weight: bold; text-decoration: underline; padding: 2mm 0;">Fond de caisse initial</div>
+                
+                <table style="width: 100%; border-collapse: collapse; margin-top: 2mm;">
+                    <tbody>
+                        <tr>
+                            <td style="width: 60%; padding: 1mm 0;">Espèces</td>
+                            <td style="width: 40%; text-align: right; padding: 1mm 0;"><t t-esc="'{:,.0f}'.format(fond_initial.get('especes', 0)).replace(',', ' ')"/></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 1mm 0;">Chèques</td>
+                            <td style="text-align: right; padding: 1mm 0;"><t t-esc="'{:,.0f}'.format(fond_initial.get('cheques', 0)).replace(',', ' ')"/></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 1mm 0;">Cartes</td>
+                            <td style="text-align: right; padding: 1mm 0;"><t t-esc="'{:,.0f}'.format(fond_initial.get('cartes', 0)).replace(',', ' ')"/></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 1mm 0;">Titres de paiements</td>
+                            <td style="text-align: right; padding: 1mm 0;"><t t-esc="'{:,.0f}'.format(fond_initial.get('titres_paiements', 0)).replace(',', ' ')"/></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- Separator -->
+                <div style="border-bottom: 1px solid #000; margin: 3mm 0;"></div>
+
+                <!-- ============================================= -->
+                <!-- SECTION 3: Encaissements comptants -->
+                <!-- ============================================= -->
+                <t t-set="encaissements" t-value="cloture_data.get('encaissements_comptants', {})"/>
+                
+                <div style="font-weight: bold; text-decoration: underline; padding: 2mm 0;">Encaissements comptants</div>
+                
+                <table style="width: 100%; border-collapse: collapse; margin-top: 2mm;">
+                    <thead>
+                        <tr>
+                            <th style="width: 40%; text-align: left;"></th>
+                            <th style="width: 20%; text-align: right; font-weight: bold; border-bottom: 1px dashed #000; padding-bottom: 1mm;">Nbre</th>
+                            <th style="width: 40%; text-align: right; font-weight: bold; border-bottom: 1px dashed #000; padding-bottom: 1mm;">Montant</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="padding: 1mm 0;">Espèces</td>
+                            <td style="text-align: right; padding: 1mm 0;"><t t-esc="encaissements.get('especes', {}).get('count', 0)"/></td>
+                            <td style="text-align: right; padding: 1mm 0; white-space: nowrap;"><t t-esc="'{:,.0f}'.format(encaissements.get('especes', {}).get('total', 0)).replace(',', ' ')"/></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 1mm 0;">Chèques</td>
+                            <td style="text-align: right; padding: 1mm 0;"><t t-esc="encaissements.get('cheques', {}).get('count', 0)"/></td>
+                            <td style="text-align: right; padding: 1mm 0; white-space: nowrap;"><t t-esc="'{:,.0f}'.format(encaissements.get('cheques', {}).get('total', 0)).replace(',', ' ')"/></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 1mm 0;">Cartes</td>
+                            <td style="text-align: right; padding: 1mm 0;"><t t-esc="encaissements.get('cartes', {}).get('count', 0)"/></td>
+                            <td style="text-align: right; padding: 1mm 0; white-space: nowrap;"><t t-esc="'{:,.0f}'.format(encaissements.get('cartes', {}).get('total', 0)).replace(',', ' ')"/></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 1mm 0;">Avoir</td>
+                            <td style="text-align: right; padding: 1mm 0;"><t t-esc="encaissements.get('avoir', {}).get('count', 0)"/></td>
+                            <td style="text-align: right; padding: 1mm 0; white-space: nowrap;"><t t-esc="'{:,.0f}'.format(encaissements.get('avoir', {}).get('total', 0)).replace(',', ' ')"/></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 1mm 0;">Titre de paiements</td>
+                            <td style="text-align: right; padding: 1mm 0;"><t t-esc="encaissements.get('titres', {}).get('count', 0)"/></td>
+                            <td style="text-align: right; padding: 1mm 0; white-space: nowrap;"><t t-esc="'{:,.0f}'.format(encaissements.get('titres', {}).get('total', 0)).replace(',', ' ')"/></td>
+                        </tr>
+                        <!-- Total row with bold and top border -->
+                        <tr style="font-weight: bold;">
+                            <td style="padding: 2mm 0; border-top: 1px solid #000;">Total</td>
+                            <td style="text-align: right; padding: 2mm 0; border-top: 1px solid #000;"><t t-esc="encaissements.get('total', {}).get('count', 0)"/></td>
+                            <td style="text-align: right; padding: 2mm 0; border-top: 1px solid #000; white-space: nowrap;"><t t-esc="'{:,.0f}'.format(encaissements.get('total', {}).get('total', 0)).replace(',', ' ')"/></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- Separator -->
+                <div style="border-bottom: 1px solid #000; margin: 3mm 0;"></div>
+
+                <!-- ============================================= -->
+                <!-- SECTION 4: Prélèvements -->
+                <!-- ============================================= -->
+                <t t-set="prelevements" t-value="cloture_data.get('prelevements', {})"/>
+                
+                <div style="font-weight: bold; text-decoration: underline; padding: 2mm 0;">Prélèvements</div>
+                
+                <table style="width: 100%; border-collapse: collapse; margin-top: 2mm;">
+                    <thead>
+                        <tr>
+                            <th style="width: 40%; text-align: left;"></th>
+                            <th style="width: 20%; text-align: right; font-weight: bold; border-bottom: 1px dashed #000; padding-bottom: 1mm;">Nbre</th>
+                            <th style="width: 40%; text-align: right; font-weight: bold; border-bottom: 1px dashed #000; padding-bottom: 1mm;">Montant</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="padding: 1mm 0;">Espèces</td>
+                            <td style="text-align: right; padding: 1mm 0;"><t t-esc="prelevements.get('especes', {}).get('count', 0)"/></td>
+                            <td style="text-align: right; padding: 1mm 0; white-space: nowrap;"><t t-esc="'{:,.0f}'.format(prelevements.get('especes', {}).get('total', 0)).replace(',', ' ')"/></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 1mm 0;">Chèques</td>
+                            <td style="text-align: right; padding: 1mm 0;"><t t-esc="prelevements.get('cheques', {}).get('count', 0)"/></td>
+                            <td style="text-align: right; padding: 1mm 0; white-space: nowrap;"><t t-esc="'{:,.0f}'.format(prelevements.get('cheques', {}).get('total', 0)).replace(',', ' ')"/></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 1mm 0;">Cartes</td>
+                            <td style="text-align: right; padding: 1mm 0;"><t t-esc="prelevements.get('cartes', {}).get('count', 0)"/></td>
+                            <td style="text-align: right; padding: 1mm 0; white-space: nowrap;"><t t-esc="'{:,.0f}'.format(prelevements.get('cartes', {}).get('total', 0)).replace(',', ' ')"/></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 1mm 0;">Titre de paiements</td>
+                            <td style="text-align: right; padding: 1mm 0;"><t t-esc="prelevements.get('titres', {}).get('count', 0)"/></td>
+                            <td style="text-align: right; padding: 1mm 0; white-space: nowrap;"><t t-esc="'{:,.0f}'.format(prelevements.get('titres', {}).get('total', 0)).replace(',', ' ')"/></td>
+                        </tr>
+                        <!-- Total row with bold and top border -->
+                        <tr style="font-weight: bold;">
+                            <td style="padding: 2mm 0; border-top: 1px solid #000;">Total</td>
+                            <td style="text-align: right; padding: 2mm 0; border-top: 1px solid #000;"><t t-esc="prelevements.get('total', {}).get('count', 0)"/></td>
+                            <td style="text-align: right; padding: 2mm 0; border-top: 1px solid #000; white-space: nowrap;"><t t-esc="'{:,.0f}'.format(prelevements.get('total', {}).get('total', 0)).replace(',', ' ')"/></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- ============================================= -->
+                <!-- FOOTER -->
+                <!-- ============================================= -->
+                <div style="margin-top: 5mm; padding-top: 3mm; border-top: 1px solid #000; text-align: center;">
+                    <div style="font-weight: bold;">Fin de la clôture</div>
+                    
+                    <!-- Signature area -->
+                    <div style="margin-top: 15mm;">
+                        <div style="border-top: 1px solid #000; width: 40mm; margin: 0 auto;"></div>
+                        <div style="font-size: 8pt; margin-top: 1mm;">Signature</div>
+                    </div>
+                </div>
+
+            </div>
+        </template>
+    </data>
+</odoo>
