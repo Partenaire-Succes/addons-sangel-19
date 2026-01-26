@@ -20,3 +20,6 @@ class ResCompany(models.Model):
      lib_company = fields.Char(string='Libelle',
                          help="Nom de l'entreprise à utiliser dans le numéro d'article du produit.",
                          copy=False)
+     code_company = fields.Char(string='Code',
+                         help="Code de l'entreprise à utiliser dans les commandes magasin.",
+                         copy=False)

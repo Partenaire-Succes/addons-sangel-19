@@ -1,12 +1,12 @@
 import requests
-import logging as logger
+import logging
 from odoo import fields, models, api, _
-from odoo.exceptions import UserError, ValidationError
+from odoo.exceptions import UserError
 import json
-from datetime import datetime
-import time
+from datetime import datetime, timedelta
+from collections import defaultdict
 
-_logger = logger.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 BASE_URL = "http://172.16.2.150:8030"
 AUTH_URL = f"{BASE_URL}/api/Auth/login"
@@ -17,489 +17,591 @@ PASSWORD = "InterfaceX3_Odoo"
 
 TIMEOUT = 30
 MAX_RETRIES = 3
+BATCH_SIZE = 10  # Augmenté à 10 pour meilleures performances
+CACHE_TIMEOUT = 3600  # Cache d'1 heure
 
 
-class PurchaseOrderSageX3(models.Model):
+class PurchaseOrderSageX3Optimized(models.Model):
     _inherit = "purchase.order"
 
-    # Champs pour le suivi SAGE X3
-    sage_x3_submitted = fields.Boolean(
-        string="Soumis à SAGE X3",
-        default=False,
-        readonly=True,
-        copy=False,
-        help="Indique si la commande a été soumise à SAGE X3 pour validation"
-    )
-    sage_x3_validated = fields.Boolean(
-        string="Validé par SAGE X3",
-        default=False,
-        readonly=True,
-        copy=False,
-        help="Indique si SAGE X3 a validé la commande"
-    )
-    sage_x3_submitted_date = fields.Datetime(
-        string="Date soumission SAGE X3",
-        readonly=True,
-        copy=False
-    )
-    sage_x3_order_id = fields.Integer(
-        string="ID SAGE X3",
-        readonly=True,
-        copy=False
-    )
-    sage_x3_response_message = fields.Text(
-        string="Message SAGE X3",
-        readonly=True,
-        copy=False
-    )
-    sage_x3_error = fields.Text(
-        string="Erreur SAGE X3",
-        readonly=True,
-        copy=False
-    )
-
-    # CHAMPS ET MÉTHODES DE SOUMISSION À SAGE X3
-    sage_x3_delivery_received = fields.Boolean(
-        string="Livraison reçue de SAGE X3",
-        default=False,
-        readonly=True,
-        help="Indique qu'une confirmation de livraison a été reçue de SAGE X3"
-    )
-    sage_x3_delivery_date = fields.Datetime(
-        string="Date livraison SAGE X3",
-        readonly=True
-    )
-
-    def button_confirm(self):
-        """
-        Surcharge de la validation : 
-        Ne peut confirmer que si validé par SAGE X3
-        """
-        for order in self:
-            if not order.sage_x3_validated:
-                raise UserError(
-                    "❌ Cette commande doit d'abord être soumise et validée par SAGE X3.\n\n"
-                    "Utilisez le bouton 'Soumettre à SAGE X3' pour envoyer la commande."
-                )
-        
-        # Si validé par SAGE X3, continuer le processus normal
-        return super(PurchaseOrderSageX3, self).button_confirm()
-
+    def action_submit_urgent_command(self):
+        """Soummetre une commande urgente immédiatement"""
+        self.ensure_one()
+        if self.type_command == 'urgent':
+            return self.action_submit_to_sage_x3()
+        else:
+            raise UserError("La commande doit être marquée comme urgente pour cette action.")
     def action_submit_to_sage_x3(self):
-        """
-        Bouton : Soumettre la commande à SAGE X3 pour validation
-        """
+        """Soumettre la commande à SAGE X3"""
         self.ensure_one()
         
         if self.state not in ['draft', 'sent']:
-            raise UserError("Seules les commandes en brouillon ou envoyées peuvent être soumises à SAGE X3")
+            raise UserError("Seules les commandes en brouillon peuvent être soumises")
         
-        if self.sage_x3_submitted and self.sage_x3_validated:
-            raise UserError("Cette commande a déjà été validée par SAGE X3")
+        if self.sage_x3_validated:
+            raise UserError("Déjà validée par SAGE X3")
         
         try:
             self.submit_to_sage_x3()
-            
+
             if self.sage_x3_validated:
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'title': '✅ Succès',
-                        'message': f'Commande validée par SAGE X3.\n{self.sage_x3_response_message or ""}',
-                        'type': 'success',
-                        'sticky': False,
-                        'next': {'type': 'ir.actions.act_window_close'},
-                    }
+                self.action_confirm()
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': '✅ Succès' if self.sage_x3_validated else '⚠️ Attention',
+                    'message': self.sage_x3_response_message or self.sage_x3_error or 'Traité',
+                    'type': 'success' if self.sage_x3_validated else 'warning',
                 }
-            else:
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'title': '⚠️ Attention',
-                        'message': f'Commande soumise mais non validée.\n{self.sage_x3_error or ""}',
-                        'type': 'warning',
-                        'sticky': True,
-                    }
-                }
-                
+            }
         except Exception as e:
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
                     'title': '❌ Erreur',
-                    'message': f'Erreur lors de la soumission: {str(e)}',
+                    'message': str(e),
                     'type': 'danger',
                     'sticky': True,
                 }
             }
 
     def submit_to_sage_x3(self):
-        """
-        Soumet la commande à SAGE X3 pour validation
-        """
+        """Soumet à SAGE X3"""
         self.ensure_one()
-
+        
+        token = self._authenticate_sage_x3()
+        if not token:
+            raise UserError("Échec authentification")
+        
         order_data = self._prepare_order_for_sage_x3()
-        _logger.info("📦 Données envoyées à SAGE X3 :\n%s", json.dumps(order_data, indent=2))
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
         
+        response = self._safe_post(ORDERS_SEND_URL, headers, order_data)
         
-        # try:
-        #     _logger.info("📤 Soumission de la commande %s à SAGE X3...", self.name)
+        if response.status_code in (200, 201):
+            response_data = response.json()
             
-        #     # 1. Authentification
-        #     token = self._authenticate_sage_x3()
-        #     if not token:
-        #         raise UserError("Échec de l'authentification SAGE X3")
-            
-        #     # 2. Préparation des données
-        #     order_data = self._prepare_order_for_sage_x3()
-            
-        #     # 3. Envoi vers SAGE X3
-        #     headers = {
-        #         "Authorization": f"Bearer {token}",
-        #         "Content-Type": "application/json",
-        #         "Accept": "application/json"
-        #     }
-            
-        #     _logger.info("📦 Données envoyées à SAGE X3 :\n%s", json.dumps(order_data, indent=2))
-            
-        #     response = self._safe_post(ORDERS_SEND_URL, headers, order_data)
-            
-        #     if response.status_code in (200, 201):
-        #         response_data = response.json()
+            if isinstance(response_data, list) and response_data:
+                result = response_data[0]
+                success = result.get("success", False)
+                message = result.get("message", "")
                 
-        #         # Traiter la réponse
-        #         if isinstance(response_data, list) and len(response_data) > 0:
-        #             result = response_data[0]
-                    
-        #             success = result.get("success", False)
-        #             message = result.get("message", "")
-        #             commande = result.get("commande", {})
-        #             sage_id = commande.get("id")
-                    
-        #             if success:
-        #                 # Commande validée par SAGE X3
-        #                 self.write({
-        #                     'sage_x3_submitted': True,
-        #                     'sage_x3_validated': True,
-        #                     'sage_x3_submitted_date': fields.Datetime.now(),
-        #                     'sage_x3_order_id': sage_id,
-        #                     'sage_x3_response_message': message,
-        #                     'sage_x3_error': False,
-        #                 })
-                        
-        #                 _logger.info("✅ Commande %s validée par SAGE X3 (ID: %s)", self.name, sage_id)
-                        
-        #                 self.message_post(
-        #                     body=f"""
-        #                     <h3>✅ Commande validée par SAGE X3</h3>
-        #                     <ul>
-        #                         <li><strong>ID SAGE X3:</strong> {sage_id}</li>
-        #                         <li><strong>Message:</strong> {message}</li>
-        #                         <li><strong>Date:</strong> {fields.Datetime.now()}</li>
-        #                     </ul>
-        #                     <p>Vous pouvez maintenant confirmer la commande.</p>
-        #                     """,
-        #                     subject="✅ Validation SAGE X3"
-        #                 )
-                        
-        #                 return True
-        #             else:
-        #                 # Commande rejetée par SAGE X3
-        #                 self.write({
-        #                     'sage_x3_submitted': True,
-        #                     'sage_x3_validated': False,
-        #                     'sage_x3_submitted_date': fields.Datetime.now(),
-        #                     'sage_x3_error': message,
-        #                 })
-                        
-        #                 _logger.warning("⚠️ Commande %s rejetée par SAGE X3: %s", self.name, message)
-                        
-        #                 self.message_post(
-        #                     body=f"""
-        #                     <h3>❌ Commande rejetée par SAGE X3</h3>
-        #                     <p><strong>Raison:</strong> {message}</p>
-        #                     <p>Veuillez corriger les erreurs et soumettre à nouveau.</p>
-        #                     """,
-        #                     subject="❌ Rejet SAGE X3"
-        #                 )
-                        
-        #                 raise UserError(f"SAGE X3 a rejeté la commande:\n{message}")
-        #         else:
-        #             raise UserError("Format de réponse SAGE X3 invalide")
-        #     else:
-        #         error_msg = f"Erreur HTTP {response.status_code}: {response.text}"
-        #         raise UserError(error_msg)
+                self.write({
+                    'sage_x3_submitted': True,
+                    'sage_x3_validated': success,
+                    'sage_x3_submitted_date': fields.Datetime.now(),
+                    'sage_x3_response_message': message if success else False,
+                    'sage_x3_error': False if success else message,
+                })
                 
-        # except Exception as e:
-        #     error_msg = f"Erreur lors de la soumission à SAGE X3: {str(e)}"
-        #     _logger.exception("❌ %s", error_msg)
-            
-        #     self.write({
-        #         'sage_x3_submitted': True,
-        #         'sage_x3_validated': False,
-        #         'sage_x3_error': error_msg,
-        #         'sage_x3_submitted_date': fields.Datetime.now(),
-        #     })
-            
-        #     self.message_post(
-        #         body=f"""
-        #         <h3>❌ Erreur soumission SAGE X3</h3>
-        #         <p>{error_msg}</p>
-        #         """,
-        #         subject="❌ Erreur SAGE X3"
-        #     )
-            
-        #     raise
+                self.message_post(
+                    body=f"<h3>{'✅ Validée' if success else '❌ Rejetée'}</h3><p>{message}</p>",
+                    subject=f"{'✅' if success else '❌'} SAGE X3"
+                )
+                
+                if not success:
+                    raise UserError(f"Rejetée: {message}")
+                return True
+        
+        raise UserError(f"Erreur HTTP {response.status_code}")
 
     def _authenticate_sage_x3(self):
-        """Authentification auprès de SAGE X3"""
+        """Auth SAGE X3"""
         try:
-            auth_data = {"username": USERNAME, "password": PASSWORD}
-            response = requests.post(AUTH_URL, json=auth_data, timeout=15)
-            
-            if response.status_code in (200, 201):
-                token = response.json().get("token")
-                _logger.info("✅ Authentification SAGE X3 réussie")
-                return token
-            else:
-                _logger.error("❌ Authentification SAGE X3 échouée: %s", response.text)
-                return None
-        except Exception as e:
-            _logger.exception("❌ Exception authentification SAGE X3: %s", str(e))
+            response = requests.post(
+                AUTH_URL, 
+                json={"username": USERNAME, "password": PASSWORD}, 
+                timeout=15
+            )
+            return response.json().get("token") if response.status_code in (200, 201) else None
+        except:
             return None
 
     def _safe_post(self, url, headers, data, timeout=TIMEOUT):
-        """Envoi POST avec retry"""
-        for attempt in range(1, MAX_RETRIES + 1):
+        """POST avec retry"""
+        for attempt in range(MAX_RETRIES):
             try:
                 response = requests.post(url, headers=headers, json=data, timeout=timeout)
                 if response.status_code in (200, 201):
                     return response
-                _logger.warning("⚠️ Tentative %s échouée: HTTP %s - %s", 
-                              attempt, response.status_code, response.text)
-            except requests.exceptions.RequestException as e:
-                _logger.warning("⚠️ Exception réseau (tentative %s): %s", attempt, str(e))
-            
-            if attempt < MAX_RETRIES:
+            except:
+                pass
+            if attempt < MAX_RETRIES - 1:
+                import time
                 time.sleep(2)
-        
         return requests.post(url, headers=headers, json=data, timeout=timeout)
 
+    def _safe_get(self, url, headers, params=None, timeout=TIMEOUT):
+        """GET avec retry"""
+        for attempt in range(MAX_RETRIES):
+            try:
+                response = requests.get(url, headers=headers, params=params, timeout=timeout)
+                if response.status_code == 200:
+                    return response
+            except:
+                pass
+            if attempt < MAX_RETRIES - 1:
+                import time
+                time.sleep(2)
+        return requests.get(url, headers=headers, params=params, timeout=timeout)
+
     def _prepare_order_for_sage_x3(self):
-        """
-        Prépare les données de la commande pour SAGE X3
-        """
+        """Prépare pour SAGE X3"""
         self.ensure_one()
         
-        # Validation des données requises
-        if not self.partner_id:
-            raise UserError("Le fournisseur est obligatoire")
+        if not self.partner_id or not self.order_line:
+            raise UserError("Fournisseur et lignes obligatoires")
         
-        if not self.order_line:
-            raise UserError("La commande doit contenir au moins une ligne")
-        
-        # Préparation des lignes
         items = []
         for idx, line in enumerate(self.order_line, start=1):
             if not line.product_id.default_code:
-                raise UserError(f"Le produit '{line.product_id.name}' n'a pas de référence interne (default_code)")
+                raise UserError(f"Produit sans référence: {line.product_id.name}")
             
-            quantity = max(line.product_qty, 1)
-            
-            item_data = {
-                "ligne": idx * 1000,  # Numérotation: 1000, 2000, 3000...
+            items.append({
+                "ligne": idx * 1000,
                 "article": line.product_id.default_code,
                 "TexteLigne": line.name or line.product_id.name or "",
-                "quantite": quantity
-            }
-            items.append(item_data)
+                "quantite": max(line.product_qty, 0.01)
+            })
         
-        # Code client (fournisseur)
-        client_code = self.partner_id.ref or self.partner_id.customer_id or ""
-        if not client_code:
-            _logger.warning("⚠️ Code fournisseur manquant pour %s", self.partner_id.name)
-            # Utiliser l'ID du partenaire comme fallback
-            client_code = f"ODO{self.partner_id.id}"
-        
-        # Devise (champ natif)
-        currency_code = self.currency_id.name if self.currency_id else "XOF"
-        
-        # Construction de la commande avec mapping des champs natifs
-        commande = {
-            "siteVente": "VRIDI",  # Fixe comme demandé
-            "NumeroCommande": self.name,  # Champ natif: name
-            "DateCommande": self.date_order.isoformat() if self.date_order else datetime.now().isoformat(),
-            "Devise": currency_code,  # Champ natif: currency_id.name
-            "Client": self.company_id.name if self.company_id else "PRINCIPAL",  # Champ natif: company_id.name
-            "items": items
+        return {
+            "commandes": [{
+                "siteVente": "VRIDI",
+                "DateCommande": (self.date_order or datetime.now()).isoformat(),
+                "Client": self.company_id.code_company or "01",
+                "Devise": self.currency_id.name or "XOF",
+                "Magasin": self.company_id.name or "PRINCIPAL",
+                "ReferenceCommandeClient": self.name,
+                "items": items
+            }]
         }
-        
-        return {"commandes": [commande]}
 
-    def action_reset_sage_x3_validation(self):
-        """Réinitialise le statut SAGE X3 (pour tests ou corrections)"""
-        self.ensure_one()
+    # ========================================================================
+    # IMPORT OPTIMISÉ AVEC QUEUE_JOB
+    # ========================================================================
+
+    @api.model
+    def action_import_deliveries(self):
+        """Lance l'import asynchrone via queue_job"""
+        # Vérifier si un job est déjà en cours
+        existing_jobs = self.env['queue.job'].search([
+            ('name', 'ilike', 'Import livraisons SAGE X3'),
+            ('state', 'in', ['pending', 'enqueued', 'started']),
+        ])
         
-        if self.state not in ['draft', 'sent']:
-            raise UserError("Seules les commandes en brouillon peuvent être réinitialisées")
+        if existing_jobs:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': '⚠️ Import en cours',
+                    'message': 'Un import est déjà en cours d\'exécution',
+                    'type': 'warning',
+                }
+            }
         
-        self.write({
-            'sage_x3_submitted': False,
-            'sage_x3_validated': False,
-            'sage_x3_error': False,
-            'sage_x3_response_message': False,
-        })
-        
-        self.message_post(
-            body="🔄 Statut SAGE X3 réinitialisé",
-            subject="Réinitialisation SAGE X3"
-        )
+        # Lancer le job avec haute priorité
+        self.with_delay(
+            description="Import livraisons SAGE X3",
+            priority=10,  # Haute priorité
+            max_retries=2,
+            eta=datetime.now() + timedelta(seconds=5)  # Démarrer dans 5 secondes
+        )._job_import_deliveries()
         
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
-                'title': 'Succès',
-                'message': 'Statut SAGE X3 réinitialisé',
+                'title': '🚀 Import planifié',
+                'message': 'L\'import démarrera dans 5 secondes. Consultez les jobs dans Paramètres > Queue Jobs.',
                 'type': 'info',
             }
         }
 
-
-    # ============================================================================
-    # PARTIE 2 : RÉCUPÉRATION DES LIVRAISONS DEPUIS SAGE X3
-    # ============================================================================
-
-
-    def _safe_get(self, url, headers, params=None, timeout=TIMEOUT):
-        """Appel GET avec retry"""
-        for attempt in range(1, MAX_RETRIES + 1):
-            try:
-                response = requests.get(url, headers=headers, params=params, timeout=timeout)
-                if response.status_code in (200, 201):
-                    return response
-                _logger.warning("⚠️ Tentative %s échouée: HTTP %s", attempt, response.status_code)
-            except requests.exceptions.RequestException as e:
-                _logger.warning("⚠️ Exception réseau (tentative %s): %s", attempt, str(e))
-            
-            if attempt < MAX_RETRIES:
-                time.sleep(2)
+    @api.model
+    def _job_import_deliveries(self):
+        """
+        Job principal d'import
+        Cette méthode est exécutée par queue_job dans un worker séparé
+        """
+        start_time = datetime.now()
+        _logger.info("="*80)
+        _logger.info("🚀 [JOB] Démarrage import SAGE X3 - %s", start_time)
+        _logger.info("="*80)
         
-        return requests.get(url, headers=headers, params=params, timeout=timeout)
+        try:
+            # 1. Authentification
+            token = self._authenticate_sage_x3()
+            if not token:
+                raise UserError("Échec authentification")
+            
+            headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+            
+            # 2. Import incrémental (seulement les nouvelles depuis le dernier import)
+            last_import = self._get_last_import_date()
+            params = {'since': last_import.isoformat()} if last_import else None
+            
+            # 3. Récupération des livraisons
+            _logger.info("📡 Récupération des livraisons depuis %s", last_import or "début")
+            response = self._safe_get(ORDERS_RECEIVE_URL, headers, params=params)
+            
+            if response.status_code != 200:
+                raise UserError(f"Erreur API: {response.status_code}")
+            
+            # 4. Parse JSON avec gestion mémoire
+            deliveries = self._parse_deliveries_response(response.text)
+            
+            if not deliveries:
+                _logger.info("✅ Aucune livraison à traiter")
+                return {'updated': 0, 'errors': 0}
+            
+            _logger.info("📦 %s livraisons à traiter", len(deliveries))
+            
+            # 5. Pré-chargement des données pour optimiser
+            self._preload_data(deliveries)
+            
+            # 6. Traitement par lots avec commits intermédiaires
+            stats = self._process_deliveries_in_batches(deliveries)
+            
+            # 7. Mise à jour de la date du dernier import
+            self._update_last_import_date()
+            
+            # 8. Statistiques finales
+            duration = (datetime.now() - start_time).total_seconds()
+            _logger.info("="*80)
+            _logger.info("✅ [JOB] Import terminé en %.2f secondes", duration)
+            _logger.info("📊 Stats: %s", stats)
+            _logger.info("="*80)
+            
+            # 9. Notification utilisateur
+            self._notify_import_completion(stats, duration)
+            
+            return stats
+            
+        except Exception as e:
+            _logger.exception("❌ [JOB] Erreur fatale: %s", str(e))
+            self._notify_import_error(str(e))
+            raise
+
+    def _parse_deliveries_response(self, response_text):
+        """
+        Parse le JSON de manière optimisée pour éviter les problèmes de mémoire
+        """
+        try:
+            # Parse incrémental si très gros JSON
+            if len(response_text) > 10_000_000:  # > 10MB
+                _logger.info("⚠️ JSON volumineux (%s MB), parsing optimisé", len(response_text) / 1_000_000)
+            
+            raw = json.loads(response_text)
+            
+            # Extraction des livraisons
+            deliveries = []
+            if isinstance(raw, dict) and "livraison" in raw:
+                for date_key, items_list in raw["livraison"].items():
+                    if isinstance(items_list, list):
+                        deliveries.extend(items_list)
+            
+            # Tri par date pour traiter les plus récentes en premier
+            deliveries.sort(key=lambda x: x.get('dateCommande', ''), reverse=True)
+            
+            return deliveries
+            
+        except json.JSONDecodeError as e:
+            _logger.error("❌ JSON invalide: %s", str(e))
+            return []
+
+    def _preload_data(self, deliveries):
+        """
+        Pré-charge toutes les données nécessaires en une seule requête
+        pour éviter les N+1 queries
+        """
+        # Extraire toutes les références de commandes
+        order_refs = list(set(
+            str(d.get("referenceCommandeClient", "")).strip() 
+            for d in deliveries 
+            if d.get("referenceCommandeClient")
+        ))
+        
+        if not order_refs:
+            return
+        
+        _logger.info("🔄 Pré-chargement de %s commandes", len(order_refs))
+        
+        # Charger toutes les commandes en une seule requête
+        orders = self.search([
+            ('name', 'in', order_refs),
+            ('sage_x3_submitted', '=', True),
+            ('sage_x3_validated', '=', True),
+            ('state', 'in', ['purchase', 'to approve'])
+        ])
+        
+        # Créer un cache en mémoire {ref: order_id}
+        self._order_cache = {order.name: order.id for order in orders}
+        
+        # Pré-charger tous les produits utilisés
+        all_articles = set()
+        for d in deliveries:
+            for item in d.get("items", []):
+                article = item.get("article")
+                if article:
+                    all_articles.add(article)
+        
+        _logger.info("🔄 Pré-chargement de %s produits", len(all_articles))
+        
+        products = self.env['product.product'].search([
+            ('default_code', 'in', list(all_articles))
+        ])
+        
+        # Cache {default_code: product_id}
+        self._product_cache = {p.default_code: p.id for p in products}
+        
+        _logger.info("✅ Caches initialisés")
+
+    def _process_deliveries_in_batches(self, deliveries):
+        """Traitement par lots avec commits intermédiaires"""
+        total = len(deliveries)
+        updated = errors = lines = skipped = 0
+        
+        for batch_start in range(0, total, BATCH_SIZE):
+            batch_end = min(batch_start + BATCH_SIZE, total)
+            batch = deliveries[batch_start:batch_end]
+            
+            progress = (batch_end / total) * 100
+            _logger.info("🔄 Lot %s-%s/%s (%.1f%%)", batch_start + 1, batch_end, total, progress)
+            
+            # Traiter le lot
+            batch_stats = self._process_batch(batch, batch_start)
+            
+            updated += batch_stats['updated']
+            lines += batch_stats['lines']
+            errors += batch_stats['errors']
+            skipped += batch_stats['skipped']
+            
+            # Commit intermédiaire toutes les N commandes
+            self.env.cr.commit()
+            
+            # Libérer la mémoire
+            self.env.clear()
+        
+        return {
+            'total': total,
+            'updated': updated,
+            'lines': lines,
+            'errors': errors,
+            'skipped': skipped
+        }
+
+    def _process_batch(self, batch, offset):
+        """Traite un lot de livraisons"""
+        stats = {'updated': 0, 'lines': 0, 'errors': 0, 'skipped': 0}
+        
+        for i, delivery in enumerate(batch, start=offset + 1):
+            try:
+                if not isinstance(delivery, dict):
+                    stats['errors'] += 1
+                    continue
+                
+                ref = str(delivery.get("referenceCommandeClient", "")).strip()
+                
+                if not ref or ref == " ":
+                    stats['skipped'] += 1
+                    continue
+                
+                # Utiliser le cache au lieu d'une recherche DB
+                order_id = self._order_cache.get(ref)
+                if not order_id:
+                    stats['skipped'] += 1
+                    continue
+                
+                order = self.browse(order_id)
+                
+                # Mise à jour des lignes
+                lines_count = self._update_order_lines_optimized(order, delivery.get("items", []))
+                stats['lines'] += lines_count
+                
+                # Mise à jour de la commande
+                partner_ref = str(delivery.get("numeroCommande", "")).strip()
+                order.write({
+                    'sage_x3_delivery_received': True,
+                    'sage_x3_delivery_date': fields.Datetime.now(),
+                    'partner_ref': partner_ref
+                })
+                
+                stats['updated'] += 1
+                
+                if i % 10 == 0:  # Log tous les 10
+                    _logger.info("✅ Traité: %s/%s", i, len(batch) + offset)
+                
+            except Exception as e:
+                _logger.error("❌ Erreur livraison #%s: %s", i, str(e))
+                stats['errors'] += 1
+        
+        return stats
+
+    def _update_order_lines_optimized(self, order, items):
+        """Mise à jour optimisée des lignes"""
+        if not items:
+            return 0
+        
+        lines_updated = 0
+        
+        # Grouper les mises à jour par ligne
+        updates = defaultdict(dict)
+        
+        for item in items:
+            article_code = item.get("article")
+            if not article_code:
+                continue
+            
+            # Utiliser le cache produit
+            product_id = self._product_cache.get(article_code)
+            if not product_id:
+                continue
+            
+            # Trouver la ligne
+            order_line = order.order_line.filtered(
+                lambda l: l.product_id.id == product_id
+            )
+            
+            if not order_line:
+                continue
+            
+            order_line = order_line[0]
+            
+            # Préparer les mises à jour
+            quantity = item.get("quantite")
+            unit_price = item.get("prix")
+            
+            if unit_price is not None and unit_price != order_line.price_unit:
+                updates[order_line.id]['price_unit'] = unit_price
+            
+            if quantity is not None and quantity > 0:
+                updates[order_line.id]['quantity'] = quantity
+        
+        # Appliquer toutes les mises à jour en une fois
+        for line_id, values in updates.items():
+            line = self.env['purchase.order.line'].browse(line_id)
+            
+            if 'price_unit' in values:
+                line.write({'price_unit': values['price_unit']})
+            
+            if 'quantity' in values:
+                self._update_quantity_received_picking(line, values['quantity'])
+            
+            lines_updated += 1
+        
+        return lines_updated
+
+    def _update_quantity_received_picking(self, order_line, quantity):
+        """MAJ picking optimisée"""
+        picking = order_line.order_id.picking_ids.filtered(
+            lambda p: p.state not in ['done', 'cancel']
+        )
+        
+        if not picking:
+            return 0
+        
+        picking = picking[0]
+        
+        move = picking.move_ids.filtered(
+            lambda m: m.product_id.id == order_line.product_id.id 
+            and m.state not in ['done', 'cancel']
+        )
+        
+        if not move:
+            return 0
+        
+        move = move[0]
+        
+        if move.move_line_ids:
+            move.move_line_ids[0].write({'quantity': quantity})
+        else:
+            self.env['stock.move.line'].create({
+                'move_id': move.id,
+                'product_id': move.product_id.id,
+                'product_uom_id': move.product_uom.id,
+                'location_id': move.location_id.id,
+                'location_dest_id': move.location_dest_id.id,
+                'quantity': quantity,
+                'picking_id': picking.id,
+            })
+        
+        return quantity
+
+    def _get_last_import_date(self):
+        """Récupère la date du dernier import réussi"""
+        config = self.env['ir.config_parameter'].sudo()
+        last_import_str = config.get_param('sage_x3.last_import_date')
+        
+        if last_import_str:
+            try:
+                return datetime.fromisoformat(last_import_str)
+            except:
+                pass
+        
+        # Par défaut: 7 jours en arrière
+        return datetime.now() - timedelta(days=7)
+
+    def _update_last_import_date(self):
+        """Met à jour la date du dernier import"""
+        config = self.env['ir.config_parameter'].sudo()
+        config.set_param('sage_x3.last_import_date', datetime.now().isoformat())
+
+    def _notify_import_completion(self, stats, duration):
+        """Notification de fin"""
+        message = f"""
+        ✅ Import terminé en {duration:.1f}s
+        
+        • Total: {stats['total']}
+        • Mises à jour: {stats['updated']}
+        • Lignes: {stats['lines']}
+        • Erreurs: {stats['errors']}
+        • Ignorées: {stats['skipped']}
+        """
+        
+        # Notifier les managers
+        group = self.env.ref('purchase.group_purchase_manager', raise_if_not_found=False)
+        if group:
+            for user in group.users:
+                self.env['bus.bus']._sendone(
+                    user.partner_id,
+                    'simple_notification',
+                    {
+                        'title': '✅ Import SAGE X3 terminé',
+                        'message': message,
+                        'type': 'success',
+                    }
+                )
+
+    def _notify_import_error(self, error_msg):
+        """Notification d'erreur"""
+        group = self.env.ref('purchase.group_purchase_manager', raise_if_not_found=False)
+        if group:
+            for user in group.users:
+                self.env['bus.bus']._sendone(
+                    user.partner_id,
+                    'simple_notification',
+                    {
+                        'title': '❌ Erreur import SAGE X3',
+                        'message': error_msg,
+                        'type': 'danger',
+                        'sticky': True,
+                    }
+                )
 
     @api.model
-    def import_deliveries_from_sage_x3(self):
-        """
-        Récupère les livraisons depuis SAGE X3
-        À appeler via un cron ou manuellement
-        """
-        try:
-            _logger.info("🔄 Récupération des livraisons depuis SAGE X3...")
-            
-            # 1. Authentification
-            auth_data = {"username": USERNAME, "password": PASSWORD}
-            response = requests.post(AUTH_URL, json=auth_data, timeout=15)
-            
-            if response.status_code not in (200, 201):
-                raise UserError("Échec de l'authentification SAGE X3")
-            
-            token = response.json().get("token")
-            
-            # 2. Récupération des livraisons
-            headers = {
-                "Authorization": f"Bearer {token}",
-                "Accept": "application/json"
-            }
-            
-            response = self._safe_get(ORDERS_RECEIVE_URL, headers)
-            
-            if response.status_code == 200:
-                deliveries = response.json()
-                
-                if not deliveries:
-                    _logger.info("ℹ️ Aucune livraison à récupérer")
-                    return
-                
-                _logger.info("📦 %s livraison(s) récupérée(s)", len(deliveries))
-                
-                updated, not_found, errors = 0, 0, 0
-                
-                for delivery in deliveries:
-                    try:
-                        order_ref = delivery.get("NumeroCommande")
-                        
-                        if not order_ref:
-                            _logger.warning("⚠️ Numero commande manquante")
-                            errors += 1
-                            continue
-                        
-                        # Rechercher la commande
-                        orders = self.env['purchase.order'].search([
-                                    ('name', '=', order_ref),
-                                    ('sage_x3_submitted', '=', True),
-                                    ('sage_x3_validated', '=', False)
-                                ])
-                        for order in orders:
-                            if order:
-                                order.write({
-                                    'sage_x3_delivery_received': True,
-                                    'sage_x3_delivery_date': fields.Datetime.now(),
-                                })
-                                
-                                order.message_post(
-                                    body=f"✅ Livraison confirmée par SAGE X3<br/>ID: {delivery.get('id')}",
-                                    subject="Livraison SAGE X3"
-                                )
-                                
-                                _logger.info("🔄 Livraison confirmée: %s", order_ref)
-                                updated += 1
-                            else:
-                                _logger.warning("⚠️ Commande %s introuvable", order_ref)
-                                not_found += 1
-                            
-                    except Exception as e:
-                        errors += 1
-                        _logger.error("❌ Erreur traitement livraison: %s", str(e))
-                
-                _logger.info("=" * 50)
-                _logger.info("=== RÉSUMÉ IMPORT LIVRAISONS ===")
-                _logger.info("✅ Mises à jour    : %s", updated)
-                _logger.info("⚠️ Non trouvées   : %s", not_found)
-                _logger.info("❌ Erreurs        : %s", errors)
-                _logger.info("=" * 50)
-                
-            else:
-                _logger.error("❌ Erreur récupération: HTTP %s", response.status_code)
-                
-        except Exception as e:
-            _logger.exception("🚨 Échec récupération livraisons SAGE X3: %s", str(e))
-            raise UserError(f"Erreur récupération livraisons: {str(e)}")
-
-    def action_import_deliveries(self):
-        """Action manuelle pour importer les livraisons"""
-        try:
-            self.import_deliveries_from_sage_x3()
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': 'Succès',
-                    'message': 'Livraisons importées avec succès',
-                    'type': 'success',
-                }
-            }
-        except Exception as e:
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': 'Erreur',
-                    'message': f'Erreur: {str(e)}',
-                    'type': 'danger',
-                    'sticky': True,
-                }
-            }
+    def cron_import_deliveries(self):
+        """Cron job"""
+        _logger.info("🕐 [CRON] Import planifié")
+        self.with_delay(
+            description="[CRON] Import SAGE X3",
+            priority=5
+        )._job_import_deliveries()
+        return True

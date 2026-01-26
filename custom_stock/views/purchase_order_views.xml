@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vue formulaire avec onglet SAGE X3 -->
+    <record id="view_purchase_order_form_sage" model="ir.ui.view">
+        <field name="name">purchase.order.form.sage.x3</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_form"/>
+        <field name="arch" type="xml">
+            
+            <!-- Message d'avertissement si non validé -->
+            <xpath expr="//sheet" position="before">
+                <div class="alert alert-success" 
+                     role="alert" 
+                     invisible="not sage_x3_validated"
+                     style="margin: 10px;">
+                    <strong>✅ Commande validée par SAGE X3</strong>
+                    <p>Cette commande a été acceptée par SAGE X3 et peut être confirmée.</p>
+                </div>
+                <div class="alert alert-warning" role="alert" 
+                     invisible="state not in ['draft', 'sent'] or sage_x3_validated == True">
+                    <strong>⚠️ Validation SAGE X3 requise</strong><br/>
+                    Cette commande doit être soumise et validée par SAGE X3 avant de pouvoir être confirmée.
+                    <br/>Utilisez le bouton <strong>"Soumettre à SAGE X3"</strong>.
+                </div>
+                
+                <div class="alert alert-danger" role="alert" 
+                     invisible="sage_x3_submitted == False or sage_x3_error == False">
+                    <strong>❌ Erreur SAGE X3</strong><br/>
+                    <field name="sage_x3_error" readonly="1" nolabel="1"/>
+                </div>
+            </xpath>
+
+            <xpath expr="//field[@name='currency_id']" position="after">
+                <field name="type_command" 
+                       widget="selection"
+                       options="{'no_create': True}"
+                       placeholder="Type de commande"/>
+            </xpath>
+            
+            <!-- Onglet SAGE X3 -->
+            <xpath expr="//notebook" position="inside">
+                <page string="SAGE X3" name="sage_x3">
+                    <group>
+                        <group string="Statut de soumission">
+                            <field name="sage_x3_submitted" readonly="1"/>
+                            <field name="sage_x3_validated" readonly="1"/>
+                            <field name="sage_x3_submitted_date" 
+                                   readonly="1"
+                                   invisible="sage_x3_submitted == False"/>
+                        </group>
+                        <group string="Réponse SAGE X3">
+                            <field name="sage_x3_response_message" 
+                                   readonly="1"
+                                   invisible="sage_x3_response_message == False"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Livraison SAGE X3">
+                        <group>
+                            <field name="sage_x3_delivery_received" readonly="1"/>
+                            <field name="sage_x3_delivery_date" 
+                                   readonly="1"
+                                   invisible="sage_x3_delivery_received == False"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+            
+        </field>
+    </record>
+        
+</odoo>

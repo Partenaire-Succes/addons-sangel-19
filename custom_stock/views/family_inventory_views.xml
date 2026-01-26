@@ -111,6 +111,7 @@
                 <xpath expr="//group[@name='first']" position="after">
                     <group name="group_info">
                         <group name="code_group" string="Info Categorie">
+                            <field name="name" />
                             <field name="code" />
                         </group>
                     </group>

@@ -211,6 +211,7 @@ class ProductTemplateImport(models.Model):
             "is_koumassi": item.get("yafkouM_0", False),
             "code_inventory_id": self._get_code_inventory_id(item.get("yG5EMPLC_0")),
             "family_categ_id": self._get_family_id(item.get("yG5FAM_0")),
+            "categ_id": self._get_family_id(item.get("yG5FAM_0")),
             "s_family_id": self._get_sub_family_id(item.get("yG5SFAM_0")),
             "radius_id": self._get_radius_id(item.get("yG5RAY_0")),
             "s_radius_id": self._get_sub_radius_id(item.get("yG5SRAY_0")),

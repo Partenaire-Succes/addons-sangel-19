@@ -9,11 +9,10 @@
 #############################################################################
 {
     'name': 'Personnalisation du Point de vente',
-    'version': '18.0',
     'category': 'POS',
-    'summary': """Customisation de Point de vente pour Odoo 18.0""",
+    'summary': """Customisation de Point de vente pour Odoo 19.0""",
     'description': """Adaptation du module Point de vente pour répondre aux besoins 
-        spécifiques des utilisateurs d'Odoo 18.0.""",
+        spécifiques des utilisateurs d'Odoo 19.0.""",
     'author': 'Adams KONE',
     'company': 'Partenaires Succes',
     'maintainer': 'Adams KONE',

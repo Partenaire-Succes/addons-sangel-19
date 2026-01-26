@@ -2,18 +2,22 @@
     <data>
         <record id="basic_retailing_price" model="product.pricelist">
             <field name="name">PRIX VENTE DE BASE TTC</field>
+            <field name="currency_id" ref="base.XOF"/>
         </record>
 
         <record id="carton_sale_price" model="product.pricelist">
             <field name="name">PRIX VENTE CARTON TTC</field>
+            <field name="currency_id" ref="base.XOF"/>
         </record>
 
         <record id="retail_sale_price" model="product.pricelist">
             <field name="name">PRIX VENTE NEGOCE TTC</field>
+            <field name="currency_id" ref="base.XOF"/>
         </record>
 
         <record id="e_commerce_sale_price" model="product.pricelist">
             <field name="name">PRIX VENTE E-COMMERCE TTC</field>
+            <field name="currency_id" ref="base.XOF"/>
         </record>
     </data>
 </odoo>

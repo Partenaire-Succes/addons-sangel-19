@@ -21,6 +21,7 @@ from . import  picking_inter_company
 from . import sale_order_line
 from . import category_gestion
 from . import stock_warehouse_orderpoint
+from . import purchase_order
 
 
 

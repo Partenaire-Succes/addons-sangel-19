@@ -9,11 +9,10 @@
 #############################################################################
 {
     'name': 'Personnalisation du Module Inventaire',
-    'version': '1.1.0',
     'category': 'Stock',
     'summary': """Customisation de Inventaire pour Odoo 19.0""",
     'description': """Adaptation du module Inventaire pour répondre aux besoins 
-        spécifiques des utilisateurs d'Odoo 18.0.""",
+        spécifiques des utilisateurs d'Odoo 19.0.""",
     'author': 'Adams KONE',
     'company': 'Partenaires Succes',
     'maintainer': 'Adams KONE',
@@ -40,6 +39,7 @@
         'views/picking_inter_company_views.xml',
         'views/sale_order_views.xml',
         'views/stock_warehouse_orderpoint_view.xml',
+        'views/purchase_order_views.xml',
     ],
     'license': 'AGPL-3',
     'installable': True,
