@@ -428,9 +428,12 @@ class PosSession(models.Model):
                     'order_ref': payment.pos_order_id.pos_reference or payment.pos_order_id.name or '',
                 })
         
+        # Sort titre_payments by method_name so they are grouped (all Wave first, then Orange, etc.)
+        titre_payments_sorted = sorted(titre_payments, key=lambda x: x.get('method_name', ''))
+        
         return {
             'cash_total': cash_total,
-            'titre_payments': titre_payments,
+            'titre_payments': titre_payments_sorted,
         }
 
     def action_print_prelevement_ticket(self):
