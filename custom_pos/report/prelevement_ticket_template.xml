@@ -65,11 +65,12 @@
                 <!-- Payment Lines -->
                 <div style="margin-top: 3mm;">
                     <!-- First line: Cash (Espèces) total - ALWAYS FIRST -->
-                    <!-- Use cash_register_balance_end_real: the amount user entered at closing -->
+                    <!-- Use prelevement_especes_amount: the amount user entered at closing -->
+                    <!-- This is a dedicated Float field to avoid Monetary conversion issues -->
                     <div style="margin-bottom: 2mm;">
                         <span><t t-esc="config_short"/>:<t t-raw="'Espèces'"/></span>
                         <span style="float: right; font-weight: bold;">
-                            <t t-esc="'{:,.0f}'.format(session.cash_register_balance_end_real or 0).replace(',', ' ')"/> 
+                            <t t-esc="'{:,.0f}'.format(session.prelevement_especes_amount or 0).replace(',', ' ')"/> 
                             <t t-esc="currency.symbol or 'XOF'"/>
                         </span>
                     </div>
@@ -77,11 +78,16 @@
                     <!-- Titre de paiement transactions -->
                     <t t-foreach="payment_data.get('titre_payments', [])" t-as="payment">
                         <div style="margin-bottom: 1mm;">
-                            <span><t t-esc="config_short"/>:<t t-esc="payment.get('method_name', '')"/></span>
-                            <span style="float: right;">
-                                <t t-esc="'{:,.0f}'.format(payment.get('amount', 0)).replace(',', ' ')"/> 
-                                <t t-esc="currency.symbol or 'XOF'"/>
-                            </span>
+                            <div>
+                                <span><t t-esc="config_short"/>:<t t-esc="payment.get('method_name', '')"/></span>
+                                <span style="float: right;">
+                                    <t t-esc="'{:,.0f}'.format(payment.get('amount', 0)).replace(',', ' ')"/> 
+                                    <t t-esc="currency.symbol or 'XOF'"/>
+                                </span>
+                            </div>
+                            <div style="font-size: 8pt; color: #666; margin-left: 2mm;">
+                                <t t-esc="payment.get('order_ref', '')"/>
+                            </div>
                         </div>
                     </t>
                 </div>

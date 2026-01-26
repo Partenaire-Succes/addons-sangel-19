@@ -18,7 +18,26 @@ import { patch } from "@web/core/utils/patch";
 
 console.log("🔵 closing_popup_patch.js LOADED");
 
+// Store the last confirmed cash count globally so it persists after clicking Ignorer
+let _lastConfirmedCashCount = 0;
+
 patch(ClosePosPopup.prototype, {
+    /**
+     * Override setup to restore persisted cash count
+     */
+    setup() {
+        super.setup();
+        // Restore the last confirmed cash count if any
+        if (_lastConfirmedCashCount > 0 && this.props.default_cash_details) {
+            // Use setTimeout to ensure state is initialized
+            setTimeout(() => {
+                if (this.state.payments && this.state.payments[this.props.default_cash_details.id]) {
+                    this.state.payments[this.props.default_cash_details.id].counted = 
+                        this.env.utils.formatCurrency(_lastConfirmedCashCount, false);
+                }
+            }, 0);
+        }
+    },
     /**
      * Override to prevent manual cash input editing
      * Cash count should only be updated from MoneyDetailsPopup
@@ -41,6 +60,8 @@ patch(ClosePosPopup.prototype, {
                 const { total, moneyDetailsNotes, moneyDetails } = payload;
                 this.state.payments[this.props.default_cash_details.id].counted =
                     this.env.utils.formatCurrency(total, false);
+                // Store globally for persistence after Ignorer
+                _lastConfirmedCashCount = total;
                 if (moneyDetailsNotes) {
                     this.state.notes = moneyDetailsNotes;
                 }

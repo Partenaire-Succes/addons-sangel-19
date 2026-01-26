@@ -5,6 +5,11 @@
  * Adds a direct amount input field to the money details popup
  * so users can enter an amount directly in addition to counting coins/notes.
  * Also triggers printing of the Prélèvement ticket when confirming.
+ * 
+ * Features:
+ * - Direct amount is CUMULATIVE (adds to stored total, not replace)
+ * - Negative values are not allowed
+ * - Value persists even after clicking "Ignorer" (cancel)
  */
 
 import { MoneyDetailsPopup } from "@point_of_sale/app/components/popups/money_details_popup/money_details_popup";
@@ -14,8 +19,8 @@ import { patch } from "@web/core/utils/patch";
 
 console.log("🔵 money_details_popup_patch.js LOADED");
 
-// Store directAmount globally so it persists between popup opens
-let _storedDirectAmount = "";
+// Store accumulated total globally so it persists between popup opens (even after cancel)
+let _accumulatedTotal = 0;
 
 patch(MoneyDetailsPopup.prototype, {
     /**
@@ -23,14 +28,14 @@ patch(MoneyDetailsPopup.prototype, {
      */
     setup() {
         super.setup();
-        // Add direct amount input to state - load from stored value
-        this.state.directAmount = _storedDirectAmount;
+        // Direct amount starts at 0 (user types amount to ADD to accumulated total)
+        this.state.directAmount = "";
         // Get the action service for printing
         this.actionService = useService("action");
     },
 
     /**
-     * Override computeTotal to include the direct amount input
+     * Override computeTotal to include the accumulated total and current input
      */
     computeTotal(moneyDetails = this.state.moneyDetails) {
         // Calculate total from coins/notes
@@ -39,18 +44,27 @@ patch(MoneyDetailsPopup.prototype, {
             return total + parseFloat(value) * quantity;
         }, 0);
         
-        // Add direct amount if valid
-        const directAmount = parseFloat(this.state.directAmount) || 0;
+        // Add current direct amount input (what user is typing right now)
+        const currentDirectAmount = parseFloat(this.state.directAmount) || 0;
         
-        return coinsNotesTotal + directAmount;
+        // Total = coins/notes + accumulated total + current input
+        return coinsNotesTotal + _accumulatedTotal + currentDirectAmount;
     },
 
     /**
      * Override confirm to include directAmount in total and print prelevement ticket
      */
     async confirm() {
-        // Store directAmount globally for persistence
-        _storedDirectAmount = this.state.directAmount;
+        // Get current input value BEFORE clearing
+        const currentDirectAmount = parseFloat(this.state.directAmount) || 0;
+        
+        // CRITICAL: Clear directAmount FIRST to avoid double-counting in computeTotal
+        this.state.directAmount = "";
+        
+        // THEN add to accumulated total (cumulative behavior)
+        if (currentDirectAmount > 0) {
+            _accumulatedTotal += currentDirectAmount;
+        }
 
         let moneyDetailsNotes = !this.pos.currency.isZero(this.computeTotal())
             ? this.props.context + " details: \n"
@@ -64,10 +78,9 @@ patch(MoneyDetailsPopup.prototype, {
                     )}\n`;
             }
         });
-        // Add direct amount to notes if entered
-        const directAmount = parseFloat(this.state.directAmount) || 0;
-        if (directAmount > 0) {
-            moneyDetailsNotes += "\t" + _t("Direct: %s\n", this.env.utils.formatCurrency(directAmount));
+        // Add accumulated direct amount to notes
+        if (_accumulatedTotal > 0) {
+            moneyDetailsNotes += "\t" + _t("Direct: %s\n", this.env.utils.formatCurrency(_accumulatedTotal));
         }
         if (moneyDetailsNotes) {
             moneyDetailsNotes += _t(
@@ -98,16 +111,16 @@ patch(MoneyDetailsPopup.prototype, {
         try {
             const sessionId = this.pos.session.id;
             const countedCash = this.computeTotal();
+            
             console.log("🖨️ Printing Prélèvement ticket for session:", sessionId, "Amount:", countedCash);
 
             // First, save the counted cash amount to the database
-            // This is necessary because cash_register_balance_end_real is not saved yet at this point
-            await this.pos.data.call(
+            const saveResult = await this.pos.data.call(
                 "pos.session",
                 "save_cash_count_for_prelevement",
                 [sessionId, countedCash]
             );
-            console.log("✅ Cash count saved to database:", countedCash);
+            console.log("✅ Cash count saved to database. Result:", saveResult);
 
             // Build the report URL directly for PDF download
             const reportUrl = `/report/pdf/custom_pos.report_prelevement_ticket/${sessionId}`;
@@ -152,12 +165,19 @@ patch(MoneyDetailsPopup.prototype, {
 
     /**
      * Handle direct amount input change
+     * - Only positive numbers allowed
+     * - Value persists immediately (for persistence even after cancel)
      */
     onDirectAmountInput(ev) {
-        // Allow only numbers and decimal point
+        // Allow only numbers and decimal point (no minus sign = no negative values)
         let value = ev.target.value.replace(/[^0-9.,]/g, "");
         // Replace comma with dot for decimal
         value = value.replace(",", ".");
+        // Ensure it's not negative (already handled by not allowing minus, but double-check)
+        const numValue = parseFloat(value) || 0;
+        if (numValue < 0) {
+            value = "0";
+        }
         this.state.directAmount = value;
     },
 });
