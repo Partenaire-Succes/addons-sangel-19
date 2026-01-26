@@ -425,6 +425,7 @@ class PosSession(models.Model):
                     'method_name': payment_method.name,
                     'amount': payment.amount,
                     'cashier_name': payment.session_id.user_id.name,
+                    'order_ref': payment.pos_order_id.pos_reference or payment.pos_order_id.name or '',
                 })
         
         return {

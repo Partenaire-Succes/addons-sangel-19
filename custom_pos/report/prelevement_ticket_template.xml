@@ -78,11 +78,16 @@
                     <!-- Titre de paiement transactions -->
                     <t t-foreach="payment_data.get('titre_payments', [])" t-as="payment">
                         <div style="margin-bottom: 1mm;">
-                            <span><t t-esc="config_short"/>:<t t-esc="payment.get('method_name', '')"/></span>
-                            <span style="float: right;">
-                                <t t-esc="'{:,.0f}'.format(payment.get('amount', 0)).replace(',', ' ')"/> 
-                                <t t-esc="currency.symbol or 'XOF'"/>
-                            </span>
+                            <div>
+                                <span><t t-esc="config_short"/>:<t t-esc="payment.get('method_name', '')"/></span>
+                                <span style="float: right;">
+                                    <t t-esc="'{:,.0f}'.format(payment.get('amount', 0)).replace(',', ' ')"/> 
+                                    <t t-esc="currency.symbol or 'XOF'"/>
+                                </span>
+                            </div>
+                            <div style="font-size: 8pt; color: #666; margin-left: 2mm;">
+                                <t t-esc="payment.get('order_ref', '')"/>
+                            </div>
                         </div>
                     </t>
                 </div>
