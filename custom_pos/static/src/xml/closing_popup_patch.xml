@@ -4,6 +4,11 @@
     <!-- Customize ClosePosPopup: Hide payment summary and make cash input read-only -->
     <t t-name="custom_pos.ClosePosPopupExtension" t-inherit="point_of_sale.ClosePosPopup" t-inherit-mode="extension">
         
+        <!-- 0. Hide the orders count and amount in header (e.g. "3 commandes: $ 465,75") -->
+        <xpath expr="//div[hasclass('total-orders')]" position="attributes">
+            <attribute name="style">display: none !important;</attribute>
+        </xpath>
+        
         <!-- 1. Hide the payment-methods-overview section using style (not remove, to preserve xpath targets for other modules) -->
         <xpath expr="//div[hasclass('payment-methods-overview')]" position="attributes">
             <attribute name="style">display: none !important;</attribute>
@@ -14,7 +19,7 @@
             <attribute name="style">display: none !important;</attribute>
         </xpath>
         
-        <!-- 3. Replace Cash Count input with a read-only version -->
+        <!-- 3. Replace Cash Count input with a read-only version (no auto-fill button) -->
         <xpath expr="//div[hasclass('mb-3')][.//Input[contains(@class, 'cash-input')]]" position="replace">
             <div t-if="pos.config.cash_control" class="mb-3">
                 <label class="form-label">Comptage de caisse</label>
@@ -29,12 +34,51 @@
                     <button class="icon fa fa-money btn btn-secondary" 
                             t-on-click="openDetailsPopup" 
                             title="Comptage des billets"/>
-                    <!-- Auto-fill button -->
-                    <button class="icon fa fa-clone btn btn-secondary" 
-                            t-on-click="autoFillCashCount" 
-                            title="Remplir automatiquement"/>
+                    <!-- Auto-fill button REMOVED per user request -->
                 </div>
             </div>
+        </xpath>
+        
+        <!-- 4. Make closing notes textarea readonly -->
+        <xpath expr="//textarea[hasclass('closing-notes')]" position="attributes">
+            <attribute name="readonly">readonly</attribute>
+            <attribute name="class">closing-notes form-control bg-light</attribute>
+        </xpath>
+        
+        <!-- 5. Reorganize footer buttons: Cash In/Out, Prél, Clôturer, Ignorer -->
+        <xpath expr="//t[@t-set-slot='footer']" position="replace">
+            <t t-set-slot="footer">
+                <div class="w-100 d-flex flex-wrap justify-content-between gap-2">
+                    <div class="d-flex gap-2">
+                        <!-- Cash In/Out button first -->
+                        <button t-if="pos.showCashMoveButton" 
+                                class="button btn btn-info btn-lg" 
+                                t-on-click="() => this.cashMove()">
+                            Cash entrant/sortant
+                        </button>
+                        <!-- New Prél button - opens money details popup -->
+                        <button class="button btn btn-success btn-lg" 
+                                t-on-click="openDetailsPopup"
+                                title="Prélèvement - Comptage des espèces">
+                            Prél
+                        </button>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <!-- Close button renamed to Clôturer -->
+                        <button class="button highlight btn btn-primary btn-lg" 
+                                t-att-disabled="!canConfirm()" 
+                                t-on-click="confirm">
+                            Clôturer
+                        </button>
+                        <!-- Ignorer (Discard) button -->
+                        <button class="button btn btn-secondary btn-lg" 
+                                t-att-disabled="!canCancel()" 
+                                t-on-click="cancel">
+                            Ignorer
+                        </button>
+                    </div>
+                </div>
+            </t>
         </xpath>
         
     </t>

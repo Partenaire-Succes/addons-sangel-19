@@ -205,6 +205,107 @@
                     </tbody>
                 </table>
 
+                <!-- Separator -->
+                <div style="border-bottom: 1px solid #000; margin: 3mm 0;"></div>
+
+                <!-- ============================================= -->
+                <!-- SECTION 5: Nouveau fond de caisse -->
+                <!-- ============================================= -->
+                <t t-set="fond_initial" t-value="cloture_data.get('fond_de_caisse_initial', {})"/>
+                
+                <div style="font-weight: bold; text-decoration: underline; padding: 2mm 0;">Nouveau fond de caisse</div>
+                
+                <table style="width: 100%; border-collapse: collapse; margin-top: 2mm;">
+                    <tbody>
+                        <tr>
+                            <td style="width: 60%; padding: 1mm 0;">Espèces</td>
+                            <td style="width: 40%; text-align: right; padding: 1mm 0;"><t t-esc="'{:,.0f}'.format(fond_initial.get('especes', 0)).replace(',', ' ')"/></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 1mm 0;">Chèques</td>
+                            <td style="text-align: right; padding: 1mm 0;"><t t-esc="'{:,.0f}'.format(fond_initial.get('cheques', 0)).replace(',', ' ')"/></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 1mm 0;">Cartes</td>
+                            <td style="text-align: right; padding: 1mm 0;"><t t-esc="'{:,.0f}'.format(fond_initial.get('cartes', 0)).replace(',', ' ')"/></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 1mm 0;">Titres de paiements</td>
+                            <td style="text-align: right; padding: 1mm 0;"><t t-esc="'{:,.0f}'.format(fond_initial.get('titres_paiements', 0)).replace(',', ' ')"/></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- Separator -->
+                <div style="border-bottom: 1px solid #000; margin: 3mm 0;"></div>
+
+                <!-- ============================================= -->
+                <!-- SECTION 6: Ecart de caisse -->
+                <!-- ============================================= -->
+                <t t-set="ecart" t-value="cloture_data.get('ecart_caisse', {})"/>
+                
+                <div style="font-weight: bold; text-decoration: underline; padding: 2mm 0;">Ecart de caisse</div>
+                
+                <table style="width: 100%; border-collapse: collapse; margin-top: 2mm;">
+                    <tbody>
+                        <!-- Espèces: conditional label based on gap sign -->
+                        <tr>
+                            <t t-if="ecart.get('especes', 0) >= 0">
+                                <td style="width: 60%; padding: 1mm 0;">Espèces en trop</td>
+                                <td style="width: 40%; text-align: right; padding: 1mm 0;"><t t-esc="'{:,.0f}'.format(ecart.get('especes', 0)).replace(',', ' ')"/></td>
+                            </t>
+                            <t t-else="1">
+                                <td style="width: 60%; padding: 1mm 0;">Espèces en moins</td>
+                                <td style="width: 40%; text-align: right; padding: 1mm 0;"><t t-esc="'{:,.0f}'.format(ecart.get('especes', 0)).replace(',', ' ')"/></td>
+                            </t>
+                        </tr>
+                        <tr>
+                            <td style="padding: 1mm 0;">Chèques</td>
+                            <td style="text-align: right; padding: 1mm 0;"><t t-esc="'{:,.0f}'.format(ecart.get('cheques', 0)).replace(',', ' ')"/></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 1mm 0;">Cartes</td>
+                            <td style="text-align: right; padding: 1mm 0;"><t t-esc="'{:,.0f}'.format(ecart.get('cartes', 0)).replace(',', ' ')"/></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 1mm 0;">Titres de paiements</td>
+                            <td style="text-align: right; padding: 1mm 0;"><t t-esc="'{:,.0f}'.format(ecart.get('titres', 0)).replace(',', ' ')"/></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- Separator -->
+                <div style="border-bottom: 1px solid #000; margin: 3mm 0;"></div>
+
+                <!-- ============================================= -->
+                <!-- SECTION 7: Répartition de la TVA -->
+                <!-- ============================================= -->
+                <t t-set="repartition_tva" t-value="cloture_data.get('repartition_tva', [])"/>
+                
+                <div style="font-weight: bold; text-decoration: underline; padding: 2mm 0;">Répartition de la TVA</div>
+                
+                <table style="width: 100%; border-collapse: collapse; margin-top: 2mm;">
+                    <thead>
+                        <tr>
+                            <th style="width: 15%; text-align: left; font-weight: bold; border-bottom: 1px dashed #000; padding-bottom: 1mm;"></th>
+                            <th style="width: 28%; text-align: right; font-weight: bold; border-bottom: 1px dashed #000; padding-bottom: 1mm;">CA HT</th>
+                            <th style="width: 28%; text-align: right; font-weight: bold; border-bottom: 1px dashed #000; padding-bottom: 1mm;">TVA</th>
+                            <th style="width: 29%; text-align: right; font-weight: bold; border-bottom: 1px dashed #000; padding-bottom: 1mm;">TOTAL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <t t-foreach="repartition_tva" t-as="tva_line">
+                            <tr>
+                                <td style="padding: 1mm 0;"><t t-esc="'{:.0f}%'.format(tva_line.get('tax_percent', 0))"/></td>
+                                <td style="text-align: right; padding: 1mm 0; white-space: nowrap;"><t t-esc="'{:,.0f}'.format(tva_line.get('ca_ht', 0)).replace(',', ' ')"/></td>
+                                <td style="text-align: right; padding: 1mm 0; white-space: nowrap;"><t t-esc="'{:,.0f}'.format(tva_line.get('tva', 0)).replace(',', ' ')"/></td>
+                                <td style="text-align: right; padding: 1mm 0; white-space: nowrap;"><t t-esc="'{:,.0f}'.format(tva_line.get('total', 0)).replace(',', ' ')"/></td>
+                            </tr>
+                        </t>
+                    </tbody>
+                </table>
+
+
                 <!-- ============================================= -->
                 <!-- FOOTER -->
                 <!-- ============================================= -->
