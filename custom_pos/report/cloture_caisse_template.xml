@@ -144,6 +144,11 @@
                             <td style="text-align: right; padding: 1mm 0; white-space: nowrap;"><t t-esc="'{:,.0f}'.format(encaissements.get('avoir', {}).get('total', 0)).replace(',', ' ')"/></td>
                         </tr>
                         <tr>
+                            <td style="padding: 1mm 0;">Ecart règl</td>
+                            <td style="text-align: right; padding: 1mm 0;"></td>
+                            <td style="text-align: right; padding: 1mm 0; white-space: nowrap;"><t t-esc="'{:,.0f}'.format(encaissements.get('ecart_regl', {}).get('total', 0)).replace(',', ' ')"/></td>
+                        </tr>
+                        <tr>
                             <td style="padding: 1mm 0;">Titre de paiements</td>
                             <td style="text-align: right; padding: 1mm 0;"><t t-esc="encaissements.get('titres', {}).get('count', 0)"/></td>
                             <td style="text-align: right; padding: 1mm 0; white-space: nowrap;"><t t-esc="'{:,.0f}'.format(encaissements.get('titres', {}).get('total', 0)).replace(',', ' ')"/></td>

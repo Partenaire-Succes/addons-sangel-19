@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+        <!-- Add ecart_reglement column to session list view -->
+        <record id="view_pos_session_tree_inherit" model="ir.ui.view">
+            <field name="name">pos.session.list.view.ecart.reglement</field>
+            <field name="model">pos.session</field>
+            <field name="inherit_id" ref="point_of_sale.view_pos_session_tree"/>
+            <field name="arch" type="xml">
+                <!-- Add Ecart règl column after Solde de clôture (cash_register_balance_end) -->
+                <xpath expr="//field[@name='cash_register_balance_end']" position="after">
+                    <field name="ecart_reglement" string="Ecart règl"/>
+                </xpath>
+            </field>
+        </record>
+        
+        <!-- Add ecart_reglement to form view as well -->
+        <record id="view_pos_session_form_inherit" model="ir.ui.view">
+            <field name="name">pos.session.form.view.ecart.reglement</field>
+            <field name="model">pos.session</field>
+            <field name="inherit_id" ref="point_of_sale.view_pos_session_form"/>
+            <field name="arch" type="xml">
+                <!-- Add Ecart règl field in the Cash Control section -->
+                <xpath expr="//field[@name='cash_register_balance_end_real']" position="after">
+                    <field name="ecart_reglement" readonly="1"/>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>

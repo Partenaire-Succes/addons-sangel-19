@@ -219,6 +219,92 @@ class PosOrder(models.Model):
             'discount_amount': discount_amount,
             'qty': qty,
         }
+
+    def _process_existing_gift_cards(self, coupon_data):
+        """Override to fix singleton error when multiple gift cards match empty code.
+        
+        BUG IN NATIVE ODOO: The domain uses OR with empty string code which matches
+        ALL gift cards that have no code set. This override adds proper filtering.
+        """
+        from odoo import _
+        
+        updated_gift_cards = self.env['loyalty.card']
+        coupon_key_to_remove = []
+        
+        for coupon_id, coupon_vals in coupon_data.items():
+            program_id = self.env['loyalty.program'].browse(coupon_vals['program_id'])
+            if program_id.program_type == 'gift_card':
+                updated = False
+                
+                # FIX: Build domain properly - don't search with empty code
+                code = coupon_vals.get('code', '')
+                coupon_id_val = coupon_vals.get('coupon_id', False)
+                
+                # Build a proper domain that doesn't match all empty codes
+                if code and coupon_id_val:
+                    # Both code and id provided - use OR
+                    domain = ['|', ('code', '=', code), ('id', '=', coupon_id_val)]
+                elif code:
+                    # Only code provided
+                    domain = [('code', '=', code)]
+                elif coupon_id_val:
+                    # Only id provided
+                    domain = [('id', '=', coupon_id_val)]
+                else:
+                    # Neither provided - skip this coupon
+                    continue
+                
+                # FIX: Add limit=1 to ensure singleton
+                gift_card = self.env['loyalty.card'].search(domain, limit=1)
+                
+                if not gift_card.exists():
+                    continue
+
+                if not gift_card.partner_id and self.partner_id:
+                    updated = True
+                    gift_card.partner_id = self.partner_id
+                    gift_card.history_ids.create({
+                        'card_id': gift_card.id,
+                        'description': _('Assigning partner %s', self.partner_id.name),
+                        'used': 0,
+                        'issued': gift_card.points,
+                    })
+
+                if len([id for id in gift_card.history_ids.mapped('order_id') if id != 0]) == 0:
+                    updated = True
+                    gift_card.source_pos_order_id = self.id
+                    gift_card.history_ids.create({
+                        'card_id': gift_card.id,
+                        'order_model': self._name,
+                        'order_id': self.id,
+                        'description': _('Assigning order %s', self.display_name),
+                        'used': 0,
+                        'issued': gift_card.points,
+                    })
+
+                if coupon_vals.get('points') != gift_card.points:
+                    # Coupon vals contains negative points
+                    updated = True
+                    new_value = gift_card.points + coupon_vals['points']
+                    gift_card.points = new_value
+                    gift_card.history_ids.create({
+                        'card_id': gift_card.id,
+                        'order_model': self._name,
+                        'order_id': self.id,
+                        'description': _('Onsite %s', self.display_name),
+                        'used': -coupon_vals['points'] if coupon_vals['points'] < 0 else 0,
+                        'issued': coupon_vals['points'] if coupon_vals['points'] > 0 else 0,
+                    })
+
+                if updated:
+                    updated_gift_cards |= gift_card
+
+                coupon_key_to_remove.append(coupon_id)
+
+        for key in coupon_key_to_remove:
+            coupon_data.pop(key, None)
+
+        return updated_gift_cards
     
 
 class PosSession(models.Model):
@@ -238,6 +324,63 @@ class PosSession(models.Model):
         default=0.0,
         help="Montant en espèces saisi par l'utilisateur lors du prélèvement"
     )
+    
+    # Écart de règlement: tracks unused gift card amounts when gift cards cover more than order total
+    # Reset to 0 when session is closed and reopened
+    ecart_reglement = fields.Float(
+        string="Écart de règlement",
+        compute='_compute_ecart_reglement',
+        store=False,  # Don't store - always compute fresh to get current card balances
+        help="Cumul des soldes restants des cartes cadeaux utilisées pendant cette session"
+    )
+
+    @api.depends('order_ids', 'order_ids.lines', 'order_ids.lines.is_reward_line')
+    def _compute_ecart_reglement(self):
+        """Compute the écart de règlement (payment gap) for gift card usage in this session.
+        
+        Écart = sum of remaining balances of ALL gift cards that were used during this session.
+        
+        For example: 
+        - Order 1: Gift card A ($2000) used $322 → remaining $1678
+        - Order 2: Gift card B ($500) used $200 → remaining $300
+        → Total écart = $1678 + $300 = $1978
+        
+        NOTE: We track unique gift cards to avoid double-counting if the same card is used multiple times.
+        """
+        for session in self:
+            total_ecart = 0.0
+            used_card_ids = set()  # Track unique gift cards to avoid double-counting
+            
+            for order in session.order_ids:
+                # Get all reward lines that have a coupon_id (check for gift cards)
+                for line in order.lines:
+                    if not line.is_reward_line:
+                        continue
+                    # Safely access coupon_id - it's a Many2one, so single or empty
+                    card = line.coupon_id
+                    if not card:
+                        continue
+                    # Skip if we already counted this card
+                    if card.id in used_card_ids:
+                        continue
+                    # Safely check if this is a gift card program
+                    try:
+                        program = card.program_id
+                        if not program or program.program_type != 'gift_card':
+                            continue
+                    except Exception:
+                        # In case of any access issues during batch processing, skip
+                        continue
+                    
+                    # Mark this card as processed
+                    used_card_ids.add(card.id)
+                    
+                    # Add the remaining balance of this gift card
+                    remaining_balance = card.points
+                    if remaining_balance > 0:
+                        total_ecart += remaining_balance
+            
+            session.ecart_reglement = total_ecart
 
     def _loader_params_product_product(self):
         result = super()._loader_params_product_product()
@@ -308,6 +451,11 @@ class PosSession(models.Model):
         """
         self.ensure_one()
         
+        # Detailed logging to debug
+        _logger.info("\ud83d\udd0d save_cash_count_for_prelevement called:")
+        _logger.info("  - Session ID: %s", self.id)
+        _logger.info("  - Counted cash received: %s (type: %s)", counted_cash, type(counted_cash))
+        _logger.info("  - Current prelevement_especes_amount: %s", self.prelevement_especes_amount)
         
         # Save to our dedicated Float field (not Monetary to avoid conversion issues)
         self.prelevement_especes_amount = float(counted_cash)
@@ -395,6 +543,13 @@ class PosSession(models.Model):
             'total': sum(avoir_payments.mapped('amount')),
         }
         
+        # Écart de règlement (gift card unused balance)
+        # This is the ecart_reglement computed field
+        ecart_regl = {
+            'count': 0,  # No count for this, it's a computed value
+            'total': self.ecart_reglement or 0.0,
+        }
+        
         # Titre de paiements - using is_titre_paiement
         titres_payments = all_payments.filtered(lambda p: p.payment_method_id.is_titre_paiement)
         titres = {
@@ -402,7 +557,7 @@ class PosSession(models.Model):
             'total': sum(titres_payments.mapped('amount')),
         }
         
-        # Total encaissements comptants
+        # Total encaissements comptants (excluding ecart_regl as it's informational)
         total_encaissements = {
             'count': especes['count'] + cheques['count'] + cartes['count'] + avoir['count'] + titres['count'],
             'total': especes['total'] + cheques['total'] + cartes['total'] + avoir['total'] + titres['total'],
@@ -413,6 +568,7 @@ class PosSession(models.Model):
             'cheques': cheques,
             'cartes': cartes,
             'avoir': avoir,
+            'ecart_regl': ecart_regl,
             'titres': titres,
             'total': total_encaissements,
         }

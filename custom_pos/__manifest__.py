@@ -18,7 +18,7 @@
     'company': 'Partenaires Succes',
     'maintainer': 'Adams KONE',
     'website': "https://www.partenairesucces.com/",
-    'depends': ['sale', 'point_of_sale', 'account'],
+    'depends': ['sale', 'point_of_sale', 'account', 'pos_loyalty'],
     'data': [
         # 'security/ir.model.access.csv',
         'security/security.xml',
@@ -29,6 +29,7 @@
         'report/cloture_caisse_template.xml',
         'views/pos_config_inherit_views.xml',
         'views/pos_payment_method_inherit_views.xml',
+        'views/pos_session_inherit_views.xml',
     ],
     'images': ['static/description/banner.png'],
     'license': 'AGPL-3',
