@@ -39,6 +39,27 @@
             </div>
         </xpath>
         
+        <!-- 3b. Replace non-cash payment method inputs (Wave, Orange, etc.) with read-only versions -->
+        <!-- Remove the "x" clear button and clone button, make field readonly -->
+        <xpath expr="//div[hasclass('w-100') and hasclass('mb-3') and @t-foreach='props.non_cash_payment_methods' and not(ancestor::div[hasclass('payment-methods-overview')])]" position="replace">
+            <div class="w-100 mb-3" t-foreach="props.non_cash_payment_methods" t-as="pm" t-key="pm.id">
+                <t t-set="_showDiff" t-value="pm.type === 'bank' and pm.number !== 0" />
+                <t t-if="_showDiff">
+                    <span><t t-esc="pm.name" /> Nombre</span>
+                    <div class="d-flex w-100 gap-2 mt-1">
+                        <!-- Read-only input: shows the payment method total, no editing allowed -->
+                        <input type="text" 
+                               class="form-control w-100 bg-light" 
+                               t-att-value="state.payments[pm.id]?.counted || env.utils.formatCurrency(pm.amount, false)"
+                               readonly="readonly"
+                               disabled="disabled"/>
+                        <!-- Clone/auto-fill button REMOVED per user request -->
+                        <!-- Clear (x) button REMOVED per user request -->
+                    </div>
+                </t>
+            </div>
+        </xpath>
+        
         <!-- 4. Make closing notes textarea readonly -->
         <xpath expr="//textarea[hasclass('closing-notes')]" position="attributes">
             <attribute name="readonly">readonly</attribute>
