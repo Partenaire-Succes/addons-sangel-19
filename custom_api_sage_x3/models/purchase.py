@@ -45,7 +45,7 @@ class PurchaseOrderSageX3Optimized(models.Model):
             self.submit_to_sage_x3()
 
             if self.sage_x3_validated:
-                self.action_confirm()
+                self.button_confirm()
             
             return {
                 'type': 'ir.actions.client',

@@ -21,6 +21,7 @@
         'point_of_sale',
         'purchase',
         'custom_api_sage_x3',
+        'custom_stock',
     ],
     'data': [
         'security/ir.model.access.csv',

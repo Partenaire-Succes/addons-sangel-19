@@ -1,0 +1,344 @@
+{
+    "livraison": {
+        "2023-03-24": [
+            {
+                "siteVente": "VRIDI",
+                "numeroCommande": "BLVRIDI23030884",
+                "dateLivraison": "2023-03-24T00:00:00",
+                "client": "4111CI-SUPKOUM",
+                "devise": "XOF",
+                "magasin": "VRIDI",
+                "referenceCommandeClient": " ",
+                "items": [
+                    {
+                        "ligne": 7000,
+                        "article": "8880-D",
+                        "texteLigne": "MAGNUM AMANDE 120ML ",
+                        "quantite": 20.0,
+                        "prix": 595.0
+                    },
+                    {
+                        "ligne": 8000,
+                        "article": "8880",
+                        "texteLigne": "MAGNUM AMANDE 120ML X20",
+                        "quantite": 1.0,
+                        "prix": 0.0
+                    },
+                    {
+                        "ligne": 9000,
+                        "article": "8882-D",
+                        "texteLigne": "MAGNUM CLASSIC 120ML ",
+                        "quantite": 20.0,
+                        "prix": 595.0
+                    },
+                    {
+                        "ligne": 10000,
+                        "article": "8882",
+                        "texteLigne": "MAGNUM CLASSIC 120ML X20",
+                        "quantite": 1.0,
+                        "prix": 0.0
+                    },
+                    {
+                        "ligne": 11000,
+                        "article": "8883-D",
+                        "texteLigne": "MAGNUM DOUBLE CARAMEL 88ML ",
+                        "quantite": 20.0,
+                        "prix": 595.0
+                    },
+                    {
+                        "ligne": 12000,
+                        "article": "8883",
+                        "texteLigne": "MAGNUM DOUBLE CARAMELX20 88ML",
+                        "quantite": 1.0,
+                        "prix": 0.0
+                    },
+                    {
+                        "ligne": 1000,
+                        "article": "6953-D",
+                        "texteLigne": "ROCKET FRUIT MIXTE 55ML",
+                        "quantite": 54.0,
+                        "prix": 231.0
+                    },
+                    {
+                        "ligne": 2000,
+                        "article": "6953",
+                        "texteLigne": "ROCKET FRUIT MIXTE X54 55ML",
+                        "quantite": 1.0,
+                        "prix": 0.0
+                    },
+                    {
+                        "ligne": 3000,
+                        "article": "8891-D",
+                        "texteLigne": "CORNETTO VANILLE 120ML",
+                        "quantite": 24.0,
+                        "prix": 661.0
+                    },
+                    {
+                        "ligne": 4000,
+                        "article": "8891",
+                        "texteLigne": "CORNETTO VANILLE 120ML X24",
+                        "quantite": 1.0,
+                        "prix": 0.0
+                    },
+                    {
+                        "ligne": 5000,
+                        "article": "8893-D",
+                        "texteLigne": "CORNETTO CHOCOLAT 120ML",
+                        "quantite": 24.0,
+                        "prix": 661.0
+                    },
+                    {
+                        "ligne": 6000,
+                        "article": "8893",
+                        "texteLigne": "CORNETTO CHOCOLAT X24 120ML",
+                        "quantite": 1.0,
+                        "prix": 0.0
+                    }
+                ]
+            },
+            {
+                "siteVente": "VRIDI",
+                "numeroCommande": "BLVRIDI23030885",
+                "dateLivraison": "2023-03-24T00:00:00",
+                "client": "4111SALT",
+                "devise": "XOF",
+                "magasin": "VRIDI",
+                "referenceCommandeClient": " ",
+                "items": [
+                    {
+                        "ligne": 1000,
+                        "article": "5813",
+                        "texteLigne": "FRITES 7/7 2.5KG",
+                        "quantite": 280.0,
+                        "prix": 4200.0
+                    }
+                ]
+            },
+            {
+                "siteVente": "VRIDI",
+                "numeroCommande": "BLVRIDI23030886",
+                "dateLivraison": "2023-03-24T00:00:00",
+                "client": "4111KING-MARKET",
+                "devise": "XOF",
+                "magasin": "VRIDI",
+                "referenceCommandeClient": " ",
+                "items": [
+                    {
+                        "ligne": 1000,
+                        "article": "4904",
+                        "texteLigne": "PAYSAN BRETON  EMMENTAL RAPE 7",
+                        "quantite": 6.0,
+                        "prix": 810.0
+                    },
+                    {
+                        "ligne": 2000,
+                        "article": "4866",
+                        "texteLigne": "PAYSAN BRETON MIMOLETTE TRANCH",
+                        "quantite": 15.0,
+                        "prix": 1810.0
+                    }
+                ]
+            },
+            {
+                "siteVente": "VRIDI",
+                "numeroCommande": "BLVRIDI23030887",
+                "dateLivraison": "2023-03-24T00:00:00",
+                "client": "4111HYACINTHE",
+                "devise": "XOF",
+                "magasin": "VRIDI",
+                "referenceCommandeClient": " ",
+                "items": [
+                    {
+                        "ligne": 1000,
+                        "article": "7555",
+                        "texteLigne": "TILAPIA 500-800G ",
+                        "quantite": 50.0,
+                        "prix": 1050.0
+                    },
+                    {
+                        "ligne": 2000,
+                        "article": "7552",
+                        "texteLigne": "TILAPIA 800G+",
+                        "quantite": 50.0,
+                        "prix": 1150.0
+                    }
+                ]
+            }
+        ],
+        "2023-03-23": [
+            {
+                "siteVente": "VRIDI",
+                "numeroCommande": "BLVRIDI23030880",
+                "dateLivraison": "2023-03-23T00:00:00",
+                "client": "4111SMART",
+                "devise": "XOF",
+                "magasin": "VRIDI",
+                "referenceCommandeClient": " ",
+                "items": [
+                    {
+                        "ligne": 8000,
+                        "article": "4210",
+                        "texteLigne": "LONGE DE PORC AVEC OS",
+                        "quantite": 4.585,
+                        "prix": 3140.0
+                    },
+                    {
+                        "ligne": 1000,
+                        "article": "4210",
+                        "texteLigne": "LONGE DE PORC AVEC OS",
+                        "quantite": 10.36,
+                        "prix": 3140.0
+                    },
+                    {
+                        "ligne": 2000,
+                        "article": "4816",
+                        "texteLigne": "PAYSAN BRETON BEURRE MICRO DOU",
+                        "quantite": 12.0,
+                        "prix": 10150.0
+                    },
+                    {
+                        "ligne": 3000,
+                        "article": "7303",
+                        "texteLigne": "BROCOLIS 20/40MM 1KG",
+                        "quantite": 10.0,
+                        "prix": 2460.0
+                    },
+                    {
+                        "ligne": 4000,
+                        "article": "7306",
+                        "texteLigne": "CHOUX FLEURS 30/60MM 1KG ",
+                        "quantite": 10.0,
+                        "prix": 1520.0
+                    },
+                    {
+                        "ligne": 5000,
+                        "article": "4808",
+                        "texteLigne": "PAYSAN BRETON BEURRE DOUX 200G",
+                        "quantite": 200.0,
+                        "prix": 1720.0
+                    },
+                    {
+                        "ligne": 6000,
+                        "article": "2093",
+                        "texteLigne": "VIANDE DE BOEUF S/OS LOCAL SAC",
+                        "quantite": 32.57,
+                        "prix": 3500.0
+                    },
+                    {
+                        "ligne": 7000,
+                        "article": "7308",
+                        "texteLigne": "CHOUX DE BRUXELLES 1KG        ",
+                        "quantite": 10.0,
+                        "prix": 1400.0
+                    }
+                ]
+            },
+            {
+                "siteVente": "VRIDI",
+                "numeroCommande": "BLVRIDI23030853",
+                "dateLivraison": "2023-03-23T00:00:00",
+                "client": "4111PROSUMA",
+                "devise": "XOF",
+                "magasin": "VRIDI",
+                "referenceCommandeClient": " ",
+                "items": [
+                    {
+                        "ligne": 1000,
+                        "article": "4210",
+                        "texteLigne": "LONGE DE PORC AVEC OS",
+                        "quantite": 806.81,
+                        "prix": 3140.0
+                    },
+                    {
+                        "ligne": 2000,
+                        "article": "4203",
+                        "texteLigne": "LONGE DE PORC S/OS",
+                        "quantite": 111.66,
+                        "prix": 3720.0
+                    },
+                    {
+                        "ligne": 3000,
+                        "article": "4203",
+                        "texteLigne": "LONGE DE PORC S/OS",
+                        "quantite": 900.0,
+                        "prix": 3720.0
+                    }
+                ]
+            }
+        ],
+        "2026-01-07": [
+            {
+                "siteVente": "VRIDI",
+                "numeroCommande": "BLVRIDI26010001",
+                "dateLivraison": "2026-01-07T00:00:00",
+                "client": "YOP01",
+                "devise": "XOF",
+                "magasin": "VRIDI",
+                "referenceCommandeClient": " ",
+                "items": [
+                    {
+                        "ligne": 1000,
+                        "article": "4209",
+                        "texteLigne": "CUISSOT DE PORC S/OS   ",
+                        "quantite": 1000.0,
+                        "prix": 2000.0
+                    }
+                ]
+            },
+            {
+                "siteVente": "VRIDI",
+                "numeroCommande": "VRIDI2601SDI00000001",
+                "dateLivraison": "2026-01-07T00:00:00",
+                "client": "YOP03",
+                "devise": "XOF",
+                "magasin": "VRIDI",
+                "referenceCommandeClient": " ",
+                "items": [
+                    {
+                        "ligne": 1000,
+                        "article": "4209",
+                        "texteLigne": "CUISSOT DE PORC S/OS   ",
+                        "quantite": 100.0,
+                        "prix": 2800.01
+                    }
+                ]
+            },
+            {
+                "siteVente": "VRIDI",
+                "numeroCommande": "VRIDI2601SDI00000002",
+                "dateLivraison": "2026-01-07T00:00:00",
+                "client": "YOP03",
+                "devise": "XOF",
+                "magasin": "VRIDI",
+                "referenceCommandeClient": " ",
+                "items": [
+                    {
+                        "ligne": 1000,
+                        "article": "4209",
+                        "texteLigne": "CUISSOT DE PORC S/OS   ",
+                        "quantite": 80.0,
+                        "prix": 2800.01
+                    }
+                ]
+            },
+            {
+                "siteVente": "VRIDI",
+                "numeroCommande": "VRIDI2601SDI00000003",
+                "dateLivraison": "2026-01-07T00:00:00",
+                "client": "YOP03",
+                "devise": "XOF",
+                "magasin": "VRIDI",
+                "referenceCommandeClient": " ",
+                "items": [
+                    {
+                        "ligne": 1000,
+                        "article": "4209",
+                        "texteLigne": "CUISSOT DE PORC S/OS   ",
+                        "quantite": 80.0,
+                        "prix": 2800.01
+                    }
+                ]
+            }
+        ]
+    }
+}
