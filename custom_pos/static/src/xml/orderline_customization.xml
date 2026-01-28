@@ -29,6 +29,11 @@
        t-inherit="point_of_sale.Orderline"
        t-inherit-mode="extension">
 
+        <!-- Add negative margin red background to orderline li -->
+        <xpath expr="//li[hasclass('orderline')]" position="attributes">
+            <attribute name="t-att-style">hasNegativeMargin ? 'background-color: rgba(220, 53, 69, 0.35) !important;' : ''</attribute>
+        </xpath>
+
         <!-- Add line number badge before qty -->
         <!-- <xpath expr="//span[hasclass('qty')]" position="before">
             <span t-if="props.lineNumber and props.mode !== 'receipt'" 

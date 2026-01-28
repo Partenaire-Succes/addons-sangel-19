@@ -1,8 +1,8 @@
-from odoo import fields, models, api, _,tools
-from odoo.exceptions import ValidationError, UserError
-import re
 import logging
-from odoo.exceptions import AccessError
+import re
+
+from odoo import _, api, fields, models, tools
+from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.tools import format_amount
 
 _logger = logging.getLogger(__name__)
@@ -11,6 +11,20 @@ _logger = logging.getLogger(__name__)
 class ProductTemplateInherit(models.Model):
     _inherit = 'product.template'
 
+    # Computed fields for product catalog display
+    max_qty_orderpoint = fields.Float(
+        string="Max (Règle de réapro.)",
+        compute="_compute_max_qty_orderpoint",
+        store=False,
+        help="Quantité maximale définie dans les règles de réapprovisionnement"
+    )
+
+    pending_reception_qty = fields.Float(
+        string="Commande en cours",
+        compute="_compute_pending_reception_qty",
+        store=False,
+        help="Quantité totale en attente de réception (Brouillon ou Prêt)"
+    )
 
     code_inventory_id = fields.Many2one(
         'code.inventory', 
@@ -211,6 +225,29 @@ class ProductTemplateInherit(models.Model):
         help="Cochez si ce produit fait partie de la gamme Koumassi.",
     )
 
+    @api.depends_context('company')
+    def _compute_max_qty_orderpoint(self):
+        """Compute max quantity from stock.warehouse.orderpoint for this product"""
+        for template in self:
+            orderpoint = self.env['stock.warehouse.orderpoint'].search([
+                ('product_id.product_tmpl_id', '=', template.id),
+                ('company_id', '=', self.env.company.id)
+            ], limit=1)
+            template.max_qty_orderpoint = orderpoint.product_max_qty if orderpoint else 0.0
+
+    @api.depends_context('company')
+    def _compute_pending_reception_qty(self):
+        """Compute total quantity pending reception (draft or assigned state)"""
+        for template in self:
+            # Get all incoming stock moves for this product that are pending
+            moves = self.env['stock.move'].search([
+                ('product_id.product_tmpl_id', '=', template.id),
+                ('picking_id.picking_type_id.code', '=', 'incoming'),
+                ('state', 'in', ['draft', 'assigned']),
+                ('company_id', '=', self.env.company.id)
+            ])
+            template.pending_reception_qty = sum(moves.mapped('product_uom_qty'))
+
     @api.depends('pack_child_product_id.qty_available', 'pack_qty')
     def _compute_pack_equivalences(self):
         for tmpl in self:
@@ -355,6 +392,19 @@ class ProductProduct(models.Model):
         string="Code Article",
         copy=False,
         related='product_tmpl_id.code_article',
+    )
+
+    # Related fields for product catalog display
+    max_qty_orderpoint = fields.Float(
+        string="Max (Règle de réapro.)",
+        related='product_tmpl_id.max_qty_orderpoint',
+        help="Quantité maximale définie dans les règles de réapprovisionnement"
+    )
+
+    pending_reception_qty = fields.Float(
+        string="Commande en cours",
+        related='product_tmpl_id.pending_reception_qty',
+        help="Quantité totale en attente de réception (Brouillon ou Prêt)"
     )
 
     def action_view_pack_equivalence(self):

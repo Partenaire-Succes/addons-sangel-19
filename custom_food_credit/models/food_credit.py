@@ -66,9 +66,12 @@ class FoodCredit(models.Model):
         for record in self:
             record.amount_used = sum(line.amount_used for line in record.line_ids)
 
+    @api.depends('line_ids', 'line_ids.partner_id')
     def _compute_count_child(self):
+        """Count employees based on actual food credit lines, not all company contacts"""
         for record in self:
-            record.count_child = self.env['res.partner'].search_count([('parent_id', '=', record.partner_company_id.id)])
+            # Count based on active food credit lines, not all contacts
+            record.count_child = len(record.line_ids)
 
 
     @api.onchange('amount', 'lines.amount')
@@ -219,7 +222,8 @@ class FoodCreditLine(models.Model):
 
     partner_id = fields.Many2one(
         'res.partner',
-        'Client'
+        'Client',
+        ondelete='cascade',  # Auto-delete line if partner is deleted
     ) 
     partner_name = fields.Char(related='partner_id.name', string='Nom du client', store=True)
     amount = fields.Float('Montant du crédit mensuel', default=0)
