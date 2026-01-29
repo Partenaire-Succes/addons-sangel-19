@@ -23,11 +23,11 @@
                     <br/>Utilisez le bouton <strong>"Soumettre à SAGE X3"</strong>.
                 </div>
                 
-                <div class="alert alert-danger" role="alert" 
+                <!-- <div class="alert alert-danger" role="alert" 
                      invisible="sage_x3_submitted == False or sage_x3_error == False">
                     <strong>❌ Erreur SAGE X3</strong><br/>
                     <field name="sage_x3_error" readonly="1" nolabel="1"/>
-                </div>
+                </div> -->
             </xpath>
 
             <xpath expr="//field[@name='currency_id']" position="after">
