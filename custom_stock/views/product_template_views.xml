@@ -118,5 +118,18 @@
             </field>
         </record>
 
+        <!-- Extend product catalog kanban view to include max qty and pending reception fields -->
+        <record id="product_view_kanban_catalog_custom_stock" model="ir.ui.view">
+            <field name="name">product.product.kanban.catalog.custom_stock</field>
+            <field name="model">product.product</field>
+            <field name="inherit_id" ref="product.product_view_kanban_catalog"/>
+            <field name="arch" type="xml">
+                <xpath expr="//kanban" position="inside">
+                    <field name="max_qty_orderpoint"/>
+                    <field name="pending_reception_qty"/>
+                </xpath>
+            </field>
+        </record>
+
     </data>
 </odoo>

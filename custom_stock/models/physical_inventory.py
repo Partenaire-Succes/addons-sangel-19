@@ -235,6 +235,7 @@ class PhysicalInventoryLine(models.Model):
 
     active = fields.Boolean('Actif', default=True, tracking=True)
     needs_verification = fields.Boolean('À vérifier', default=False, help='Marquer comme produit à vérifier dans la session suivante')
+    verified_by_id = fields.Many2one('res.partner', string='Vérifié par', help='Contact qui a vérifié ce produit')
 
     quant_id = fields.Many2one(
         'stock.quant',

@@ -1,7 +1,9 @@
-from odoo import models, fields, api, _
-from odoo.exceptions import UserError
-import math
 import logging
+import math
+
+from odoo import _, api, fields, models
+from odoo.exceptions import UserError
+
 
 class SaleOrder(models.Model):
     _inherit = 'sale.order'

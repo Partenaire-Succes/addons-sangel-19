@@ -90,7 +90,7 @@
                                 <field name="physical_line_ids" readonly="state == 'done'"
                                        domain="[('active', '=', True)]">
                                     <list editable="bottom" create="0" edit="1" delete="0">
-                                        <field name="code_inventory_id" column_invisible="True"/>
+                                        <field name="code_inventory_id" column_invisible="False"/>
                                         <field name="state" column_invisible="1"/>
                                         <field name="code_category_id" column_invisible="True"/>
                                         <field name="inventory_physical_id" column_invisible="True"/>
@@ -109,6 +109,7 @@
                                         <field name="valorisation" string="Valorisation" invisible="state == 'draft'"/>
                                         <field name="active" column_invisible="1"/>
                                         <field name="needs_verification" column_invisible="False"/>
+                                        <field name="verified_by_id" string="Vérifié par" options="{'no_create': True}"/>
 
                                         <button name="action_archive_line" type="object"
                                                 string="Retirer la ligne" icon="fa-archive"

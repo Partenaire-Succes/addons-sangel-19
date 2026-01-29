@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Extend the product catalog kanban record template to display max qty and pending reception -->
+    <t t-name="ProductCatalogKanbanRecord" t-inherit="ProductCatalogKanbanRecord" t-inherit-mode="extension">
+        <xpath expr="//t[@t-component='orderLineComponent']" position="before">
+            <div class="o_product_stock_info small text-muted px-2 pb-1">
+                <span class="d-block">
+                    <i class="fa fa-cubes me-1" title="Max"/>
+                    <span class="fw-bold">Max:</span>
+                    <span t-out="maxQtyOrderpoint"/>
+                </span>
+                <span class="d-block text-info">
+                    <i class="fa fa-truck me-1" title="En commande"/>
+                    <span class="fw-bold">En cours:</span>
+                    <span t-out="pendingReceptionQty"/>
+                </span>
+            </div>
+        </xpath>
+    </t>
+
+</templates>

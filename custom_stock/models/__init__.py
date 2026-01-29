@@ -8,23 +8,19 @@
 #
 #############################################################################
 # 
-from . import product_template
-from . import res_company
-from . import physical_inventory
-from . import code_inventaire
-from . import stock_picking
-from . import pos_order
-from . import inventary_family
-from . import inventary_radius
-from . import teams_inventory
-from . import  picking_inter_company
-from . import sale_order_line
-from . import category_gestion
-from . import stock_warehouse_orderpoint
-from . import purchase_order
-
-
-
-
-
-
+from . import (
+    category_gestion,
+    code_inventaire,
+    inventary_family,
+    inventary_radius,
+    physical_inventory,
+    picking_inter_company,
+    pos_order,
+    product_template,
+    res_company,
+    sale_order,
+    sale_order_line,
+    stock_picking,
+    stock_warehouse_orderpoint,
+    teams_inventory,
+)

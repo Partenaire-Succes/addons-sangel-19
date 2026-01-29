@@ -10,7 +10,7 @@
 {
     'name': 'Personnalisation du Module Inventaire',
     'category': 'Stock',
-    'summary': """Customisation de Inventaire pour Odoo 19.0""",
+    'summary': """Customisation de Inventaire pour Odoo 18.0""",
     'description': """Adaptation du module Inventaire pour répondre aux besoins 
         spécifiques des utilisateurs d'Odoo 19.0.""",
     'author': 'Adams KONE',
