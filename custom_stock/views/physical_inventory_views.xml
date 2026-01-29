@@ -250,9 +250,9 @@
         <record id="make_invisible" model="res.groups">
             <field name="name">Invisible</field>
         </record>
-        <record model="ir.ui.menu" id="stock.menu_action_inventory_tree">
+        <!-- <record model="ir.ui.menu" id="stock.menu_action_inventory_tree">
             <field name="group_ids" eval="[(6,0,[ref('make_invisible')])]"/>
-        </record>
+        </record> -->
 
     </data>
 
