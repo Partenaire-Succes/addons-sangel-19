@@ -28,12 +28,6 @@ class ProductTemplateInherit(models.Model):
         copy=False,
         index=True,
     )
-    family_id = fields.Many2one(
-        'family.inventory',
-        string="Famille Test",
-        copy=False,
-        index=True,
-    )
     family_categ_id = fields.Many2one('product.category', string='Famille', copy=True)
     s_family_id = fields.Many2one(
         'sub.family.inventory',

@@ -4,7 +4,6 @@ access_code_category_inventory,code.category.inventory,model_code_category_inven
 access_code_inventory,code.inventory,model_code_inventory,,1,1,1,1
 access_physical_inventory,physical.inventory,model_physical_inventory,,1,1,1,1
 access_physical_inventory_line,physical.inventory.line,model_physical_inventory_line,,1,1,1,1
-access_family_inventory,family.inventory,model_family_inventory,,1,1,1,1
 access_sub_family_inventory,sub.family.inventory,model_sub_family_inventory,,1,1,1,1
 access_radius_inventory,radius.inventory,model_radius_inventory,,1,1,1,1
 access_sub_radius_inventory,sub.radius.inventory,model_sub_radius_inventory,,1,1,1,1

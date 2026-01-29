@@ -54,52 +54,6 @@
             </field>
         </record>
 
-        <!-- Vue formulaire Code Inventaire -->
-        <record id="view_family_inventory_form" model="ir.ui.view">
-            <field name="name">family.inventory.form</field>
-            <field name="model">family.inventory</field>
-            <field name="arch" type="xml">
-                <form string="Famille Inventaire">
-                    <sheet>
-                        <div class="oe_title">
-                            <label for="name" class="oe_edit_only"/>
-                            <h1>
-                                <field name="name" placeholder="Nom" readonly="0"/>
-                            </h1>
-                        </div>
-                        <group>
-                            <field name="code" placeholder="Code Famille"/>
-                        </group>                       
-                    </sheet>
-                    <chatter reload_on_follower="True"/>
-                </form>
-            </field>
-        </record>
-
-        <!-- Vue liste family Inventaire -->
-        <record id="view_family_inventory_tree" model="ir.ui.view">
-            <field name="name">family.inventory.tree</field>
-            <field name="model">family.inventory</field>
-            <field name="arch" type="xml">
-                <list string="Famille inventaire">
-                    <field name="name"/>
-                    <field name="code"/>
-                </list>
-            </field>
-        </record>
-
-        <!-- Action family name Inventaire -->
-        <record id="action_family_inventory" model="ir.actions.act_window">
-            <field name="name">family inventaire</field>
-            <field name="res_model">family.inventory</field>
-            <field name="view_mode">list,form</field>
-            <field name="help" type="html">
-                <p class="o_view_nocontent_smiling_face">
-                    Créer votre premier family inventaire
-                </p>
-            </field>
-        </record>
-
         <!-- View inherit category Product -->
 
         <record id="product_category_form_views_inherits" model="ir.ui.view">
@@ -131,6 +85,7 @@
             <field name="arch" type="xml">
                 <xpath expr="//field[@name='display_name']" position="after">
                     <field name="code"/>
+                    <field name="name"/>
                 </xpath>
             </field>
         </record>
@@ -151,12 +106,6 @@
                   name="Categorie inventaire"
                   parent="stock.menu_stock_config_settings"
                   sequence="22"/>
-
-        <menuitem id="menu_family_inventory"
-                  name="Famille"
-                  parent="menu_categorie_inventory_main"
-                  action="action_family_inventory"
-                  sequence="2"/>
                   
         <menuitem id="menu_family_categ_inventory"
                   name="Famille Categ"
