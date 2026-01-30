@@ -40,6 +40,7 @@
         'views/sale_order_views.xml',
         'views/stock_warehouse_orderpoint_view.xml',
         'views/purchase_order_views.xml',
+        'views/stock_scrap_breakers_views.xml',
     ],
     'license': 'AGPL-3',
     'installable': True,

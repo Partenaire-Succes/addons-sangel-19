@@ -11,30 +11,35 @@
             <xpath expr="//sheet" position="before">
                 <div class="alert alert-success" 
                      role="alert" 
-                     invisible="not sage_x3_validated"
+                     invisible="not sage_x3_validated or type_supplier == 'local'"
                      style="margin: 10px;">
                     <strong>✅ Commande validée par SAGE X3</strong>
                     <p>Cette commande a été acceptée par SAGE X3 et peut être confirmée.</p>
                 </div>
                 <div class="alert alert-warning" role="alert" 
-                     invisible="state not in ['draft', 'sent'] or sage_x3_validated == True">
+                     invisible="state not in ['draft', 'sent'] or sage_x3_validated == True or type_supplier == 'local'">
                     <strong>⚠️ Validation SAGE X3 requise</strong><br/>
                     Cette commande doit être soumise et validée par SAGE X3 avant de pouvoir être confirmée.
                     <br/>Utilisez le bouton <strong>"Soumettre à SAGE X3"</strong>.
                 </div>
                 
                 <div class="alert alert-danger" role="alert" 
-                     invisible="sage_x3_submitted == False or sage_x3_error == False">
+                     invisible="sage_x3_submitted == False or sage_x3_error == False or type_supplier == 'local'">
                     <strong>❌ Erreur SAGE X3</strong><br/>
                     <field name="sage_x3_error" readonly="1" nolabel="1"/>
                 </div>
             </xpath>
 
-            <xpath expr="//field[@name='currency_id']" position="after">
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="type_supplier" 
+                       widget="selection"
+                       options="{'no_create': True}"
+                       readonly="state in ['cancel', 'purchase']"/>
+
                 <field name="type_command" 
                        widget="selection"
                        options="{'no_create': True}"
-                       placeholder="Type de commande"/>
+                       readonly="state in ['cancel', 'purchase']"/>
             </xpath>
             
             <!-- Onglet SAGE X3 -->

@@ -17,7 +17,7 @@ PASSWORD = "InterfaceX3_Odoo"
 
 TIMEOUT = 30
 MAX_RETRIES = 3
-BATCH_SIZE = 10  # Augmenté à 10 pour meilleures performances
+BATCH_SIZE = 100  # Augmenté à 100 pour meilleures performances
 CACHE_TIMEOUT = 3600  # Cache d'1 heure
 
 
@@ -31,6 +31,7 @@ class PurchaseOrderSageX3Optimized(models.Model):
             return self.action_submit_to_sage_x3()
         else:
             raise UserError("La commande doit être marquée comme urgente pour cette action.")
+
     def action_submit_to_sage_x3(self):
         """Soumettre la commande à SAGE X3"""
         self.ensure_one()
@@ -46,7 +47,7 @@ class PurchaseOrderSageX3Optimized(models.Model):
 
             if self.sage_x3_validated:
                 self.button_confirm()
-        
+            
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -54,11 +55,6 @@ class PurchaseOrderSageX3Optimized(models.Model):
                     'title': '✅ Succès' if self.sage_x3_validated else '⚠️ Attention',
                     'message': self.sage_x3_response_message or self.sage_x3_error or 'Traité',
                     'type': 'success' if self.sage_x3_validated else 'warning',
-                    'sticky': False,       # la notification disparaît automatiquement
-                    'next': {              # <== ça recharge la page
-                        'type': 'ir.actions.client',
-                        'tag': 'reload',
-                    }
                 }
             }
         except Exception as e:
@@ -192,43 +188,93 @@ class PurchaseOrderSageX3Optimized(models.Model):
     # IMPORT OPTIMISÉ AVEC QUEUE_JOB
     # ========================================================================
 
-    @api.model
     def action_import_deliveries(self):
-        """Lance l'import asynchrone via queue_job"""
-        # Vérifier si un job est déjà en cours
-        existing_jobs = self.env['queue.job'].search([
-            ('name', 'ilike', 'Import livraisons SAGE X3'),
-            ('state', 'in', ['pending', 'enqueued', 'started']),
-        ])
+        """Lance l'import asynchrone via queue_job ou threading"""
+        # Cette méthode peut être appelée depuis un enregistrement ou le modèle
+        # On travaille toujours au niveau du modèle pour l'import global
+        model = self.env['purchase.order']
         
-        if existing_jobs:
+        # Vérifier si queue_job est disponible
+        has_queue_job = 'queue.job' in self.env
+        
+        if has_queue_job:
+            # Méthode avec queue_job
+            try:
+                # Vérifier si un job est déjà en cours
+                existing_jobs = self.env['queue.job'].search([
+                    ('name', 'ilike', 'Import livraisons SAGE X3'),
+                    ('state', 'in', ['pending', 'enqueued', 'started']),
+                ])
+                
+                if existing_jobs:
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': '⚠️ Import en cours',
+                            'message': 'Un import est déjà en cours d\'exécution',
+                            'type': 'warning',
+                        }
+                    }
+                
+                # Lancer le job avec haute priorité
+                model.with_delay(
+                    description="Import livraisons SAGE X3",
+                    priority=10,
+                    max_retries=2,
+                    eta=datetime.now() + timedelta(seconds=5)
+                )._job_import_deliveries()
+                
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': '🚀 Import planifié (Queue Job)',
+                        'message': 'L\'import démarrera dans 5 secondes. Consultez les jobs dans Paramètres > Queue Jobs.',
+                        'type': 'info',
+                    }
+                }
+            except Exception as e:
+                _logger.error("❌ Erreur queue_job: %s, fallback vers threading", str(e))
+                has_queue_job = False
+        
+        if not has_queue_job:
+            # Fallback: Méthode avec threading
+            _logger.info("📌 queue_job non disponible, utilisation de threading")
+            
+            import threading
+            
+            # Lancer dans un thread séparé
+            thread = threading.Thread(
+                target=model._threaded_import_deliveries,
+                args=(self.env.cr.dbname, self.env.uid, self.env.context)
+            )
+            thread.daemon = True
+            thread.start()
+            
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
-                    'title': '⚠️ Import en cours',
-                    'message': 'Un import est déjà en cours d\'exécution',
-                    'type': 'warning',
+                    'title': '🚀 Import lancé (Threading)',
+                    'message': 'L\'import des livraisons est en cours en arrière-plan.',
+                    'type': 'info',
                 }
             }
-        
-        # Lancer le job avec haute priorité
-        self.with_delay(
-            description="Import livraisons SAGE X3",
-            priority=10,  # Haute priorité
-            max_retries=2,
-            eta=datetime.now() + timedelta(seconds=5)  # Démarrer dans 5 secondes
-        )._job_import_deliveries()
-        
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': '🚀 Import planifié',
-                'message': 'L\'import démarrera dans 5 secondes. Consultez les jobs dans Paramètres > Queue Jobs.',
-                'type': 'info',
-            }
-        }
+    
+    @classmethod
+    def _threaded_import_deliveries(cls, dbname, uid, context):
+        """Méthode exécutée dans un thread séparé (fallback sans queue_job)"""
+        try:
+            import odoo
+            with odoo.api.Environment.manage():
+                registry = odoo.registry(dbname)
+                with registry.cursor() as cr:
+                    env = odoo.api.Environment(cr, uid, context or {})
+                    env['purchase.order']._job_import_deliveries()
+                    cr.commit()
+        except Exception as e:
+            _logger.exception("❌ [THREAD] Erreur import: %s", str(e))
 
     @api.model
     def _job_import_deliveries(self):
@@ -237,8 +283,14 @@ class PurchaseOrderSageX3Optimized(models.Model):
         Cette méthode est exécutée par queue_job dans un worker séparé
         """
         start_time = datetime.now()
+        
+        # Récupérer la société courante
+        current_company = self.env.company
+        company_name = current_company.name
+        
         _logger.info("="*80)
         _logger.info("🚀 [JOB] Démarrage import SAGE X3 - %s", start_time)
+        _logger.info("🏢 [JOB] Société: %s (ID: %s)", company_name, current_company.id)
         _logger.info("="*80)
         
         try:
@@ -250,7 +302,7 @@ class PurchaseOrderSageX3Optimized(models.Model):
             headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
             
             # 2. Import incrémental (seulement les nouvelles depuis le dernier import)
-            last_import = self._get_last_import_date()
+            last_import = self._get_last_import_date(current_company.id)
             params = {'since': last_import.isoformat()} if last_import else None
             
             # 3. Récupération des livraisons
@@ -264,36 +316,93 @@ class PurchaseOrderSageX3Optimized(models.Model):
             deliveries = self._parse_deliveries_response(response.text)
             
             if not deliveries:
-                _logger.info("✅ Aucune livraison à traiter")
+                _logger.info("✅ Aucune livraison à traiter pour %s", company_name)
                 return {'updated': 0, 'errors': 0}
             
-            _logger.info("📦 %s livraisons à traiter", len(deliveries))
+            _logger.info("📦 %s livraisons totales reçues", len(deliveries))
             
-            # 5. Pré-chargement des données pour optimiser
-            self._preload_data(deliveries)
+            # 5. Filtrer les livraisons par société
+            deliveries_filtered = self._filter_deliveries_by_company(deliveries, current_company)
             
-            # 6. Traitement par lots avec commits intermédiaires
-            stats = self._process_deliveries_in_batches(deliveries)
+            if not deliveries_filtered:
+                _logger.info("✅ Aucune livraison pour la société %s", company_name)
+                return {'updated': 0, 'errors': 0, 'filtered': len(deliveries)}
             
-            # 7. Mise à jour de la date du dernier import
-            self._update_last_import_date()
+            _logger.info("📦 %s livraisons à traiter pour %s", len(deliveries_filtered), company_name)
             
-            # 8. Statistiques finales
+            # 6. Pré-chargement des données pour optimiser
+            order_cache, product_cache = self._preload_data(deliveries_filtered, current_company.id)
+            
+            # 7. Traitement par lots avec commits intermédiaires
+            stats = self._process_deliveries_in_batches(
+                deliveries_filtered, order_cache, product_cache, current_company.id
+            )
+            
+            # 8. Mise à jour de la date du dernier import
+            self._update_last_import_date(current_company.id)
+            
+            # 9. Statistiques finales
             duration = (datetime.now() - start_time).total_seconds()
             _logger.info("="*80)
-            _logger.info("✅ [JOB] Import terminé en %.2f secondes", duration)
+            _logger.info("✅ [JOB] Import terminé en %.2f secondes pour %s", duration, company_name)
             _logger.info("📊 Stats: %s", stats)
             _logger.info("="*80)
             
-            # 9. Notification utilisateur
-            self._notify_import_completion(stats, duration)
+            # 10. Notification utilisateur
+            self._notify_import_completion(stats, duration, company_name)
             
             return stats
             
         except Exception as e:
-            _logger.exception("❌ [JOB] Erreur fatale: %s", str(e))
-            self._notify_import_error(str(e))
+            _logger.exception("❌ [JOB] Erreur fatale pour %s: %s", company_name, str(e))
+            self._notify_import_error(str(e), company_name)
             raise
+
+    def _filter_deliveries_by_company(self, deliveries, company):
+        """
+        Filtre les livraisons pour ne garder que celles de la société courante
+        
+        Args:
+            deliveries: Liste des livraisons
+            company: res.company record
+            
+        Returns:
+            Liste filtrée des livraisons
+        """
+        if not deliveries:
+            return []
+        
+        # Extraire toutes les références de commandes des livraisons
+        all_refs = [
+            str(d.get("referenceCommandeClient", "")).strip() 
+            for d in deliveries 
+            if d.get("referenceCommandeClient")
+        ]
+        
+        if not all_refs:
+            return []
+        
+        # Chercher les commandes qui appartiennent à cette société
+        company_orders = self.search([
+            ('name', 'in', all_refs),
+            ('company_id', '=', company.id),
+            ('sage_x3_submitted', '=', True),
+            ('sage_x3_validated', '=', True),
+        ])
+        
+        # Créer un set des références valides pour cette société
+        valid_refs = set(company_orders.mapped('name'))
+        
+        # Filtrer les livraisons
+        filtered = [
+            d for d in deliveries 
+            if str(d.get("referenceCommandeClient", "")).strip() in valid_refs
+        ]
+        
+        _logger.info("🔍 Filtrage société '%s': %s/%s livraisons retenues", 
+                    company.name, len(filtered), len(deliveries))
+        
+        return filtered
 
     def _parse_deliveries_response(self, response_text):
         """
@@ -322,10 +431,17 @@ class PurchaseOrderSageX3Optimized(models.Model):
             _logger.error("❌ JSON invalide: %s", str(e))
             return []
 
-    def _preload_data(self, deliveries):
+    def _preload_data(self, deliveries, company_id):
         """
         Pré-charge toutes les données nécessaires en une seule requête
         pour éviter les N+1 queries
+        
+        Args:
+            deliveries: Liste des livraisons (déjà filtrées par société)
+            company_id: ID de la société
+            
+        Returns:
+            tuple: (order_cache, product_cache) - dictionnaires pour les lookups rapides
         """
         # Extraire toutes les références de commandes
         order_refs = list(set(
@@ -334,21 +450,25 @@ class PurchaseOrderSageX3Optimized(models.Model):
             if d.get("referenceCommandeClient")
         ))
         
+        order_cache = {}
+        product_cache = {}
+        
         if not order_refs:
-            return
+            return order_cache, product_cache
         
-        _logger.info("🔄 Pré-chargement de %s commandes", len(order_refs))
+        _logger.info("🔄 Pré-chargement de %s commandes pour société ID %s", len(order_refs), company_id)
         
-        # Charger toutes les commandes en une seule requête
+        # Charger toutes les commandes en une seule requête (avec filtre société)
         orders = self.search([
             ('name', 'in', order_refs),
+            ('company_id', '=', company_id),
             ('sage_x3_submitted', '=', True),
             ('sage_x3_validated', '=', True),
             ('state', 'in', ['purchase', 'to approve'])
         ])
         
         # Créer un cache en mémoire {ref: order_id}
-        self._order_cache = {order.name: order.id for order in orders}
+        order_cache = {order.name: order.id for order in orders}
         
         # Pré-charger tous les produits utilisés
         all_articles = set()
@@ -365,11 +485,14 @@ class PurchaseOrderSageX3Optimized(models.Model):
         ])
         
         # Cache {default_code: product_id}
-        self._product_cache = {p.default_code: p.id for p in products}
+        product_cache = {p.default_code: p.id for p in products}
         
-        _logger.info("✅ Caches initialisés")
+        _logger.info("✅ Caches initialisés: %s commandes, %s produits", 
+                    len(order_cache), len(product_cache))
+        
+        return order_cache, product_cache
 
-    def _process_deliveries_in_batches(self, deliveries):
+    def _process_deliveries_in_batches(self, deliveries, order_cache, product_cache, company_id):
         """Traitement par lots avec commits intermédiaires"""
         total = len(deliveries)
         updated = errors = lines = skipped = 0
@@ -379,10 +502,11 @@ class PurchaseOrderSageX3Optimized(models.Model):
             batch = deliveries[batch_start:batch_end]
             
             progress = (batch_end / total) * 100
-            _logger.info("🔄 Lot %s-%s/%s (%.1f%%)", batch_start + 1, batch_end, total, progress)
+            _logger.info("🔄 Lot %s-%s/%s (%.1f%%) - Société ID %s", 
+                        batch_start + 1, batch_end, total, progress, company_id)
             
             # Traiter le lot
-            batch_stats = self._process_batch(batch, batch_start)
+            batch_stats = self._process_batch(batch, batch_start, order_cache, product_cache)
             
             updated += batch_stats['updated']
             lines += batch_stats['lines']
@@ -400,10 +524,11 @@ class PurchaseOrderSageX3Optimized(models.Model):
             'updated': updated,
             'lines': lines,
             'errors': errors,
-            'skipped': skipped
+            'skipped': skipped,
+            'company_id': company_id
         }
 
-    def _process_batch(self, batch, offset):
+    def _process_batch(self, batch, offset, order_cache, product_cache):
         """Traite un lot de livraisons"""
         stats = {'updated': 0, 'lines': 0, 'errors': 0, 'skipped': 0}
         
@@ -420,7 +545,7 @@ class PurchaseOrderSageX3Optimized(models.Model):
                     continue
                 
                 # Utiliser le cache au lieu d'une recherche DB
-                order_id = self._order_cache.get(ref)
+                order_id = order_cache.get(ref)
                 if not order_id:
                     stats['skipped'] += 1
                     continue
@@ -428,7 +553,9 @@ class PurchaseOrderSageX3Optimized(models.Model):
                 order = self.browse(order_id)
                 
                 # Mise à jour des lignes
-                lines_count = self._update_order_lines_optimized(order, delivery.get("items", []))
+                lines_count = self._update_order_lines_optimized(
+                    order, delivery.get("items", []), product_cache
+                )
                 stats['lines'] += lines_count
                 
                 # Mise à jour de la commande
@@ -450,7 +577,7 @@ class PurchaseOrderSageX3Optimized(models.Model):
         
         return stats
 
-    def _update_order_lines_optimized(self, order, items):
+    def _update_order_lines_optimized(self, order, items, product_cache):
         """Mise à jour optimisée des lignes"""
         if not items:
             return 0
@@ -466,7 +593,7 @@ class PurchaseOrderSageX3Optimized(models.Model):
                 continue
             
             # Utiliser le cache produit
-            product_id = self._product_cache.get(article_code)
+            product_id = product_cache.get(article_code)
             if not product_id:
                 continue
             
@@ -540,10 +667,11 @@ class PurchaseOrderSageX3Optimized(models.Model):
         
         return quantity
 
-    def _get_last_import_date(self):
-        """Récupère la date du dernier import réussi"""
+    def _get_last_import_date(self, company_id):
+        """Récupère la date du dernier import réussi pour une société"""
         config = self.env['ir.config_parameter'].sudo()
-        last_import_str = config.get_param('sage_x3.last_import_date')
+        param_key = f'sage_x3.last_import_date.company_{company_id}'
+        last_import_str = config.get_param(param_key)
         
         if last_import_str:
             try:
@@ -554,15 +682,17 @@ class PurchaseOrderSageX3Optimized(models.Model):
         # Par défaut: 7 jours en arrière
         return datetime.now() - timedelta(days=7)
 
-    def _update_last_import_date(self):
-        """Met à jour la date du dernier import"""
+    def _update_last_import_date(self, company_id):
+        """Met à jour la date du dernier import pour une société"""
         config = self.env['ir.config_parameter'].sudo()
-        config.set_param('sage_x3.last_import_date', datetime.now().isoformat())
+        param_key = f'sage_x3.last_import_date.company_{company_id}'
+        config.set_param(param_key, datetime.now().isoformat())
 
-    def _notify_import_completion(self, stats, duration):
+    def _notify_import_completion(self, stats, duration, company_name):
         """Notification de fin"""
         message = f"""
         ✅ Import terminé en {duration:.1f}s
+        🏢 Société: {company_name}
         
         • Total: {stats['total']}
         • Mises à jour: {stats['updated']}
@@ -572,30 +702,28 @@ class PurchaseOrderSageX3Optimized(models.Model):
         """
         
         # Notifier les managers
-        group = self.env.ref('purchase.group_purchase_manager', raise_if_not_found=False)
-        if group:
-            for user in group.users:
-                self.env['bus.bus']._sendone(
-                    user.partner_id,
-                    'simple_notification',
-                    {
-                        'title': '✅ Import SAGE X3 terminé',
-                        'message': message,
-                        'type': 'success',
-                    }
-                )
+        user = self.env.user
+        if user:
+            self.env['bus.bus']._sendone(
+                user.partner_id,
+                'simple_notification',
+                {
+                    'title': f'✅ Import SAGE X3 terminé - {company_name}',
+                    'message': message,
+                    'type': 'success',
+                }
+            )
 
-    def _notify_import_error(self, error_msg):
+    def _notify_import_error(self, error_msg, company_name):
         """Notification d'erreur"""
-        group = self.env.ref('purchase.group_purchase_manager', raise_if_not_found=False)
-        if group:
-            for user in group.users:
-                self.env['bus.bus']._sendone(
-                    user.partner_id,
-                    'simple_notification',
-                    {
-                        'title': '❌ Erreur import SAGE X3',
-                        'message': error_msg,
+        user = self.env.user
+        if user:
+            self.env['bus.bus']._sendone(
+                user.partner_id,
+                'simple_notification',
+                {
+                    'title': f'❌ Erreur import SAGE X3 - {company_name}',
+                    'message': f'Société: {company_name}\n{error_msg}',
                         'type': 'danger',
                         'sticky': True,
                     }
@@ -603,10 +731,24 @@ class PurchaseOrderSageX3Optimized(models.Model):
 
     @api.model
     def cron_import_deliveries(self):
-        """Cron job"""
+        """Cron job avec détection automatique queue_job/threading"""
         _logger.info("🕐 [CRON] Import planifié")
-        self.with_delay(
-            description="[CRON] Import SAGE X3",
-            priority=5
-        )._job_import_deliveries()
+        
+        # Vérifier si queue_job est disponible
+        if 'queue.job' in self.env:
+            try:
+                self.with_delay(
+                    description="[CRON] Import SAGE X3",
+                    priority=5
+                )._job_import_deliveries()
+                _logger.info("✅ [CRON] Job queue_job créé")
+            except Exception as e:
+                _logger.error("❌ [CRON] Erreur queue_job: %s", str(e))
+                # Fallback direct
+                self._job_import_deliveries()
+        else:
+            # Exécution directe sans queue_job
+            _logger.info("📌 [CRON] Exécution directe (pas de queue_job)")
+            self._job_import_deliveries()
+        
         return True

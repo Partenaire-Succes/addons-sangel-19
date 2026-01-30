@@ -17,7 +17,7 @@
                 <attribute name="invisible">1</attribute>
             </xpath>
             <xpath expr="//button[@name='button_confirm'][1]" position="attributes">
-                <attribute name="invisible">1</attribute>
+                <attribute name="invisible">type_supplier == 'vridi' or state not in ['draft', 'sent']</attribute>
             </xpath>
             <xpath expr="//button[@name='button_confirm'][2]" position="attributes">
                 <attribute name="invisible">1</attribute>
@@ -31,13 +31,13 @@
                         string="Commande urgente" 
                         type="object"
                         class="oe_highlight"
-                        invisible="state not in ['draft', 'sent'] or sage_x3_validated == True or type_command != 'urgent'"/>
+                        invisible="state not in ['draft', 'sent'] or sage_x3_validated == True or type_command != 'urgent' or type_supplier != 'vridi'"/>
 
                 <button name="action_submit_to_sage_x3" 
                         string="Soumettre à SAGE X3" 
                         type="object" 
                         class="oe_highlight"
-                        invisible="state not in ['draft', 'sent'] or sage_x3_validated == True"/>
+                        invisible="1"/>
 
                 <button name="action_import_deliveries" 
                         string="Importer livraisons" 
