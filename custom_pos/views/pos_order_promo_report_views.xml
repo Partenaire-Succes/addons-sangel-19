@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- List View -->
+    <record id="view_pos_order_promo_report_list" model="ir.ui.view">
+        <field name="name">report.pos.order.promo.list</field>
+        <field name="model">report.pos.order.promo</field>
+        <field name="arch" type="xml">
+            <list string="Ventes Promo POS" create="false" edit="false">
+                <field name="date"/>
+                <field name="order_id"/>
+                <field name="session_id"/>
+                <field name="product_id"/>
+                <field name="qty" sum="Total Qté"/>
+                <field name="original_price" sum="Total Original"/>
+                <field name="promo_price" sum="Total Promo"/>
+                <field name="discount_amount" sum="Total Remise"/>
+                <field name="discount_percent" widget="progressbar"/>
+                <field name="margin" sum="Total Marge"/>
+                <field name="margin_percent" widget="progressbar"/>
+                <field name="promo_type" widget="badge" decoration-info="promo_type == 'reward'" decoration-success="promo_type == 'coupon'" decoration-warning="promo_type == 'discount'"/>
+                <field name="partner_id" optional="hide"/>
+                <field name="user_id" optional="hide"/>
+                <field name="config_id" optional="hide"/>
+                <field name="categ_id" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Pivot View -->
+    <record id="view_pos_order_promo_report_pivot" model="ir.ui.view">
+        <field name="name">report.pos.order.promo.pivot</field>
+        <field name="model">report.pos.order.promo</field>
+        <field name="arch" type="xml">
+            <pivot string="Analyse des ventes promo POS">
+                <field name="product_id" type="row"/>
+                <field name="date" type="col" interval="month"/>
+                <field name="qty" type="measure"/>
+                <field name="original_price" type="measure"/>
+                <field name="promo_price" type="measure"/>
+                <field name="discount_amount" type="measure"/>
+                <field name="margin" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- Graph View -->
+    <record id="view_pos_order_promo_report_graph" model="ir.ui.view">
+        <field name="name">report.pos.order.promo.graph</field>
+        <field name="model">report.pos.order.promo</field>
+        <field name="arch" type="xml">
+            <graph string="Ventes Promo POS" type="bar">
+                <field name="product_id"/>
+                <field name="discount_amount" type="measure"/>
+                <field name="margin" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_pos_order_promo_report_search" model="ir.ui.view">
+        <field name="name">report.pos.order.promo.search</field>
+        <field name="model">report.pos.order.promo</field>
+        <field name="arch" type="xml">
+            <search string="Rechercher ventes promo">
+                <field name="product_id"/>
+                <field name="order_id"/>
+                <field name="session_id"/>
+                <field name="partner_id"/>
+                <field name="config_id"/>
+                <field name="categ_id"/>
+                <separator/>
+                <filter name="filter_rewards" string="Lignes récompense" domain="[('is_reward_line', '=', True)]"/>
+                <filter name="filter_discounts" string="Remises manuelles" domain="[('promo_type', '=', 'discount')]"/>
+                <filter name="filter_coupons" string="Coupons" domain="[('coupon_id', '!=', False)]"/>
+                <separator/>
+                <filter name="filter_today" string="Aujourd'hui" domain="[('date', '&gt;=', (context_today()).strftime('%Y-%m-%d'))]"/>
+                <filter name="filter_week" string="Cette semaine" domain="[('date', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                <filter name="filter_month" string="Ce mois" domain="[('date', '&gt;=', (context_today()).strftime('%Y-%m-01'))]"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action - must be defined BEFORE menu -->
+    <record id="action_pos_order_promo_report" model="ir.actions.act_window">
+        <field name="name">Ventes Promo</field>
+        <field name="res_model">report.pos.order.promo</field>
+        <field name="view_mode">list,pivot,graph</field>
+        <field name="search_view_id" ref="view_pos_order_promo_report_search"/>
+        <field name="context">{'search_default_filter_month': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Aucune vente promo trouvée
+            </p>
+            <p>
+                Ce rapport affiche toutes les lignes de commandes POS avec des promotions, remises ou récompenses fidélité.
+                Utilisez les filtres pour analyser par type de promo, produit, session ou période.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu under POS > Commandes -->
+    <menuitem
+        id="menu_pos_order_promo_report"
+        name="Ventes Promo"
+        parent="point_of_sale.menu_point_of_sale"
+        action="action_pos_order_promo_report"
+        sequence="50"/>
+</odoo>
