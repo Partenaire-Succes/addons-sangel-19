@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    
+    <record id="view_stock_product_multicompany_form" model="ir.ui.view">
+        <field name="name">stock.product.multicompany.form</field>
+        <field name="model">stock.product.multicompany</field>
+        <field name="arch" type="xml">
+            <form string="Stock multi-sociétés">
+                <sheet>
+
+                    <!-- Société -->
+                    <group>
+                        <field name="company_id" options="{'no_create': True}"/>
+                    </group>
+
+                    <!-- Sélection des produits -->
+                    <group>
+                        <field name="product_ids"
+                            widget="many2many_tags"
+                            options="{'no_create': True}"
+                            placeholder="Sélectionner les produits"/>
+                    </group>
+
+                    <!-- Résultat : stock par produit -->
+                    <!-- <group string="Stock disponible">
+                        <field name="line_ids" nolabel="1">
+                            <list editable="bottom" create="false" delete="false">
+                                <field name="product_id"/>
+                                <field name="qty_available"/>
+                            </list>
+                        </field>
+                    </group> -->
+                    <notebook>
+                        <page name="product_stock" string="Stock disponible">
+                            <field name="line_ids">
+                                <list editable="bottom">
+                                    <field name="product_id"/>
+                                    <field name="qty_available"/>
+                                </list>
+                            </field>
+                            
+                        </page>
+                    </notebook>
+
+                </sheet>
+
+                <!-- Boutons -->
+                <footer>
+                    <button string="Fermer"
+                            class="btn-secondary"
+                            special="cancel"/>
+                </footer>
+
+            </form>
+        </field>
+    </record>
+
+    <record id="action_stock_product_multicompany" model="ir.actions.act_window">
+        <field name="name">Stock multi-sociétés</field>
+        <field name="res_model">stock.product.multicompany</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem 
+        id="menu_stock_multicompany"
+        name="Stock Multi-Sociétés"
+        parent="stock.menu_stock_adjustments"
+        action="action_stock_product_multicompany"
+        sequence="100"/>
+
+</odoo>

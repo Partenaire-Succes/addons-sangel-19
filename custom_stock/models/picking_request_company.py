@@ -26,7 +26,7 @@ class StockPickingSupplyRequest(models.Model):
     send_company_id = fields.Many2one(
         'res.company',
         required=True,
-        string='Magasin qUI Cède',
+        string='Magasin qui Cède',
         help="Société à laquelle appartient le transfert inter-société")
     date_done = fields.Date('Date de réalisation', default=fields.Date.context_today, readonly=True)
     state = fields.Selection(
