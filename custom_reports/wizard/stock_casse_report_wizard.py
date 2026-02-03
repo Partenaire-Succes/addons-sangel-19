@@ -24,6 +24,11 @@ class StockCasseReport(models.TransientModel):
         default=lambda self: self.env.company,
     )
 
+    scrap_reason_tag_ids = fields.Many2many(
+        'stock.scrap.reason.tag',
+        string='Raisons de casse',
+    )
+
     scrap_lines_ids = fields.Many2many(
         'stock.scrap',
         string='Lignes de casse',
@@ -38,6 +43,7 @@ class StockCasseReport(models.TransientModel):
                 ('date_done', '<=', record.date_to),
                 ('company_id', '=', record.company_id.id),
                 ('state', '=', 'done'),
+                ('scrap_reason_tag_ids', 'in', record.scrap_reason_tag_ids.ids),
             ], order='date_done, name')
             # Consider 'CASSE' as scraps whose source location is not internal
         #    record.scrap_lines_ids = scraps.filtered(lambda s: s.location_id.usage != 'internal')

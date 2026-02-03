@@ -26,4 +26,26 @@ patch(Orderline.prototype, {
         const cost = line.product_id.standard_price ?? 0;
         return cost > 0 && unitPrice < cost;
     },
+
+    get hasItemsOnSale() {
+        const line = this.props.line;
+        if (!line || !line.product_id) {
+            return false;
+        }
+        const discount = Number(line.discount || 0);
+        return discount > 0;
+    },
+
+    get hasNegativePrice() {
+        const line = this.props.line;
+        if (!line) {
+            return false;
+        }
+        return line.getDisplayPrice() < 0;
+    },
+
+    get hasCriticalIssue() {
+        return this.hasItemsOnSale || this.hasNegativePrice;
+    }
+
 });

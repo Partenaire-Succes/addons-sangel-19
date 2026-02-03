@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        
+        <!-- Règle pour limiter l'accès aux demandes de la société de l'utilisateur uniquement -->
+        <record id="stock_picking_inter_comp_rule" model="ir.rule">
+            <field name="name">Inter Company Transfer: société de l'utilisateur uniquement</field>
+            <field name="model_id" ref="model_stock_picking_inter"/>
+            <field name="domain_force">[('send_company_id', 'in', company_ids)]</field>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <record id="stock_picking_supply_request_comp_rule" model="ir.rule">
+            <field name="name">Demande de réappro: société de l'utilisateur uniquement</field>
+            <field name="model_id" ref="model_stock_picking_supply_request"/>
+            <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <record id="stock_scrap_breakers_comp_rule" model="ir.rule">
+            <field name="name">Casse: société de l'utilisateur uniquement</field>
+            <field name="model_id" ref="model_stock_scrap_breakers"/>
+            <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <record id="stock_physical_inventory_comp_rule" model="ir.rule">
+            <field name="name">Inventaire physique: société de l'utilisateur uniquement</field>
+            <field name="model_id" ref="model_physical_inventory"/>
+            <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+    </data>
+</odoo>

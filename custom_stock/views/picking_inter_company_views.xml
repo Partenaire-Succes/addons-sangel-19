@@ -40,6 +40,8 @@
                                 <field name="date_done" string="Effective Date" invisible="state != 'done'"/>
                                 <field name="origin" placeholder="e.g. PO0032" readonly="state in ['cancel', 'done']"/>
                                 <field name="picking_id" readonly="1"/>
+                                <field name="source" readonly="1"/>
+
                             </group>
                             <group string="Destination">
                                 <field name="company_id" options="{'no_open': True}" readonly="state in ['cancel', 'done']"/>
@@ -112,7 +114,7 @@
         </record>
 
         <record id="stock_picking_inter_action" model="ir.actions.act_window">
-            <field name="name">Transferts interentreprises</field>
+            <field name="name">Cession inter magasin</field>
             <field name="res_model">stock.picking.inter</field>
             <field name="view_mode">list,form</field>
             <field name="help" type="html">
@@ -125,7 +127,7 @@
         </record>
 
         <menuitem
-            name="Transfert Inter Magasin"
+            name="Cession inter magasin"
             id="menu_stock_picking_inter"
             parent="stock.menu_stock_transfers"
             action="stock_picking_inter_action"

@@ -8,6 +8,7 @@
             <list string="Ventes Promo POS" create="false" edit="false">
                 <field name="date"/>
                 <field name="order_id"/>
+                <field name="company_id"/>
                 <field name="session_id"/>
                 <field name="product_id"/>
                 <field name="qty" sum="Total Qté"/>

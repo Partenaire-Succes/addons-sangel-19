@@ -22,6 +22,7 @@
     'data': [
         'security/ir.model.access.csv',
         'security/security.xml',
+        'security/pos_security.xml',
         'data/ir_sequence_data.xml',
         'report/prelevement_ticket_report.xml',
         'report/prelevement_ticket_template.xml',

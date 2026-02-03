@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="stock_picking_supply_request_view_form" model="ir.ui.view">
+            <field name="name">stock.picking.supply.request.view.form</field>
+            <field name="model">stock.picking.supply.request</field>
+            <field name="arch" type="xml">
+                <form string="">
+                    <header>
+                        <button name="action_confirm_inter" type="object" string="Confirmé" invisible="state != 'draft'" class="btn btn-success"/>
+                        <field name="state" widget="statusbar" statusbar_visible="draft,done,cancel"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_title">
+                            <h1 class="d-flex">
+                                <field name="name"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <group string="Source">
+                                <field name="company_id" options="{'no_open': True}" readonly="1"/>
+                                <field name="picking_type_id" readonly="state in ['cancel', 'done']"/>
+                                <field name="location_dest_id" readonly="state in ['cancel', 'done']"/>
+                            </group>
+                            <group  string="Fournisseur">
+                                <field name="partner_id" readonly="state in ['cancel', 'done']" placeholder="e.g. Lumber Inc"/>
+                                <field name="send_company_id" options="{'no_open': True}" readonly="state in ['cancel', 'done']"/>
+                                <field name="date_done" invisible="state in ('done', 'cancel') or not date_done"
+                                        decoration-danger="date_done and date_done &lt; current_date"
+                                        decoration-bf="date_done and date_done &lt; current_date"/>
+                                <field name="location_id" readonly="state in ['cancel', 'done']"/>
+                            </group>
+                            
+                        </group>
+                        <notebook>
+                            <page name="operation" string="Operetions">
+                                <field name="supply_request_line_ids" mode="list,kanban" widget="stock_move_one2many">
+
+                                    <list editable="bottom" >
+
+                                        <field name="product_id"/>
+                                        <field name="qty_available" />
+                                        <field name="product_uom_qty"/>
+                                    </list>
+                                </field>
+                            </page>
+
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="stock_picking_supply_request_view_list" model="ir.ui.view">
+            <field name="name">stock.picking.supply.request.view.list</field>
+            <field name="model">stock.picking.supply.request</field>
+            <field name="arch" type="xml">
+                <list string="">
+                    <field name="name"/>
+                    <field name="date_done"/>
+                    <field name="company_id"/>
+                    <field name="send_company_id"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="stock_picking_supply_request_action" model="ir.actions.act_window">
+            <field name="name">Demandes de cession inter magasin</field>
+            <field name="res_model">stock.picking.supply.request</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_create">
+                    Create your first request inter company.
+                </p>
+            </field>
+            <field name="context"></field>
+            <field name="domain">[]</field>
+        </record>
+
+        <menuitem
+            name="Demande cession"
+            id="menu_stock_picking_supply_request"
+            parent="stock.menu_stock_transfers"
+            action="stock_picking_supply_request_action"
+            sequence="23"
+        />
+
+    </data>
+</odoo>

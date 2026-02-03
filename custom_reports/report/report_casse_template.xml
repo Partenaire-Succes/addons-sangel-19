@@ -19,6 +19,7 @@
                                         <tr>
                                             <th>Code article</th>
                                             <th>Nom de l'article</th>
+                                            <th>Raison</th>
                                             <th>Coût</th>
                                             <th class="text-right">Quantité casse</th>
                                             <th class="text-right">Valorisation casse</th>
@@ -29,6 +30,7 @@
                                             <tr>
                                                 <td><span t-esc="scrap.product_id.code_article or scrap.product_id.default_code or ''"/></td>
                                                 <td><span t-esc="scrap.product_id.name"/></td>
+                                                <td><span t-esc="', '.join(scrap.scrap_reason_tag_ids.mapped('name'))"/></td>
                                                 <td class="text-right"><span t-esc="'%.2f' % (scrap.product_id.standard_price or 0.0)"/></td>
                                                 <td class="text-right"><span t-esc="'%.2f' % scrap.scrap_qty"/></td>
                                                 <td class="text-right"><span t-esc="'%.2f' % (scrap.scrap_qty * (scrap.product_id.standard_price or 0.0))"/></td>
@@ -37,7 +39,7 @@
                                     </tbody>
                                     <tfoot>
                                         <tr style="background-color:#e9ecef; font-weight:bold;">
-                                            <td colspan="3">TOTAL</td>
+                                            <td colspan="4">TOTAL</td>
                                             <td class="text-right"><span t-esc="'%.2f' % sum([s.scrap_qty for s in o.scrap_lines_ids])"/></td>
                                             <td class="text-right"><span t-esc="'%.2f' % sum([s.scrap_qty * (s.product_id.standard_price or 0.0) for s in o.scrap_lines_ids])"/></td>
                                         </tr>

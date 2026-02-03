@@ -25,4 +25,5 @@ from . import (
     teams_inventory,
     purchase_order,
     stock_scrap_breakers,
+    picking_request_company
 )

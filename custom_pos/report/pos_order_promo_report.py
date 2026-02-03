@@ -29,7 +29,7 @@ class PosOrderPromoReport(models.Model):
     session_id = fields.Many2one('pos.session', string='Session', readonly=True)
     config_id = fields.Many2one('pos.config', string='Point de vente', readonly=True)
     partner_id = fields.Many2one('res.partner', string='Client', readonly=True)
-    company_id = fields.Many2one('res.company', string='Société', readonly=True)
+    company_id = fields.Many2one('res.company', string='Société', readonly=True, default=lambda self: self.env.company.id)
     user_id = fields.Many2one('res.users', string='Vendeur', readonly=True)
 
     # Info Produit

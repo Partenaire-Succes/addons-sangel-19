@@ -16,6 +16,20 @@ class StockScrapBreakers(models.Model):
         ('done', 'Terminé'),
         ('cancelled', 'Annulé'),
     ], string="État", default='draft', tracking=True)
+    company_id = fields.Many2one(
+        'res.company',
+        string='Société',
+        required=True,
+        default=lambda self: self.env.company
+    )
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Generate a unique name for new inter company transfer."""
+        for vals in vals_list:
+            if not vals.get('name') or vals.get('name') == 'Nouveau':
+                vals['name'] = self.env['ir.sequence'].sudo().next_by_code('stock.scrap.breakers') or 'Nouveau'
+        return super(StockScrapBreakers, self).create(vals_list)
 
     def action_validate_breaker(self):
         """Valide le groupe de rebuts en confirmant tous les rebuts associés"""
