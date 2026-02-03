@@ -22,14 +22,6 @@
                     </group>
 
                     <!-- Résultat : stock par produit -->
-                    <!-- <group string="Stock disponible">
-                        <field name="line_ids" nolabel="1">
-                            <list editable="bottom" create="false" delete="false">
-                                <field name="product_id"/>
-                                <field name="qty_available"/>
-                            </list>
-                        </field>
-                    </group> -->
                     <notebook>
                         <page name="product_stock" string="Stock disponible">
                             <field name="line_ids">
@@ -65,8 +57,8 @@
     <menuitem 
         id="menu_stock_multicompany"
         name="Stock Multi-Sociétés"
-        parent="stock.menu_stock_adjustments"
+        parent="stock.menu_stock_transfers"
         action="action_stock_product_multicompany"
-        sequence="100"/>
+        sequence="22"/>
 
 </odoo>
