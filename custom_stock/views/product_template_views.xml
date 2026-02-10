@@ -128,6 +128,18 @@
                     <field name="max_qty_orderpoint"/>
                     <field name="pending_reception_qty"/>
                 </xpath>
+
+                <!-- Affichage dans la carte -->
+                <xpath expr="//t[@t-name='card']//div[@class='ps-2 d-flex flex-column m-0']" position="inside">
+                    <div class="mt-1 text-muted small">
+                        <div>
+                            Max = <field name="max_qty_orderpoint"/>
+                        </div>
+                        <div>
+                            Réception = <field name="pending_reception_qty"/>
+                        </div>
+                    </div>
+                </xpath>
             </field>
         </record>
 
