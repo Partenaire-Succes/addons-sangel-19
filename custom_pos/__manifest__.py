@@ -9,18 +9,20 @@
 #############################################################################
 {
     'name': 'Personnalisation du Point de vente',
+    'version': '18.0',
     'category': 'POS',
-    'summary': """Customisation de Point de vente pour Odoo 19.0""",
+    'summary': """Customisation de Point de vente pour Odoo 18.0""",
     'description': """Adaptation du module Point de vente pour répondre aux besoins 
-        spécifiques des utilisateurs d'Odoo 19.0.""",
+        spécifiques des utilisateurs d'Odoo 18.0.""",
     'author': 'Adams KONE',
     'company': 'Partenaires Succes',
     'maintainer': 'Adams KONE',
     'website': "https://www.partenairesucces.com/",
     'depends': ['sale', 'point_of_sale', 'account', 'pos_loyalty'],
     'data': [
-        # 'security/ir.model.access.csv',
+        'security/ir.model.access.csv',
         'security/security.xml',
+        'security/pos_security.xml',
         'data/ir_sequence_data.xml',
         'report/prelevement_ticket_report.xml',
         'report/prelevement_ticket_template.xml',
@@ -29,6 +31,7 @@
         'views/pos_config_inherit_views.xml',
         'views/pos_payment_method_inherit_views.xml',
         'views/pos_session_inherit_views.xml',
+        'views/pos_order_promo_report_views.xml',
     ],
     'images': ['static/description/banner.png'],
     'license': 'AGPL-3',

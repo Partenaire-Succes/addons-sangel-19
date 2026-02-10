@@ -21,6 +21,7 @@
     'data': [
         'security/ir.model.access.csv',
         'security/product_security.xml',
+        'security/stock_picking_inter_security.xml',
         'data/code_category_inventory_data.xml',
         'data/data_sequence.xml',
         'data/product_pricelist_data.xml',
@@ -40,6 +41,9 @@
         'views/sale_order_views.xml',
         'views/stock_warehouse_orderpoint_view.xml',
         'views/purchase_order_views.xml',
+        'views/stock_scrap_breakers_views.xml',
+        'views/picking_request_company_views.xml',
+        'views/stock_product_multicompany_views.xml',
     ],
     'license': 'AGPL-3',
     'installable': True,

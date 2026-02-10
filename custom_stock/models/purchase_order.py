@@ -15,3 +15,7 @@ class PurchaseOrderSageX3Optimized(models.Model):
         ('normal', 'Normale'),
         ('urgent', 'Urgente'),
     ], string="Type de commande", default='normal', copy=False)
+    type_supplier = fields.Selection([
+        ('vridi', 'VRIDI'),
+        ('local', 'Local/Autres'),
+    ], string="Type de fournisseur", default='vridi', copy=False)

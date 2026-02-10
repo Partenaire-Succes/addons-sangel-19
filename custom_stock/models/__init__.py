@@ -23,5 +23,8 @@ from . import (
     stock_picking,
     stock_warehouse_orderpoint,
     teams_inventory,
-    purchase_order
+    purchase_order,
+    stock_scrap_breakers,
+    picking_request_company,
+    stock_product_multicompany_view,
 )

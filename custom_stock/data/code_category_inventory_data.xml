@@ -1,28 +1,40 @@
 <odoo>
     <data>
         <record id="code_invenory_category_a" model="code.category.inventory">
-            <field name="name">Code inventaire A</field>
+            <field name="name">Code inventaire 4</field>
         </record>
         <record id="code_invenory_category_b" model="code.category.inventory">
-            <field name="name">Code inventaire B</field>
+            <field name="name">Code inventaire 5</field>
         </record>
         <record id="code_invenory_category_c" model="code.category.inventory">
-            <field name="name">Code inventaire C</field>
+            <field name="name">Code inventaire 6</field>
         </record>
         <record id="code_invenory_category_d" model="code.category.inventory">
-            <field name="name">Code inventaire D</field>
+            <field name="name">Code inventaire 7</field>
         </record>
         <record id="code_invenory_category_e" model="code.category.inventory">
-            <field name="name">Code inventaire E</field>
+            <field name="name">Code inventaire 8</field>
         </record>
         <record id="code_invenory_category_f" model="code.category.inventory">
-            <field name="name">Code inventaire F</field>
+            <field name="name">Code inventaire 9</field>
         </record>
         <record id="code_invenory_category_g" model="code.category.inventory">
-            <field name="name">Code inventaire G</field>
+            <field name="name">Code inventaire 10</field>
         </record>
         <record id="code_invenory_category_h" model="code.category.inventory">
-            <field name="name">Code inventaire H</field>
+            <field name="name">Code inventaire 11</field>
+        </record>
+        <record id="code_invenory_category_i" model="code.category.inventory">
+            <field name="name">Code inventaire 12</field>
+        </record>
+        <record id="code_invenory_category_j" model="code.category.inventory">
+            <field name="name">Code inventaire 13</field>
+        </record>
+        <record id="code_invenory_category_k" model="code.category.inventory">
+            <field name="name">Code inventaire 14</field>
+        </record>
+        <record id="code_invenory_category_l" model="code.category.inventory">
+            <field name="name">Code inventaire 15</field>
         </record>
     </data>
 </odoo>

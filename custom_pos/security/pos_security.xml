@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        
+        <!-- Règle pour limiter l'accès aux demandes de la société de l'utilisateur uniquement -->
+        <record id="view_report_pos_promo_rule" model="ir.rule">
+            <field name="name">Produit en promo: société de l'utilisateur uniquement</field>
+            <field name="model_id" ref="model_report_pos_order_promo"/>
+            <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+    </data>
+</odoo>

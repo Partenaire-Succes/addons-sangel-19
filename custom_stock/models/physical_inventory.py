@@ -58,6 +58,8 @@ class PhysicalInventory(models.Model):
 
     def action_done(self):
         self.write({'state': 'done', 'date_done': fields.Datetime.now()})
+        for line in self.physical_line_ids:
+            line.product_tmpl_id.write({'qty_available': line.physical_qty})
 
     def action_draft(self):
         self.write({'state': 'draft', 'date_done': False})

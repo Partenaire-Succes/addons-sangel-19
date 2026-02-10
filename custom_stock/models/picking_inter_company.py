@@ -61,6 +61,10 @@ class StockPickingInter(models.Model):
         'stock.picking.inter.line',
         'picking_inter_id',
     )
+    supply_request_id = fields.Many2one(
+        'stock.picking.supply.request',
+        string='Demande de transfert inter-société')
+    source = fields.Char('Source')
 
     _sql_constraints = [
         ('unique_name', 'unique(name)', 'Le nom doit être unique.')
@@ -116,17 +120,14 @@ class StockPickingInter(models.Model):
             ], limit=1)
 
             _logger.info('picking_type_out: %s et location_dest_out : %s', picking_type_out.name,
-                         location_dest_out.name)
+                        location_dest_out.name)
             if not picking_type_out:
                 raise UserError(_("Veuillez configurer un type de picking sortant pour la société sélectionnée."))
             if not location_dest_out:
                 raise UserError(_("Veuillez configurer un emplacement de destination pour la société sélectionnée."))
 
             move_lines = []
-            move_line_vals = []
-
             out_move_lines = []
-            out_move_line_vals = []
 
             for line in picking.picking_inter_line_ids:
                 if not line.product_id:
@@ -134,23 +135,8 @@ class StockPickingInter(models.Model):
                 if line.product_uom_qty <= 0:
                     raise UserError(
                         _("La quantité demandée doit être supérieure à zéro pour le produit %s.") % line.product_id.name)
-                # line.product_id.product_tmpl_id.action_generate_lot(company_id=line.company_id.id)
-
-                # Génération des lots
-                # lots = self.env['stock.lot'].action_create_lot(
-                #     product_id=line.product_id,
-                #     company_id=line.company_id,
-                #     qte=line.product_uom_qty,
-                #     location_id=line.location_id
-                # )
-                #
-                # out_lots = self.env['stock.lot'].action_create_lot(
-                #     product_id=line.product_id,
-                #     company_id=company_connect,
-                #     qte=line.product_uom_qty,
-                #     location_id=location_dest_out
-                # )
-                # Stock move
+                
+                # Stock move pour le picking entrant
                 move_lines.append((0, 0, {
                     'company_id': line.company_id.id,
                     'product_id': line.product_id.id,
@@ -163,6 +149,7 @@ class StockPickingInter(models.Model):
                     'product_uom': line.product_id.uom_id.id,
                 }))
 
+                # Stock move pour le picking sortant
                 out_move_lines.append((0, 0, {
                     'company_id': company_connect.id,
                     'product_id': line.product_id.id,
@@ -175,30 +162,7 @@ class StockPickingInter(models.Model):
                     'product_uom': line.product_id.uom_id.id,
                 }))
 
-                # Stock move lines (quantité réelle avec lot unitaire)
-                # for lot in lots:
-                #     move_line_vals.append((0, 0, {
-                #         'product_id': line.product_id.id,
-                #         'lot_id': lot.id,
-                #         'lot_name': lot.name,
-                #         'quantity': 1.0,
-                #         'product_uom_id': line.product_id.uom_id.id,
-                #         'location_id': line.location_id.id,
-                #         'location_dest_id': line.location_dest_id.id,
-                #     }))
-
-                # for lot in out_lots:
-                #     out_move_line_vals.append((0, 0, {
-                #         'product_id': line.product_id.id,
-                #         'lot_id': lot.id,
-                #         'lot_name': lot.name,
-                #         'quantity': 1.0,
-                #         'product_uom_id': line.product_id.uom_id.id,
-                #         'location_id': location_dest_out.id,
-                #         'location_dest_id': line.location_id.id,
-                #     }))
-
-            # Création du picking entrant
+            # Création du picking entrant avec le contexte de la société destinataire
             incoming_vals = {
                 'name': picking.name,
                 'picking_type_id': picking.picking_type_id.id,
@@ -211,24 +175,29 @@ class StockPickingInter(models.Model):
                 'picking_type_code': 'incoming',
                 'picking_inter_id': picking.id,
                 'move_ids': move_lines,
-                'move_line_ids': move_line_vals,
             }
 
-            incoming_picking = self.env['stock.picking'].with_context(force_company=False).sudo().search([
+            # IMPORTANT: Utiliser sudo() avec le contexte de la société cible
+            incoming_picking = self.env['stock.picking'].sudo().with_context(
+                allowed_company_ids=[picking.company_id.id],
+                force_company=picking.company_id.id
+            ).search([
                 ('name', '=', picking.name),
                 ('picking_type_code', '=', 'incoming'),
                 ('company_id', '=', picking.company_id.id)
             ])
 
             if incoming_picking:
-                incoming_picking.sudo().write(incoming_vals)
+                incoming_picking.write(incoming_vals)
             else:
-                incoming_picking = self.env['stock.picking'].sudo().create(incoming_vals)
+                incoming_picking = self.env['stock.picking'].sudo().with_context(
+                    allowed_company_ids=[picking.company_id.id],
+                    force_company=picking.company_id.id
+                ).create(incoming_vals)
                 picking.write({'picking_id': incoming_picking.id})
                 incoming_picking.action_confirm()
 
-            # Copie pour créer le picking sortant
-
+            # Création du picking sortant avec le contexte de la société émettrice
             outgoing_vals = {
                 'name': f"{picking.name} - OUT",
                 'picking_type_id': picking_type_out.id,
@@ -241,28 +210,30 @@ class StockPickingInter(models.Model):
                 'picking_type_code': 'outgoing',
                 'picking_inter_id': picking.id,
                 'move_ids': out_move_lines,
-                'move_line_ids': out_move_line_vals,
             }
-            # Recherche du picking sortant existant ou création d'un nouveau
-            outgoing_picking = self.env['stock.picking'].with_context(force_company=False).sudo().search([
+
+            # IMPORTANT: Utiliser sudo() avec le contexte de la société émettrice
+            outgoing_picking = self.env['stock.picking'].sudo().with_context(
+                allowed_company_ids=[company_connect.id],
+                force_company=company_connect.id
+            ).search([
                 ('name', '=', f"{picking.name} - OUT"),
                 ('picking_type_code', '=', 'outgoing'),
                 ('company_id', '=', company_connect.id)
             ])
 
             if outgoing_picking:
-                outgoing_picking = self.env['stock.picking'].sudo().update(outgoing_vals)
-                outgoing_picking.write({
-                    'state': 'assigned',
-                })
+                outgoing_picking.write(outgoing_vals)
+                outgoing_picking.write({'state': 'assigned'})
             else:
-                outgoing_picking = self.env['stock.picking'].sudo().create(outgoing_vals)
+                outgoing_picking = self.env['stock.picking'].sudo().with_context(
+                    allowed_company_ids=[company_connect.id],
+                    force_company=company_connect.id
+                ).create(outgoing_vals)
                 outgoing_picking.action_confirm()
 
             # Mise à jour de l'état du picking inter-société
-            picking.write({
-                'state': 'confirmed',
-            })
+            picking.write({'state': 'confirmed'})
 
     def action_cancel(self):
         for inter in self:

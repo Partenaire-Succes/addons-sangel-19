@@ -78,7 +78,8 @@ class ReceptionFournisseurWizard(models.TransientModel):
 
             total_reception = 0.0
 
-            for move in picking.move_ids_without_package:
+            # for move in picking.move_ids_without_package:
+            for move in picking.move_ids:
                 if move.purchase_line_id:
                     total_reception = move.purchase_line_id.order_id.amount_total
 

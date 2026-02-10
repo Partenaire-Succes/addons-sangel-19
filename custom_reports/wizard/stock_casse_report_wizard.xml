@@ -10,9 +10,12 @@
                     <sheet>
                         <group>
                             <group>
+                                <field name="scrap_reason_tag_ids" widget="many2many_tags"/>
+                                <field name="company_id" readonly="1"/>
+                            </group>
+                            <group>
                                 <field name="date_from"/>
                                 <field name="date_to"/>
-                                <field name="company_id" readonly="1"/>
                             </group>
                         </group>
 
