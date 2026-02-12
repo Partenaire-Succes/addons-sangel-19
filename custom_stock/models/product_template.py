@@ -154,8 +154,8 @@ class ProductTemplateInherit(models.Model):
     )
 
     price_unit_ttc = fields.Float(
-        string="Prix Unitaire TTC",
-        help="Prix de vente unitaire toutes taxes comprises.",
+        string="Prix Catalogue",
+        help="Prix de vente catalogue toutes taxes comprises.",
     )
 
     marque = fields.Char(

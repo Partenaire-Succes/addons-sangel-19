@@ -317,33 +317,32 @@ class AccountMove(models.Model):
             # Remise
             if line.discount > 0:
                 item_data['discount'] = line.discount
-            
+
+            if not self.partner_id.phone:
+                raise UserError(_("Veuillez renseigner le téléphone du client pour la certification FNE."))
+
+            if not self.partner_id.email:
+                raise UserError(_("Veuillez renseigner l'email du client pour la certification FNE."))
+
             # Taxes
             item_taxes = []
             custom_taxes = []
-            
-            for tax in line.tax_ids:
-                if 'TVA' in tax.name.upper():
-                    if '18' in tax.name:
-                        item_taxes.append('TVA')
-                    elif '9' in tax.name:
-                        item_taxes.append('TVAB')
-                    elif 'EXEC' in tax.name.upper() and 'CONV' in tax.name.upper():
-                        item_taxes.append('TVAC')
-                    elif 'EXEC' in tax.name.upper() and 'LEG' in tax.name.upper():
-                        item_taxes.append('TVAD')
-                else:
-                    custom_taxes.append({
-                        'name': tax.name[:20],
-                        'amount': tax.amount
-                    })
-            
-            if not item_taxes:
-                item_taxes = ['TVA']  # Par défaut
-            
-            item_data['taxes'] = item_taxes
-            if custom_taxes:
-                item_data['customTaxes'] = custom_taxes
+
+            if line.tax_ids:
+                for tax in line.tax_ids:
+                    if tax.tax_type in ['TVA', 'TVAB', 'TVAC', 'TVAD']:
+                        item_taxes.append(tax.tax_type)
+                    else:
+                        custom_taxes.append({
+                            'name': tax.name[:20],
+                            'amount': tax.amount
+                        })
+                
+                item_data['taxes'] = item_taxes
+                if custom_taxes:
+                    item_data['customTaxes'] = custom_taxes
+            else:
+                item_data['taxes'] = ['TVAD']
             
             items.append(item_data)
         
@@ -353,13 +352,20 @@ class AccountMove(models.Model):
             'paymentMethod': self.fne_payment_method or 'cash',
             'template': self.fne_template or 'B2C',
             'isRne': False,
-            'clientCompanyName': self.partner_id.name or 'Client',
-            'clientPhone': self.partner_id.phone or '0000000000',
-            'clientEmail': self.partner_id.email or 'noemail@example.com',
+            'clientCompanyName': self.partner_id.name,
+            'clientPhone': self.partner_id.phone,
+            'clientEmail': self.partner_id.email,
             'pointOfSale': config.fne_point_of_sale,
             'establishment': config.fne_establishment,
             'items': items
         }
+
+        rate = self.currency_id._get_conversion_rate(
+            self.currency_id,
+            self.company_id.currency_id,
+            self.company_id,
+            self.invoice_date or fields.Date.today(),
+        )
         
         # NCC pour B2B
         if self.fne_template == 'B2B' and self.partner_id.vat:
@@ -368,7 +374,7 @@ class AccountMove(models.Model):
         # Devise étrangère pour B2F
         if self.fne_template == 'B2F' and self.currency_id.name != 'XOF':
             data['foreignCurrency'] = self.currency_id.name
-            data['foreignCurrencyRate'] = self.currency_id.rate or 1
+            data['foreignCurrencyRate'] = rate or 1
         else:
             data['foreignCurrency'] = ''
             data['foreignCurrencyRate'] = 0

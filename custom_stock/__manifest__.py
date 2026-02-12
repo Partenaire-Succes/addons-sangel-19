@@ -17,7 +17,7 @@
     'company': 'Partenaires Succes',
     'maintainer': 'Adams KONE',
     'website': "https://www.partenairesucces.com/",
-    'depends': ['base','stock','product','sale','purchase','hr','custom_pos'],
+    'depends': ['base','stock','product','sale','purchase','hr','custom_pos','account'],
     'data': [
         'security/ir.model.access.csv',
         'security/product_security.xml',
@@ -44,6 +44,7 @@
         'views/stock_scrap_breakers_views.xml',
         'views/picking_request_company_views.xml',
         'views/stock_product_multicompany_views.xml',
+        # 'views/account_views.xml',
     ],
     'license': 'AGPL-3',
     'installable': True,

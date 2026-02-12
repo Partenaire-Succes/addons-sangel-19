@@ -21,6 +21,7 @@
         'views/fne_invoice_view.xml',
         'views/res_partner_views.xml',
         'views/report_invoice_fne.xml',
+        'views/account_tax_views.xml',
     ],
 
     'license': 'LGPL-3',

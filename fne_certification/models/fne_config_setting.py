@@ -33,7 +33,6 @@ class FneConfigSettings(models.Model):
         string='URL API',
         compute='_compute_api_url',
         store=True,
-        readonly=True
     )
     
     fne_point_of_sale = fields.Char(
@@ -86,7 +85,10 @@ class FneConfigSettings(models.Model):
                 rec.fne_api_url = ''
 
     def action_validate(self):
-        self.write({'state': 'validated'})
+        self.write({
+            'state': 'validated',
+            'is_fne_enabled': True
+            })
 
     def test_connection(self):
         """Tester la connexion à l'API FNE"""

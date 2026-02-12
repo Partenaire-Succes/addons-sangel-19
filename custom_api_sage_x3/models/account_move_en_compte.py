@@ -136,7 +136,7 @@ class AccountMoveSageX3(models.Model):
         - UNIQUEMENT pour la société passée en paramètre (isolation stricte)
         - Basé sur pos.session.payment_ids
         - PAIEMENTS COMPTANT (is_limit=False): GROUPÉS par mode de paiement
-        - PAIEMENTS CRÉDIT (is_limit=True): AUCUN REGROUPEMENT - une ligne par paiement
+        - PAIEMENTS CRÉDIT (is_limit=True): LIGNE PAR LIGNE (un par client)
         
         Paramètres:
             company: res.company - La société (UNE SEULE)
@@ -164,10 +164,10 @@ class AccountMoveSageX3(models.Model):
             _logger.info("   • Session: %s (Caisse: %s)", session.name, session.config_id.name)
         
         # Regroupement des paiements
-        # payments_cash: {(account_code, payment_method_name): total_amount} - GROUPÉ
-        # payments_credit_lines: [liste de lignes] - AUCUN REGROUPEMENT
+        # payments_cash: {(account_code, payment_method_name): total_amount} - GROUPÉ par mode de paiement
+        # payments_credit: {(account_code, payment_method_name): {third_party: total_amount}} - LIGNE PAR CLIENT
         payments_cash = defaultdict(float)
-        payments_credit_lines = []  # Liste de lignes individuelles (pas de regroupement)
+        payments_credit = defaultdict(lambda: defaultdict(float))
         
         total_payments_processed = 0
         
@@ -205,41 +205,31 @@ class AccountMoveSageX3(models.Model):
                 if amount == 0:
                     continue
                 
+                # Clé de regroupement : (compte, nom du moyen de paiement)
+                payment_key = (debit_account.code, payment_method.name)
+                
                 # Vérifier si c'est un paiement crédit (client en compte)
                 if payment_method.is_limit:
-                    # PAIEMENT CRÉDIT: AUCUN REGROUPEMENT
-                    # → Créer UNE LIGNE par paiement (pas d'accumulation)
+                    # PAIEMENT CRÉDIT: avec thirdParty (compte client)
+                    # → UNE LIGNE PAR CLIENT (pas de regroupement global)
                     partner = payment.partner_id
                     
                     if partner and partner.customer_id:
                         third_party = partner.customer_id.strip()
+                        # Accumuler par client (permet de regrouper si même client multiple fois)
+                        payments_credit[payment_key][third_party] += amount
                         
-                        # Créer directement la ligne (pas d'accumulation)
-                        label = f"{payment_method.name} du {target_date.strftime('%d/%m/%Y')}"
-                        
-                        payments_credit_lines.append({
-                            "account": debit_account.code,
-                            "label": label,
-                            "sense": 1,  # Débit
-                            "amount": amount,
-                            "thirdParty": third_party,
-                            "payment_method": payment_method.name,
-                            "client": partner.name
-                        })
-                        
-                        _logger.debug("   💳 CRÉDIT: %s - %s - %s XOF (client: %s) - LIGNE #%s", 
+                        _logger.debug("   💳 CRÉDIT: %s - %s - %s XOF (client: %s)", 
                                     session.config_id.name, payment_method.name, 
-                                    amount, partner.name, len(payments_credit_lines))
+                                    amount, partner.name)
                     else:
                         # Pas de compte client configuré
                         _logger.warning("⚠️  Client '%s' sans customer_id (session %s) - traité comme comptant", 
                                       partner.name if partner else "Inconnu", session.name)
-                        # Traiter comme comptant
-                        payment_key = (debit_account.code, payment_method.name)
                         payments_cash[payment_key] += amount
                 else:
-                    # PAIEMENT COMPTANT: GROUPÉ par mode de paiement
-                    payment_key = (debit_account.code, payment_method.name)
+                    # PAIEMENT COMPTANT: sans thirdParty
+                    # → GROUPÉ par mode de paiement
                     payments_cash[payment_key] += amount
                     
                     _logger.debug("   💵 COMPTANT: %s - %s - %s XOF", 
@@ -252,7 +242,7 @@ class AccountMoveSageX3(models.Model):
                        session.name, session_total, len(payments))
         
         # Vérifier qu'on a bien des données
-        if not payments_cash and not payments_credit_lines:
+        if not payments_cash and not payments_credit:
             _logger.warning("⚠️  Aucun paiement valide trouvé pour %s le %s", company.name, target_date)
             return None
         
@@ -277,34 +267,33 @@ class AccountMoveSageX3(models.Model):
                 _logger.info("   ✓ %s (compte %s): %s XOF - LIGNE GROUPÉE", 
                            payment_method_name, account_code, amount)
         
-        # 2. LIGNES DÉBIT - Paiements crédit (AUCUN REGROUPEMENT - liste directe)
-        _logger.info("💳 Paiements CRÉDIT (AUCUN REGROUPEMENT - ligne par paiement):")
+        # 2. LIGNES DÉBIT - Paiements crédit (UNE LIGNE PAR CLIENT - PAS DE REGROUPEMENT GLOBAL)
+        _logger.info("💳 Paiements CRÉDIT (LIGNE PAR LIGNE - pas de regroupement):")
         
-        if payments_credit_lines:
-            # Trier par compte, puis par client
-            payments_credit_lines_sorted = sorted(
-                payments_credit_lines, 
-                key=lambda x: (x['account'], x['thirdParty'])
-            )
+        total_credit_lines = 0
+        for (account_code, payment_method_name), third_parties in sorted(payments_credit.items()):
+            _logger.info("   Mode: %s (compte %s) → %s client(s) distinct(s)", 
+                       payment_method_name, account_code, len(third_parties))
             
-            for idx, credit_line in enumerate(payments_credit_lines_sorted, 1):
-                # Ajouter directement la ligne (déjà créée)
-                lines.append({
-                    "account": credit_line['account'],
-                    "label": credit_line['label'],
-                    "sense": credit_line['sense'],
-                    "amount": credit_line['amount'],
-                    "thirdParty": credit_line['thirdParty']
-                })
-                
-                _logger.info("      ✓ Ligne #%s - %s (compte %s) - Client %s: %s XOF", 
-                           idx,
-                           credit_line['payment_method'],
-                           credit_line['account'],
-                           credit_line['client'],
-                           credit_line['amount'])
-            
-            _logger.info("   📊 Total: %s ligne(s) distincte(s) (AUCUN regroupement)", len(payments_credit_lines))
+            # Créer UNE ligne par client (pas de regroupement)
+            for third_party, amount in sorted(third_parties.items()):
+                if amount > 0:
+                    label = f"{payment_method_name} du {target_date.strftime('%d/%m/%Y')}"
+                    
+                    lines.append({
+                        "account": account_code,
+                        "label": label,
+                        "sense": 1,  # Débit
+                        "amount": amount,
+                        "thirdParty": third_party
+                    })
+                    
+                    total_credit_lines += 1
+                    _logger.info("      ✓ Client %s: %s XOF - LIGNE INDIVIDUELLE #%s", 
+                               third_party, amount, total_credit_lines)
+        
+        if total_credit_lines > 0:
+            _logger.info("   📊 Total: %s ligne(s) distincte(s) pour clients en compte", total_credit_lines)
         
         # Calculer le total
         total_amount = sum(line['amount'] for line in lines)
@@ -368,7 +357,7 @@ class AccountMoveSageX3(models.Model):
         _logger.info("   • Journal: %s", piece['journal'])
         _logger.info("   • Nombre de lignes TOTAL: %s", len(lines))
         _logger.info("   • Dont lignes comptant (groupées): %s", len(payments_cash))
-        _logger.info("   • Dont lignes crédit (NON groupées): %s", len(payments_credit_lines))
+        _logger.info("   • Dont lignes crédit (individuelles): %s", total_credit_lines)
         _logger.info("   • Total: %s XOF", total_amount)
         _logger.info("   • Sessions traitées: %s", len(pos_sessions))
         _logger.info("   • Paiements traités: %s", total_payments_processed)

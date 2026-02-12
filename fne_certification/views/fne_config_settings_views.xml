@@ -31,7 +31,7 @@
                             
                             <group string="Environnement">
                                 <field name="environment" widget="radio" readonly="state == 'validated'"/>
-                                <field name="fne_api_url" readonly="1"/>
+                                <field name="fne_api_url" readonly="0"/>
                             </group>
                         </group>
                         

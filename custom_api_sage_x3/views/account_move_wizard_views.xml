@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ========================================================================
+         WIZARD : Confirmation envoi en masse
+         ======================================================================== -->
+    
+    <record id="view_sage_x3_send_wizard_form" model="ir.ui.view">
+        <field name="name">sage.x3.send.wizard.form</field>
+        <field name="model">sage.x3.send.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Envoi en masse à SAGE X3">
+                <group>
+                    <div class="alert alert-warning" style="margin: 10px;">
+                        <h3>⚠️ Confirmer l'envoi en masse à SAGE X3</h3>
+                        <p>
+                            Vous êtes sur le point d'envoyer de votre magasin des données comptables en masse vers SAGE X3.
+                            Assurez-vous que les données sont correctes et que vous avez sélectionné le bon magasin avant de confirmer l'envoi.
+                        </p>
+                        <p><strong>Cette action est irréversible.</strong></p>
+                    </div>
+                    <field name="company_ids" readonly="1"/>
+                    <field name="date_from" readonly="0"/>
+                </group>
+                <footer>
+                    <button name="action_confirm_send" 
+                            type="object" 
+                            string="Confirmer l'envoi" 
+                            class="btn-primary"/>
+                    <button string="Annuler" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>

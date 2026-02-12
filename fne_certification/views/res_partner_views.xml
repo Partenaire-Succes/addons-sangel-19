@@ -10,7 +10,7 @@
                 <!-- Ajouter le type client FNE dans l'onglet Comptabilité -->
                 <xpath expr="//page[@name='accounting']" position="inside">
                     <group string="Facturation FNE" name="fne_info">
-                        <field name="fne_client_type" readonly="1" 
+                        <field name="fne_client_type" readonly="0" 
                             widget="badge" 
                             decoration-info="fne_client_type == 'B2C'"
                             decoration-success="fne_client_type == 'B2B'"
