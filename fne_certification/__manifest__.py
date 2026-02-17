@@ -12,6 +12,7 @@
         'base',
         'account',
         'sale',
+        'purchase',
     ],
     'data': [
         'security/ir.model.access.csv',

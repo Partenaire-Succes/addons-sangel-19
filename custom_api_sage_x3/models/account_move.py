@@ -10,7 +10,7 @@ _logger = logging.getLogger(__name__)
 
 BASE_URL = "http://172.16.2.150:8030"
 AUTH_URL = f"{BASE_URL}/api/Auth/login"
-ACCOUNTING_URL = f"{BASE_URL}/api/Accounting/entries"
+ACCOUNTING_URL = f"{BASE_URL}/api/Accounting/entries/batch"
 USERNAME = "odoo"
 PASSWORD = "InterfaceX3_Odoo"
 

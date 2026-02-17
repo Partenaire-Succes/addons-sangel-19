@@ -17,10 +17,10 @@ class SaleOrderInherit(models.Model):
     )
     is_loyalty = fields.Boolean('Carte de fidélité')
 
-    def action_confirm(self):
-        res = super(SaleOrderInherit, self).action_confirm()
-        self._check_loyalty_card()
-        return res
+    # def action_confirm(self):
+    #     res = super(SaleOrderInherit, self).action_confirm()
+    #     self._check_loyalty_card()
+    #     return res
     
 
     def _program_check_compute_points(self, programs):
@@ -102,75 +102,75 @@ class SaleOrderInherit(models.Model):
         _logger.info('TOTAL POINTS SALE ORDER: %d', total_points)
         return total_points
     
-    def _check_loyalty_card(self):
-        for order in self:
-            if order.payment_mode == 'loyalty':
-                if not order.partner_id.is_loyalty:
-                    raise ValidationError(_("Le client %s n'a pas de carte de fidelité attribué.") 
-                                        %  order.partner_id.name)
+    # def _check_loyalty_card(self):
+    #     for order in self:
+    #         if order.payment_mode == 'loyalty':
+    #             if not order.partner_id.is_loyalty:
+    #                 raise ValidationError(_("Le client %s n'a pas de carte de fidelité attribué.") 
+    #                                     %  order.partner_id.name)
                 
-                loyalty_card = self.env['loyalty.card'].sudo().search([
-                    ('partner_id', '=', order.partner_id.id),
-                ], limit=1)
+    #             loyalty_card = self.env['loyalty.card'].sudo().search([
+    #                 ('partner_id', '=', order.partner_id.id),
+    #             ], limit=1)
                 
-                if not loyalty_card:
-                    raise ValidationError(
-                        _("Aucune carte de fidelité trouvé pour le client %s dans la période spécifiée.") 
-                        % order.partner_id.name)
+    #             if not loyalty_card:
+    #                 raise ValidationError(
+    #                     _("Aucune carte de fidelité trouvé pour le client %s dans la période spécifiée.") 
+    #                     % order.partner_id.name)
                 
-                solde_disponible = loyalty_card.points
-                _logger.info('Points disponible: %s', solde_disponible)
+    #             solde_disponible = loyalty_card.points
+    #             _logger.info('Points disponible: %s', solde_disponible)
                 
-                if order.amount_total > solde_disponible:
-                    raise ValidationError(
-                        _("Le montant total de la commande (%s) dépasse les points de la carte de fidelité disponible (%s) pour le client %s.") 
-                        % (order.amount_total, solde_disponible, order.partner_id.name))
+    #             if order.amount_total > solde_disponible:
+    #                 raise ValidationError(
+    #                     _("Le montant total de la commande (%s) dépasse les points de la carte de fidelité disponible (%s) pour le client %s.") 
+    #                     % (order.amount_total, solde_disponible, order.partner_id.name))
                 
-                # Mettre à jour points
-                loyalty_card.sudo().write({
-                    'points': solde_disponible - order.amount_total,
-                })
-                self.env['loyalty.history'].create({
-                    'card_id': loyalty_card.id,
-                    'description': "Gros & 1/2 Gros - %s" % order.name,
-                    'used': order.amount_total,
-                    'order_model': 'sale.order',
-                    'order_id': order.id,
-                })
-                order.is_loyalty = True
+    #             # Mettre à jour points
+    #             loyalty_card.sudo().write({
+    #                 'points': solde_disponible - order.amount_total,
+    #             })
+    #             self.env['loyalty.history'].create({
+    #                 'card_id': loyalty_card.id,
+    #                 'description': "Gros & 1/2 Gros - %s" % order.name,
+    #                 'used': order.amount_total,
+    #                 'order_model': 'sale.order',
+    #                 'order_id': order.id,
+    #             })
+    #             order.is_loyalty = True
                 
-                # Invalider tout le cache
-                self.env.invalidate_all()
+    #             # Invalider tout le cache
+    #             self.env.invalidate_all()
 
-        return True
+    #     return True
 
-    def _action_cancel(self):
-        """Override to restore loyalty points when order is cancelled."""
-        # Restore loyalty points before cancellation
-        self._retire_loyalty_card()
-        return super()._action_cancel()
+    # def _action_cancel(self):
+    #     """Override to restore loyalty points when order is cancelled."""
+    #     # Restore loyalty points before cancellation
+    #     self._retire_loyalty_card()
+    #     return super()._action_cancel()
 
-    def _retire_loyalty_card(self):
-        """Restore loyalty card points when order is cancelled."""
-        for order in self:
-            if order.payment_mode == 'loyalty' and order.is_loyalty:
-                loyalty_card = self.env['loyalty.card'].sudo().search([
-                    ('partner_id', '=', order.partner_id.id),
-                ], limit=1)
-                if loyalty_card:
-                    loyalty_card.sudo().write({
-                        'points': loyalty_card.points + order.amount_total
-                    })
-                    self.env['loyalty.history'].create({
-                        'card_id': loyalty_card.id,
-                        'description': "Annulation Gros & 1/2 Gros - %s" % order.name,
-                        'used': -order.amount_total,
-                        'order_model': 'sale.order',
-                        'order_id': order.id,
-                    })
-                    order.is_loyalty = False
-                    self.env.invalidate_all()
+    # def _retire_loyalty_card(self):
+    #     """Restore loyalty card points when order is cancelled."""
+    #     for order in self:
+    #         if order.payment_mode == 'loyalty' and order.is_loyalty:
+    #             loyalty_card = self.env['loyalty.card'].sudo().search([
+    #                 ('partner_id', '=', order.partner_id.id),
+    #             ], limit=1)
+    #             if loyalty_card:
+    #                 loyalty_card.sudo().write({
+    #                     'points': loyalty_card.points + order.amount_total
+    #                 })
+    #                 self.env['loyalty.history'].create({
+    #                     'card_id': loyalty_card.id,
+    #                     'description': "Annulation Gros & 1/2 Gros - %s" % order.name,
+    #                     'used': -order.amount_total,
+    #                     'order_model': 'sale.order',
+    #                     'order_id': order.id,
+    #                 })
+    #                 order.is_loyalty = False
+    #                 self.env.invalidate_all()
                     
-                    _logger.info('Points utilisé mis à jour: %s', loyalty_card.points)
+    #                 _logger.info('Points utilisé mis à jour: %s', loyalty_card.points)
 
-        return True
+    #     return True

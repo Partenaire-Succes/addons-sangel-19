@@ -190,7 +190,7 @@ class ProductTemplateImport(models.Model):
             "default_code": item.get("itmreF_0") or False,
             "barcode": barcode,
             "description": item.get("itmdeS2_0", ""),
-            "list_price": self._safe_float(item.get("basprI_0")),
+            "list_price": self._safe_float(item.get("ypV_SAN_0")),
             "taxes_id": self._get_taxes_id(item.get("vacitM_0")),
             "supplier_taxes_id": self._get_supplier_taxes_id(item.get("vacitM_0")),
             "price_unit_ttc": self._safe_float(item.get("ypV_SAN_0")),
@@ -200,6 +200,7 @@ class ProductTemplateImport(models.Model):
             "marque": item.get("ymarK_0", ""),
             "discount_ligne": item.get("yappremL_0", False),
             "airsi_tax_id": self._get_airsi_tax_id(item.get("yairsI_0")),
+            "price_catalog": self._safe_float(item.get("basprI_0")),
             "price_carton": self._safe_float(item.get("ypxcA_0")),
             "price_negoce": self._safe_float(item.get("ypxneG_0")),
             "price_ecom": self._safe_float(item.get("yglovttC_0")),
@@ -302,6 +303,7 @@ class ProductTemplateImport(models.Model):
         # Mapping : (xml_id, champ_api, nom_affichage)
         pricelist_mappings = [
             ('custom_stock.basic_retailing_price', 'ypV_SAN_0', 'PRIX VENTE DE BASE TTC'),
+            ('custom_stock.catalog_sale_price', 'basprI_0', 'PRIX VENTE CATALOGUE'),
             ('custom_stock.carton_sale_price', 'ypxcA_0', 'PRIX VENTE CARTON TTC'),
             ('custom_stock.retail_sale_price', 'ypxneG_0', 'PRIX VENTE NEGOCE TTC'),
             ('custom_stock.e_commerce_sale_price', 'yglovttC_0', 'PRIX VENTE E-COMMERCE TTC'),

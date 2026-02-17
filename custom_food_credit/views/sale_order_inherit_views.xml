@@ -9,8 +9,6 @@
             <field name="arch" type="xml">
 
                 <xpath expr="//field[@name='partner_id']" position="after">
-                    <field name="payment_mode" readonly="state != 'draft'"/>
-                    <field name="mode_payment" readonly="state != 'draft'"/>
                     <field name="is_airsi_eligible"/>
                 </xpath>
 

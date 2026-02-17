@@ -1,10 +1,17 @@
-from odoo import models, api
+from odoo import models, api, fields, _
+from odoo.exceptions import ValidationError
 import logging
 
 _logger = logging.getLogger(__name__)
 
 class AccountMove(models.Model):
     _inherit = 'account.move'
+
+    mode_payment = fields.Selection([
+            ('credit', 'Credit'), 
+            ('cash', 'Cash'),
+        ], string='Clients à compte', default='cash')
+    is_limit = fields.Boolean('Limite Credit')
 
     def write(self, vals):
         """Trigger lors de la modification des factures"""
@@ -17,6 +24,82 @@ class AccountMove(models.Model):
                 line._trigger_daily_budget_recompute(line)
         
         return res
+    
+
+    def _check_credit_limit(self):
+        for order in self:
+            if order.mode_payment == 'credit':
+                if not order.partner_id.is_limit:
+                    raise ValidationError(_("Le client %s n'a pas de limite crédit attribué.") 
+                                        %  order.partner_id.name)
+
+                limit_credit = self.env['limit.credit'].sudo().search([
+                    ('partner_id', '=', order.partner_id.id),
+                ], limit=1)
+
+                if not limit_credit:
+                    raise ValidationError(
+                        _("Aucune limite crédit trouvé pour le client %s dans la période spécifiée.") 
+                        % order.partner_id.name)
+
+                solde_disponible = limit_credit.amount_limit - limit_credit.amount_limit_consumed
+                _logger.info('Crédit disponible: %s', solde_disponible)
+
+                if order.amount_total > solde_disponible:
+                    raise ValidationError(
+                        _("Le montant total de la commande (%s) dépasse la limite crédit disponible (%s) pour le client %s.") 
+                        % (order.amount_total, solde_disponible, order.partner_id.name))
+
+                # Mettre à jour amount_limit_consumed
+                limit_credit.sudo().write({
+                    'amount_limit_consumed': limit_credit.amount_limit_consumed + order.amount_total,
+                })
+                self.env['limit.credit.operation'].create({
+                    'limit_id': limit_credit.id,
+                    'name': "Gros & 1/2 Gros - %s - %s" % (order.name, order.company_id.lib_company),
+                    'amount_operation': order.amount_total,
+                    'operation_date': fields.Datetime.now(),
+                })
+                order.is_limit = True
+
+                # Invalider tout le cache
+                self.env.invalidate_all()
+        return True
+
+
+    def action_post(self):
+        res = super(AccountMove, self).action_post()
+        self._check_credit_limit()
+        return res
+
+    def button_draft(self):
+        """Override to restore loyalty points when order is cancelled."""
+        # Restore loyalty points before cancellation
+        self._retire_credit_limit()
+        return super().button_draft()
+    
+
+    def _retire_credit_limit(self):
+        """Restore limit credit when order is cancelled."""
+        for order in self:
+            if order.mode_payment == 'credit' and order.is_limit:
+                limit_credit = self.env['limit.credit'].sudo().search([
+                    ('partner_id', '=', order.partner_id.id),
+                ], limit=1)
+                if limit_credit:
+                    limit_credit.sudo().write({
+                        'amount_limit_consumed': limit_credit.amount_limit_consumed - order.amount_total
+                    })
+                    self.env['limit.credit.operation'].create({
+                        'limit_id': limit_credit.id,
+                        'name': "Annulation Gros & 1/2 Gros - %s - %s" % (order.name, order.company_id.lib_company),
+                        'amount_operation': -order.amount_total,
+                        'operation_date': fields.Datetime.now(),
+                    })
+                    order.is_limit = False
+                    self.env.invalidate_all()
+                    _logger.info('Crédit utilisé mis à jour: %s', limit_credit.amount_limit_consumed)
+        return True
 
 
 class AccountMoveLine(models.Model):

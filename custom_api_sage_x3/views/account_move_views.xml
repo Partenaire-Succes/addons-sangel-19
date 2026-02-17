@@ -20,6 +20,12 @@
                         invisible="move_type != 'out_invoice' or state != 'posted' or sage_x3_sent"
                         groups="account.group_account_manager"
                         help="Envoie la facture à SAGE X3"/>
+
+                <button name="action_send_all_classic_invoices_to_sage_x3"
+                        type="object"
+                        string="Envoyer autre factures à SAGE X3"
+                        class="btn-primary"
+                        help="Envoie les factures non envoyées à SAGE X3"/>
             </xpath>
             
             <!-- Onglet SAGE X3 -->
