@@ -13,6 +13,7 @@
     ],
     'data': [
         'security/ir.model.access.csv',
+        'views/account_move_inherit_views.xml',
         'views/budget_analytic_daily_view.xml',
         'views/account_budget_inherit_views.xml',
     ],

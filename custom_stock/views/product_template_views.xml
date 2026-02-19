@@ -69,6 +69,7 @@
                             </group>
                             <group name="price_group">
                                 <field name="price_unit_ttc"/>
+                                <field name="price_catalog"/>
                                 <field name="price_carton"/>
                                 <field name="price_negoce"/>
                                 <field name="price_ecom"/>

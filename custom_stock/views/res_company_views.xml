@@ -13,10 +13,10 @@
                                 <field name="dest_warehouse_id"
                                     domain="[('company_id', '=', id)]"/>
 
-                                <field name="lib_company"/> 
+                                <field name="lib_company" required="1"/> 
                             </group>
                             <group>
-                                <field name="code_company"/>
+                                <field name="code_company" required="1"/>
                             </group>
                         </group>
                     </page>
@@ -25,21 +25,7 @@
                 <xpath expr="//notebook" position="inside">
                     <page name="sage_x3_accounting" string="SAGE X3 Comptabilité">
                         
-                        <group string="Paramètres SAGE X3">
-                            <group>
-                                <field name="sage_x3_site" placeholder="SIEGE"/>
-                                <field name="sage_x3_journal_sale" placeholder="VTE"/>
-                                <field name="sage_x3_journal_cash" placeholder="CAISSE"/>
-                                <field name="sage_x3_journal_bank" placeholder="BQ"/>
-                            </group>
-                            <group>
-                                <field name="sage_x3_auto_send"/>
-                            </group>
-                        </group>
-                        
-                        <separator string="Comptes Comptables"/>
-                        
-                        <group>
+                        <group string="Comptes Comptables">
                             <group string="Ventes">
                                 <field name="sage_x3_account_sale_id" 
                                     options="{'no_create': True}"
@@ -50,42 +36,21 @@
                                     placeholder="41110000 - Client DIVERS"
                                     required="1"/>
                             </group>
-                            
-                            <group string="Trésorerie">
-                                <field name="sage_x3_account_cash_id"
-                                    options="{'no_create': True}"
-                                    placeholder="57xxxxx - Espèces"/>
-                                <field name="sage_x3_account_check_id"
-                                    options="{'no_create': True}"
-                                    placeholder="521xxxxx - Chèque"/>
-                                <field name="sage_x3_account_transfer_id"
-                                    options="{'no_create': True}"
-                                    placeholder="585xxxxx - Virement"/>
-                                <field name="sage_x3_account_mobile_money_id"
-                                    options="{'no_create': True}"
-                                    placeholder="Mobile Money"/>
-                                <field name="sage_x3_account_tpe_id"
-                                    options="{'no_create': True}"
-                                    placeholder="TPE / Carte bancaire"/>
+
+                            <group>
+                                <div class="alert alert-info">
+                                    <h4>📝 Instructions de configuration</h4>
+                                    <ul>
+                                        <li><strong>Compte de vente</strong> : Un seul compte 701xxxxx par société</li>
+                                        <li><strong>Client DIVERS</strong> : Compte générique 4111xxxx pour ventes comptoir</li>
+                                    </ul>
+                                    <p><strong>Exemples pour SANgel Yop demi-gros :</strong></p>
+                                    <ul>
+                                        <li>Vente : 70116000</li>
+                                        <li>Client : 41110000 </li>
+                                    </ul>
+                                </div>
                             </group>
-                        </group>
-                        
-                        <group>
-                            <div class="alert alert-info">
-                                <h4>📝 Instructions de configuration</h4>
-                                <ul>
-                                    <li><strong>Compte de vente</strong> : Un seul compte 701xxxxx par société</li>
-                                    <li><strong>Client DIVERS</strong> : Compte générique 41110000 pour ventes comptoir</li>
-                                    <li><strong>Comptes trésorerie</strong> : Un par moyen de paiement</li>
-                                </ul>
-                                <p><strong>Exemples pour SANgel Yop demi-gros :</strong></p>
-                                <ul>
-                                    <li>Vente : 70116000</li>
-                                    <li>Espèces : 57120000</li>
-                                    <li>Chèque : 52110018</li>
-                                    <li>Virement : 58520000</li>
-                                </ul>
-                            </div>
                         </group>
                         
                     </page>

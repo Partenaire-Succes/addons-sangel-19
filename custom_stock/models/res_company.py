@@ -35,6 +35,11 @@ class ResCompany(models.Model):
           default="VTE",
           help="Code journal des ventes (ex: VTE)"
      )
+
+
+     
+
+
      sage_x3_journal_cash = fields.Char(
           string="Journal caisse SAGE X3",
           default="CAISSE",

@@ -10,6 +10,11 @@
             <field name="currency_id" ref="base.XOF"/>
         </record>
 
+        <record id="catalog_sale_price" model="product.pricelist">
+            <field name="name">PRIX VENTE CATALOGUE TTC</field>
+            <field name="currency_id" ref="base.XOF"/>
+        </record>
+
         <record id="retail_sale_price" model="product.pricelist">
             <field name="name">PRIX VENTE NEGOCE TTC</field>
             <field name="currency_id" ref="base.XOF"/>

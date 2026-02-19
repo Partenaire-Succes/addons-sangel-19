@@ -10,7 +10,7 @@ _logger = logging.getLogger(__name__)
 
 BASE_URL = "http://172.16.2.150:8030"
 AUTH_URL = f"{BASE_URL}/api/Auth/login"
-ACCOUNTING_URL = f"{BASE_URL}/api/Accounting/entries"
+ACCOUNTING_URL = f"{BASE_URL}/api/Accounting/entries/batch"
 USERNAME = "odoo"
 PASSWORD = "InterfaceX3_Odoo"
 
@@ -44,11 +44,6 @@ class AccountMoveSageX3(models.Model):
         error_count = 0
         errors = []
         
-        _logger.info("="*80)
-        _logger.info("🚀 [BULK] Envoi période %s au %s", date_from, date_to)
-        _logger.info("🏢 [BULK] Sociétés concernées: %s", company_ids)
-        _logger.info("="*80)
-        
         # Pour chaque société (isolation stricte)
         for company_id in company_ids:
             company = self.env['res.company'].browse(company_id)
@@ -57,11 +52,6 @@ class AccountMoveSageX3(models.Model):
             if not company.exists():
                 _logger.error("❌ Société ID %s introuvable", company_id)
                 continue
-            
-            _logger.info("")
-            _logger.info("="*80)
-            _logger.info("🏢 TRAITEMENT SOCIÉTÉ: %s (ID: %s)", company.name, company.id)
-            _logger.info("="*80)
             
             try:
                 # Générer les pièces jour par jour POUR CETTE SOCIÉTÉ UNIQUEMENT
@@ -73,10 +63,6 @@ class AccountMoveSageX3(models.Model):
                 
                 while current_date <= end_date:
                     try:
-                        _logger.info("")
-                        _logger.info("-" * 60)
-                        _logger.info("📅 Traitement: %s - %s", company.name, current_date)
-                        _logger.info("-" * 60)
                         
                         # Préparer les données de la journée POUR CETTE SOCIÉTÉ
                         accounting_data = self._prepare_daily_entry(company, current_date)
@@ -113,13 +99,6 @@ class AccountMoveSageX3(models.Model):
                 error_msg = f"{company.name} (erreur générale): {str(e)}"
                 errors.append(error_msg)
                 _logger.error("❌ ERREUR SOCIÉTÉ %s", error_msg, exc_info=True)
-        
-        _logger.info("")
-        _logger.info("="*80)
-        _logger.info("✅ [BULK] ENVOI TERMINÉ")
-        _logger.info("📊 TOTAL: %s jours envoyés avec succès", success_count)
-        _logger.info("❌ TOTAL: %s erreurs", error_count)
-        _logger.info("="*80)
         
         return {
             'success': success_count,
@@ -158,10 +137,6 @@ class AccountMoveSageX3(models.Model):
         if not pos_sessions:
             _logger.info("ℹ️  Aucune session POS fermée pour %s le %s", company.name, target_date)
             return None
-        
-        _logger.info("📦 %s session(s) POS trouvée(s) pour %s:", len(pos_sessions), company.name)
-        for session in pos_sessions:
-            _logger.info("   • Session: %s (Caisse: %s)", session.name, session.config_id.name)
         
         # Regroupement des paiements
         # payments_cash: {(account_code, payment_method_name): total_amount} - GROUPÉ
@@ -215,7 +190,7 @@ class AccountMoveSageX3(models.Model):
                         third_party = partner.customer_id.strip()
                         
                         # Créer directement la ligne (pas d'accumulation)
-                        label = f"{payment_method.name} du {target_date.strftime('%d/%m/%Y')}"
+                        label = f"{payment_method.name} du {payment.payment_date.strftime('%d/%m/%Y')}"
                         
                         payments_credit_lines.append({
                             "account": debit_account.code,
@@ -226,10 +201,6 @@ class AccountMoveSageX3(models.Model):
                             "payment_method": payment_method.name,
                             "client": partner.name
                         })
-                        
-                        _logger.debug("   💳 CRÉDIT: %s - %s - %s XOF (client: %s) - LIGNE #%s", 
-                                    session.config_id.name, payment_method.name, 
-                                    amount, partner.name, len(payments_credit_lines))
                     else:
                         # Pas de compte client configuré
                         _logger.warning("⚠️  Client '%s' sans customer_id (session %s) - traité comme comptant", 
@@ -241,15 +212,9 @@ class AccountMoveSageX3(models.Model):
                     # PAIEMENT COMPTANT: GROUPÉ par mode de paiement
                     payment_key = (debit_account.code, payment_method.name)
                     payments_cash[payment_key] += amount
-                    
-                    _logger.debug("   💵 COMPTANT: %s - %s - %s XOF", 
-                                session.config_id.name, payment_method.name, amount)
                 
                 session_total += amount
                 total_payments_processed += 1
-            
-            _logger.info("   ✓ Session %s: %s XOF (%s paiements)", 
-                       session.name, session_total, len(payments))
         
         # Vérifier qu'on a bien des données
         if not payments_cash and not payments_credit_lines:
@@ -260,7 +225,6 @@ class AccountMoveSageX3(models.Model):
         lines = []
         
         # 1. LIGNES DÉBIT - Paiements comptant (GROUPÉS par mode de paiement)
-        _logger.info("💰 Paiements COMPTANT (GROUPÉS par mode de paiement):")
         for (account_code, payment_method_name), amount in sorted(payments_cash.items()):
             if amount > 0:
                 # Utiliser directement le nom du moyen de paiement
@@ -273,12 +237,8 @@ class AccountMoveSageX3(models.Model):
                     "amount": amount,
                     "thirdParty": ""
                 })
-                
-                _logger.info("   ✓ %s (compte %s): %s XOF - LIGNE GROUPÉE", 
-                           payment_method_name, account_code, amount)
         
         # 2. LIGNES DÉBIT - Paiements crédit (AUCUN REGROUPEMENT - liste directe)
-        _logger.info("💳 Paiements CRÉDIT (AUCUN REGROUPEMENT - ligne par paiement):")
         
         if payments_credit_lines:
             # Trier par compte, puis par client
@@ -296,15 +256,6 @@ class AccountMoveSageX3(models.Model):
                     "amount": credit_line['amount'],
                     "thirdParty": credit_line['thirdParty']
                 })
-                
-                _logger.info("      ✓ Ligne #%s - %s (compte %s) - Client %s: %s XOF", 
-                           idx,
-                           credit_line['payment_method'],
-                           credit_line['account'],
-                           credit_line['client'],
-                           credit_line['amount'])
-            
-            _logger.info("   📊 Total: %s ligne(s) distincte(s) (AUCUN regroupement)", len(payments_credit_lines))
         
         # Calculer le total
         total_amount = sum(line['amount'] for line in lines)
@@ -329,8 +280,6 @@ class AccountMoveSageX3(models.Model):
             "amount": total_amount,
             "thirdParty": ""
         })
-        
-        _logger.info("💵 CRÉDIT total ventes: %s XOF (compte %s)", total_amount, sale_account.code)
         
         # 4. Construction de la pièce comptable
         # Vérifier la configuration de la société
@@ -360,22 +309,6 @@ class AccountMoveSageX3(models.Model):
             "lines": lines
         }
         
-        _logger.info("")
-        _logger.info("📋 Pièce préparée pour %s:", company.name)
-        _logger.info("   • Référence: %s", piece['reference'])
-        _logger.info("   • Date: %s", piece['date'])
-        _logger.info("   • Site: %s", piece['site'])
-        _logger.info("   • Journal: %s", piece['journal'])
-        _logger.info("   • Nombre de lignes TOTAL: %s", len(lines))
-        _logger.info("   • Dont lignes comptant (groupées): %s", len(payments_cash))
-        _logger.info("   • Dont lignes crédit (NON groupées): %s", len(payments_credit_lines))
-        _logger.info("   • Total: %s XOF", total_amount)
-        _logger.info("   • Sessions traitées: %s", len(pos_sessions))
-        _logger.info("   • Paiements traités: %s", total_payments_processed)
-
-        _logger.debug("📦 Données JSON à envoyer:")
-        _logger.debug(json.dumps(entry, indent=2, ensure_ascii=False))
-        
         return {"entries": [entry]}
 
     def _send_daily_to_sage_x3_api(self, accounting_data, company, target_date):
@@ -388,14 +321,8 @@ class AccountMoveSageX3(models.Model):
             target_date: date - Date de la journée
         """
         try:
-            _logger.info("")
-            _logger.info("📤 ENVOI À SAGE X3")
-            _logger.info("   • Société: %s", company.name)
-            _logger.info("   • Date: %s", target_date)
-            _logger.info("")
-            _logger.info("📦 Données JSON:")
+            _logger.info("📦 Données JSON POS:")
             _logger.info(json.dumps(accounting_data, indent=2, ensure_ascii=False))
-            _logger.info("")
             
             # 1. Authentification
             token = self._authenticate_sage_x3()
