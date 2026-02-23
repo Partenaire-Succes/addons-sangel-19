@@ -7,4 +7,5 @@ from . import (
     stock_casse_report_wizard,
     stock_valorise_report_wizard,
     suplier_return_report_wizard,
+    cadencier_sale,
 )

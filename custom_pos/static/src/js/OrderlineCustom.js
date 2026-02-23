@@ -41,6 +41,15 @@ patch(Orderline.prototype, {
         if (!line) {
             return false;
         }
+
+        // ✅ Vérifier que la méthode existe avant de l'appeler
+        if (typeof line.getDisplayPrice !== 'function') {
+            // Fallback sur les propriétés disponibles
+            const price = line.price_unit ?? line.unitDisplayPrice ?? 0;
+            const qty = line.qty ?? line.quantity ?? 1;
+            return (price * qty) < 0;
+        }
+
         return line.getDisplayPrice() < 0;
     },
 

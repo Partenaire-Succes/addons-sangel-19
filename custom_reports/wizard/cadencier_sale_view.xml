@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- ============================================================
+         WIZARD : Cadencier Stat Ventes Articles
+    ============================================================ -->
+    <record id="view_cadencier_wizard_form" model="ir.ui.view">
+        <field name="name">cadencier.ventes.wizard.form</field>
+        <field name="model">cadencier.ventes.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Cadencier Stat Ventes Articles">
+                <group>
+                    <group string="Paramètres du rapport">
+                        <field name="company_id" readonly="1"/>
+                        <field name="year"/>
+                    </group>
+                    <group string="Filtres (optionnels)">
+                        <field name="famille_ids" widget="many2many_tags"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="action_print_report"
+                            string="Imprimer le rapport"
+                            type="object"
+                            class="btn-primary"
+                            icon="fa-print"/>
+                    <button string="Annuler" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- ACTION WIZARD -->
+    <record id="action_cadencier_wizard" model="ir.actions.act_window">
+        <field name="name">Cadencier Stat Ventes Articles</field>
+        <field name="res_model">cadencier.ventes.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- MENU -->
+
+    <menuitem id="menu_cadencier_wizard"
+              name="Cadencier Stat Articles"
+              parent="sale.menu_sale_report"
+              action="action_cadencier_wizard"
+              sequence="1"/>
+
+</odoo>

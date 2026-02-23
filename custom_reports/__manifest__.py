@@ -32,6 +32,8 @@
         'report/report_casse_template.xml',
         'wizard/report_daily_sales_wizard_view.xml',
         'report/report_daily_sales_template.xml',
+        'report/report_cadencier_template.xml',
+        'wizard/cadencier_sale_view.xml',
     ],
     'installable': True,
     'auto_install': False

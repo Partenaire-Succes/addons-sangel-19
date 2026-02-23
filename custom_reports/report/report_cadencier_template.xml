@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <template id="report_cadencier_template">
+        <t t-call="web.html_container">
+            <t t-call="web.basic_layout">
+
+                <div class="page" style="font-family: DejaVu Sans, Arial, sans-serif; font-size: 7pt; color: #1a1a2e;">
+
+                    <!-- EN-TÊTE SOCIÉTÉ -->
+                    <div style="margin-bottom: 6px; font-size: 7pt; color: #555;">
+                        <strong><t t-esc="company.name"/></strong>
+                        <t t-if="company.street"> - <t t-esc="company.street"/></t>
+                        <t t-if="company.city">, <t t-esc="company.city"/></t>
+                    </div>
+
+                    <!-- HEADER -->
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 6px;">
+                        <tr>
+                            <td style="width: 140px; border: 2px solid #1a1a2e; padding: 6px 10px; text-align: center;">
+                                <t t-if="company.logo">
+                                    <img t-att-src="image_data_uri(company.logo)" style="max-height: 45px; max-width: 120px;"/>
+                                </t>
+                                <t t-else="">
+                                    <span style="font-size: 16pt; font-weight: 900;">
+                                        <t t-esc="(company.name or '')[:6].upper()"/>
+                                    </span>
+                                </t>
+                            </td>
+
+                            <td style="background: #00c8e0; border: 2px solid #1a1a2e; border-left: none; text-align: center;">
+                                <span style="font-size: 15pt; font-weight: 900; letter-spacing: 2px;">
+                                    CADENCIER STAT VENTES ARTICLES
+                                </span><br/>
+                                <span style="font-size: 7pt;">
+                                    ANNEE <t t-esc="year"/> - SOURCE : POS + MODULE VENTE
+                                </span><br/>
+                                <span>
+                                    Date d'impression :
+                                    <t t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y %H:%M')"/>
+                                </span>
+                            </td>
+
+                            <td style="width: 80px; border: 2px solid #1a1a2e; border-left: none; text-align: right; padding: 6px 8px; vertical-align: middle;">
+                                <div style="font-size: 18pt; font-weight: 900; color: #1a1a2e;">
+                                    <t t-esc="(company.code_company or '')"/>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <!-- TABLEAU PRINCIPAL -->
+                    <table style="width: 100%;
+                                  border-collapse: collapse;
+                                  border: 1.5px solid #1a1a2e;
+                                  table-layout: fixed;">
+
+                        <colgroup>
+                            <col style="width:34px;"/>
+                            <col style="width:120px;"/>
+                            <col style="width:22px;"/>
+                            <col style="width:40px;"/>
+                            <col style="width:28px;"/>
+                            <col style="width:30px;"/>
+                            <col style="width:28px;" span="12"/>
+                            <col style="width:36px;"/>
+                        </colgroup>
+
+                        <thead>
+                            <tr style="background: #1a1a2e; color: white;">
+                                <th style="padding: 4px 3px; text-align: center; font-size: 6pt;">CODE</th>
+                                <th style="padding: 4px 3px; text-align: left; font-size: 6pt;">DESIGNATION</th>
+                                <th style="padding: 4px 3px; text-align: center; font-size: 6pt;">STA.</th>
+                                <th style="padding: 4px 3px; text-align: center; font-size: 6pt;">FAMILLE</th>
+                                <th style="padding: 4px 3px; text-align: center; font-size: 6pt;">ST.DISP.</th>
+                                <th style="padding: 4px 3px; text-align: center; font-size: 6pt;">PVTC</th>
+
+                                <t t-foreach="['JAN','FEV','MAR','AVR','MAI','JUIN','JLT','AOT','SPT','OCT','NOV','DEC']" t-as="m">
+                                    <th style="padding: 4px 2px; text-align: center; font-size: 6pt; background: #00c8e0; color: #1a1a2e;">
+                                        <t t-esc="m"/>
+                                    </th>
+                                </t>
+
+                                <th style="padding: 4px 3px; text-align: center; font-size: 6pt; background: #ff6b35; color: white;">
+                                    TOTAL
+                                </th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            <t t-set="current_famille" t-value="''"/>
+                            <t t-foreach="lines" t-as="line">
+
+                                <!-- Ligne produit -->
+                                <tr style="border-bottom: 0.5px solid #e0e0e0;">
+
+                                    <td style="padding: 3px; text-align: center; font-size: 6pt;">
+                                        <t t-esc="line['code']"/>
+                                    </td>
+
+                                    <td style="padding: 3px 4px; text-align: left; font-size: 6.5pt; word-wrap: break-word;">
+                                        <t t-esc="line['designation']"/>
+                                    </td>
+
+                                    <td style="padding: 3px; text-align: center; font-size: 6pt;">
+                                        <t t-esc="line['sta']"/>
+                                    </td>
+
+                                    <td style="padding: 3px; text-align: center; font-size: 5.5pt; color: #666;">
+                                        <t t-esc="line['famille']"/>
+                                    </td>
+
+                                    <td style="padding: 3px; text-align: center; font-size: 6pt;">
+                                        <t t-esc="'%.0f' % line['st_disp']"/>
+                                    </td>
+
+                                    <td style="padding: 3px; text-align: right; font-size: 6pt;">
+                                        <t t-esc="'%.0f' % line['pvtc']"/>
+                                    </td>
+
+                                    <!-- MOIS avec couleur si > 0 -->
+                                    <t t-foreach="line['ventes']" t-as="qty">
+                                        <t t-if="qty > 0">
+                                            <td style="padding: 3px 2px;
+                                                       text-align: center;
+                                                       font-size: 6pt;
+                                                       background: #d9f5f8;
+                                                       font-weight: 700;">
+                                                <t t-esc="'%.0f' % qty"/>
+                                            </td>
+                                        </t>
+                                        <t t-else="">
+                                            <td style="padding: 3px 2px;
+                                                       text-align: center;
+                                                       font-size: 6pt;
+                                                       color: #bbb;">
+                                                0
+                                            </td>
+                                        </t>
+                                    </t>
+
+                                    <t t-if="line['total'] &gt; 0">
+                                        <td style="padding: 3px; text-align: center; font-size: 6.5pt; font-weight: 700; background: #fff3ee; color: #ff6b35;">
+                                            <t t-esc="'%.0f' % line['total']"/>
+                                        </td>
+                                    </t>
+                                    <t t-else="">
+                                        <td style="padding: 3px; text-align: center; font-size: 6.5pt; color: #999;">0</td>
+                                    </t>
+
+                                </tr>
+                            </t>
+
+                            <tr style="border-bottom: 0.5px solid #e0e0e0;">
+                                <td colspan="19" style="padding: 0; border: none; text-align: center; font-size: 6.5pt; font-weight: 700; color: #00708a;">
+                                    RECAPITULATIF PAR FAMILLE
+                                </td>
+                            </tr>
+
+                            <t t-set="current_famille" t-value="''"/>
+                            <t t-foreach="lines" t-as="l">
+                                <t t-if="l['famille'] != current_famille">
+
+                                    <!-- Calcul lignes de la famille -->
+                                    <t t-set="current_famille" t-value="l['famille']"/>
+                                    <t t-set="code" t-value="l['code_famille']"/>
+                                    <t t-set="fam_lines"
+                                    t-value="[l for l in lines if l['famille'] == current_famille]"/>
+
+                                    <tr style="background: #e8f8fb; border-bottom: 0.5px solid #e0e0e0;">
+
+                                        <td colspan="1"
+                                            style="padding: 3px 6px;
+                                                font-weight: 700;
+                                                font-size: 6.5pt;">
+                                            <t t-esc="code"/>
+                                        </td>
+                                        <td colspan="5"
+                                            style="padding: 3px 6px;
+                                                font-weight: 700;
+                                                font-size: 6.5pt;">
+                                            <t t-esc="current_famille"/>
+                                        </td>
+
+                                        <!-- Total 12 mois -->
+                                        <t t-foreach="range(12)" t-as="mi">
+                                            <t t-set="month_total"
+                                            t-value="sum(l['ventes'][mi] for l in fam_lines)"/>
+
+                                            <td style="padding: 3px 6px;
+                                                    text-align: center;
+                                                    font-weight: 700;">
+                                                <t t-esc="'%.0f' % month_total"/>
+                                            </td>
+                                        </t>
+
+                                        <!-- Total général famille -->
+                                        <td style="padding: 3px;
+                                                text-align: center;
+                                                font-size: 6.5pt;
+                                                font-weight: 700;">
+                                            <t t-esc="'%.0f' % sum(l['total'] for l in fam_lines)"/>
+                                        </td>
+
+                                    </tr>
+
+                                </t>
+                            </t>
+                        </tbody>
+
+                    </table>
+
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <!-- FORMAT PAPIER A3 PAYSAGE -->
+    <record id="paperformat_cadencier" model="report.paperformat">
+        <field name="name">Cadencier A3 Paysage</field>
+        <field name="default" eval="False"/>
+        <field name="format">A3</field>
+        <field name="orientation">Landscape</field>
+        <field name="margin_top">10</field>
+        <field name="margin_bottom">10</field>
+        <field name="margin_left">5</field>
+        <field name="margin_right">5</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">10</field>
+        <field name="dpi">96</field>
+    </record>
+
+    <!-- ACTION RAPPORT — un seul record -->
+    <record id="action_report_cadencier" model="ir.actions.report">
+        <field name="name">Cadencier Stat Ventes Articles</field>
+        <field name="model">cadencier.ventes.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">custom_reports.report_cadencier_template</field>
+        <field name="report_file">custom_reports.report_cadencier_template</field>
+        <field name="print_report_name">'Cadencier_Ventes_%s' % (object.year)</field>
+        <field name="paperformat_id" ref="paperformat_cadencier"/>
+        <field name="attachment_use">False</field>
+    </record>
+
+</odoo>

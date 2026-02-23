@@ -15,12 +15,22 @@
                         <h3>⚠️ Confirmer l'envoi en masse à SAGE X3</h3>
                         <p>
                             Vous êtes sur le point d'envoyer de votre magasin des données comptables en masse vers SAGE X3.
-                            Assurez-vous que les données sont correctes et que vous avez sélectionné le bon magasin avant de confirmer l'envoi.
+                            Assurez-vous que les données sont correctes et que vous avez sélectionné la bonne periode avant de confirmer l'envoi.
                         </p>
                         <p><strong>Cette action est irréversible.</strong></p>
                     </div>
-                    <field name="company_ids" readonly="1"/>
-                    <field name="date_from" readonly="0"/>
+                    
+                </group>
+                <group name="info" string="Informations sur l'envoi">
+                    <group>
+                        <field name="company_ids" widget="many2many_tags" readonly="1"/>   
+                        <field name="date_from" readonly="0"/>
+                        <field name="date_to" readonly="0"/>
+                    </group>
+                    <group>
+                        <field name="count_invoices"/>
+                        <field name="count_payments"/>
+                    </group>
                 </group>
                 <footer>
                     <button name="action_confirm_send" 

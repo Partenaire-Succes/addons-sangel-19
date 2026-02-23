@@ -91,12 +91,12 @@
         </record>
 
         <record id="action_categ_family_inventory" model="ir.actions.act_window">
-            <field name="name">family inventaire</field>
+            <field name="name">famille inventaire</field>
             <field name="res_model">product.category</field>
             <field name="view_mode">list,form</field>
             <field name="help" type="html">
                 <p class="o_view_nocontent_smiling_face">
-                    Créer votre premier family inventaire
+                    Créer votre premier famille inventaire
                 </p>
             </field>
         </record>

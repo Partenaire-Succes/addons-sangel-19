@@ -44,7 +44,7 @@
         'views/stock_scrap_breakers_views.xml',
         'views/picking_request_company_views.xml',
         'views/stock_product_multicompany_views.xml',
-        # 'views/account_views.xml',
+        'views/account_views.xml',
     ],
     'license': 'AGPL-3',
     'installable': True,

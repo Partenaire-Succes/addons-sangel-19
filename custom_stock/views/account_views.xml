@@ -64,7 +64,7 @@
         <field name="model">account.move</field>
         <field name="inherit_id" ref="account.view_invoice_tree"/>
         <field name="arch" type="xml">
-            <xpath expr="//field[@name='amount_total']" position="after">
+            <xpath expr="//field[@name='status_in_payment']" position="after">
                 <field name="sage_x3_sent" 
                        widget="boolean"
                        string="SAGE X3"
@@ -109,7 +109,7 @@
         <field name="arch" type="xml">
             
             <!-- Champs SAGE X3 -->
-            <xpath expr="//group[@name='other_info']" position="after">
+            <xpath expr="//group[@name='main_group']" position="after">
                 <group name="sage_x3_info" string="SAGE X3" 
                        invisible="payment_type != 'inbound' or partner_type != 'customer'">
                     <field name="sage_x3_sent" readonly="1"/>
@@ -130,7 +130,7 @@
         <field name="model">account.payment</field>
         <field name="inherit_id" ref="account.view_account_payment_tree"/>
         <field name="arch" type="xml">
-            <xpath expr="//field[@name='amount']" position="after">
+            <xpath expr="//field[@name='state']" position="after">
                 <field name="sage_x3_sent" 
                        widget="boolean"
                        string="SAGE X3"
@@ -143,7 +143,7 @@
          FILTRES PAIEMENTS
          ======================================================================== -->
     
-    <record id="view_account_payment_search_sage_x3" model="ir.ui.view">
+    <!-- <record id="view_account_payment_search_sage_x3" model="ir.ui.view">
         <field name="name">account.payment.search.sage.x3</field>
         <field name="model">account.payment</field>
         <field name="inherit_id" ref="account.view_account_payment_search"/>
@@ -155,9 +155,9 @@
                         domain="[('sage_x3_sent', '=', True)]"/>
                 <filter name="sage_x3_not_sent" 
                         string="Non envoyé à SAGE X3"
-                        domain="[('sage_x3_sent', '=', False), ('payment_type', '=', 'inbound'), ('partner_type', '=', 'customer'), ('state', '=', 'posted')]"/>
+                        domain="[('sage_x3_sent', '=', False), ('payment_type', '=', 'inbound'), ('partner_type', '=', 'customer'), ('state', '=', 'paid')]"/>
             </xpath>
         </field>
-    </record>
+    </record> -->
 
 </odoo>

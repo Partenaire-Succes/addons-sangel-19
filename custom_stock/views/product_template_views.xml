@@ -130,7 +130,7 @@
                     <field name="pending_reception_qty"/>
                 </xpath>
 
-                <xpath expr="//t[@t-name='card']//div[@class='ps-2 d-flex flex-column m-1 overflow-hidden']" position="inside">
+                <!-- <xpath expr="//t[@t-name='card']//div[@class='ps-2 d-flex flex-column m-1 overflow-hidden']" position="inside">
                     <div class="mt-1 text-muted small">
                         <div>
                             Max = <field name="max_qty_orderpoint"/>
@@ -139,7 +139,7 @@
                             Réception = <field name="pending_reception_qty"/>
                         </div>
                     </div>
-                </xpath>
+                </xpath> -->
             </field>
         </record>
 

@@ -80,7 +80,7 @@
             </field>
         </record>
 
-        <!-- Vue liste product family x3 -->
+        <!-- Vue liste Famille produits X3 -->
         <record id="view_product_family_x3_tree" model="ir.ui.view">
             <field name="name">product.family.x3.tree</field>
             <field name="model">product.family.x3</field>
@@ -95,12 +95,12 @@
 
         <!-- Action family name Inventaire -->
         <record id="action_product_family_x3" model="ir.actions.act_window">
-            <field name="name">product family x3</field>
+            <field name="name">Famille produits X3</field>
             <field name="res_model">product.family.x3</field>
             <field name="view_mode">list,form</field>
             <field name="help" type="html">
                 <p class="o_view_nocontent_smiling_face">
-                    Créer votre premier product family x3
+                    Créer votre premier Famille produits X3
                 </p>
             </field>
         </record>
@@ -182,7 +182,7 @@
             </field>
         </record>
 
-        <!-- Vue liste product family x3 -->
+        <!-- Vue liste Status article X3 -->
         <record id="view_product_status_sage_tree" model="ir.ui.view">
             <field name="name">product.status.sage.tree</field>
             <field name="model">product.status.sage</field>
@@ -197,7 +197,7 @@
 
         <!-- Action family name Inventaire -->
         <record id="action_product_status_sage" model="ir.actions.act_window">
-            <field name="name">product family x3</field>
+            <field name="name">Status article X3</field>
             <field name="res_model">product.status.sage</field>
             <field name="view_mode">list,form</field>
             <field name="help" type="html">

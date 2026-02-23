@@ -25,59 +25,6 @@ class AccountMoveSageX3(models.Model):
     # PARTIE 1: FACTURES HORS POS (Envoi DIRECT sans wizard)
     # ============================================================================
 
-    def action_send_invoice_to_sage_x3(self):
-        """
-        Bouton pour envoyer UNE facture classique (hors POS) à SAGE X3
-        """
-        self.ensure_one()
-        
-        if self.sage_x3_sent:
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': 'ℹ️ Information',
-                    'message': f'Cette facture a déjà été envoyée à SAGE X3\nN°: {self.sage_x3_piece_number}',
-                    'type': 'info',
-                }
-            }
-        
-        if self.move_type != 'out_invoice':
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': '⚠️ Attention',
-                    'message': 'Seules les factures clients peuvent être envoyées à SAGE X3',
-                    'type': 'warning',
-                }
-            }
-        
-        try:
-            # Préparer et envoyer la facture
-            self._send_single_invoice_to_sage_x3()
-            
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': '✅ Succès',
-                    'message': f'Facture {self.name} envoyée à SAGE X3\nN°: {self.sage_x3_piece_number}',
-                    'type': 'success',
-                }
-            }
-        except Exception as e:
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': '❌ Erreur',
-                    'message': str(e),
-                    'type': 'danger',
-                    'sticky': True,
-                }
-            }
-
     def action_send_all_classic_invoices_to_sage_x3(self):
         """
         Envoyer toutes les factures classiques non envoyées - ENVOI DIRECT
@@ -86,85 +33,7 @@ class AccountMoveSageX3(models.Model):
         # Filtrer par les sociétés auxquelles l'utilisateur a accès
         company = self.env.company
         
-        pending_invoices = self.search([
-            ('move_type', '=', 'out_invoice'),
-            ('state', '=', 'posted'),
-            ('sage_x3_sent', '=', False),
-            # Exclure les factures POS (qui ont une session)
-            ('pos_order_ids', '=', False),
-            # SÉCURITÉ: Uniquement les sociétés autorisées
-            ('company_id', '=', company.id),
-        ])
-        
-        _logger.info("🔒 Sécurité: Utilisateur autorisé pour société: %s", company.name)
-        
-        total = len(pending_invoices)
-        _logger.info("📊 Factures classiques à envoyer: %s", total)
-        for inv in pending_invoices:
-            _logger.info("   • %s - client %s - (Société: %s)", inv.name, inv.partner_id.name, inv.company_id.name)
-        
-        if total == 0:
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': 'ℹ️ Information',
-                    'message': 'Aucune facture classique à envoyer',
-                    'type': 'info',
-                }
-            }
-        
-        # ENVOI DIRECT - Pas de wizard
-        try:
-            result = self._process_bulk_send_classic_invoices_to_sage_x3(pending_invoices.ids)
-            
-            # Message de résultat
-            if result['errors'] == 0:
-                message = f"""✅ Envoi terminé avec succès
-
-📊 {result['success']} facture(s) envoyée(s) à SAGE X3
-"""
-                title = '✅ Succès'
-                notif_type = 'success'
-            else:
-                message = f"""⚠️ Envoi terminé avec erreurs
-
-✅ Succès: {result['success']} facture(s)
-❌ Erreurs: {result['errors']} facture(s)
-
-Détails des erreurs:
-"""
-                for error in result['error_details'][:5]:
-                    message += f"• {error}\n"
-                
-                if len(result['error_details']) > 5:
-                    message += f"\n... et {len(result['error_details']) - 5} autre(s) erreur(s)"
-                
-                title = '⚠️ Terminé avec erreurs'
-                notif_type = 'warning'
-            
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': title,
-                    'message': message,
-                    'type': notif_type,
-                    'sticky': True,
-                }
-            }
-            
-        except Exception as e:
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': '❌ Erreur',
-                    'message': f'Erreur lors de l\'envoi: {str(e)}',
-                    'type': 'danger',
-                    'sticky': True,
-                }
-            }
+        return True
 
     @api.model
     def _process_bulk_send_classic_invoices_to_sage_x3(self, invoice_ids):
@@ -176,16 +45,10 @@ Détails des erreurs:
         success_count = 0
         error_count = 0
         errors = []
-        
-        _logger.info("="*80)
-        _logger.info("🚀 ENVOI EN MASSE - FACTURES CLASSIQUES")
         _logger.info("📊 Nombre de factures: %s", len(invoices))
-        _logger.info("="*80)
         
         for idx, invoice in enumerate(invoices, 1):
             try:
-                _logger.info("")
-                _logger.info("📄 [%s/%s] Traitement facture: %s", idx, len(invoices), invoice.name)
                 
                 invoice._send_single_invoice_to_sage_x3()
                 success_count += 1
@@ -199,11 +62,7 @@ Détails des erreurs:
                 _logger.error("❌ Erreur facture %s: %s", invoice.name, str(e))
         
         self.env.cr.commit()
-        
-        _logger.info("="*80)
-        _logger.info("✅ ENVOI TERMINÉ")
         _logger.info("📊 Succès: %s | Erreurs: %s", success_count, error_count)
-        _logger.info("="*80)
         
         return {
             'success': success_count,
@@ -216,10 +75,6 @@ Détails des erreurs:
         Envoie une facture classique (hors POS) à SAGE X3
         """
         self.ensure_one()
-        
-        _logger.info("="*80)
-        _logger.info("📄 ENVOI FACTURE CLASSIQUE: %s", self.name)
-        _logger.info("="*80)
         
         # Vérifications
         if self.state != 'posted':
@@ -242,11 +97,6 @@ Détails des erreurs:
         if not accounting_data:
             raise UserError("Impossible de préparer les données de la facture")
         
-        # Envoyer à SAGE X3
-        _logger.info("📤 Envoi de la facture %s à SAGE X3", self.name)
-        _logger.info("📦 Données JSON:")
-        _logger.info(json.dumps(accounting_data, indent=2, ensure_ascii=False))
-        
         # Authentification
         token = self._authenticate_sage_x3()
         if not token:
@@ -264,6 +114,7 @@ Détails des erreurs:
         _logger.error("STATUS: %s", response.status_code)
         _logger.error("HEADERS: %s", response.headers)
         _logger.error("BODY: %s", response.text)
+        _logger.error("REPONSE TEST: %s", response)
         
         if response.status_code in (200, 201):
 
@@ -290,8 +141,6 @@ Détails des erreurs:
                 'sage_x3_piece_number': piece_number,
             })
 
-            
-            _logger.info("✅ Facture %s envoyée avec succès: %s", self.name, piece_number)
         else:
             error_msg = f"Erreur HTTP {response.status_code}: {response.text}"
             _logger.error("❌ ERREUR: %s", error_msg)
@@ -326,8 +175,6 @@ Détails des erreurs:
             "thirdParty": third_party
         })
         
-        _logger.info("💰 DÉBIT - Client %s: %s XOF", invoice.partner_id.name, invoice.amount_total)
-        
         # 2. LIGNES CRÉDIT - Produits (regroupés par compte)
         product_lines = defaultdict(float)
         
@@ -351,7 +198,6 @@ Détails des erreurs:
             product_lines[account.code] += amount
         
         # Créer les lignes de crédit
-        _logger.info("💵 CRÉDIT - Produits:")
         credit_account = invoice.company_id.sage_x3_account_sale_id
         if not credit_account:
             raise UserError(f"Compte vente non configuré pour {invoice.partner_id.name}")
@@ -365,9 +211,6 @@ Détails des erreurs:
                     "amount": amount,
                     "thirdParty": ""
                 })
-                
-                _logger.info("   • Compte %s: %s XOF", account_code, amount)
-        
         
         # 4. Construction de la pièce
         company = invoice.company_id
@@ -378,7 +221,7 @@ Détails des erreurs:
         if not company.sage_x3_journal_sale:
             raise UserError(f"Journal de vente SAGE X3 non configuré pour {company.name}")
         
-        company_code = company.code if hasattr(company, 'code') and company.code else company.name[:3].upper()
+        company_code = company.code if hasattr(company, 'code') and company.code else company.lib_company.upper()
         
         piece = {
             "type": "FACLI",
@@ -396,12 +239,6 @@ Détails des erreurs:
             "lines": lines
         }
         
-        _logger.info("📋 Facture préparée:")
-        _logger.info("   • Référence: %s", piece['reference'])
-        _logger.info("   • Client: %s (%s)", invoice.partner_id.name, third_party)
-        _logger.info("   • Montant: %s XOF", invoice.amount_total)
-        _logger.info("   • Lignes: %s", len(lines))
-        
         return {"entries": [entry]}
 
     def _authenticate_sage_x3(self):
@@ -417,10 +254,8 @@ Détails des erreurs:
             if response.status_code in (200, 201):
                 token = response.json().get("token")
                 if token:
-                    _logger.debug("✅ Authentification réussie")
                     return token
                 else:
-                    _logger.error("❌ Token manquant dans la réponse")
                     return None
             else:
                 _logger.error("❌ Échec authentification: HTTP %s", response.status_code)
@@ -444,8 +279,7 @@ Détails des erreurs:
                     _logger.debug("✅ Requête réussie")
                     return response
                 else:
-                    _logger.warning("⚠️  HTTP %s (tentative %s/%s)", 
-                                  response.status_code, attempt + 1, MAX_RETRIES)
+                    _logger.warning("⚠️  HTTP %s (tentative %s/%s)", response.status_code, attempt + 1, MAX_RETRIES)
                     last_exception = Exception(f"HTTP {response.status_code}: {response.text}")
                     
             except requests.exceptions.Timeout:
@@ -477,46 +311,6 @@ Détails des erreurs:
 class AccountPaymentSageX3(models.Model):
     _inherit = "account.payment"
 
-    def action_send_payment_to_sage_x3(self):
-        """Bouton pour envoyer LE paiement à SAGE X3"""
-        self.ensure_one()
-        
-        if self.sage_x3_sent:
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': 'ℹ️ Information',
-                    'message': f'Ce paiement a déjà été envoyé à SAGE X3\nN°: {self.sage_x3_piece_number}',
-                    'type': 'info',
-                }
-            }
-        
-        try:
-            self._send_payment_to_sage_x3()
-            
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': '✅ Succès',
-                    'message': f'Règlement {self.name} envoyé à SAGE X3\nN°: {self.sage_x3_piece_number}',
-                    'type': 'success',
-                }
-            }
-        except Exception as e:
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': '❌ Erreur',
-                    'message': str(e),
-                    'type': 'danger',
-                    'sticky': True,
-                }
-            }
-
-    @api.model
     def action_send_all_pending_payments_to_sage_x3(self):
         """
         Envoyer TOUS les paiements clients non envoyés - ENVOI DIRECT
@@ -528,13 +322,11 @@ class AccountPaymentSageX3(models.Model):
         pending_payments = self.search([
             ('payment_type', '=', 'inbound'),
             ('partner_type', '=', 'customer'),
-            ('state', '=', 'posted'),
+            ('state', '=', 'paid'),
             ('sage_x3_sent', '=', False),
             # SÉCURITÉ: Uniquement les sociétés autorisées
             ('company_id', '=', company.id),
         ])
-        
-        _logger.info("🔒 Sécurité: Utilisateur autorisé pour société: %s", company.name)
         
         total = len(pending_payments)
         
@@ -546,49 +338,17 @@ class AccountPaymentSageX3(models.Model):
                     'title': 'ℹ️ Information',
                     'message': 'Aucun paiement à envoyer',
                     'type': 'info',
+                    'next': {
+                        'type': 'ir.actions.client',
+                        'tag': 'reload',
+                    },
                 }
             }
         
         # ENVOI DIRECT - Pas de wizard
         try:
-            result = self._process_bulk_send_payments_to_sage_x3(pending_payments.ids)
-            
-            # Message de résultat
-            if result['errors'] == 0:
-                message = f"""✅ Envoi terminé avec succès
-
-📊 {result['success']} paiement(s) envoyé(s) à SAGE X3
-"""
-                title = '✅ Succès'
-                notif_type = 'success'
-            else:
-                message = f"""⚠️ Envoi terminé avec erreurs
-
-✅ Succès: {result['success']} paiement(s)
-❌ Erreurs: {result['errors']} paiement(s)
-
-Détails des erreurs:
-"""
-                for error in result['error_details'][:5]:
-                    message += f"• {error}\n"
-                
-                if len(result['error_details']) > 5:
-                    message += f"\n... et {len(result['error_details']) - 5} autre(s) erreur(s)"
-                
-                title = '⚠️ Terminé avec erreurs'
-                notif_type = 'warning'
-            
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': title,
-                    'message': message,
-                    'type': notif_type,
-                    'sticky': True,
-                }
-            }
-            
+            return self._process_bulk_send_payments_to_sage_x3(pending_payments.ids)
+                 
         except Exception as e:
             return {
                 'type': 'ir.actions.client',
@@ -598,6 +358,10 @@ Détails des erreurs:
                     'message': f'Erreur lors de l\'envoi: {str(e)}',
                     'type': 'danger',
                     'sticky': True,
+                    'next': {
+                        'type': 'ir.actions.client',
+                        'tag': 'reload',
+                    },
                 }
             }
 
@@ -609,16 +373,10 @@ Détails des erreurs:
         success_count = 0
         error_count = 0
         errors = []
-        
-        _logger.info("="*80)
-        _logger.info("🚀 ENVOI EN MASSE - PAIEMENTS CLIENTS")
         _logger.info("📊 Nombre de paiements: %s", len(payments))
-        _logger.info("="*80)
         
         for idx, payment in enumerate(payments, 1):
             try:
-                _logger.info("")
-                _logger.info("💰 [%s/%s] Traitement paiement: %s", idx, len(payments), payment.name)
                 
                 payment._send_payment_to_sage_x3()
                 success_count += 1
@@ -632,11 +390,6 @@ Détails des erreurs:
                 _logger.error("❌ Erreur paiement %s: %s", payment.name, str(e))
         
         self.env.cr.commit()
-        
-        _logger.info("="*80)
-        _logger.info("✅ ENVOI TERMINÉ")
-        _logger.info("📊 Succès: %s | Erreurs: %s", success_count, error_count)
-        _logger.info("="*80)
         
         return {
             'success': success_count,
@@ -654,12 +407,8 @@ Détails des erreurs:
         """
         self.ensure_one()
         
-        _logger.info("="*80)
-        _logger.info("💰 ENVOI PAIEMENT: %s", self.name)
-        _logger.info("="*80)
-        
         # Vérifications
-        if self.state != 'posted':
+        if self.state != 'paid':
             raise UserError("Seuls les paiements validés peuvent être envoyés")
         
         if self.payment_type != 'inbound':
@@ -693,10 +442,8 @@ Détails des erreurs:
             "thirdParty": ""
         })
         
-        _logger.info("💰 DÉBIT - %s: %s XOF", self.journal_id.name, self.amount)
-        
         # 2. LIGNE CRÉDIT - Compte client
-        credit_account = self.partner_id.property_account_receivable_id
+        credit_account = company.sage_x3_account_customer_default_id
         if not credit_account:
             raise UserError(f"Compte client non configuré pour {self.partner_id.name}")
         
@@ -708,23 +455,20 @@ Détails des erreurs:
             "thirdParty": third_party
         })
         
-        _logger.info("💵 CRÉDIT - Client %s: %s XOF", self.partner_id.name, self.amount)
-        
         # 3. Construction de la pièce
         if not company.sage_x3_site:
             raise UserError(f"Site SAGE X3 non configuré pour {company.name}")
         
-        if not company.sage_x3_journal_payment:
-            raise UserError(f"Journal de règlement SAGE X3 non configuré pour {company.name}")
         
-        company_code = company.code if hasattr(company, 'code') and company.code else company.name[:3].upper()
+        journal_payment = self.journal_id.name
+        company_code = company.code if hasattr(company, 'code') and company.code else company.lib_company.upper()
         
         piece = {
             "type": "REGCLI",
             "numero": "",
             "site": company.sage_x3_site,
             "date": self.date.strftime("%Y-%m-%d"),
-            "journal": company.sage_x3_journal_payment,
+            "journal": journal_payment,
             "reference": f"REGCLI_{company_code}_{self.name.replace('/', '_')}",
             "devise": "XOF",
             "transaction": "STDCO"
@@ -736,15 +480,7 @@ Détails des erreurs:
         }
         
         accounting_data = {"entries": [entry]}
-        
-        _logger.info("📋 Paiement préparé:")
-        _logger.info("   • Référence: %s", piece['reference'])
-        _logger.info("   • Client: %s (%s)", self.partner_id.name, third_party)
-        _logger.info("   • Montant: %s XOF", self.amount)
-        _logger.info("   • Journal: %s", self.journal_id.name)
-        
         # Envoyer à SAGE X3
-        _logger.info("📤 Envoi du paiement à SAGE X3")
         _logger.info("📦 Données JSON:")
         _logger.info(json.dumps(accounting_data, indent=2, ensure_ascii=False))
         
@@ -761,20 +497,31 @@ Détails des erreurs:
         }
         
         response = self._safe_post(ACCOUNTING_URL, headers, accounting_data)
-        
+
         if response.status_code in (200, 201):
-            response_data = response.json()
-            piece_number = response_data.get('pieceNumber', piece['reference'])
-            
-            # Marquer comme envoyé
+
+            if not response.text:
+                raise UserError("Réponse vide reçue de Sage X3")
+
+            # Sage renvoie un fichier texte, pas du JSON
+            response_text = response.text.strip()
+
+            # Extraire la référence depuis la ligne G
+            first_line = response_text.splitlines()[0]
+            parts = first_line.split(";")
+
+            # Format: G;FACLI;;SIEGE;110226;VTE;FACLI_SAN_INV_2026_00012;XOF;STDCO
+            if len(parts) >= 7:
+                piece_number = parts[6]
+            else:
+                piece_number = accounting_data['entries'][0]['piece']['reference']
+
             self.write({
                 'sage_x3_sent': True,
                 'sage_x3_sent_date': fields.Datetime.now(),
                 'sage_x3_piece_type': 'REGCLI',
                 'sage_x3_piece_number': piece_number,
             })
-            
-            _logger.info("✅ Paiement %s envoyé avec succès: %s", self.name, piece_number)
         else:
             error_msg = f"Erreur HTTP {response.status_code}: {response.text}"
             _logger.error("❌ ERREUR: %s", error_msg)
@@ -783,7 +530,6 @@ Détails des erreurs:
     def _authenticate_sage_x3(self):
         """Authentification SAGE X3"""
         try:
-            _logger.debug("🔐 Authentification SAGE X3...")
             response = requests.post(
                 AUTH_URL,
                 json={"username": USERNAME, "password": PASSWORD},

@@ -185,7 +185,7 @@ class ProductTemplateImport(models.Model):
                             barcode, existing.default_code)
                 barcode = False
 
-        return {
+        vals = {
             "name": item.get("itmdeS1_0") or "Produit sans nom",
             "default_code": item.get("itmreF_0") or False,
             "barcode": barcode,
@@ -227,6 +227,11 @@ class ProductTemplateImport(models.Model):
             "available_in_pos": True,
             "is_storable": True,
         }
+        uom_ids = self._get_uom_ids(item.get("ypcB1_0"), item.get("saU_0"))
+        if uom_ids is not None:
+            vals["uom_ids"] = uom_ids
+        
+        return vals
 
     # ----------------------------------------------------------
     # GESTION DES FOURNISSEURS
@@ -335,8 +340,6 @@ class ProductTemplateImport(models.Model):
                 if existing_item:
                     # Mettre à jour le prix existant
                     existing_item.write({'fixed_price': price_value})
-                    _logger.info("🔄 Prix mis à jour pour %s : %s = %.2f", 
-                               product.default_code, display_name, price_value)
                 else:
                     # Créer une nouvelle ligne de liste de prix
                     PricelistItem.create({
@@ -347,8 +350,6 @@ class ProductTemplateImport(models.Model):
                         'display_applied_on': '1_product',
                         'min_quantity': 1,
                     })
-                    _logger.info("➕ Prix ajouté pour %s : %s = %.2f", 
-                               product.default_code, display_name, price_value)
                     
             except Exception as e:
                 _logger.error("❌ Erreur création prix pour %s (%s) : %s", 
@@ -449,7 +450,37 @@ class ProductTemplateImport(models.Model):
         if not unit_name:
             return self.env.ref("uom.product_uom_unit").id
         uom = self.env["uom.uom"].search([("name", "ilike", unit_name)], limit=1)
-        return uom.id or self.env.ref("uom.product_uom_unit").id
+        if uom:
+            return uom.id
+        else:
+            new_uom = self.env["uom.uom"].create({
+                "name": unit_name,
+                "relative_factor": 1.0,
+            })
+            return new_uom.id
+    
+    def _get_uom_ids(self, cond, unit):
+        # ✅ Si pas de condition, ne pas renseigner le champ
+        if not cond:
+            return None
+
+        unit_id = self._get_uom_id(unit)
+        name = f"cond {cond}"
+
+        uom = self.env["uom.uom"].search([
+            ("name", "ilike", name),
+            ("relative_uom_id", "=", unit_id),
+        ], limit=1)
+
+        if uom:
+            return [(6, 0, [uom.id])]
+        else:
+            new_uom = self.env["uom.uom"].create({
+                "name": name,
+                "relative_uom_id": unit_id,
+                "relative_factor": self._safe_float(cond),
+            })
+            return [(6, 0, [new_uom.id])]
 
     def _get_code_inventory_id(self, name):
         if not name:
