@@ -22,7 +22,7 @@
     ],
     'data': [
         'security/ir.model.access.csv',
-        'data/data_food_credit.xml',
+        # 'data/data_food_credit.xml',
         'data/generate_credit_food.xml',
         'wizard/generate_credit_food_views.xml',
         'wizard/generate_invoice_credit_food_views.xml',
