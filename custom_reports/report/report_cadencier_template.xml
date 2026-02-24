@@ -60,7 +60,7 @@
                             <col style="width:120px;"/>
                             <col style="width:22px;"/>
                             <col style="width:40px;"/>
-                            <col style="width:28px;"/>
+                            <col style="width:28px;" span="4"/>
                             <col style="width:30px;"/>
                             <col style="width:28px;" span="12"/>
                             <col style="width:36px;"/>
@@ -73,6 +73,9 @@
                                 <th style="padding: 4px 3px; text-align: center; font-size: 6pt;">STA.</th>
                                 <th style="padding: 4px 3px; text-align: center; font-size: 6pt;">FAMILLE</th>
                                 <th style="padding: 4px 3px; text-align: center; font-size: 6pt;">ST.DISP.</th>
+                                <th style="padding: 4px 3px; text-align: center; font-size: 6pt;">MAXI</th>
+                                <th style="padding: 4px 3px; text-align: center; font-size: 6pt;">CMD</th>
+                                <th style="padding: 4px 3px; text-align: center; font-size: 6pt;">MARG</th>
                                 <th style="padding: 4px 3px; text-align: center; font-size: 6pt;">PVTC</th>
 
                                 <t t-foreach="['JAN','FEV','MAR','AVR','MAI','JUIN','JLT','AOT','SPT','OCT','NOV','DEC']" t-as="m">
@@ -114,7 +117,19 @@
                                         <t t-esc="'%.0f' % line['st_disp']"/>
                                     </td>
 
-                                    <td style="padding: 3px; text-align: right; font-size: 6pt;">
+                                    <td style="padding: 3px; text-align: center; font-size: 6pt;">
+                                        <t t-esc="'%.0f' % line['maxi']"/>
+                                    </td>
+
+                                    <td style="padding: 3px; text-align: center; font-size: 6pt;">
+                                        <t t-esc="'%.0f' % line['cmd']"/>
+                                    </td>
+
+                                    <td style="padding: 3px; text-align: center; font-size: 6pt;">
+                                        <t t-esc="'%.0f' % line['marg']"/>
+                                    </td>
+
+                                    <td style="padding: 3px; text-align: center; font-size: 6pt;">
                                         <t t-esc="'%.0f' % line['pvtc']"/>
                                     </td>
 
@@ -152,7 +167,7 @@
                             </t>
 
                             <tr style="border-bottom: 0.5px solid #e0e0e0;">
-                                <td colspan="19" style="padding: 0; border: none; text-align: center; font-size: 6.5pt; font-weight: 700; color: #00708a;">
+                                <td colspan="22" style="padding: 0; border: none; text-align: center; font-size: 6.5pt; font-weight: 700; color: #00708a;">
                                     RECAPITULATIF PAR FAMILLE
                                 </td>
                             </tr>
@@ -172,14 +187,32 @@
                                         <td colspan="1"
                                             style="padding: 3px 6px;
                                                 font-weight: 700;
+                                                text-align: center;
                                                 font-size: 6.5pt;">
                                             <t t-esc="code"/>
                                         </td>
-                                        <td colspan="5"
+                                        <td colspan="3"
                                             style="padding: 3px 6px;
                                                 font-weight: 700;
+                                                text-align: left;
                                                 font-size: 6.5pt;">
                                             <t t-esc="current_famille"/>
+                                        </td>
+
+                                        <td colspan="1" style="padding: 3px 6px; text-align: center;">
+                                            <t t-esc="'%.0f' % sum(l['st_disp'] for l in fam_lines)"/>
+                                        </td>
+                                        <td colspan="1" style="padding: 3px 6px; text-align: center;">
+                                            <t t-esc="'%.0f' % sum(l['maxi'] for l in fam_lines)"/>
+                                        </td>
+                                        <td colspan="1" style="padding: 3px 6px; text-align: center;">
+                                            <t t-esc="'%.0f' % sum(l['cmd'] for l in fam_lines)"/>
+                                        </td>
+                                        <td colspan="1" style="padding: 3px 6px; text-align: center;">
+                                            <t t-esc="'%.0f' % sum(l['marg'] for l in fam_lines)"/>
+                                        </td>
+                                        <td colspan="1" style="padding: 3px 6px; text-align: center;">
+                                            <t t-esc="'%.0f' % sum(l['pvtc'] for l in fam_lines)"/>
                                         </td>
 
                                         <!-- Total 12 mois -->

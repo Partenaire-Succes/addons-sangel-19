@@ -8,7 +8,7 @@
     
     <!-- Category (application level) -->
     <record model="ir.module.category" id="module_category_pos_custom">
-        <field name="name">POS Personnalisé</field>
+        <field name="name">Parametre de la caisse</field>
         <field name="sequence">120</field>
     </record>
     
@@ -27,14 +27,19 @@
         <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
     </record>
     <record id="group_pos_admin" model="res.groups">
-        <field name="name">Responsable des caisse</field>
+        <field name="name">Superviseur</field>
         <field name="privilege_id" ref="privilege_pos_access"/>
         <field name="implied_ids" eval="[(4, ref('group_pos_user'))]"/>
     </record>
-    <record id="group_pos_shop" model="res.groups">
-        <field name="name">Responsable des Magasin</field>
+    <record id="group_pos_manager" model="res.groups">
+        <field name="name">Assistant Magasin</field>
         <field name="privilege_id" ref="privilege_pos_access"/>
         <field name="implied_ids" eval="[(4, ref('group_pos_admin'))]"/>
+    </record>
+    <record id="group_pos_shop" model="res.groups">
+        <field name="name">Responsable Magasin</field>
+        <field name="privilege_id" ref="privilege_pos_access"/>
+        <field name="implied_ids" eval="[(4, ref('group_pos_manager'))]"/>
     </record>
     <record id="group_pos_dsi" model="res.groups">
         <field name="name">DSI</field>

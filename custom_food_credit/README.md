@@ -48,7 +48,7 @@ Ces menus sont ajoutés dans : **Ventes → Configuration**
 
 1. Ouvrir **Contacts → Contacts**
 2. Ouvrir la fiche de la société (type société)
-3. Aller à l’onglet **Credt** (oui, orthographe telle quelle dans l’écran)
+3. Aller à l’onglet **Crédit** (oui, orthographe telle quelle dans l’écran)
 4. Dans le bloc **Credit Alimentaire** :
    - cocher **A un credit Alimentaire**
    - renseigner **Credit Alimentaire** (montant mensuel)
@@ -66,7 +66,7 @@ Ces menus sont ajoutés dans : **Ventes → Configuration**
 ### C. Paramétrer la “Limite de crédit” (Compte client)
 
 1. Ouvrir **Contacts → Contacts**
-2. Sur le client concerné, onglet **Credt**
+2. Sur le client concerné, onglet **Crédit**
 3. Dans le bloc **Limite de credit** :
    - cocher **A une limite de credit**
    - renseigner **Limite de credit**
@@ -256,7 +256,7 @@ Boutons utiles :
 
 ## 12) Emplacements pour captures d’écran
 
-- [CAPTURE] Contact société : onglet “Credt” → bloc “Credit Alimentaire”
+- [CAPTURE] Contact société : onglet “Crédit” → bloc “Credit Alimentaire”
 - [CAPTURE] POS : moyen de paiement (cases Credit Alimentaire / Compte client)
 - [CAPTURE] Liste “Crédit alimentaire” : bouton “Générer Crédits + Lignes”
 - [CAPTURE] Crédit (formulaire) : lignes employés + solde

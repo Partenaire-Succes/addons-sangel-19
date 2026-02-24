@@ -84,12 +84,15 @@ class CadencierWizard(models.TransientModel):
             ventes = [round(monthly_qtys.get(i, 0), 2) for i in range(12)]
             total = sum(ventes)
             stock = product.with_company(company).qty_available
+            marg = (product.list_price - product.standard_price)
 
             result.append({
                 'code': product.default_code or '',
                 'designation': product.name,
-                'sta': 'C' if product.active else 'I',
+                'sta': product.prod_status_x3_id.name if product.prod_status_x3_id else '',
                 'maxi': product.max_qty_orderpoint,
+                'cmd': product.pending_reception_qty,
+                'marg': round(marg, 2),
                 'famille': product.categ_id.name,
                 'code_famille': product.categ_id.code,
                 'st_disp': round(stock, 2),
