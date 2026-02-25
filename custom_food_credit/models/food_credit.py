@@ -38,6 +38,7 @@ class FoodCredit(models.Model):
     state = fields.Selection([
             ('draft', 'Brouillon'), 
             ('in_progress', 'En cours'), 
+            ('close', 'Bloqué'), 
             ('done', 'Terminé')
         ], string='État', default='draft', required=True)
     note = fields.Text('Note')
@@ -86,13 +87,16 @@ class FoodCredit(models.Model):
                 raise UserError(_("Vous ne pouvez supprimer que les credits alimentaires à l'état Brouillon."))
         return super(FoodCredit, self).unlink()
     
-    def action_done(self):
+    def action_in_progress(self):
         if not self.line_ids:
             raise UserError(_("Vous devez d'abord créer les lignes des clients."))
         self.write({'state': 'in_progress'})
 
     def action_close(self):
-        self.write({'state': 'done'})
+        self.write({'state': 'close'})
+
+    def action_done(self):
+        self.write({'state': 'done'})  
 
 
     def action_generate_credits_with_lines(self):

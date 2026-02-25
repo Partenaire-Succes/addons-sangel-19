@@ -57,8 +57,6 @@
                                         <th>Panier Valeur</th>
                                         <th>Panier Qté</th>
                                         <th>Valeur remises</th>
-                                        <th>Météo</th>
-                                        <th>Observations</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -66,32 +64,29 @@
                                         <tr>
                                             <td><span t-esc="l['jour'].capitalize()"/></td>
                                             <td><span t-esc="l['date'].strftime('%d/%m/%Y')"/></td>
-                                            <td class="text-right"><span t-esc="'%.0f' % l['ca_ht']"/></td>
-                                            <td class="text-right"><span t-esc="'%.0f' % l['ca_ttc']"/></td>
-                                            <td class="text-right"><span t-esc="'%.0f' % l['marge']"/></td>
+                                            <td class="text-right"><span t-esc="'{:,.0f}'.format(l['ca_ht']).replace(',', ' ')"/></td>
+                                            <td class="text-right"><span t-esc="'{:,.0f}'.format(l['ca_ttc']).replace(',', ' ')"/></td>
+                                            <td class="text-right"><span t-esc="'{:,.0f}'.format(l['marge']).replace(',', ' ')"/></td>
                                             <td class="text-right"><span t-esc="'%.2f' % l['pct_marge']"/>%</td>
                                             <td class="text-right"><span t-esc="l['nb_clients']"/></td>
-                                            <td class="text-right"><span t-esc="'%.0f' % l['panier_valeur']"/></td>
+                                            <td class="text-right"><span t-esc="'{:,.0f}'.format(l['panier_valeur']).replace(',', ' ')"/></td>
                                             <td class="text-right"><span t-esc="'%.2f' % l['panier_qte']"/></td>
-                                            <td class="text-right"><span t-esc="'%.0f' % l['remises']"/></td>
-                                            <td></td>
-                                            <td></td>
+                                            <td class="text-right"><span t-esc="'{:,.0f}'.format(l['remises']).replace(',', ' ')"/></td>
                                         </tr>
                                     </t>
 
                                     <tr class="totaux">
                                         <td colspan="2">Totaux / Moyennes</td>
-                                        <td class="text-right"><span t-esc="'%.0f' % totaux['ca_ht']"/></td>
-                                        <td class="text-right"><span t-esc="'%.0f' % totaux['ca_ttc']"/></td>
-                                        <td class="text-right"><span t-esc="'%.0f' % totaux['marge']"/></td>
+                                        <td class="text-right"><span t-esc="'{:,.0f}'.format(totaux['ca_ht']).replace(',', ' ')"/></td>
+                                        <td class="text-right"><span t-esc="'{:,.0f}'.format(totaux['ca_ttc']).replace(',', ' ')"/></td>
+                                        <td class="text-right"><span t-esc="'{:,.0f}'.format(totaux['marge']).replace(',', ' ')"/></td>
                                         <td class="text-right">
                                             <span t-esc="'%.2f' % totaux.get('pct_marge', 0)"/>%
                                         </td>
                                         <td class="text-right"><span t-esc="totaux['nb_clients']"/></td>
-                                        <td class="text-right"><span t-esc="'%.0f' % totaux['panier_valeur']"/></td>
+                                        <td class="text-right"><span t-esc="'{:,.0f}'.format(totaux['panier_valeur']).replace(',', ' ')"/></td>
                                         <td class="text-right"><span t-esc="'%.2f' % totaux['panier_qte']"/></td>
-                                        <td class="text-right"><span t-esc="'%.0f' % totaux['remises']"/></td>
-                                        <td colspan="2"></td>
+                                        <td class="text-right"><span t-esc="'{:,.0f}'.format(totaux['remises']).replace(',', ' ')"/></td>
                                     </tr>
                                 </tbody>
                             </table>

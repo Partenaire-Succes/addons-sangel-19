@@ -10,11 +10,13 @@
                 <form string="Gestion des credits Alimentaire" create="0" edit="1" delete="0">
                     <header>
                         <button display="always" class="btn btn-primary" 
-                                string="Générer Crédits Alimentaires" type="action" invisible="state != 'draft'"
+                                string="Générer Crédits Alimentaires" type="action" invisible="1"
                                 name="%(custom_food_credit.action_food_credit_generation_wizard)d" />
-                        <button name="action_done" type="object" string="Soumettre pour validation"
-                                class="btn-info" invisible="state != 'draft'" />
-                        <button name="action_close" type="object" string="Clôturer"
+                        <button name="action_in_progress" type="object" string="Mettre en cours"
+                                class="btn-info" invisible="state not in ('draft', 'close')" />
+                        <button name="action_close" type="object" string="Bloquer"
+                                class="btn-warning" invisible="state not in ('in_progress', 'draft')" />
+                        <button name="action_done" type="object" string="Clôturer"
                                 class="btn btn-success" invisible="state != 'in_progress'" />
                         <button display="always" class="btn btn-primary" 
                                 string="Generer les factures" type="action" invisible="state not in ('in_progress', 'done')"
@@ -69,7 +71,7 @@
                                     </list>
                                 </field>
                             </page>
-                            <page string="Les Employes" invisible="0">
+                            <page string="Les Employes" invisible="1">
                                 <field name="partner_ids" readonly="state == 'done'">
                                     <list editable="bottom" create="0" edit="1" delete="0">
                                         <field name="name" string='Client'/>

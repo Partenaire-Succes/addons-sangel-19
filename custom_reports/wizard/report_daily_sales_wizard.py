@@ -20,6 +20,7 @@ class ReportDailySalesWizard(models.TransientModel):
     report_type = fields.Selection([
         ('sale', 'Ventes (Sales)'),
         ('pos', 'Point de Vente (POS)'),
+        ('all', 'Vente et Point de vente')
     ], string='Source', required=True, default='sale')
 
     company_id = fields.Many2one(
@@ -38,7 +39,7 @@ class ReportDailySalesWizard(models.TransientModel):
         current_date = self.date_from
         delta = timedelta(days=1)
 
-        # ✅ Forcer le format de date français
+        # Forcer le format de date français
         try:
             locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
         except locale.Error:
@@ -65,21 +66,20 @@ class ReportDailySalesWizard(models.TransientModel):
 
                 ca_ht = sum(order.amount_untaxed for order in orders)
                 ca_ttc = sum(order.amount_total for order in orders)
-
-                # ✅ CORRECTION : Calcul de la marge réelle (prix de vente - coût d'achat)
                 cout_total = sum(
                     line.product_uom_qty * line.product_id.standard_price
                     for line in order_lines
                 )
-                marge = ca_ht - cout_total  # Marge = CA HT - Coût d'achat
-
+                marge = ca_ht - cout_total
                 remises = sum(
-                    (l.price_unit * l.product_uom_qty * (l.discount or 0.0) / 100.0)
+                    l.price_unit * l.product_uom_qty * (l.discount or 0.0) / 100.0
                     for l in order_lines
                 )
-                nb_clients = len(set(orders.mapped('partner_id.id')))
+                nb_clients = len(orders)
+                # FIX 4 : champ correct pour panier_qte
+                total_qte = sum(order_lines.mapped('product_uom_qty'))
 
-            else:  # POS
+            elif self.report_type == 'pos':
                 orders = self.env['pos.order'].search([
                     ('date_order', '>=', fields.Datetime.to_datetime(current_date)),
                     ('date_order', '<', fields.Datetime.to_datetime(next_day)),
@@ -90,30 +90,90 @@ class ReportDailySalesWizard(models.TransientModel):
                     ('order_id', 'in', orders.ids)
                 ])
 
-                # ✅ CORRECTION : Récupérer le CA HT depuis les commandes POS
-                ca_ht = sum(order.amount_tax == 0 and order.amount_total or
-                            (order.amount_total - order.amount_tax) for order in orders)
+                # FIX 3 : remplacer le and/or par un vrai ternaire
+                ca_ht = sum(
+                    order.amount_total if order.amount_tax == 0
+                    else (order.amount_total - order.amount_tax)
+                    for order in orders
+                )
                 ca_ttc = sum(order.amount_total for order in orders)
-
-                # ✅ CORRECTION : Calcul de la marge réelle pour POS
                 cout_total = sum(
                     line.qty * line.product_id.standard_price
                     for line in order_lines
                 )
                 marge = ca_ht - cout_total
-
                 remises = sum(
-                    (l.price_unit * l.qty * (l.discount or 0.0) / 100.0)
+                    l.price_unit * l.qty * (l.discount or 0.0) / 100.0
                     for l in order_lines
                 )
-                nb_clients = len(set(orders.mapped('partner_id.id')))
+                nb_clients = len(orders)
+                total_qte = sum(order_lines.mapped('qty'))
+
+            else:  # 'all' : ventes + POS combinés
+                # --- Ventes ---
+                sale_orders = self.env['sale.order'].search([
+                    ('date_order', '>=', fields.Datetime.to_datetime(current_date)),
+                    ('date_order', '<', fields.Datetime.to_datetime(next_day)),
+                    ('state', 'in', ['sale', 'done']),
+                    ('company_id', '=', self.company_id.id),
+                ])
+                sale_order_lines = self.env['sale.order.line'].search([
+                    ('order_id', 'in', sale_orders.ids),
+                    ('state', '!=', 'cancel')
+                ])
+                sale_ca_ht = sum(order.amount_untaxed for order in sale_orders)
+                sale_ca_ttc = sum(order.amount_total for order in sale_orders)
+                sale_cout_total = sum(
+                    line.product_uom_qty * line.product_id.standard_price
+                    for line in sale_order_lines
+                )
+                sale_marge = sale_ca_ht - sale_cout_total
+                sale_remises = sum(
+                    l.price_unit * l.product_uom_qty * (l.discount or 0.0) / 100.0
+                    for l in sale_order_lines
+                )
+                sale_qte = sum(sale_order_lines.mapped('product_uom_qty'))
+
+                # --- POS ---
+                pos_orders = self.env['pos.order'].search([
+                    ('date_order', '>=', fields.Datetime.to_datetime(current_date)),
+                    ('date_order', '<', fields.Datetime.to_datetime(next_day)),
+                    ('state', 'in', ['paid', 'invoiced', 'done']),
+                    ('company_id', '=', self.company_id.id),
+                ])
+                pos_order_lines = self.env['pos.order.line'].search([
+                    ('order_id', 'in', pos_orders.ids)
+                ])
+                # FIX 3 : ternaire propre
+                pos_ca_ht = sum(
+                    order.amount_total if order.amount_tax == 0
+                    else (order.amount_total - order.amount_tax)
+                    for order in pos_orders
+                )
+                pos_ca_ttc = sum(order.amount_total for order in pos_orders)
+                pos_cout_total = sum(
+                    line.qty * line.product_id.standard_price
+                    for line in pos_order_lines
+                )
+                pos_marge = pos_ca_ht - pos_cout_total
+                pos_remises = sum(
+                    l.price_unit * l.qty * (l.discount or 0.0) / 100.0
+                    for l in pos_order_lines
+                )
+                pos_qte = sum(pos_order_lines.mapped('qty'))
+
+                # FIX 1 : ca_ht défini dans le bloc else
+                ca_ht = sale_ca_ht + pos_ca_ht
+                ca_ttc = sale_ca_ttc + pos_ca_ttc
+                marge = sale_marge + pos_marge
+                remises = sale_remises + pos_remises
+                nb_clients = len(sale_orders) + len(pos_orders)
+                # FIX 2 : total_qte calculé sans .mapped() sur une liste
+                total_qte = sale_qte + pos_qte
 
             panier_valeur = ca_ttc / nb_clients if nb_clients else 0
-            panier_qte = (
-                sum(order_lines.mapped('product_uom_qty' if self.report_type == 'sale' else 'qty'))
-                / nb_clients if nb_clients else 0
-            )
-            # ✅ CORRECTION : Le % de marge est calculé sur le CA HT, pas le CA TTC
+            panier_qte = total_qte / nb_clients if nb_clients else 0
+            # % de marge calculé sur le CA HT
             pct_marge = (marge / ca_ht * 100.0) if ca_ht else 0.0
 
             data.append({
@@ -127,8 +187,6 @@ class ReportDailySalesWizard(models.TransientModel):
                 'panier_valeur': panier_valeur,
                 'panier_qte': panier_qte,
                 'remises': remises,
-                'meteo': '',
-                'obs': '',
             })
 
             current_date = next_day

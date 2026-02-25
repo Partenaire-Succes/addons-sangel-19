@@ -79,12 +79,28 @@ class CadencierWizard(models.TransientModel):
             )
 
         result = []
-        for product in products.sorted(key=lambda p: ((p.categ_id.name or '').lower(),(p.default_code or '').lower())):
+        for product in products.sorted(key=lambda p: ((p.categ_id.name or '').lower(), (p.default_code or '').lower())):
             monthly_qtys = product_data[product.id]
             ventes = [round(monthly_qtys.get(i, 0), 2) for i in range(12)]
             total = sum(ventes)
             stock = product.with_company(company).qty_available
-            marg = (product.list_price - product.standard_price)
+            pmp = product.avg_cost if product.avg_cost else product.standard_price
+
+            # ✅ CA réel depuis les lignes de vente (après remises)
+            total_ca = 0.0
+            for line in sale_lines:
+                if line.product_id.id == product.id:
+                    total_ca += line.price_subtotal  # HT après remise
+
+            for line in pos_lines:
+                if line.product_id.id == product.id:
+                    total_ca += line.price_subtotal  # HT après remise POS
+
+            # ✅ Coût total cumulé sur l'année
+            total_cost = total * pmp
+
+            # ✅ Taux de marge cumulé = (CA - Coût) / CA * 100
+            taux_marge = round((total_ca - total_cost) / total_ca * 100, 2) if total_ca > 0 else 0.0
 
             result.append({
                 'code': product.default_code or '',
@@ -92,7 +108,7 @@ class CadencierWizard(models.TransientModel):
                 'sta': product.prod_status_x3_id.name if product.prod_status_x3_id else '',
                 'maxi': product.max_qty_orderpoint,
                 'cmd': product.pending_reception_qty,
-                'marg': round(marg, 2),
+                'marg': taux_marge,
                 'famille': product.categ_id.name,
                 'code_famille': product.categ_id.code,
                 'st_disp': round(stock, 2),

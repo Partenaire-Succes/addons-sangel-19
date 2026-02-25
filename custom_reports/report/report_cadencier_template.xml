@@ -130,7 +130,7 @@
                                     </td>
 
                                     <td style="padding: 3px; text-align: center; font-size: 6pt;">
-                                        <t t-esc="'%.0f' % line['pvtc']"/>
+                                        <t t-esc="'{:,.0f}'.format(line['pvtc']).replace(',', ' ')"/>
                                     </td>
 
                                     <!-- MOIS avec couleur si > 0 -->
@@ -209,10 +209,10 @@
                                             <t t-esc="'%.0f' % sum(l['cmd'] for l in fam_lines)"/>
                                         </td>
                                         <td colspan="1" style="padding: 3px 6px; text-align: center;">
-                                            <t t-esc="'%.0f' % sum(l['marg'] for l in fam_lines)"/>
+                                            <t t-esc="'%.2f' % (sum(l['marg'] for l in fam_lines) / len(fam_lines) if fam_lines else 0)"/>
                                         </td>
                                         <td colspan="1" style="padding: 3px 6px; text-align: center;">
-                                            <t t-esc="'%.0f' % sum(l['pvtc'] for l in fam_lines)"/>
+                                            <span t-esc="'{:,.0f}'.format(sum(l['pvtc'] for l in fam_lines)).replace(',', ' ')"/>
                                         </td>
 
                                         <!-- Total 12 mois -->

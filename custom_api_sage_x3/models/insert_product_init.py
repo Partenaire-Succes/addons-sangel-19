@@ -190,7 +190,7 @@ class ProductTemplateImport(models.Model):
             "default_code": item.get("itmreF_0") or False,
             "barcode": barcode,
             "description": item.get("itmdeS2_0", ""),
-            "list_price": self._safe_float(item.get("ypV_SAN_0")),
+            "list_price": self._get_ht_price(item.get("ypV_SAN_0"), item.get("vacitM_0")),
             "taxes_id": self._get_taxes_id(item.get("vacitM_0")),
             "supplier_taxes_id": self._get_supplier_taxes_id(item.get("vacitM_0")),
             "price_unit_ttc": self._safe_float(item.get("ypV_SAN_0")),
@@ -236,6 +236,17 @@ class ProductTemplateImport(models.Model):
     # ----------------------------------------------------------
     # GESTION DES FOURNISSEURS
     # ----------------------------------------------------------
+    def _get_ht_price(self, price, tax):
+        """Calcule le prix HT à partir du prix TTC et du taux de taxe extrait du code taxe."""
+        price_ttc = self._safe_float(price)
+        tax_amount = self._extract_tax_amount(tax)
+        
+        if tax_amount > 0:
+            price_ht = price_ttc / (1 + tax_amount / 100)
+            return round(price_ht, 2)
+        else:
+            return price_ttc 
+        
     def _update_product_suppliers(self, product, item):
         """
         Crée ou met à jour les fournisseurs d'un produit
@@ -325,6 +336,15 @@ class ProductTemplateImport(models.Model):
             
             try:
                 # Récupérer la liste de prix via son xml_id
+                product.write({
+                    "list_price": self._get_ht_price(item.get("ypV_SAN_0"), item.get("vacitM_0")),
+                    "price_unit_ttc": self._safe_float(item.get("ypV_SAN_0")),
+                    "price_catalog": self._safe_float(item.get("basprI_0")),
+                    "price_carton": self._safe_float(item.get("ypxcA_0")),
+                    "price_negoce": self._safe_float(item.get("ypxneG_0")),
+                    "price_ecom": self._safe_float(item.get("yglovttC_0")),
+                    })  # Mettre à jour les differents champs de prix
+                
                 pricelist = self.env.ref(xml_id, raise_if_not_found=False)
                 
                 if not pricelist:
@@ -464,6 +484,10 @@ class ProductTemplateImport(models.Model):
         if not cond:
             return None
 
+        factor = self._safe_float(cond)
+        if factor <= 0:
+            return None
+
         unit_id = self._get_uom_id(unit)
         name = f"cond {cond}"
 
@@ -478,7 +502,7 @@ class ProductTemplateImport(models.Model):
             new_uom = self.env["uom.uom"].create({
                 "name": name,
                 "relative_uom_id": unit_id,
-                "relative_factor": self._safe_float(cond),
+                "relative_factor": factor,
             })
             return [(6, 0, [new_uom.id])]
 
