@@ -11,5 +11,13 @@
             <field name="standard_price">0.0</field>
             <field name="description">Produit pour facturation des crédits alimentaires</field>
         </record>
+
+        <record id="generation_credit_food" model="food.credit">
+            <field name="partner_company_id" ref="base.main_partner"/>
+            <field name="amount">0.0</field>
+            <field name="state">draft</field>
+            <field name="company_id" ref="base.main_company"/>
+            <field name="responsible_id" ref="base.user_admin"/>
+        </record>
     </data>
 </odoo>
