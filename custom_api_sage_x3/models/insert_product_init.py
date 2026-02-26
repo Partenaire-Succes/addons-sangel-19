@@ -312,10 +312,14 @@ class ProductTemplateImport(models.Model):
                         product.default_code, str(e))
             return 0
 
+
     def _create_pricelist_items(self, product, item):
         """Crée les lignes de liste de prix pour un produit."""
         PricelistItem = self.env['product.pricelist.item']
-        
+
+        # Récupération de la taxe depuis l'API
+        tax_code = item.get('vacitM_0')
+
         # Mapping : (xml_id, champ_api, nom_affichage)
         pricelist_mappings = [
             ('custom_stock.basic_retailing_price', 'ypV_SAN_0', 'PRIX VENTE DE BASE TTC'),
@@ -324,18 +328,24 @@ class ProductTemplateImport(models.Model):
             ('custom_stock.retail_sale_price', 'ypxneG_0', 'PRIX VENTE NEGOCE TTC'),
             ('custom_stock.e_commerce_sale_price', 'yglovttC_0', 'PRIX VENTE E-COMMERCE TTC'),
         ]
-        
+
         for xml_id, api_field, display_name in pricelist_mappings:
-            price_value = self._safe_float(item.get(api_field))
-            
+            price_value_ttc = self._safe_float(item.get(api_field))
+
             # Ne créer que si le prix existe et est > 0
-            if not price_value or price_value <= 0:
-                _logger.debug("⏭️ Prix ignoré pour %s (%s) : %.2f", 
-                            product.default_code, display_name, price_value or 0)
+            if not price_value_ttc or price_value_ttc <= 0:
+                _logger.debug("⏭️ Prix ignoré pour %s (%s) : %.2f",
+                            product.default_code, display_name, price_value_ttc or 0)
                 continue
-            
+
+            # Conversion TTC → HT
+            price_value = self._get_ht_price(price_value_ttc, tax_code)
+            _logger.debug("💱 %s | TTC: %.2f → HT: %.2f (taxe: %s)",
+                        display_name, price_value_ttc, price_value, tax_code)
+
             try:
-                # Récupérer la liste de prix via son xml_id
+                pricelist = self.env.ref(xml_id, raise_if_not_found=False)
+
                 product.write({
                     "list_price": self._get_ht_price(item.get("ypV_SAN_0"), item.get("vacitM_0")),
                     "price_unit_ttc": self._safe_float(item.get("ypV_SAN_0")),
@@ -344,24 +354,19 @@ class ProductTemplateImport(models.Model):
                     "price_negoce": self._safe_float(item.get("ypxneG_0")),
                     "price_ecom": self._safe_float(item.get("yglovttC_0")),
                     })  # Mettre à jour les differents champs de prix
-                
-                pricelist = self.env.ref(xml_id, raise_if_not_found=False)
-                
+
                 if not pricelist:
                     _logger.warning("⚠️ Liste de prix introuvable : %s", xml_id)
                     continue
-                
-                # Vérifier si l'item existe déjà
+
                 existing_item = PricelistItem.search([
                     ('pricelist_id', '=', pricelist.id),
                     ('product_tmpl_id', '=', product.id),
                 ], limit=1)
-                
+
                 if existing_item:
-                    # Mettre à jour le prix existant
                     existing_item.write({'fixed_price': price_value})
                 else:
-                    # Créer une nouvelle ligne de liste de prix
                     PricelistItem.create({
                         'pricelist_id': pricelist.id,
                         'product_tmpl_id': product.id,
@@ -370,9 +375,9 @@ class ProductTemplateImport(models.Model):
                         'display_applied_on': '1_product',
                         'min_quantity': 1,
                     })
-                    
+
             except Exception as e:
-                _logger.error("❌ Erreur création prix pour %s (%s) : %s", 
+                _logger.error("❌ Erreur création prix pour %s (%s) : %s",
                             product.default_code, display_name, str(e))
                 
     # ----------------------------------------------------------

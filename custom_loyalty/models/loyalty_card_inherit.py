@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from odoo import api, models
+from odoo import api, models, fields
 
 
 class LoyaltyCardInherit(models.Model):
@@ -31,7 +31,6 @@ class LoyaltyCardInherit(models.Model):
         
         This allows the POS to validate codes offline using cached data.
         """
-        from odoo import fields
 
         # Get program IDs for this POS config
         program_ids = config._get_program_ids().ids

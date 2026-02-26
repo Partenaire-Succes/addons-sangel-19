@@ -7,22 +7,25 @@
        t-inherit-mode="extension">
 
         <xpath expr="//section[hasclass('paymentlines-container')]" position="after">
-            <t t-set="loyaltyStats" t-value="pos.getOrder()?.getLoyaltyPoints() or []"/>
-
-            <!-- Calcul du total des points -->
-            <t t-set="totalPoints"
-            t-value="loyaltyStats.reduce((sum, stat) => sum + (stat.points?.balance || 0), 0)"/>
-
-            <t t-if="pos.getOrder()?.getPartner() and totalPoints > 0">
-                <section class="paymentlines-container rounded-3 bg-view mt-2">
-                    <div class="total text-center py-2 py-lg-4">
-                        Solde : Point de fidélité
-                        <div class="text-warning fw-bold fs-3">
-                            <t t-esc="totalPoints"/>
+            <t t-set="order" t-value="pos.getOrder()"/>
+            <t t-if="order and order.getPartner()">
+                <t t-set="loyaltyTotal"
+                   t-value="order.getLoyaltyBalanceTotal()"/>
+                <t t-if="loyaltyTotal > 0">
+                    <section class="paymentlines-container bg-view rounded-3 mt-2">
+                        <div class="text-center py-2 py-lg-4">
+                            <div class="fw-bold">
+                                Solde: Points fidélité
+                            </div>
+                            <div class="text-warning fw-bold fs-3">
+                                <t t-esc="loyaltyTotal"/>
+                            </div>
                         </div>
-                    </div>
-                </section>
+                    </section>
+                    
+                </t>
             </t>
+
         </xpath>
     </t>
 

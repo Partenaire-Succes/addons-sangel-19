@@ -72,8 +72,7 @@
                 <div class="w-100 d-flex flex-wrap justify-content-between gap-2">
                     <div class="d-flex gap-2">
                         <!-- Cash In/Out button first -->
-                        <button t-if="pos.showCashMoveButton" 
-                                class="button btn btn-info btn-lg" 
+                        <button class="button btn btn-info btn-lg" 
                                 t-on-click="() => this.cashMove()">
                             Cash entrant/sortant
                         </button>

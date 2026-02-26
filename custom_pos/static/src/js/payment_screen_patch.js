@@ -6,6 +6,7 @@ import { ActionpadWidget } from "@point_of_sale/app/screens/product_screen/actio
 import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 import { _t } from "@web/core/l10n/translation";
 import { patch } from "@web/core/utils/patch";
+import { PosOrder } from "@point_of_sale/app/models/pos_order";
 
 console.warn("🟢 payment_screen_patch.js - All imports successful, applying patch now");
 
@@ -115,6 +116,16 @@ patch(ActionpadWidget.prototype, {
             });
         }
     },
+});
+
+patch(PosOrder.prototype, {
+    getLoyaltyBalanceTotal() {
+        const loyaltyPoints = this.getLoyaltyPoints?.() || [];
+        return loyaltyPoints.reduce(
+            (sum, stat) => sum + (stat.points?.balance || 0),
+            0
+        );
+    }
 });
 
 // VERIFICATION: Check if patch was applied successfully
