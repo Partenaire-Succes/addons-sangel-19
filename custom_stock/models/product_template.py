@@ -163,6 +163,21 @@ class ProductTemplateInherit(models.Model):
         help="Prix de vente catalogue toutes taxes comprises.",
     )
 
+    price_gm = fields.Float(
+        string="Tarif GM",
+        help="Prix de vente GM toutes taxes comprises.",
+    )
+
+    price_rh = fields.Float(
+        string="Tarif RH",
+        help="Prix de vente RH toutes taxes comprises.",
+    )
+
+    price_st = fields.Float(
+        string="Tarif ST",
+        help="Prix de vente ST toutes taxes comprises.",
+    )
+
     marque = fields.Char(
         string="Marque",
         help="Marque du produit.",

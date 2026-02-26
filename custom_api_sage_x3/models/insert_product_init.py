@@ -320,16 +320,32 @@ class ProductTemplateImport(models.Model):
         # Récupération de la taxe depuis l'API
         tax_code = item.get('vacitM_0')
 
-        # Mapping : (xml_id, champ_api, nom_affichage)
+        # Mapping : (xml_id, champ_api, nom_affichage, multiplicateur)
         pricelist_mappings = [
-            ('custom_stock.basic_retailing_price', 'ypV_SAN_0', 'PRIX VENTE DE BASE TTC'),
-            ('custom_stock.catalog_sale_price', 'basprI_0', 'PRIX VENTE CATALOGUE'),
-            ('custom_stock.carton_sale_price', 'ypxcA_0', 'PRIX VENTE CARTON TTC'),
-            ('custom_stock.retail_sale_price', 'ypxneG_0', 'PRIX VENTE NEGOCE TTC'),
-            ('custom_stock.e_commerce_sale_price', 'yglovttC_0', 'PRIX VENTE E-COMMERCE TTC'),
+            ('custom_stock.basic_retailing_price', 'ypV_SAN_0', 'PRIX VENTE DE BASE TTC',  1.0),
+            ('custom_stock.catalog_sale_price',    'basprI_0',  'PRIX VENTE CATALOGUE',     1.0),
+            ('custom_stock.carton_sale_price',     'ypxcA_0',   'PRIX VENTE CARTON TTC',    1.0),
+            ('custom_stock.retail_sale_price',     'ypxneG_0',  'PRIX VENTE NEGOCE TTC',    1.0),
+            ('custom_stock.e_commerce_sale_price', 'yglovttC_0','PRIX VENTE E-COMMERCE TTC',1.0),
+            ('custom_stock.gm_sale_price',         'basprI_0',  'TARIF GM',                 1.05),
+            ('custom_stock.rh_sale_price',         'basprI_0',  'TARIF RH',                 1.02),
+            ('custom_stock.st_sale_price',         'basprI_0',  'TARIF ST',                 1.01),
         ]
 
-        for xml_id, api_field, display_name in pricelist_mappings:
+        # Mettre à jour les champs de prix sur le produit (une seule fois, hors boucle)
+        product.write({
+            "list_price":      self._get_ht_price(item.get("ypV_SAN_0"), tax_code),
+            "price_unit_ttc":  self._safe_float(item.get("ypV_SAN_0")),
+            "price_catalog":   self._safe_float(item.get("basprI_0")),
+            "price_carton":    self._safe_float(item.get("ypxcA_0")),
+            "price_negoce":    self._safe_float(item.get("ypxneG_0")),
+            "price_ecom":      self._safe_float(item.get("yglovttC_0")),
+            "price_gm":        self._safe_float(item.get("basprI_0")) * 1.05,
+            "price_rh":        self._safe_float(item.get("basprI_0")) * 1.02,
+            "price_st":        self._safe_float(item.get("basprI_0")) * 1.01,
+        })
+
+        for xml_id, api_field, display_name, multiplier in pricelist_mappings:
             price_value_ttc = self._safe_float(item.get(api_field))
 
             # Ne créer que si le prix existe et est > 0
@@ -338,22 +354,14 @@ class ProductTemplateImport(models.Model):
                             product.default_code, display_name, price_value_ttc or 0)
                 continue
 
-            # Conversion TTC → HT
-            price_value = self._get_ht_price(price_value_ttc, tax_code)
-            _logger.debug("💱 %s | TTC: %.2f → HT: %.2f (taxe: %s)",
-                        display_name, price_value_ttc, price_value, tax_code)
+            # Conversion TTC → HT puis application du multiplicateur
+            price_value = round(self._get_ht_price(price_value_ttc, tax_code) * multiplier, 2)
+            _logger.debug("💱 %s | TTC: %.2f → HT: %.2f × %.2f = %.2f (taxe: %s)",
+                        display_name, price_value_ttc,
+                        price_value / multiplier, multiplier, price_value, tax_code)
 
             try:
                 pricelist = self.env.ref(xml_id, raise_if_not_found=False)
-
-                product.write({
-                    "list_price": self._get_ht_price(item.get("ypV_SAN_0"), item.get("vacitM_0")),
-                    "price_unit_ttc": self._safe_float(item.get("ypV_SAN_0")),
-                    "price_catalog": self._safe_float(item.get("basprI_0")),
-                    "price_carton": self._safe_float(item.get("ypxcA_0")),
-                    "price_negoce": self._safe_float(item.get("ypxneG_0")),
-                    "price_ecom": self._safe_float(item.get("yglovttC_0")),
-                    })  # Mettre à jour les differents champs de prix
 
                 if not pricelist:
                     _logger.warning("⚠️ Liste de prix introuvable : %s", xml_id)

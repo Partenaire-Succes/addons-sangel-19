@@ -95,11 +95,59 @@
             </field>
         </record>
 
+        <record id="view_stock_scrap_reason_tag_form" model="ir.ui.view">
+            <field name="name">stock.scrap.reason.tag</field>
+            <field name="model">stock.scrap.reason.tag</field>
+            <field name="arch" type="xml">
+                <form string="Groupe de rebuts">
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name" class="oe_edit_only"/>
+                            <h1>
+                                <field name="name" placeholder="Nom" readonly="name"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <field name="color" widget="color"/>              
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_stock_scrap_reason_tag_tree" model="ir.ui.view">
+            <field name="name">stock.scrap.reason.tag.tree</field>
+            <field name="model">stock.scrap.reason.tag</field>
+            <field name="arch" type="xml">
+                <list string="Raisons de casses">
+                    <field name="name"/>
+                </list>
+            </field>
+        </record>
+
+            <!-- Action Code Inventaire -->
+        <record id="action_stock_scrap_reason_tag" model="ir.actions.act_window">
+            <field name="name">Raisons de casses</field>
+            <field name="res_model">stock.scrap.reason.tag</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Créer votre première raison de casse
+                </p>
+            </field>
+        </record>
+
         <menuitem id="menu_stock_scrap_breakers"
                   name="Groupe de casses"
                   parent="stock.menu_stock_adjustments"
                   action="action_stock_scrap_breakers"
                   sequence="4"/>
+
+        <menuitem id="menu_stock_scrap_reason_tag"
+                  name="Raisons de casses"
+                  parent="stock.menu_stock_config_settings"
+                  action="action_stock_scrap_reason_tag"
+                  sequence="5"/>
 
     </data>
 

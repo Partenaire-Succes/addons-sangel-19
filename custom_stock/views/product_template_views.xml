@@ -62,17 +62,29 @@
                     <page string="Sage X3" name="fields_x3">
                         <group>
                             <group name="table_group">
-                                <field name="cat_gestion_id" />
-                                <field name="prod_family_x3_id" />
-                                <field name="prod_type_x3_id" />
-                                <field name="prod_status_x3_id" />
+                                <field name="cat_gestion_id" readonly="1"/>
+                                <field name="prod_family_x3_id" readonly="1"/>
+                                <field name="prod_type_x3_id" readonly="1"/>
                             </group>
-                            <group name="price_group">
-                                <field name="price_unit_ttc"/>
-                                <field name="price_catalog"/>
-                                <field name="price_carton"/>
-                                <field name="price_negoce"/>
-                                <field name="price_ecom"/>
+                            <group>
+                                <field name="prod_cond" readonly="1"/>
+                                <field name="marque" readonly="1"/>
+                                <field name="prod_status_x3_id" readonly="1"/>
+                            </group>
+                        </group>
+
+                        <group name="price_group" string="Prix">
+                            <group>
+                                <field name="price_unit_ttc" readonly="1"/>
+                                <field name="price_carton" readonly="1"/>
+                                <field name="price_negoce" readonly="1"/>
+                                <field name="price_ecom" readonly="1"/>
+                            </group>
+                            <group>
+                                <field name="price_catalog" readonly="1"/>
+                                <field name="price_gm" readonly="1"/>
+                                <field name="price_rh" readonly="1"/>
+                                <field name="price_st" readonly="1"/>
                             </group>
                         </group>
 
@@ -87,10 +99,7 @@
                                 <field name="is_square"/>
                                 <field name="is_koumassi"/>
                             </group>
-                            <group>
-                                <field name="prod_cond"/>
-                                <field name="marque"/>
-                            </group>
+                            
                         </group> 
                     </page>
                 </xpath>

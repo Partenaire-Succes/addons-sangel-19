@@ -24,5 +24,20 @@
             <field name="name">PRIX VENTE E-COMMERCE TTC</field>
             <field name="currency_id" ref="base.XOF"/>
         </record>
+
+        <record id="gm_sale_price" model="product.pricelist">
+            <field name="name">TARIF GM</field>
+            <field name="currency_id" ref="base.XOF"/>
+        </record>
+
+        <record id="rh_sale_price" model="product.pricelist">
+            <field name="name">TARIF RH</field>
+            <field name="currency_id" ref="base.XOF"/>
+        </record>
+
+        <record id="st_sale_price" model="product.pricelist">
+            <field name="name">TARIF ST</field>
+            <field name="currency_id" ref="base.XOF"/>
+        </record>
     </data>
 </odoo>

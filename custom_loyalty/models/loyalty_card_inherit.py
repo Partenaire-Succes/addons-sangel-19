@@ -73,3 +73,24 @@ class LoyaltyCardInherit(models.Model):
                 fields.append(field)
         
         return fields
+
+
+
+    def _sync_partner_barcode(self):
+        """Met à jour le barcode du partenaire avec le code de la carte de fidélité."""
+        for card in self:
+            if card.partner_id and card.code:
+                card.partner_id.write({'barcode': card.code})
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        cards = super().create(vals_list)
+        cards._sync_partner_barcode()
+        return cards
+
+    def write(self, vals):
+        res = super().write(vals)
+        # Resync uniquement si le code ou le partenaire change
+        if 'code' in vals or 'partner_id' in vals:
+            self._sync_partner_barcode()
+        return res
