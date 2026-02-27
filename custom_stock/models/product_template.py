@@ -10,6 +10,7 @@ _logger = logging.getLogger(__name__)
 
 class ProductTemplateInherit(models.Model):
     _inherit = 'product.template'
+    _rec_name = 'default_code'
 
     # Computed fields for product catalog display
     max_qty_orderpoint = fields.Float(
@@ -402,6 +403,7 @@ class ProductTemplateInherit(models.Model):
 
 class ProductProduct(models.Model):
     _inherit = "product.product"
+    _rec_name = 'default_code'
 
     code_article = fields.Char(
         string="Code Article",
