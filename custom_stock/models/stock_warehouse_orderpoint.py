@@ -7,6 +7,14 @@ _logger = logging.getLogger(__name__)
 class StockWarehouseOrderpoint(models.Model):
     _inherit = 'stock.warehouse.orderpoint'
 
+
+    default_code = fields.Char(
+        string="Code article",
+        related='product_id.default_code',
+        readonly=True,
+        store=True
+    )
+    
     def auto_update_supply(self):
         for orderpoint in self:
             primary_supplier = self.env['product.supplierinfo'].search([
