@@ -150,7 +150,7 @@ class ProductTemplateInherit(models.Model):
 
     prod_status_x3_id = fields.Many2one(
         'product.status.sage',
-        string='Statut article',
+        string='Statut article X3',
     )
 
     price_unit_ttc = fields.Float(
@@ -164,17 +164,17 @@ class ProductTemplateInherit(models.Model):
     )
 
     price_gm = fields.Float(
-        string="Tarif GM",
-        help="Prix de vente GM toutes taxes comprises.",
+        string="Tarif GMS",
+        help="Prix de vente GMS toutes taxes comprises.",
     )
 
     price_rh = fields.Float(
-        string="Tarif RH",
+        string="Tarif RHF",
         help="Prix de vente RH toutes taxes comprises.",
     )
 
     price_st = fields.Float(
-        string="Tarif ST",
+        string="Tarif STATION",
         help="Prix de vente ST toutes taxes comprises.",
     )
 

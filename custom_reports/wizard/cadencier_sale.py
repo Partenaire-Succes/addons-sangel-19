@@ -105,7 +105,7 @@ class CadencierWizard(models.TransientModel):
             result.append({
                 'code': product.default_code or '',
                 'designation': product.name,
-                'sta': product.prod_status_x3_id.name if product.prod_status_x3_id else '',
+                'sta': product.current_company_status_id.code if product.current_company_status_id else '',
                 'maxi': product.max_qty_orderpoint,
                 'cmd': product.pending_reception_qty,
                 'marg': taux_marge,

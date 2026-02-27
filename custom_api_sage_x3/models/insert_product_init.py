@@ -327,9 +327,9 @@ class ProductTemplateImport(models.Model):
             ('custom_stock.carton_sale_price',     'ypxcA_0',   'PRIX VENTE CARTON TTC',    1.0),
             ('custom_stock.retail_sale_price',     'ypxneG_0',  'PRIX VENTE NEGOCE TTC',    1.0),
             ('custom_stock.e_commerce_sale_price', 'yglovttC_0','PRIX VENTE E-COMMERCE TTC',1.0),
-            ('custom_stock.gm_sale_price',         'basprI_0',  'TARIF GM',                 1.05),
-            ('custom_stock.rh_sale_price',         'basprI_0',  'TARIF RH',                 1.02),
-            ('custom_stock.st_sale_price',         'basprI_0',  'TARIF ST',                 1.01),
+            ('custom_stock.gm_sale_price',         'basprI_0',  'TARIF GMS',                 1.05),
+            ('custom_stock.rh_sale_price',         'basprI_0',  'TARIF RHF',                 1.02),
+            ('custom_stock.st_sale_price',         'basprI_0',  'TARIF STATION',                 1.01),
         ]
 
         # Mettre à jour les champs de prix sur le produit (une seule fois, hors boucle)
