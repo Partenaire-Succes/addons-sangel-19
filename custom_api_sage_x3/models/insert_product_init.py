@@ -204,12 +204,12 @@ class ProductTemplateImport(models.Model):
             "price_carton": self._safe_float(item.get("ypxcA_0")),
             "price_negoce": self._safe_float(item.get("ypxneG_0")),
             "price_ecom": self._safe_float(item.get("yglovttC_0")),
-            "is_yop_demi_gros": item.get("yafdM_0", False),
-            "is_yop_detail": item.get("yafdet_0", False),
-            "is_synacass_ci": item.get("yafsyN_0", False),
-            "is_square": item.get("yafsQ_0", False),
-            "is_bassam": item.get("yafbsM_0", False),
-            "is_koumassi": item.get("yafkouM_0", False),
+            "is_yop_demi_gros": self._verify_boolean(item.get("yafdM_0")),
+            "is_yop_detail": self._verify_boolean(item.get("yafdet_0")),
+            "is_synacass_ci": self._verify_boolean(item.get("yafsyN_0")),
+            "is_square": self._verify_boolean(item.get("yafsQ_0")),
+            "is_bassam": self._verify_boolean(item.get("yafbsM_0")),
+            "is_koumassi": self._verify_boolean(item.get("yafkouM_0")),
             "code_inventory_id": self._get_code_inventory_id(item.get("yG5EMPLC_0")),
             "family_categ_id": self._get_family_id(item.get("yG5FAM_0")),
             "categ_id": self._get_family_id(item.get("yG5FAM_0")),
@@ -236,6 +236,18 @@ class ProductTemplateImport(models.Model):
     # ----------------------------------------------------------
     # GESTION DES FOURNISSEURS
     # ----------------------------------------------------------
+    def _verify_boolean(self, value):
+        """Verifier si c'est un false (0, 1) ou true (2) ."""
+        vals = self._safe_float(value)
+        if vals == 2:
+            return True
+        elif vals in [0, 1]:
+            return False
+        else:
+            _logger.warning("⚠️ Valeur non reconnue pour boolean : %s", value)
+            return False
+    
+
     def _get_ht_price(self, price, tax):
         """Calcule le prix HT à partir du prix TTC et du taux de taxe extrait du code taxe."""
         price_ttc = self._safe_float(price)
@@ -343,6 +355,12 @@ class ProductTemplateImport(models.Model):
             "price_gm":        self._safe_float(item.get("basprI_0")) * 1.05,
             "price_rh":        self._safe_float(item.get("basprI_0")) * 1.02,
             "price_st":        self._safe_float(item.get("basprI_0")) * 1.01,
+            "is_yop_demi_gros": self._verify_boolean(item.get("yafdM_0")),
+            "is_yop_detail": self._verify_boolean(item.get("yafdet_0")),
+            "is_synacass_ci": self._verify_boolean(item.get("yafsyN_0")),
+            "is_square": self._verify_boolean(item.get("yafsQ_0")),
+            "is_bassam": self._verify_boolean(item.get("yafbsM_0")),
+            "is_koumassi": self._verify_boolean(item.get("yafkouM_0")),
         })
 
         for xml_id, api_field, display_name, multiplier in pricelist_mappings:
