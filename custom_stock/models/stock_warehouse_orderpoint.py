@@ -8,12 +8,12 @@ class StockWarehouseOrderpoint(models.Model):
     _inherit = 'stock.warehouse.orderpoint'
 
 
-    prod_name = fields.Char(
-        string="Code article",
-        related='product_id.name',
-        readonly=True,
-        store=True
-    )
+    # prod_name = fields.Char(
+    #     string="Code article",
+    #     related='product_id.name',
+    #     readonly=True,
+    #     store=True
+    # )
 
     def auto_update_supply(self):
         for orderpoint in self:
