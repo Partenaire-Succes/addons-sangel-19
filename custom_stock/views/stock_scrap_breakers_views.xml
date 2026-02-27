@@ -107,6 +107,9 @@
                                 <field name="name" placeholder="Nom" readonly="name"/>
                             </h1>
                         </div>
+                        <group>
+                            <field name="code"/>
+                        </group>
                     </sheet>
                 </form>
             </field>
@@ -118,6 +121,7 @@
             <field name="arch" type="xml">
                 <list string="Raisons de casses">
                     <field name="name"/>
+                    <field name="code"/>
                 </list>
             </field>
         </record>

@@ -64,5 +64,16 @@
             </field>
         </record>
 
+        <record id="res_partner_inherit_tree_view" model="ir.ui.view">
+            <field name="name">res.partner.inherit.tree</field>
+            <field name="model">res.partner</field>
+            <field name="inherit_id" ref="base.view_partner_tree"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='complete_name']" position="before">
+                    <field name="customer_id"/>
+                </xpath>
+            </field>
+        </record>
+
     </data>
 </odoo>

@@ -56,3 +56,9 @@ class StockScrap(models.Model):
     _inherit = "stock.scrap"
 
     breaker_id = fields.Many2one('stock.scrap.breakers', string="Groupe de casses", copy=False)
+
+
+class StockScrapReasonTag(models.Model):
+    _inherit = "stock.scrap.reason.tag"
+
+    code = fields.Char(string="Code", required=True, copy=False)
