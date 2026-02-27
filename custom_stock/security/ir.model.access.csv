@@ -24,3 +24,6 @@ access_stock_picking_supply_request,stock.picking.supply.request,model_stock_pic
 access_stock_picking_supply_request_line,stock.picking.supply.request.line,model_stock_picking_supply_request_line,,1,1,1,1
 access_stock_product_multicompany,stock.product.multicompany,model_stock_product_multicompany,,1,1,1,1
 access_stock_product_multicompany_line,stock.product.multicompany.line,model_stock_product_multicompany_line,,1,1,1,1
+
+access_product_status_user,product.status user,model_product_status,base.group_user,1,1,1,0
+access_product_company_status_user,product.company.status user,model_product_company_status,base.group_user,1,1,1,0

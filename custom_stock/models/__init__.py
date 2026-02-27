@@ -28,4 +28,5 @@ from . import (
     picking_request_company,
     stock_product_multicompany_view,
     account,
+    company_state,
 )

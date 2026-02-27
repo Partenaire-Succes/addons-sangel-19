@@ -239,6 +239,7 @@ class ProductTemplateInherit(models.Model):
         help="Cochez si ce produit fait partie de la gamme Koumassi.",
     )
 
+
     @api.depends_context('company')
     def _compute_max_qty_orderpoint(self):
         """Compute max quantity from stock.warehouse.orderpoint for this product"""
