@@ -14,6 +14,7 @@
     'depends': [
         'base',
         'contacts',
+        'product',
         'stock',
         'point_of_sale',
         'account',

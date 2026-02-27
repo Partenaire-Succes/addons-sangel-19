@@ -1,15 +1,22 @@
 <odoo>
     <data>
+
+        <record id="category_food_credit" model="product.category">
+            <field name="name">Crédit Alimentaire</field>
+        </record>
+
         <record id="product_credit_food" model="product.product">
             <field name="name">Crédit Alimentaire</field>
             <field name="sale_ok">True</field>
             <field name="purchase_ok">False</field>
             <field name="invoice_policy">order</field>
             <field name="type">service</field>
-            <field name="categ_id" ref="product.product_category_services"/>
+            <field name="categ_id" ref="custom_food_credit.category_food_credit"/>
             <field name="list_price">0.0</field>
             <field name="standard_price">0.0</field>
-            <field name="description">Produit pour facturation des crédits alimentaires</field>
+            <field name="description">
+                Produit pour facturation des crédits alimentaires
+            </field>
         </record>
 
         <record id="generation_credit_food" model="food.credit">
