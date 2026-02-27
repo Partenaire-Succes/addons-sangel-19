@@ -1,5 +1,7 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_team_inventory,team.inventory,model_team_inventory,,1,1,1,1
+access_product_template,product.template,model_product_template,,1,1,1,1
+access_product_product,product.product,model_product_product,,1,1,1,1
 access_code_category_inventory,code.category.inventory,model_code_category_inventory,,1,1,1,1
 access_code_inventory,code.inventory,model_code_inventory,,1,1,1,1
 access_physical_inventory,physical.inventory,model_physical_inventory,,1,1,1,1
