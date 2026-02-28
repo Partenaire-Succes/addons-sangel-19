@@ -7,6 +7,7 @@ import re
 
 class ResPartnerInherit(models.Model):
     _inherit = 'res.partner'
+    _rec_name = 'customer_id'
 
     customer_id = fields.Char(
         string="ID client",
