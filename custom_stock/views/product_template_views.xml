@@ -35,7 +35,7 @@
                     <attribute name="string">Prix de base</attribute>
                 </xpath>
                 <xpath expr="//page[6]" position="after">
-                    <page string="Articles &amp; remises" name="article_and_discount">
+                    <page string="Taxes &amp; Remises" name="article_and_discount">
                         <group>
                             <group name="pack_group" string="Décomposition D'articles">
                                 <field name="is_pack_parent"/>
