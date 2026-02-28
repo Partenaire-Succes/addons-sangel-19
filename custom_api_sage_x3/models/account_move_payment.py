@@ -45,7 +45,6 @@ class AccountMoveSageX3(models.Model):
         success_count = 0
         error_count = 0
         errors = []
-        _logger.info("📊 Nombre de factures: %s", len(invoices))
         
         for idx, invoice in enumerate(invoices, 1):
             try:
@@ -59,7 +58,6 @@ class AccountMoveSageX3(models.Model):
             except Exception as e:
                 error_count += 1
                 errors.append(f"{invoice.name}: {str(e)}")
-                _logger.error("❌ Erreur facture %s: %s", invoice.name, str(e))
         
         self.env.cr.commit()
         _logger.info("📊 Succès: %s | Erreurs: %s", success_count, error_count)
@@ -110,11 +108,6 @@ class AccountMoveSageX3(models.Model):
         }
         
         response = self._safe_post(ACCOUNTING_URL, headers, accounting_data)
-
-        _logger.error("STATUS: %s", response.status_code)
-        _logger.error("HEADERS: %s", response.headers)
-        _logger.error("BODY: %s", response.text)
-        _logger.error("REPONSE TEST: %s", response)
         
         if response.status_code in (200, 201):
 
@@ -143,7 +136,6 @@ class AccountMoveSageX3(models.Model):
 
         else:
             error_msg = f"Erreur HTTP {response.status_code}: {response.text}"
-            _logger.error("❌ ERREUR: %s", error_msg)
             raise UserError(error_msg)
 
     def _prepare_invoice_entry(self, invoice):

@@ -83,6 +83,10 @@ class ProductTemplateImport(models.Model):
                         _logger.warning("⚠️ Produit ignoré sans default_code : %s", vals.get("name"))
                         skipped += 1
                         continue
+                    if "SF" in str(vals.get("default_code", "")).upper():
+                        _logger.info("⏭️ Produit ignoré (code SF) : %s", vals.get("default_code"))
+                        skipped += 1
+                        continue
 
                     existing = self.search([("default_code", "=", vals["default_code"])], limit=1)
 
