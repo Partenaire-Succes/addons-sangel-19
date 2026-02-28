@@ -78,6 +78,14 @@ class ResPartnerInherit(models.Model):
         string="Cartes de fidélité"
     )
 
+    @api.depends('name', 'customer_id')
+    def _compute_display_name(self):
+        for partner in self:
+            if partner.customer_id:
+                partner.display_name = f"{partner.customer_id}"
+            else:
+                partner.display_name = partner.name
+
     @api.onchange('discount_eligible')
     def onchange_discount_start_date(self):
         for rec in self:

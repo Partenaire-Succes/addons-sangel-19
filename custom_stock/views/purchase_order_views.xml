@@ -38,6 +38,7 @@
 
                 <field name="type_command" 
                        widget="selection"
+                       invisible="type_supplier == 'local'"
                        options="{'no_create': True}"
                        readonly="state in ['cancel', 'purchase']"/>
             </xpath>

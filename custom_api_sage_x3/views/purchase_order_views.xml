@@ -28,7 +28,7 @@
             <xpath expr="//button[@name='button_confirm']" position="before">
                 <!-- Bouton Soumettre à SAGE X3 -->
                 <button name="action_submit_urgent_command" 
-                        string="Commande urgente" 
+                        string="Confirmer Commande" 
                         type="object"
                         class="oe_highlight"
                         invisible="state not in ['draft', 'sent'] or sage_x3_validated == True or type_command != 'urgent' or type_supplier != 'vridi'"/>
