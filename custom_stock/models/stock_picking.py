@@ -6,6 +6,11 @@ import logging
 _logger = logging.getLogger(__name__)
 
 
+class StockQuant(models.Model):
+    _inherit = 'stock.quant'
+
+    standard_price = fields.Float(string="Prix standard", related='product_id.standard_price', readonly=False)
+
 class StockPicking(models.Model):
     _inherit = 'stock.picking'
 
