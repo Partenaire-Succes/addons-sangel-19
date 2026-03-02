@@ -29,3 +29,5 @@ access_stock_product_multicompany_line,stock.product.multicompany.line,model_sto
 
 access_product_status_user,product.status user,model_product_status,base.group_user,1,1,1,0
 access_product_company_status_user,product.company.status user,model_product_company_status,base.group_user,1,1,1,0
+access_stock_excel_import_wizard,stock.excel.import.wizard,model_stock_excel_import_wizard,,1,1,1,1
+access_stock_excel_import_line,stock.excel.import.line,model_stock_excel_import_line,,1,1,1,1

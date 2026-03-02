@@ -1,0 +1,63 @@
+<odoo>
+
+    <record id="view_stock_excel_import_wizard_form" model="ir.ui.view">
+        <field name="name">stock.excel.import.wizard.form</field>
+        <field name="model">stock.excel.import.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Import Stock from Excel">
+
+                <group>
+                    <field name="company_id" readonly="state != 'draft'"/>
+                    <field name="location_id" readonly="state != 'draft'"/>
+                    <field name="file" filename="file_name" invisible="state != 'draft'"/>
+                </group>
+
+                <button name="action_load_file"
+                        type="object"
+                        string="Load File"
+                        class="btn-primary"
+                        invisible="state != 'draft'"/>
+
+                <field name="line_ids" readonly="1">
+
+                    <list editable="bottom">
+                        <field name="product_code"/>
+                        <field name="product_id" column_invisible="1"/>
+                        <field name="product_name"/>
+                        <field name="quantity"/>
+                        <field name="cost"/>
+                        <field name="found"/>
+                    </list>
+
+                </field>
+
+                <footer>
+
+                    <button name="action_confirm"
+                            type="object"
+                            string="Confirm"
+                            class="btn-success"
+                            invisible="state != 'loaded'"/>
+
+                    <button string="Cancel" special="cancel"/>
+
+                </footer>
+
+            </form>
+        </field>
+    </record>
+
+    <record id="action_stock_excel_import" model="ir.actions.act_window">
+        <field name="name">Stock Excel Import</field>
+        <field name="res_model">stock.excel.import.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_stock_excel_import" 
+              name="Import Stock Excel" 
+              parent="stock.menu_stock_adjustments" 
+              action="action_stock_excel_import"
+              sequence="100"/>
+
+</odoo>

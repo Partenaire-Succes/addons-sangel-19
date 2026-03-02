@@ -46,6 +46,7 @@
         'views/stock_product_multicompany_views.xml',
         'views/account_views.xml',
         'views/company_status_views.xml',
+        'wizard/stock_excel_import_wizard_views.xml',
     ],
     'license': 'AGPL-3',
     'installable': True,
