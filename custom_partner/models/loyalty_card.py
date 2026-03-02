@@ -56,3 +56,12 @@ class LoyaltyCard(models.Model):
             if card.code and card.partner_id:
                 card.partner_id.customer_id = card.code
         return res
+
+
+    def update_code_from_partner(self):
+        for card in self:
+            partners = self.env["res.partner"].search([("customer_id", "=", card.code)], limit=1)
+            if partners:
+                card.partner_id = partners.id
+            else:
+                card.partner_id = False
