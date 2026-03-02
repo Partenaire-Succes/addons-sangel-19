@@ -176,11 +176,21 @@ class ReportDailySalesWizard(models.TransientModel):
             # % de marge calculé sur le CA HT
             pct_marge = (marge / ca_ht * 100.0) if ca_ht else 0.0
 
+            # Budget journalier : lignes dont le parent est en cours ou terminé
+            budget_lines = self.env['daily.budget.analytic.line'].search([
+                ('daily_budget_id.state', 'in', ['in_progress', 'done']),
+                ('daily_budget_id.company_id', '=', self.company_id.id),
+                ('date_from', '>=', fields.Datetime.to_datetime(current_date)),
+                ('date_from', '<', fields.Datetime.to_datetime(next_day)),
+            ])
+            budget = sum(budget_lines.mapped('budget_amount'))
+
             data.append({
                 'jour': jour,
                 'date': current_date,
                 'ca_ht': ca_ht,
                 'ca_ttc': ca_ttc,
+                'budget': budget,
                 'marge': marge,
                 'pct_marge': pct_marge,
                 'nb_clients': nb_clients,
@@ -206,6 +216,7 @@ class ReportDailySalesWizard(models.TransientModel):
         return {
             'ca_ht': total_ca_ht,
             'ca_ttc': total_ca_ttc,
+            'budget': sum(l['budget'] for l in lignes),
             'marge': total_marge,
             'pct_marge': (total_marge / total_ca_ht * 100.0) if total_ca_ht else 0.0,
             'nb_clients': sum(l['nb_clients'] for l in lignes),
