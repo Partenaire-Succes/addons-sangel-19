@@ -128,6 +128,12 @@ class StockExcelImportWizard(models.TransientModel):
         for line in self.line_ids.filtered(lambda l: l.found):
 
             product = line.product_id.with_company(self.company_id)
+            status = self.env["product.status"].search([
+                    ("code", "=", line.product_state.code),
+                    ("active", "=", True)
+                ], limit=1)
+            if status:
+                product.current_company_status_id = status.id
 
             # Update cost safely (standard cost)
             if product:
@@ -179,5 +185,6 @@ class StockExcelImportLine(models.TransientModel):
     product_code = fields.Char("Code article")
     quantity = fields.Float("Quantité")
     cost = fields.Float("Coût")
+    product_state = fields.Many2one("product.status", string="Statut Article", readonly=True)
 
     found = fields.Boolean("Produit trouvé")
