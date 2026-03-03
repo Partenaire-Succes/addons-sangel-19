@@ -3,6 +3,9 @@ from odoo.exceptions import UserError
 import base64
 import io
 from openpyxl import load_workbook
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 class StockExcelImportWizard(models.TransientModel):
@@ -59,12 +62,13 @@ class StockExcelImportWizard(models.TransientModel):
 
         headers = [str(h).strip() for h in rows[0]]
 
-        required_columns = ["product_code", "quantity", "cost"]
+        required_columns = ["product_code", "product_state", "quantity", "cost"]
         for col in required_columns:
             if col not in headers:
                 raise UserError(_("Missing column: %s") % col)
 
         product_index = headers.index("product_code")
+        status_index = headers.index("product_state")
         qty_index = headers.index("quantity")
         cost_index = headers.index("cost")
 
@@ -81,6 +85,7 @@ class StockExcelImportWizard(models.TransientModel):
                 continue
 
             product_code = str(row[product_index]).strip()
+            product_state = str(row[status_index]).strip() if row[status_index] else False
             quantity = float(row[qty_index] or 0.0)
             cost = float(row[cost_index] or 0.0)
 
@@ -92,6 +97,7 @@ class StockExcelImportWizard(models.TransientModel):
             lines_vals.append((0, 0, {
                 "product_code": product_code,
                 "product_id": product.id if product else False,
+                "p_state": product_state,
                 "quantity": quantity,
                 "cost": cost,
                 "found": bool(product),
@@ -128,14 +134,19 @@ class StockExcelImportWizard(models.TransientModel):
         for line in self.line_ids.filtered(lambda l: l.found):
 
             product = line.product_id.with_company(self.company_id)
-            status = self.env["product.status"].search([
-                    ("code", "=", line.product_state.code),
-                    ("active", "=", True)
-                ], limit=1)
-            if status:
-                product.current_company_status_id = status.id
 
-            # Update cost safely (standard cost)
+            status = self.env["product.status"].search([
+                ("code", "=", line.p_state),
+                ("active", "=", True)
+            ], limit=1)
+
+            if status:
+                # ✅ Écrire sur le template avec le bon contexte société
+                tmpl = product.product_tmpl_id.with_context(
+                    allowed_company_ids=[self.company_id.id]
+                ).with_company(self.company_id)
+                tmpl.current_company_status_id = status.id
+
             if product:
                 product.standard_price = line.cost
 
@@ -185,6 +196,6 @@ class StockExcelImportLine(models.TransientModel):
     product_code = fields.Char("Code article")
     quantity = fields.Float("Quantité")
     cost = fields.Float("Coût")
-    product_state = fields.Many2one("product.status", string="Statut Article", readonly=True)
+    p_state = fields.Char("Statut Article", readonly=True)
 
     found = fields.Boolean("Produit trouvé")

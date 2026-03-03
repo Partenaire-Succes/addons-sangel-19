@@ -47,6 +47,9 @@
                         <group name="status_magasin" string="Statut magasin">
                             <field name="current_company_status_id"/>
                         </group>
+                        <group string="List Statut Magasin">
+                            <field name="company_status_ids" widget="many2many_tags"/>
+                        </group>
                     </group>
                 </page>
             </xpath>
