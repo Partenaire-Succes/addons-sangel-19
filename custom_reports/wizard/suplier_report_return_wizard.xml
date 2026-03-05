@@ -48,8 +48,7 @@
     <!-- Menu dans Inventaire > Analyse -->
     <menuitem id="menu_supplier_return_report"
               name="Rapports Retours Fournisseurs"
-              parent="stock.menu_warehouse_report"
+              parent="custom_reports.menu_reports_purchase"
               action="action_supplier_return_report_wizard"
-              sequence="100"
-              groups="stock.group_stock_user"/>
+              sequence="100"/>
 </odoo>

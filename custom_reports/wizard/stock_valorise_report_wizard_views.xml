@@ -57,7 +57,7 @@
         <!-- ========== MENU ========== -->
         <menuitem id="menu_stock_valorise_report"
                   name="Rapport de Stock Valorisé"
-                  parent="stock.menu_warehouse_report"
+                  parent="custom_reports.menu_reports_stock"
                   action="action_stock_valorise_report"
                   sequence="100"/>
 

@@ -46,6 +46,8 @@ class BudgetAnalyticDaily(models.Model):
     account_analytic_id = fields.Many2one(
         'account.analytic.account',
         string='Compte Analytique',
+        check_company=True,
+        domain="[('company_id', 'in', [company_id, False])]"
     )
 
     plan_analytic_id = fields.Many2one(
@@ -59,6 +61,11 @@ class BudgetAnalyticDaily(models.Model):
     )
     budget_amount = fields.Monetary(
         string="Budget Mensuel",
+        compute="_compute_budget_amount",
+        store=True
+    )
+    budget_marge = fields.Monetary(
+        string="Marge Mensuel",
         compute="_compute_budget_amount",
         store=True
     )
@@ -86,10 +93,11 @@ class BudgetAnalyticDaily(models.Model):
         copy=True
     )
 
-    @api.depends('line_ids.budget_amount')
+    @api.depends('line_ids.budget_amount', 'line_ids.budget_marge')
     def _compute_budget_amount(self):
         for record in self:
             record.budget_amount = sum(record.line_ids.mapped('budget_amount'))
+            record.budget_marge = sum(record.line_ids.mapped('budget_marge'))
 
 
     @api.constrains('date_from', 'date_to')
@@ -116,6 +124,8 @@ class BudgetAnalyticDaily(models.Model):
         for line in self.line_ids:
             if line.budget_amount <= 0:
                 raise ValidationError(_("Le budget des lignes générées doit être strictement supérieur à zéro."))
+            if line.budget_marge <= 0:
+                raise ValidationError(_("Le budget de marge des lignes générées doit être strictement supérieur à zéro."))
 
         self.write({'state': 'in_progress'})
 
@@ -177,8 +187,8 @@ class BudgetAnalyticDaily(models.Model):
         # Créer une ligne pour chaque jour
         for rec in self:
 
-            date_from = self.date_from.date() if isinstance(self.date_from, datetime) else self.date_from
-            date_to = self.date_to.date() if isinstance(self.date_to, datetime) else self.date_to
+            date_from = rec.date_from.date() if isinstance(rec.date_from, datetime) else rec.date_from
+            date_to = rec.date_to.date() if isinstance(rec.date_to, datetime) else rec.date_to
             budget_create = self.env['budget.analytic']
 
             line_vals = {
@@ -245,7 +255,10 @@ class BudgetAnalyticDailyLine(models.Model):
         string='Plan Analytique',
     )
     budget_amount = fields.Monetary(
-        string="Budget Mensuel"
+        string="Budget CA"
+    )
+    budget_marge = fields.Monetary(
+        string="Budget marge"
     )
     currency_id = fields.Many2one(
         string="Currency",
@@ -261,7 +274,12 @@ class BudgetAnalyticDailyLine(models.Model):
         related='daily_budget_id.state',
     )
     actual_amount = fields.Monetary(
-        string="Montant Réel",
+        string="CA HT",
+        compute='compute_actual_amount',
+        store=True
+    )
+    actual_amount_ttc = fields.Monetary(
+        string="CA TTC",
         compute='compute_actual_amount',
         store=True
     )
@@ -288,14 +306,17 @@ class BudgetAnalyticDailyLine(models.Model):
             date_from = line.date_from.date() if isinstance(line.date_from, datetime) else line.date_from
             date_to = line.date_to.date() if isinstance(line.date_to, datetime) else line.date_to
             
-            move_lines = self.env['account.move.line'].sudo().search([
+            move_lines = self.env['account.move.line'].search([
                 ('distribution_analytic_account_ids', 'in', [line.account_analytic_id.id]),
                 ('parent_state', '=', 'posted'),
                 ('date', '>=', date_from),
                 ('date', '<=', date_to),
             ])
-            
-            line.actual_amount = sum(move_lines.mapped('credit'))
+                # credit = sum(move_lines.mapped('credit'))
+                # debit = sum(move_lines.mapped('debit'))
+                # line.actual_amount = credit - debit
+            line.actual_amount = sum(move_lines.mapped('price_subtotal'))
+            line.actual_amount_ttc = sum(move_lines.mapped('price_total'))
 
 
     @api.depends('budget_amount', 'actual_amount')

@@ -28,7 +28,7 @@
                         <group>
                             <group>
                                 <field name="budget_type" readonly='1'/>
-                                <field name="company_id" invisible="1"/>
+                                <field name="company_id" groups="base.group_multi_company" options="{'no_create': True, 'no_open': True}"/>
                                 <field name="plan_analytic_id" required='1' readonly="state in ('pending', 'in_progress', 'done')"/>
                                 <field name="account_analytic_id" 
                                         domain="[('plan_id', '=', plan_analytic_id)]"
@@ -39,6 +39,7 @@
                             </group>
                             <group>
                                 <field name="budget_amount"/>
+                                <field name="budget_marge"/>
                                 <field name="currency_id" invisible="1"/>
                                 <field name="budget_id" readonly='1' invisible="not budget_id"/>
                                 <label for="date_from" string="Periode"/>
@@ -54,18 +55,20 @@
                             <page string="Description">
                                 <field name="note" placeholder="Ajouter une note"/>
                             </page>
-                            <page string="Les lignes de budget journaliere">
+                            <page string="Les lignes de budget journalier">
                                 <field name="line_ids" readonly="state in ('in_progress', 'done')">
                                     <list editable="bottom" create="0" edit="1" delete="0"
                                             decoration-success="variance &gt; 0"
                                             decoration-danger="variance &lt; 0">
                                         <field name="name"/>
-                                        <field name="plan_analytic_id"/>
-                                        <field name="account_analytic_id" domain="[('plan_id', '=', plan_analytic_id)]"/>
+                                        <field name="plan_analytic_id" optional="hide"/>
+                                        <field name="account_analytic_id" domain="[('plan_id', '=', plan_analytic_id)]" optional="hide"/>
                                         <field name="currency_id" column_invisible="True"/>
                                         <field name="state" column_invisible="True"/>
                                         <field name="budget_amount" sum="budget"/>
+                                        <field name="budget_marge" sum="budget_marge"/>
                                         <field name="actual_amount" sum="actual" invisible="state not in ('in_progress', 'done')" optional="hide"/>
+                                        <field name="actual_amount_ttc" sum="actual_ttc" invisible="state not in ('in_progress', 'done')" optional="hide"/>
                                         <field name="variance_percent" widget="percentage" invisible="state not in ('in_progress', 'done')" optional="hide"/>
                                         <field name="variance" sum="variance" invisible="state not in ('in_progress', 'done')" optional="hide"/>
                                         <field name="date_from" optional="hide"/>

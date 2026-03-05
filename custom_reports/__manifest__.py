@@ -13,9 +13,11 @@
         'stock',
         'stock_account',
         'custom_stock',
+        'dashboard_management_administration',
     ],
     'data': [
         'security/ir.model.access.csv',
+        'views/menu.xml',
         'wizard/stock_valorise_report_wizard_views.xml',
         'report/stock_picking_report_template.xml',
         'wizard/sale_stat_report_wizard_view.xml',

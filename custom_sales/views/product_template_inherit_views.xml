@@ -6,8 +6,12 @@
             <field name="model">product.template</field>
             <field name="inherit_id" ref="product.product_template_only_form_view"/>
             <field name="arch" type="xml">
-                <xpath expr="//field[@name='default_code']" position="after">
+                <!-- <xpath expr="//field[@name='default_code']" position="after">
                     <field name="allowed_company_ids" widget="many2many_tags"/>
+                </xpath> -->
+
+                <xpath expr="//field[@name='default_code']" position="attributes">
+                    <attribute name="readonly">1</attribute>
                 </xpath>
 
                 <xpath expr="//form[@name='Product Template']/sheet[@name='product_form']/notebook[1]/page[@name='general_information']/group[1]/group[@name='group_standard_price']/field[@name='company_id']"

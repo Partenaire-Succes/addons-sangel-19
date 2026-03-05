@@ -127,8 +127,6 @@ class StockExcelImportWizard(models.TransientModel):
             allowed_company_ids=[self.company_id.id]
         ))
         quants_to_apply = env["stock.quant"]
-        count_no_dispo = 0
-        list_no_dispo = []
         count_lines = len(self.line_ids.filtered(lambda l: l.found))
 
         for line in self.line_ids.filtered(lambda l: l.found):
@@ -158,8 +156,6 @@ class StockExcelImportWizard(models.TransientModel):
             if quant:
                 quant.inventory_quantity = line.quantity
             else:
-                count_no_dispo += 1
-                list_no_dispo.append(line.product_code)
                 quant = env["stock.quant"].create({
                     "product_id": product.id,
                     "location_id": self.location_id.id,
@@ -179,8 +175,8 @@ class StockExcelImportWizard(models.TransientModel):
                 'tag': 'display_notification',
                 'params': {
                     'title': 'Mise à jour du stock ligne total : %s' % count_lines,
-                    'message': "Import terminé avec succès." if count_no_dispo == 0 else f"Import terminé avec {count_no_dispo} produits non disponibles : {', '.join(list_no_dispo)}",
-                    'type': 'success' if count_no_dispo == 0 else 'warning',
+                    'message': "Import terminé avec succès.",
+                    'type': 'success',
                 }
             }
 

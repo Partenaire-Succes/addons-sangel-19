@@ -48,6 +48,7 @@
                         <h3>Vente: Gros</h3>
                         <p class="o_stat_value" t-esc="formatCurrency(state.data.statistiques.total_ventes)"/>
                         <small t-esc="state.data.statistiques.nb_commandes_ventes + ' Ventes'"/>
+                        <small t-esc="' / Marge: ' + state.data.statistiques.marge_ventes_percent + '%'"/>
                     </div>
                 </div>
 
@@ -57,6 +58,7 @@
                         <h3>POS: 1/2 Gros</h3>
                         <p class="o_stat_value" t-esc="formatCurrency(state.data.statistiques.total_pos)"/>
                         <small t-esc="state.data.statistiques.nb_commandes_pos + ' Ventes'"/>
+                        <small t-esc="' / Marge: ' + state.data.statistiques.marge_pos_percent + '%'"/>
                     </div>
                 </div>
 

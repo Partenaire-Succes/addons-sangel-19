@@ -56,7 +56,7 @@
         <!-- ========== MENU ========== -->
         <menuitem id="menu_cumul_inventary_report"
                   name="Rapport de Cumul Inventaire"
-                  parent="stock.menu_warehouse_report"
+                  parent="custom_reports.menu_reports_stock"
                   action="action_cumul_inventary_report"
                   sequence="100"/>
 

@@ -184,6 +184,7 @@ class ReportDailySalesWizard(models.TransientModel):
                 ('date_from', '<', fields.Datetime.to_datetime(next_day)),
             ])
             budget = sum(budget_lines.mapped('budget_amount'))
+            budget_marge = sum(budget_lines.mapped('budget_marge'))
 
             data.append({
                 'jour': jour,
@@ -191,6 +192,7 @@ class ReportDailySalesWizard(models.TransientModel):
                 'ca_ht': ca_ht,
                 'ca_ttc': ca_ttc,
                 'budget': budget,
+                'budget_marge': budget_marge,
                 'marge': marge,
                 'pct_marge': pct_marge,
                 'nb_clients': nb_clients,
@@ -217,6 +219,7 @@ class ReportDailySalesWizard(models.TransientModel):
             'ca_ht': total_ca_ht,
             'ca_ttc': total_ca_ttc,
             'budget': sum(l['budget'] for l in lignes),
+            'budget_marge': sum(l['budget_marge'] for l in lignes),
             'marge': total_marge,
             'pct_marge': (total_marge / total_ca_ht * 100.0) if total_ca_ht else 0.0,
             'nb_clients': sum(l['nb_clients'] for l in lignes),

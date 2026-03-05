@@ -2,6 +2,17 @@
 <odoo>
     <data>
 
+        <record id="product_template_inherit_form_view_procurement" model="ir.ui.view">
+            <field name="name">product.template.inherit.form</field>
+            <field name="model">product.template</field>
+            <field name="inherit_id" ref="stock.product_template_form_view_procurement_button"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='qty_available']" position="attributes">
+                    <attribute name="readonly">1</attribute>
+                </xpath>
+            </field>
+        </record>
+
         <!-- ce code permet de modifier le libellé etiquette en catgorie client-->
         <record id="product_template_inherit_form_view" model="ir.ui.view">
             <field name="name">product.template.inherit.form</field>
@@ -12,15 +23,15 @@
                 <!-- Odoo 19: Use stock_property group as anchor (more reliable than route_from_categ_ids which may be invisible) -->
                 <xpath expr="//group[@name='stock_property']" position="before">
                     <group string="Code Inventaire" name="code_inventory_group">
-                        <field name="code_inventory_id"/>
+                        <field name="code_inventory_id" readonly="1"/>
                     </group>
                 </xpath>
                 <xpath expr="//group[@name='stock_property']" position="after">
                     <group string="Système de classification en rateau" name="system_classification">
-                        <field name="radius_id"/>
-                        <field name="s_radius_id" domain="[('radius_id', '=', radius_id)]"/>
-                        <field name="family_categ_id"/>
-                        <field name="s_family_id" domain="[('family_categ_id', '=', family_categ_id)]"/>
+                        <field name="radius_id" readonly="1"/>
+                        <field name="s_radius_id" domain="[('radius_id', '=', radius_id)]" readonly="1"/>
+                        <field name="family_categ_id" readonly="1"/>
+                        <field name="s_family_id" domain="[('family_categ_id', '=', family_categ_id)]" readonly="1"/>
                     </group>
                 </xpath>
             </field>
@@ -34,6 +45,31 @@
                 <xpath expr="//label[@for='list_price']" position="attributes">
                     <attribute name="string">Prix de base</attribute>
                 </xpath>
+                <xpath expr="//field[@name='list_price']" position="attributes">
+                    <attribute name="readonly">1</attribute>
+                </xpath>
+                <xpath expr="//field[@name='name']" position="attributes">
+                    <attribute name="readonly">1</attribute>
+                </xpath>
+                <xpath expr="//field[@name='uom_id']" position="attributes">
+                    <attribute name="readonly">1</attribute>
+                </xpath>
+                <xpath expr="//field[@name='taxes_id']" position="attributes">
+                    <attribute name="readonly">1</attribute>
+                </xpath>
+                <xpath expr="//field[@name='standard_price']" position="attributes">
+                    <attribute name="readonly">1</attribute>
+                </xpath>
+                <xpath expr="//field[@name='supplier_taxes_id']" position="attributes">
+                    <attribute name="readonly">1</attribute>
+                </xpath>
+                <xpath expr="//field[@name='categ_id']" position="attributes">
+                    <attribute name="readonly">1</attribute>
+                </xpath>
+                <xpath expr="//page[@name='sales_price']/field[@name='pricelist_rule_ids']" position="attributes">
+                    <attribute name="readonly">1</attribute>
+                </xpath>
+
                 <xpath expr="//page[6]" position="after">
                     <page string="Taxes &amp; Remises" name="article_and_discount">
                         <group>

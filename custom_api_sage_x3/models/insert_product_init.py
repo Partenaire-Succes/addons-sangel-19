@@ -196,7 +196,7 @@ class ProductTemplateImport(models.Model):
             "description": item.get("itmdeS2_0", ""),
             "list_price": self._get_ht_price(item.get("ypV_SAN_0"), item.get("vacitM_0")),
             "taxes_id": self._get_taxes_id(item.get("vacitM_0")),
-            "supplier_taxes_id": self._get_supplier_taxes_id(item.get("vacitM_0")),
+            # "supplier_taxes_id": self._get_supplier_taxes_id(item.get("vacitM_0")),
             "price_unit_ttc": self._safe_float(item.get("ypV_SAN_0")),
             "uom_id": self._get_uom_id(item.get("saU_0")),
             "prod_cond": item.get("ypcB1_0", ""),

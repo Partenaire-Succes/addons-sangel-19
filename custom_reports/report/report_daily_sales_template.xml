@@ -52,6 +52,7 @@
                                         <th>CA HT</th>
                                         <th>CA TTC</th>
                                         <th>Budget</th>
+                                        <th>B. Marge</th>
                                         <th>Marge</th>
                                         <th>% marge</th>
                                         <th>Nb clients</th>
@@ -68,6 +69,7 @@
                                             <td class="text-right"><span t-esc="'{:,.0f}'.format(l['ca_ht']).replace(',', ' ')"/></td>
                                             <td class="text-right"><span t-esc="'{:,.0f}'.format(l['ca_ttc']).replace(',', ' ')"/></td>
                                             <td class="text-right"><span t-esc="'{:,.0f}'.format(l['budget']).replace(',', ' ')"/></td>
+                                            <td class="text-right"><span t-esc="'{:,.0f}'.format(l['budget_marge']).replace(',', ' ')"/></td>
                                             <td class="text-right"><span t-esc="'{:,.0f}'.format(l['marge']).replace(',', ' ')"/></td>
                                             <td class="text-right"><span t-esc="'%.2f' % l['pct_marge']"/>%</td>
                                             <td class="text-right"><span t-esc="l['nb_clients']"/></td>
@@ -82,6 +84,7 @@
                                         <td class="text-right"><span t-esc="'{:,.0f}'.format(totaux['ca_ht']).replace(',', ' ')"/></td>
                                         <td class="text-right"><span t-esc="'{:,.0f}'.format(totaux['ca_ttc']).replace(',', ' ')"/></td>
                                         <td class="text-right"><span t-esc="'{:,.0f}'.format(totaux['budget']).replace(',', ' ')"/></td>
+                                        <td class="text-right"><span t-esc="'{:,.0f}'.format(totaux['budget_marge']).replace(',', ' ')"/></td>
                                         <td class="text-right"><span t-esc="'{:,.0f}'.format(totaux['marge']).replace(',', ' ')"/></td>
                                         <td class="text-right">
                                             <span t-esc="'%.2f' % totaux.get('pct_marge', 0)"/>%

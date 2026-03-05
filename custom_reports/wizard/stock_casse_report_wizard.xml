@@ -50,7 +50,7 @@
         <!-- Menu item under Analyse (warehouse reports) -->
         <menuitem id="menu_stock_casse_report"
                   name="Rapport de Casse"
-                  parent="stock.menu_warehouse_report"
+                  parent="custom_reports.menu_reports_stock"
                   action="action_stock_casse_report"
                   sequence="110"/>
 
