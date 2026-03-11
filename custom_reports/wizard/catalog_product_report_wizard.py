@@ -12,7 +12,7 @@ class ProductReportWizard(models.TransientModel):
 
     categ_ids = fields.Many2many(
         'product.category',
-        string='Catégories',
+        string='Familles',
         help='Laisser vide pour toutes les catégories'
     )
     active_products_only = fields.Boolean(

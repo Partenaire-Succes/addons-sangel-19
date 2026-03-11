@@ -19,6 +19,7 @@
                             string="Suppresion" 
                             type="object" 
                             icon="fa-upload" 
+                            invisible="1"
                             class="btn btn-secondary"/>
                 </xpath>
 
