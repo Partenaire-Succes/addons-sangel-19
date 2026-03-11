@@ -5,8 +5,16 @@
         <record id="product_comp_rule" model="ir.rule">
             <field name="name">Product multi-company</field>
             <field name="model_id" ref="product.model_product_template"/>
-            <field name="domain_force">['|', ('allowed_company_ids', 'in', company_ids), ('allowed_company_ids', '=',
-                False)]
+            <field name="domain_force">
+                [('allowed_company_ids', 'in', company_ids)]
+            </field>
+        </record>
+
+        <record id="product_variant_company_rule" model="ir.rule">
+            <field name="name">Product Variant multi-company</field>
+            <field name="model_id" ref="product.model_product_product"/>
+            <field name="domain_force">
+                [('product_tmpl_id.allowed_company_ids', 'in', company_ids)]
             </field>
         </record>
 

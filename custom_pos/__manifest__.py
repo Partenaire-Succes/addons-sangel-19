@@ -68,6 +68,8 @@
             "/custom_pos/static/src/xml/pos_receipt_custom.xml",
             "/custom_pos/static/src/js/logout_button.js",
             "/custom_pos/static/src/xml/logout_button.xml",
+            #Info product
+            "/custom_pos/static/src/xml/pos_product_info_hide_inventory.xml",
         ],
     },
 }

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_product_report_wizard_form" model="ir.ui.view">
+        <field name="name">product.report.wizard.form</field>
+        <field name="model">product.report.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Catalogue Articles - Filtres">
+                <group string="Filtres">
+                    <group>
+                        <field name="company_id" readonly="1"/>
+                    </group>
+                    <group>
+                        <field name="categ_ids" widget="many2many_tags" options="{'no_create': True}"
+                            placeholder="Toutes les catégories..."/>
+                    </group>
+
+                </group>
+                <footer>
+                    <button name="action_print_report"
+                            type="object"
+                            string="Imprimer le Catalogue"
+                            class="btn-primary"
+                            icon="fa-print"/>
+                    <button string="Annuler"
+                            class="btn-secondary"
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_product_report_wizard" model="ir.actions.act_window">
+        <field name="name">Catalogue Articles</field>
+        <field name="res_model">product.report.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_product_catalogue_report"
+              name="Catalogue Articles"
+              parent="custom_reports.menu_reports_sale"
+              action="action_product_report_wizard"
+              sequence="10"/>
+
+</odoo>

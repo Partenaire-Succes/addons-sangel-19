@@ -8,3 +8,4 @@ access_cumul_inventary_report_wizard_user,cumul.inventary.report.wizard.user,mod
 access_stock_adjustment_report_wizard_user,stock.adjustment.report.wizard.user,model_stock_adjustment_report_wizard,,1,1,1,1
 access_report_daily_sales_wizard_user,report.daily.sales.wizard.user,model_report_daily_sales_wizard,,1,1,1,1
 access_cadencier_ventes_wizard_user,cadencier.ventes.wizard.user,model_cadencier_ventes_wizard,,1,1,1,1
+access_product_report_wizard,product.report.wizard,model_product_report_wizard,,1,1,1,1

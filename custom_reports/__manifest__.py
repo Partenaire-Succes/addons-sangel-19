@@ -13,6 +13,7 @@
         'stock',
         'stock_account',
         'custom_stock',
+        'custom_sales',
         'dashboard_management_administration',
     ],
     'data': [
@@ -36,6 +37,8 @@
         'report/report_daily_sales_template.xml',
         'report/report_cadencier_template.xml',
         'wizard/cadencier_sale_view.xml',
+        'report/report_catalog_template.xml',
+        'wizard/catalog_product_report_wizard.xml',
     ],
     'installable': True,
     'auto_install': False

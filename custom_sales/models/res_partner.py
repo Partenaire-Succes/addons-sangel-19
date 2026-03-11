@@ -16,7 +16,5 @@ class ResPartner(models.Model):
 
         # 2) Sinon, on cherche une liste de prix globale ou autorisée pour cette société
         return self.env['product.pricelist'].search([
-            '|',
             ('allowed_company_ids', 'in', company.id),
-            ('allowed_company_ids', '=', False)
         ], limit=1)

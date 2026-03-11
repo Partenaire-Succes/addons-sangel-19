@@ -16,6 +16,7 @@
         'stock',
         'custom_stock',
         'custom_partner',
+        'custom_sales',
         'custom_food_credit',
         'queue_job',
     ],

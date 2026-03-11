@@ -84,8 +84,8 @@
                                        invisible="is_pack_parent == False"/>
                             </group>
                             <group name="article_and_discount" string="Remises et taxes">
-                                <field name="discount_ligne"/>
-                                <field name="airsi_tax_id"/>
+                                <field name="discount_ligne" readonly="1"/>
+                                <field name="airsi_taxes_id" widget="many2many_tags" readonly="1"/>
                             </group>
 
                             <group name="code_article" string="Articles">

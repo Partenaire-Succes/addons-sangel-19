@@ -1,0 +1,434 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============================================================
+         FORMAT PAPIER : A4 Paysage avec marges réduites
+    ============================================================ -->
+    <record id="paperformat_catalogue_landscape" model="report.paperformat">
+        <field name="name">Catalogue A4 Paysage</field>
+        <field name="default" eval="False"/>
+        <field name="format">A4</field>
+        <field name="orientation">Landscape</field>
+        <field name="margin_top">12</field>
+        <field name="margin_bottom">8</field>
+        <field name="margin_left">5</field>
+        <field name="margin_right">5</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">3</field>
+        <field name="dpi">96</field>
+    </record>
+
+    <!-- ============================================================
+         TEMPLATE QWEB
+    ============================================================ -->
+    <template id="report_product_template">
+        <t t-call="web.html_container">
+            <t t-foreach="docs_by_categ" t-as="categ_data" t-if="False"/>
+            <div class="article">
+                <style>
+                    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+                    body, .page {
+                        font-family: Arial, Helvetica, sans-serif;
+                        font-size: 8.5px;
+                        color: #1a1a2e;
+                        background: #fff;
+                    }
+
+                    /* =========================================
+                       EN-TÊTE RAPPORT
+                    ========================================= */
+                    .rpt-header {
+                        width: 100%;
+                        margin-bottom: 10px;
+                        border-collapse: collapse;
+                    }
+                    .rpt-header td {
+                        vertical-align: middle;
+                        padding: 0;
+                    }
+                    .rpt-title-box {
+                        background-color: #0057a8;
+                        color: #fff;
+                        font-weight: bold;
+                        font-size: 15px;
+                        padding: 7px 20px;
+                        text-align: center;
+                        letter-spacing: 2px;
+                        text-transform: uppercase;
+                        border: 2px solid #0057a8;
+                    }
+                    .rpt-date-box {
+                        border: 1.5px solid #0057a8;
+                        color: #0057a8;
+                        font-weight: bold;
+                        font-size: 10px;
+                        padding: 4px 10px;
+                        text-align: center;
+                        white-space: nowrap;
+                    }
+                    .rpt-page-box {
+                        font-size: 7.5px;
+                        color: #888;
+                        text-align: right;
+                        padding-top: 2px;
+                    }
+
+                    /* =========================================
+                       TABLEAU CATALOGUE
+                    ========================================= */
+                    table.catalogue {
+                        width: 100%;
+                        border-collapse: collapse;
+                        font-size: 11px;
+                    }
+
+                    /* En-tête colonnes */
+                    table.catalogue thead tr th {
+                        background-color: #0057a8;
+                        color: #fff;
+                        border: 1px solid #004488;
+                        text-align: center;
+                        font-weight: bold;
+                        font-size: 7.8px;
+                        padding: 3px 2px;
+                        vertical-align: middle;
+                        text-transform: uppercase;
+                        letter-spacing: 0.3px;
+                        white-space: nowrap;
+                    }
+                    /* Séparateur vertical visible dans le header */
+                    table.catalogue thead tr th + th {
+                        border-left: 1px solid #3399ee;
+                    }
+
+                    /* Cellules corps */
+                    table.catalogue tbody td {
+                        border: 1px solid #dde3ec;
+                        padding: 2px 3px;
+                        vertical-align: middle;
+                        font-size: 7.8px;
+                        color: #1a1a2e;
+                    }
+
+                    /* Lignes paires – zébrage léger */
+                    table.catalogue tbody tr.row-even td {
+                        background-color: #f0f6ff;
+                    }
+                    table.catalogue tbody tr.row-odd td {
+                        background-color: #ffffff;
+                    }
+
+                    /* Survol (non rendu wkhtmltopdf, mais utile en aperçu) */
+                    table.catalogue tbody tr:hover td {
+                        background-color: #ddeeff;
+                    }
+
+                    /* =========================================
+                       EN-TÊTE CATÉGORIE
+                    ========================================= */
+                    tr.categ-header td {
+                        font-weight: bold;
+                        font-size: 9px;
+                        padding: 5px 6px 3px 6px;
+                        border: none !important;
+                        border-bottom: 2px solid #0057a8 !important;
+                        border-top: 6px solid transparent !important;
+                        background-color: #fff;
+                        color: #0057a8;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                    }
+
+                    /* =========================================
+                       LIGNE SÉPARATRICE
+                    ========================================= */
+                    tr.categ-spacer td {
+                        border: none !important;
+                        height: 6px;
+                        background: #fff;
+                    }
+
+                    /* =========================================
+                       CELLULES CHIFFRÉES – mise en valeur
+                    ========================================= */
+                    td.num-positive {
+                        color: #006622;
+                        font-weight: bold;
+                    }
+                    td.num-negative {
+                        color: #cc0000;
+                        font-weight: bold;
+                    }
+                    td.highlight-price {
+                        background-color: #e8f4fd !important;
+                        font-weight: bold;
+                        color: #0057a8;
+                    }
+
+                    /* =========================================
+                       PIED DE PAGE
+                    ========================================= */
+                    .rpt-footer {
+                        margin-top: 6px;
+                        border-top: 1px solid #ccd6e8;
+                        padding-top: 3px;
+                        display: flex;
+                        justify-content: space-between;
+                        font-size: 7.5px;
+                        color: #777;
+                    }
+
+                    /* =========================================
+                       ALIGNEMENTS
+                    ========================================= */
+                    .tc { text-align: center; }
+                    .tr { text-align: right;  }
+                    .tl { text-align: left;   }
+
+                    
+                </style>
+
+                <div class="page">
+
+                    <!-- ===== EN-TÊTE (table pour compatibilité wkhtmltopdf) ===== -->
+                    <table class="rpt-header">
+                        <tr>
+                            <td style="width:100%;">
+                                <div class="rpt-title-box">
+                                    CATALOGUE ARTICLES — <t t-esc="res_company.name"/>
+                                </div>
+                            </td>
+                            <td style="width:130px; padding-left:8px;">
+                                <div class="rpt-date-box">
+                                    Edite le : <t t-esc="today"/>
+                                </div>
+                                <div class="rpt-page-box">Document confidentiel</div>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <!-- ===== TABLEAU ===== -->
+                    <table class="catalogue">
+                        <!-- <colgroup>
+                            <col class="col-cfam"/>
+                            <col class="col-famille"/>
+                            <col class="col-code"/>
+                            <col class="col-design"/>
+                            <col class="col-inv"/>
+                            <col class="col-fourn"/>
+                            <col class="col-pmpa"/>
+                            <col class="col-condt"/>
+                            <col class="col-maxi"/>
+                            <col class="col-stock"/>
+                            <col class="col-carton"/>
+                            <col class="col-detail"/>
+                            <col class="col-margc"/>
+                            <col class="col-margd"/>
+                            <col class="col-tva"/>
+                            <col class="col-airsi"/>
+                            <col class="col-r"/>
+                        </colgroup> -->
+                        <thead>
+                            <tr>
+                                <th class="col-cfam">Cde<br/>FAM</th>
+                                <th class="col-famille">FAMILLE</th>
+                                <th class="col-code">CODE</th>
+                                <th class="col-design tl">DÉSIGNATION</th>
+                                <th class="col-inv">INV.</th>
+                                <th class="col-fourn">FOURN.</th>
+                                <th class="col-pmpa">PMPA</th>
+                                <th class="col-condt">CONDT</th>
+                                <th class="col-maxi">MAXI</th>
+                                <th class="col-stock">STOCK</th>
+                                <th class="col-carton">CARTON</th>
+                                <th class="col-detail">DÉTAIL</th>
+                                <th class="col-margc">MARG C</th>
+                                <th class="col-margd">MARG DÉT</th>
+                                <th class="col-tva">T.V.A</th>
+                                <th class="col-airsi">AIRSI</th>
+                                <th class="col-r">R</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="docs_by_categ" t-as="categ_data">
+
+                                <!-- == EN-TÊTE CATÉGORIE == -->
+                                <tr class="categ-header">
+                                    <td colspan="17">
+                                        <t t-esc="categ_data['categ_name']"/>
+                                        <span style="font-size:6.5px; font-weight:normal; color:#555; margin-left:8px;">
+                                            (<t t-esc="len(categ_data['products'])"/> article<t t-if="len(categ_data['products']) > 1">s</t>)
+                                        </span>
+                                    </td>
+                                </tr>
+
+                                <!-- == LIGNES PRODUITS == -->
+                                <t t-foreach="categ_data['products']" t-as="product">
+                                    <!-- Zébrage : row-even / row-odd selon index -->
+                                    <tr t-attf-class="#{(product_index % 2 == 0) and 'row-even' or 'row-odd'}">
+
+                                        <!-- C FAM -->
+                                        <td class="tc" style="color:#0057a8; font-weight:bold;">
+                                            <t t-esc="categ_data['categ_id']"/>
+                                        </td>
+
+                                        <!-- FAMILLE -->
+                                        <td style="font-size:6px; color:#444;">
+                                            <t t-esc="categ_data['categ_name']"/>
+                                        </td>
+
+                                        <!-- CODE -->
+                                        <td class="tc" style="font-family: 'Courier New', monospace; font-size:6.5px; color:#333;">
+                                            <t t-esc="product.default_code or ''"/>
+                                        </td>
+
+                                        <!-- DESIGNATION -->
+                                        <td class="tl" style="font-weight: 500;">
+                                            <t t-esc="product.name"/>
+                                        </td>
+
+                                        <!-- INV. -->
+                                        <td class="tc">
+                                            <t t-if="product.code_inventory_id">
+                                                <t t-esc="product.code_inventory_id.name"/>
+                                            </t>
+                                        </td>
+
+                                        <!-- FOURN. -->
+                                        <td class="tc" style="color:#555;">
+                                            <t t-if="product.seller_ids">
+                                                <t t-esc="product.seller_ids[0].partner_id.ref or product.seller_ids[0].partner_id.name or ''"/>
+                                            </t>
+                                        </td>
+
+                                        <!-- PMPA -->
+                                        <td class="tr" style="font-family: 'Courier New', monospace;">
+                                            <t t-esc="'{:,.0f}'.format(product.standard_price).replace(',', ' ')"/>
+                                        </td>
+
+                                        <!-- CONDT -->
+                                        <td class="tc">
+                                            <t t-if="product.uom_ids">
+                                                <t t-esc="product.uom_ids[0].relative_factor"/>
+                                            </t>
+                                        </td>
+
+                                        <!-- MAXI -->
+                                        <td class="tc">
+                                            <t>
+                                                <t t-if="product.max_qty_orderpoint">
+                                                    <t t-esc="'{:,.0f}'.format(product.max_qty_orderpoint).replace(',', ' ')"/>
+                                                </t>
+                                            </t>
+                                        </td>
+
+                                        <!-- STOCK : coloré selon valeur -->
+                                        <td class="tr">
+                                            <t t-if="product.qty_available > 0">
+                                                <span style="color:#006622; font-weight:bold;">
+                                                    <t t-esc="'{:,.0f}'.format(product.qty_available).replace(',', ' ')"/>
+                                                </span>
+                                            </t>
+                                            <t t-elif="product.qty_available &lt; 0">
+                                                <span style="color:#cc0000; font-weight:bold;">
+                                                    <t t-esc="'{:,.0f}'.format(product.qty_available).replace(',', ' ')"/>
+                                                </span>
+                                            </t>
+                                            <t t-else="">
+                                                <span style="color:#888;">0</span>
+                                            </t>
+                                        </td>
+
+                                        <!-- CARTON -->
+                                        <td class="tr" style="font-family: 'Courier New', monospace;">
+                                            <t>
+                                                <t t-if="product.price_carton">
+                                                    <t t-esc="'{:,.0f}'.format(product.price_carton).replace(',', ' ')"/>
+                                                </t>
+                                            </t>
+                                        </td>
+
+                                        <!-- DETAIL : Prix vente – mis en valeur -->
+                                        <td class="tr highlight-price">
+                                            <t t-esc="'{:,.0f}'.format(product.list_price).replace(',', ' ')"/>
+                                        </td>
+
+                                        <!-- MARG C -->
+                                        <td class="tr">
+                                            <t t-if="product.standard_price and product.standard_price != 0">
+                                                <t t-set="marg_c" t-value="((product.list_price - product.standard_price) / product.standard_price) * 100"/>
+                                                <span t-attf-style="color: #{marg_c >= 20 and '#006622' or (marg_c >= 0 and '#555' or '#cc0000')}; font-weight: #{marg_c >= 20 and 'bold' or 'normal'};">
+                                                    <t t-esc="'{:.2f}'.format(marg_c)"/>%
+                                                </span>
+                                            </t>
+                                            <t t-else=""><span style="color:#aaa;">0.00%</span></t>
+                                        </td>
+
+                                        <!-- MARG DET -->
+                                        <td class="tr">
+                                            <t t-if="product.list_price and product.list_price != 0">
+                                                <t t-set="marg_d" t-value="((product.list_price - product.standard_price) / product.list_price) * 100"/>
+                                                <span t-attf-style="color: #{marg_d >= 15 and '#006622' or (marg_d >= 0 and '#555' or '#cc0000')}; font-weight: #{marg_d >= 15 and 'bold' or 'normal'};">
+                                                    <t t-esc="'{:.2f}'.format(marg_d)"/>%
+                                                </span>
+                                            </t>
+                                            <t t-else=""><span style="color:#aaa;">0.00%</span></t>
+                                        </td>
+
+                                        <!-- T.V.A -->
+                                        <td class="tc" style="color:#555;">
+                                            <t t-if="product.taxes_id">
+                                                <t t-esc="product.taxes_id[0].name"/>
+                                            </t>
+                                        </td>
+
+                                        <!-- AIRSI -->
+                                        <td class="tc" style="color:#555;">
+                                            <t t-if="product.airsi_taxes_id">
+                                                <t t-esc="product.airsi_taxes_id[0].amount"/>
+                                            </t>
+                                        </td>
+
+                                        <!-- R -->
+                                        <td class="tc" style="color:#0057a8; font-weight:bold;">
+                                            <t>
+                                                <t t-esc="(res_company.code_company or '')"/>
+                                            </t>
+                                        </td>
+                                    </tr>
+                                </t>
+
+                                <!-- Espaceur inter-catégorie -->
+                                <tr class="categ-spacer">
+                                    <td colspan="17"/>
+                                </tr>
+
+                            </t>
+                        </tbody>
+                    </table>
+
+                    <!-- ===== PIED DE PAGE ===== -->
+                    <div class="rpt-footer">
+                        <span><t t-esc="res_company.name"/> — Usage interne confidentiel</span>
+                        <span>Généré le <t t-esc="today"/></span>
+                    </div>
+
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- ============================================================
+         ACTION RAPPORT
+    ============================================================ -->
+    <record id="action_report_product_template" model="ir.actions.report">
+        <field name="name">Catalogue Articles</field>
+        <field name="model">product.template</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">custom_reports.report_product_template</field>
+        <field name="report_file">custom_reports.report_product_template</field>
+        <field name="paperformat_id" ref="custom_reports.paperformat_catalogue_landscape"/>
+    </record>
+
+</odoo>

@@ -81,8 +81,12 @@ class ProductTemplateInherit(models.Model):
     airsi_tax_id = fields.Many2one(
         'account.tax',
         string='Taxe AIRSI',
-        domain=[('is_airsi', '=', True)],
         help='Taxe AIRSI à appliquer pour les clients à limite avec paiement à crédit'
+    )
+    airsi_taxes_id = fields.Many2many(
+        'account.tax',
+        string='Taxes AIRSI',
+        help='Taxes AIRSI à appliquer pour les clients à limite avec paiement à crédit'
     )
 
     # Nouveau champ pour activer/désactiver la synchronisation

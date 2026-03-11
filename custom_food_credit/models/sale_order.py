@@ -140,12 +140,12 @@ class SaleOrderLineInherit(models.Model):
             # Vérifier si on doit ajouter la taxe AIRSI
             should_apply_airsi = (
                 line.order_id.is_airsi_eligible and 
-                line.product_id.airsi_tax_id
+                line.product_id.airsi_taxes_id
             )
             
             if should_apply_airsi:
                 # Ajouter la taxe AIRSI si elle n'est pas déjà présente
-                airsi_tax = line.product_id.airsi_tax_id
+                airsi_tax = line.product_id.airsi_taxes_id[0]
                 if airsi_tax and airsi_tax not in base_taxes:
                     line.tax_id = base_taxes | airsi_tax
             else:

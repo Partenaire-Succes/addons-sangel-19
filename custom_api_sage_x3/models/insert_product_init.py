@@ -203,7 +203,7 @@ class ProductTemplateImport(models.Model):
             "weight": self._safe_float(item.get("itmweI_0")),
             "marque": item.get("ymarK_0", ""),
             "discount_ligne": item.get("yappremL_0", False),
-            "airsi_tax_id": self._get_airsi_tax_id(item.get("yairsI_0")),
+            "airsi_taxes_id": self._get_airsi_taxes_id(item.get("yairsI_0")),
             "price_catalog": self._safe_float(item.get("basprI_0")),
             "price_carton": self._safe_float(item.get("ypxcA_0")),
             "price_negoce": self._safe_float(item.get("ypxneG_0")),
@@ -214,6 +214,7 @@ class ProductTemplateImport(models.Model):
             "is_square": self._verify_boolean(item.get("yafsQ_0")),
             "is_bassam": self._verify_boolean(item.get("yafbsM_0")),
             "is_koumassi": self._verify_boolean(item.get("yafkouM_0")),
+            "allowed_company_ids": self._get_allowed_company_ids(item),
             "code_inventory_id": self._get_code_inventory_id(item.get("yG5EMPLC_0")),
             "family_categ_id": self._get_family_id(item.get("yG5FAM_0")),
             "categ_id": self._get_family_id(item.get("yG5FAM_0")),
@@ -365,6 +366,7 @@ class ProductTemplateImport(models.Model):
             "is_square": self._verify_boolean(item.get("yafsQ_0")),
             "is_bassam": self._verify_boolean(item.get("yafbsM_0")),
             "is_koumassi": self._verify_boolean(item.get("yafkouM_0")),
+            "allowed_company_ids": self._get_allowed_company_ids(item),
         })
 
         for xml_id, api_field, display_name, multiplier in pricelist_mappings:
@@ -413,6 +415,90 @@ class ProductTemplateImport(models.Model):
     # ----------------------------------------------------------
     # GESTION DES TAXES
     # ----------------------------------------------------------
+    # def _extract_tax_amount(self, tax_code):
+    #     import re
+    #     if not tax_code:
+    #         return 0.0
+    #     try:
+    #         return float(tax_code)
+    #     except ValueError:
+    #         pass
+    #     numbers = re.findall(r"\d+\.?\d*", str(tax_code))
+    #     return float(numbers[0]) if numbers else 0.0
+
+    # def _get_or_create_tax_group(self, amount):
+    #     name = f"TVA {amount}%"
+    #     tax_group = self.env["account.tax.group"].search([("name", "=", name)], limit=1)
+    #     if tax_group:
+    #         return tax_group
+    #     try:
+    #         return self.env["account.tax.group"].create({"name": name})
+    #     except Exception:
+    #         return self.env["account.tax.group"].search([], limit=1) or self.env["account.tax.group"].create({"name": "Taxe générique"})
+
+    # def _get_taxes_id(self, tax_code):
+    #     amount = self._extract_tax_amount(tax_code)
+    #     if not amount:
+    #         return []
+    #     tax = self.env["account.tax"].search([
+    #         ("amount", "=", amount),
+    #         ("amount_type", "=", "percent"),
+    #         ("type_tax_use", "=", "sale")
+    #     ], limit=1)
+    #     if tax:
+    #         return [(6, 0, [tax.id])]
+    #     group = self._get_or_create_tax_group(amount)
+    #     new_tax = self.env["account.tax"].create({
+    #         "name": f"TVA {amount}%",
+    #         "amount": amount,
+    #         "amount_type": "percent",
+    #         "type_tax_use": "sale",
+    #         "tax_group_id": group.id,
+    #     })
+    #     return [(6, 0, [new_tax.id])]
+
+    # def _get_supplier_taxes_id(self, tax_code):
+    #     amount = self._extract_tax_amount(tax_code)
+    #     if not amount:
+    #         return []
+    #     tax = self.env["account.tax"].search([
+    #         ("amount", "=", amount),
+    #         ("amount_type", "=", "percent"),
+    #         ("type_tax_use", "=", "purchase")
+    #     ], limit=1)
+    #     if tax:
+    #         return [(6, 0, [tax.id])]
+    #     group = self._get_or_create_tax_group(amount)
+    #     new_tax = self.env["account.tax"].create({
+    #         "name": f"TVA Achat {amount}%",
+    #         "amount": amount,
+    #         "amount_type": "percent",
+    #         "type_tax_use": "purchase",
+    #         "tax_group_id": group.id,
+    #     })
+    #     return [(6, 0, [new_tax.id])]
+    
+    # def _get_airsi_tax_id(self, tax_code):
+    #     amount = self._extract_tax_amount(tax_code)
+    #     if not amount:
+    #         return False
+    #     tax = self.env["account.tax"].search([
+    #         ("amount", "=", amount),
+    #         ("amount_type", "=", "percent"),
+    #         ("type_tax_use", "=", "sale")
+    #     ], limit=1)
+    #     if tax:
+    #         return tax.id
+    #     group = self._get_or_create_tax_group(amount)
+    #     new_tax = self.env["account.tax"].create({
+    #         "name": f"TVA AIRSI {amount}%",
+    #         "amount": amount,
+    #         "amount_type": "percent",
+    #         "type_tax_use": "sale",
+    #         "tax_group_id": group.id,
+    #     })
+    #     return new_tax.id
+
     def _extract_tax_amount(self, tax_code):
         import re
         if not tax_code:
@@ -424,78 +510,71 @@ class ProductTemplateImport(models.Model):
         numbers = re.findall(r"\d+\.?\d*", str(tax_code))
         return float(numbers[0]) if numbers else 0.0
 
-    def _get_or_create_tax_group(self, amount):
+    def _get_or_create_tax_group(self, amount, company):
         name = f"TVA {amount}%"
-        tax_group = self.env["account.tax.group"].search([("name", "=", name)], limit=1)
+        env = self.env['account.tax.group'].with_company(company)
+        tax_group = env.search([
+            ("name", "=", name),
+            ("company_id", "=", company.id)
+        ], limit=1)
         if tax_group:
             return tax_group
         try:
-            return self.env["account.tax.group"].create({"name": name})
+            return env.create({"name": name, "company_id": company.id})
         except Exception:
-            return self.env["account.tax.group"].search([], limit=1) or self.env["account.tax.group"].create({"name": "Taxe générique"})
+            return env.search([("company_id", "=", company.id)], limit=1) or \
+                env.create({"name": "Taxe générique", "company_id": company.id})
+
+    def _get_or_create_tax(self, name, amount, company):
+        """Cherche ou crée une taxe pour une société donnée."""
+        env_tax = self.env['account.tax'].with_company(company)
+        tax = env_tax.search([
+            ("amount", "=", amount),
+            ("amount_type", "=", "percent"),
+            ("type_tax_use", "=", "sale"),
+            ("company_id", "=", company.id),
+        ], limit=1)
+        if tax:
+            return tax
+        group = self._get_or_create_tax_group(amount, company)
+        return env_tax.create({
+            "name": name,
+            "amount": amount,
+            "amount_type": "percent",
+            "type_tax_use": "sale",
+            "tax_group_id": group.id,
+            "company_id": company.id,
+        })
 
     def _get_taxes_id(self, tax_code):
+        """Crée la TVA pour toutes les sociétés → Many2many (6, 0, [...])"""
         amount = self._extract_tax_amount(tax_code)
         if not amount:
             return []
-        tax = self.env["account.tax"].search([
-            ("amount", "=", amount),
-            ("amount_type", "=", "percent"),
-            ("type_tax_use", "=", "sale")
-        ], limit=1)
-        if tax:
-            return [(6, 0, [tax.id])]
-        group = self._get_or_create_tax_group(amount)
-        new_tax = self.env["account.tax"].create({
-            "name": f"TVA {amount}%",
-            "amount": amount,
-            "amount_type": "percent",
-            "type_tax_use": "sale",
-            "tax_group_id": group.id,
-        })
-        return [(6, 0, [new_tax.id])]
 
-    def _get_supplier_taxes_id(self, tax_code):
+        all_companies = self.env['res.company'].search([])
+        tax_ids = []
+
+        for company in all_companies:
+            tax = self._get_or_create_tax(f"TVA {amount}%", amount, company)
+            tax_ids.append(tax.id)
+
+        return [(6, 0, tax_ids)]
+
+    def _get_airsi_taxes_id(self, tax_code):
+        """AIRSI en Many2many → même logique multi-société"""
         amount = self._extract_tax_amount(tax_code)
         if not amount:
             return []
-        tax = self.env["account.tax"].search([
-            ("amount", "=", amount),
-            ("amount_type", "=", "percent"),
-            ("type_tax_use", "=", "purchase")
-        ], limit=1)
-        if tax:
-            return [(6, 0, [tax.id])]
-        group = self._get_or_create_tax_group(amount)
-        new_tax = self.env["account.tax"].create({
-            "name": f"TVA Achat {amount}%",
-            "amount": amount,
-            "amount_type": "percent",
-            "type_tax_use": "purchase",
-            "tax_group_id": group.id,
-        })
-        return [(6, 0, [new_tax.id])]
-    
-    def _get_airsi_tax_id(self, tax_code):
-        amount = self._extract_tax_amount(tax_code)
-        if not amount:
-            return False
-        tax = self.env["account.tax"].search([
-            ("amount", "=", amount),
-            ("amount_type", "=", "percent"),
-            ("type_tax_use", "=", "sale")
-        ], limit=1)
-        if tax:
-            return tax.id
-        group = self._get_or_create_tax_group(amount)
-        new_tax = self.env["account.tax"].create({
-            "name": f"TVA AIRSI {amount}%",
-            "amount": amount,
-            "amount_type": "percent",
-            "type_tax_use": "sale",
-            "tax_group_id": group.id,
-        })
-        return new_tax.id
+
+        all_companies = self.env['res.company'].search([])
+        tax_ids = []
+
+        for company in all_companies:
+            tax = self._get_or_create_tax(f"TVA AIRSI {amount}%", amount, company)
+            tax_ids.append(tax.id)
+
+        return [(6, 0, tax_ids)]
 
 
     # ----------------------------------------------------------
@@ -682,6 +761,31 @@ class ProductTemplateImport(models.Model):
                         "❌ Erreur mise à jour code-barres pour %s : %s",
                         product.default_code, str(e)
                     )
+
+
+    def _get_allowed_company_ids(self, item):
+        # Mapping code société → paramètre booléen
+        company_map = {
+            "01": item.get("yafdM_0"), # is_yop_demi_gros
+            "02": item.get("yafdeT_0"), # is_yop_detail
+            "03": item.get("yafsyN_0"), # is_synacass_ci
+            "04": item.get("yafsQ_0"), # is_square
+            "05": item.get("yafbsM_0"), # is_bassam
+            "06": item.get("yafkouM_0"), # is_koumassi
+            "07": item.get("abobo"), # is_abobo
+        }
+
+        # Codes des sociétés cochées
+        active_codes = [code for code, flag in company_map.items() if self._verify_boolean(flag)]
+
+        if not active_codes:
+            return None 
+        company_ids = self.env['res.company'].search(
+            [('code_company', 'in', active_codes)]
+        ).ids
+
+        return [(6, 0, company_ids)]
+    
 
 class ProductProduct(models.Model):
     _inherit = 'product.product'

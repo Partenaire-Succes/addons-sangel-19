@@ -71,13 +71,24 @@ class ReportDailySalesWizard(models.TransientModel):
                     for line in order_lines
                 )
                 marge = ca_ht - cout_total
-                remises = sum(
+                remises = 0.0
+                remise_line = sum(
                     l.price_unit * l.product_uom_qty * (l.discount or 0.0) / 100.0
                     for l in order_lines
                 )
+                remise_global = sum(
+                    l.price_unit * l.product_uom_qty
+                    for l in order_lines
+                    if l.price_unit < 0
+                )
+                remises = remise_line - remise_global
                 nb_clients = len(orders)
                 # FIX 4 : champ correct pour panier_qte
-                total_qte = sum(order_lines.mapped('product_uom_qty'))
+                total_qte = sum(
+                    line.product_uom_qty
+                    for line in order_lines
+                    if line.price_unit >= 0
+                )
 
             elif self.report_type == 'pos':
                 orders = self.env['pos.order'].search([
@@ -102,12 +113,23 @@ class ReportDailySalesWizard(models.TransientModel):
                     for line in order_lines
                 )
                 marge = ca_ht - cout_total
-                remises = sum(
+                remises = 0.0
+                remise_line = sum(
                     l.price_unit * l.qty * (l.discount or 0.0) / 100.0
                     for l in order_lines
                 )
+                remise_global = sum(
+                    l.price_unit * l.qty
+                    for l in order_lines
+                    if l.price_unit < 0
+                )
+                remises = remise_line - remise_global
                 nb_clients = len(orders)
-                total_qte = sum(order_lines.mapped('qty'))
+                total_qte = sum(
+                    line.qty
+                    for line in order_lines
+                    if line.price_unit >= 0
+                )
 
             else:  # 'all' : ventes + POS combinés
                 # --- Ventes ---
@@ -128,11 +150,22 @@ class ReportDailySalesWizard(models.TransientModel):
                     for line in sale_order_lines
                 )
                 sale_marge = sale_ca_ht - sale_cout_total
-                sale_remises = sum(
+                sale_remises = 0.0
+                sale_remise_line = sum(
                     l.price_unit * l.product_uom_qty * (l.discount or 0.0) / 100.0
                     for l in sale_order_lines
                 )
-                sale_qte = sum(sale_order_lines.mapped('product_uom_qty'))
+                sale_remise_global = sum(
+                    l.price_unit * l.product_uom_qty
+                    for l in sale_order_lines
+                    if l.price_unit < 0
+                )
+                sale_remises = sale_remise_line - sale_remise_global
+                sale_qte = sum(
+                    line.product_uom_qty
+                    for line in sale_order_lines
+                    if line.price_unit >= 0
+                )
 
                 # --- POS ---
                 pos_orders = self.env['pos.order'].search([
@@ -156,11 +189,22 @@ class ReportDailySalesWizard(models.TransientModel):
                     for line in pos_order_lines
                 )
                 pos_marge = pos_ca_ht - pos_cout_total
-                pos_remises = sum(
+                pos_remises = 0.0
+                pos_remise_line = sum(
                     l.price_unit * l.qty * (l.discount or 0.0) / 100.0
                     for l in pos_order_lines
                 )
-                pos_qte = sum(pos_order_lines.mapped('qty'))
+                pos_remise_global = sum(
+                    l.price_unit * l.qty
+                    for l in pos_order_lines
+                    if l.price_unit < 0
+                )
+                pos_remises = pos_remise_line - pos_remise_global
+                pos_qte = sum(
+                    line.qty
+                    for line in pos_order_lines
+                    if line.price_unit >= 0
+                )
 
                 # FIX 1 : ca_ht défini dans le bloc else
                 ca_ht = sale_ca_ht + pos_ca_ht

@@ -18,8 +18,6 @@ class ProductTemplate(models.Model):
         if not self.env.su:
             user_companies = self.env.companies.ids
             args = [
-                '|',
-                ('allowed_company_ids', '=', False),
                 ('allowed_company_ids', 'in', user_companies)
             ] + list(args)
         return super(ProductTemplate, self).search(args, **kwargs)
