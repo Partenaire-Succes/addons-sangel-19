@@ -231,7 +231,7 @@
                         </colgroup> -->
                         <thead>
                             <tr>
-                                <th class="col-cfam">Cde<br/>FAM</th>
+                                <th class="col-cfam">Cde FAM.</th>
                                 <th class="col-famille">FAMILLE</th>
                                 <th class="col-code">CODE</th>
                                 <th class="col-design tl">DÉSIGNATION</th>

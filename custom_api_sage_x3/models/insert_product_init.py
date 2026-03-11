@@ -27,6 +27,25 @@ class ProductTemplateImport(models.Model):
     def import_products_job(self):
         self.import_products()
 
+    def action_delete_products_no_company(self):
+        products = self.env['product.template'].with_context(
+            active_test=False
+        ).search([('allowed_company_ids', '=', False), ('type', '=', 'consu')])
+        
+        count = len(products)
+        products.unlink()
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Suppression effectuée',
+                'message': f'{count} produit(s) supprimé(s).',
+                'type': 'success',
+                'sticky': False,
+            }
+        }
+
 
     def safe_get(self, url, headers, params, timeout=TIMEOUT):
         """Appel GET avec retry et timeout"""
