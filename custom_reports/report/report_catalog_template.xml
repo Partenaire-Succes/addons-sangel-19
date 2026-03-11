@@ -356,8 +356,8 @@
 
                                         <!-- MARG C -->
                                         <td class="tr">
-                                            <t t-if="product.standard_price and product.standard_price != 0">
-                                                <t t-set="marg_c" t-value="((product.list_price - product.standard_price) / product.standard_price) * 100"/>
+                                            <t t-if="product.price_carton and product.price_carton != 0">
+                                                <t t-set="marg_c" t-value="((product.price_carton - product.standard_price) / product.price_carton) * 100"/>
                                                 <span t-attf-style="color: #{marg_c >= 20 and '#006622' or (marg_c >= 0 and '#555' or '#cc0000')}; font-weight: #{marg_c >= 20 and 'bold' or 'normal'};">
                                                     <t t-esc="'{:.2f}'.format(marg_c)"/>%
                                                 </span>
