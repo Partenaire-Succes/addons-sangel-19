@@ -8,7 +8,15 @@
     'author': 'Koua Alexandre',
     'website': '',
     'license': 'LGPL-3',
-    'depends': ['base', 'product', 'mail','stock','sale','custom_multi_barcode_for_products'],
+    'depends': [
+        'base', 
+        'product', 
+        'mail',
+        'stock',
+        'sale',
+        'custom_multi_barcode_for_products',
+        'custom_reports',
+    ],
     'data': [
         'security/ir.model.access.csv',
         'data/ir_cron_data.xml',

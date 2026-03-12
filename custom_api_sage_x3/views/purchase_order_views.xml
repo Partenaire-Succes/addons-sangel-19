@@ -32,17 +32,6 @@
                         type="object"
                         class="oe_highlight"
                         invisible="state not in ['draft', 'sent'] or sage_x3_validated == True or type_command != 'urgent' or type_supplier != 'vridi'"/>
-
-                <button name="action_submit_to_sage_x3" 
-                        string="Soumettre à SAGE X3" 
-                        type="object" 
-                        class="oe_highlight"
-                        invisible="1"/>
-
-                <button name="action_import_deliveries" 
-                        string="Importer livraisons" 
-                        type="object" 
-                        class="oe_highlight"/>
             </xpath>
         </field>
     </record>

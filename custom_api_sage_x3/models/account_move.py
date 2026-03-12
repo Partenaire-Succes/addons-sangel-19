@@ -31,7 +31,6 @@ class AccountMoveSageX3(models.Model):
             'res_model': 'sage.x3.send.wizard',
             'view_mode': 'form',
             'target': 'new',
-            'context': {}
         }
 
     @api.model
@@ -132,6 +131,7 @@ class AccountMoveSageX3(models.Model):
             ('start_at', '>=', datetime.combine(target_date, datetime.min.time())),
             ('start_at', '<=', datetime.combine(target_date, datetime.max.time())),
             ('state', '=', 'closed'),
+            ('sage_x3_sent', '=', False),
         ])
         
         if not pos_sessions:
@@ -377,6 +377,14 @@ class AccountMoveSageX3(models.Model):
             ('invoice_date', '=', target_date),
             ('sage_x3_sent', '=', False),
         ])
+
+        pos_sessions = self.env['pos.session'].search([
+            ('company_id', '=', company.id),  # ← FILTRE SOCIÉTÉ OBLIGATOIRE
+            ('start_at', '>=', datetime.combine(target_date, datetime.min.time())),
+            ('start_at', '<=', datetime.combine(target_date, datetime.max.time())),
+            ('state', '=', 'closed'),
+            ('sage_x3_sent', '=', False),
+        ])
         
         if invoices:
             invoices.write({
@@ -386,9 +394,12 @@ class AccountMoveSageX3(models.Model):
                 'sage_x3_piece_number': piece_number,
             })
             
-            _logger.info("✅ %s facture(s) marquée(s) comme envoyée(s) à SAGE X3", len(invoices))
-        else:
-            _logger.info("ℹ️  Aucune facture à marquer pour %s le %s", company.name, target_date)
+        if pos_sessions:
+            pos_sessions.write({
+                'sage_x3_sent': True,
+                'sage_x3_sent_date': fields.Datetime.now(),
+                'sage_x3_piece_number': piece_number,
+            })
 
     def _authenticate_sage_x3(self):
         """Authentification SAGE X3"""

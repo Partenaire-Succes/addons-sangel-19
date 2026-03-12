@@ -221,41 +221,55 @@ class PosActionsDashboard(models.Model):
             raise UserError(f"Erreur lors du traitement des documents: {str(e)}")
 
     @api.model
-    def action_import_products(self):
+    def action_import_products(self, *args, **kwargs):
         """Exécute l'action d'import des produits"""
         try:
-            # REMPLACEZ par votre vraie action
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': 'Import Produits',
-                    'message': 'Action à configurer',
-                    'type': 'info',
+            products = self.env['product.template'].search([
+                ('company_id', '=', self.env.company.id)
+            ])
+            
+            if not products:
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': 'Import Produits',
+                        'message': 'Aucun produit à importer',
+                        'type': 'info',
+                    }
                 }
-            }
+            
+            return products.action_import_from_external_source()
+        
         except Exception as e:
             raise UserError(f"Erreur lors de l'import des produits: {str(e)}")
 
     @api.model
-    def action_import_contacts(self):
+    def action_import_contacts(self, *args, **kwargs):
         """Exécute l'action d'import des contacts"""
         try:
-            # REMPLACEZ par votre vraie action
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': 'Import Contacts',
-                    'message': 'Action à configurer',
-                    'type': 'info',
+            contacts = self.env['res.partner'].search([
+                ('company_id', '=', self.env.company.id)
+            ])
+            
+            if not contacts:
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': 'Import Contacts',
+                        'message': 'Aucun contact à importer',
+                        'type': 'info',
+                    }
                 }
-            }
+            
+            return contacts.action_import_from_external_source()
+        
         except Exception as e:
             raise UserError(f"Erreur lors de l'import des contacts: {str(e)}")
 
     @api.model
-    def action_validate_purchases(self):
+    def action_validate_purchases(self, *args, **kwargs):
         """Exécute l'action de validation des achats"""
         try:
             company_id = self.env.company.id
@@ -276,49 +290,40 @@ class PosActionsDashboard(models.Model):
                     }
                 }
             
-            return {
-                'name': 'Achats à valider',
-                'type': 'ir.actions.act_window',
-                'res_model': 'purchase.order',
-                'view_mode': 'tree,form',
-                'domain': [('id', 'in', purchases.ids)],
-                'context': {'default_company_id': company_id}
-            }
+            return purchases.action_submit_to_sage_x3()
+        
         except Exception as e:
             raise UserError(f"Erreur lors de la validation des achats: {str(e)}")
 
     @api.model
-    def action_send_invoices_x3(self):
-        """Exécute l'action d'envoi des factures à X3"""
-        try:
-            company_id = self.env.company.id
-            invoices = self.env['account.move'].search([
-                ('company_id', '=', company_id),
-                ('move_type', 'in', ['out_invoice', 'out_refund']),
-                ('state', '=', 'posted'),
-                # ('x3_sent', '=', False)
-            ])
-            
-            if not invoices:
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'title': 'Information',
-                        'message': 'Aucune facture à envoyer',
-                        'type': 'warning',
-                        'sticky': False,
-                    }
-                }
-            
-            # REMPLACEZ par votre vraie action
+    def action_send_invoices_x3(self, *args, **kwargs):
+        company_id = self.env.company.id
+
+        invoices = self.env['account.move'].search([
+            ('company_id', '=', company_id),
+            ('move_type', 'in', ['out_invoice', 'out_refund']),
+            ('state', '=', 'posted')
+        ])
+
+        if not invoices:
             return {
-                'name': 'Factures à envoyer',
-                'type': 'ir.actions.act_window',
-                'res_model': 'account.move',
-                'view_mode': 'tree,form',
-                'domain': [('id', 'in', invoices.ids)],
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Information',
+                    'message': 'Aucune facture à envoyer',
+                    'type': 'warning',
+                    'sticky': False,
+                }
             }
-            
-        except Exception as e:
-            raise UserError(f"Erreur lors de l'envoi des factures à X3: {str(e)}")
+
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Sélectionner la période',
+            'res_model': 'sage.x3.send.wizard',
+            'views': [[False, 'form']],
+            'target': 'new',
+            'context': {
+                'default_company_id': self.env.company.id
+            }
+        }

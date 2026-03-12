@@ -43,9 +43,7 @@ class StockValoriseReport(models.TransientModel):
         """Détermine les produits concernés par la société et les catégories choisies."""
         for record in self:
             domain = [
-                '|',
-                ('company_id', '=', record.company_id.id),
-                ('company_id', '=', False)
+                ('allowed_company_ids', 'in', [record.company_id.id]),
             ]
             if record.category_ids:
                 domain.append(('categ_id', 'in', record.category_ids.ids))

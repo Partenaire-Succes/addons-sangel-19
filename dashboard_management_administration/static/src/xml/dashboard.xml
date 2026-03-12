@@ -45,7 +45,7 @@
                 <div class="o_stat_card o_stat_ventes">
                     <div class="o_stat_icon"><i class="fa fa-shopping-cart"/></div>
                     <div class="o_stat_content">
-                        <h3>Vente: Gros</h3>
+                        <h3>VENTE: B2B</h3>
                         <p class="o_stat_value" t-esc="formatCurrency(state.data.statistiques.total_ventes)"/>
                         <small t-esc="state.data.statistiques.nb_commandes_ventes + ' Ventes'"/>
                         <small t-esc="' / Marge: ' + state.data.statistiques.marge_ventes_percent + '%'"/>
@@ -55,7 +55,7 @@
                 <div class="o_stat_card o_stat_pos">
                     <div class="o_stat_icon"><i class="fa fa-desktop"/></div>
                     <div class="o_stat_content">
-                        <h3>POS: 1/2 Gros</h3>
+                        <h3>VENTE: Caisse </h3>
                         <p class="o_stat_value" t-esc="formatCurrency(state.data.statistiques.total_pos)"/>
                         <small t-esc="state.data.statistiques.nb_commandes_pos + ' Ventes'"/>
                         <small t-esc="' / Marge: ' + state.data.statistiques.marge_pos_percent + '%'"/>

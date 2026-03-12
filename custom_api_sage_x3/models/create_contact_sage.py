@@ -26,7 +26,7 @@ class ResPartnerImport(models.Model):
 
     def import_contacts_job(self):
         """Méthode pour lancer l'import via queue job si nécessaire"""
-        self.import_contacts()
+        self.action_import_from_external_source()
 
     def safe_get(self, url, headers, params, timeout=TIMEOUT):
         """Appel GET avec retry et timeout"""
@@ -41,7 +41,7 @@ class ResPartnerImport(models.Model):
             time.sleep(5)
         raise UserError("Échec de récupération des données après plusieurs tentatives.")
 
-    def import_contacts(self):
+    def action_import_from_external_source(self):
         """Importation des contacts/clients depuis l'API SAGE X3 avec gestion d'erreurs et commits réguliers."""
         try:
             # Authentification

@@ -12,7 +12,16 @@
     """,
     'author': 'Partenaire de succes',
     'website': 'https://www.partenairesucces.com/',
-    'depends': ['base', 'stock', 'purchase', 'sale', 'mail', 'point_of_sale','project'],
+    'depends': [
+        'base', 
+        'stock', 
+        'purchase', 
+        'sale', 
+        'mail', 
+        'point_of_sale',
+        'project',
+        'custom_reports',
+    ],
     'data': [
         'security/ir.model.access.csv',
         'views/reliquat_report_views.xml',

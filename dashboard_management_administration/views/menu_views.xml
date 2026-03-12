@@ -10,11 +10,11 @@
               action="action_demi_gros_dashboard"
               sequence="1"/>
 
-    <menuitem id="menu_managment_admin"
+    <!-- <menuitem id="menu_managment_admin"
               name="Gestion des Périodes"
               parent="menu_demi_gros_root"
               action="action_managment_admin"
-              sequence="10"/>
+              sequence="10"/> -->
 
     <menuitem id="menu_pos_actions_dashboard"
               name="Gestion Admin"

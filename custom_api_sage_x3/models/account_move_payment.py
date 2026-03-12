@@ -25,16 +25,6 @@ class AccountMoveSageX3(models.Model):
     # PARTIE 1: FACTURES HORS POS (Envoi DIRECT sans wizard)
     # ============================================================================
 
-    def action_send_all_classic_invoices_to_sage_x3(self):
-        """
-        Envoyer toutes les factures classiques non envoyées - ENVOI DIRECT
-        SÉCURITÉ: Uniquement les factures des sociétés de l'utilisateur
-        """
-        # Filtrer par les sociétés auxquelles l'utilisateur a accès
-        company = self.env.company
-        
-        return True
-
     @api.model
     def _process_bulk_send_classic_invoices_to_sage_x3(self, invoice_ids):
         """
@@ -316,7 +306,6 @@ class AccountPaymentSageX3(models.Model):
             ('partner_type', '=', 'customer'),
             ('state', '=', 'paid'),
             ('sage_x3_sent', '=', False),
-            # SÉCURITÉ: Uniquement les sociétés autorisées
             ('company_id', '=', company.id),
         ])
         

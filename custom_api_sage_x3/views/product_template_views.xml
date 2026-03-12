@@ -9,7 +9,7 @@
             <field name="arch" type="xml">
 
                 <xpath expr="//div[@name='button_box']" position="inside">
-                    <button name="import_products" 
+                    <button name="action_import_from_external_source" 
                             string="Importer Produits SAGE X3" 
                             type="object" 
                             icon="fa-history" 

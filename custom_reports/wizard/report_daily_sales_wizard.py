@@ -21,7 +21,7 @@ class ReportDailySalesWizard(models.TransientModel):
         ('sale', 'Ventes (Sales)'),
         ('pos', 'Point de Vente (POS)'),
         ('all', 'Vente et Point de vente')
-    ], string='Source', required=True, default='sale')
+    ], string='Source', required=True, default='all')
 
     company_id = fields.Many2one(
         'res.company',
