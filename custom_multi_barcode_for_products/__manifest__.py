@@ -5,7 +5,16 @@
     'summary': """Allows to create multiple barcode for a single product.""",
     'description': """This module allows to create Product multi barcode for
     Sales, Purchase, Inventory and Invoicing.""",
-    'depends': ['stock', 'sale_management', 'purchase', 'account', 'point_of_sale','base','product','custom_stock'],
+    'depends': [
+        'stock', 
+        'sale_management', 
+        'purchase', 
+        'account', 
+        'point_of_sale',
+        'base',
+        'product',
+        'custom_stock',
+    ],
     'data': [
         'security/ir.model.access.csv',
         'views/account_move_views.xml',
