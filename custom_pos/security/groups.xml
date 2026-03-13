@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============================================================
+         CATÉGORIE DES GROUPES
+    ============================================================ -->
+    <record id="module_category_custom_roles" model="ir.module.category">
+        <field name="name">Rôles Magasin</field>
+        <field name="description">Groupes de sécurité personnalisés par fonction</field>
+        <field name="sequence">3</field>
+    </record>
+    
+    <!-- Privilege (links category to groups) -->
+    <record model="res.groups.privilege" id="privilege_magazin_access">
+        <field name="name">Accès Magasin</field>
+        <field name="description">Caissière: Peut vendre les produits disponibles. DSI: Vend même en rupture de stock.</field>
+        <field name="category_id" ref="module_category_custom_roles"/>
+        <field name="sequence">10</field>
+    </record>
+
+    <!-- ============================================================
+         1. CAISSIÈRE
+         - POS : Utilisateur (base)
+         - Aucune action sur le dashboard
+    ============================================================ -->
+    <record id="group_caissiere" model="res.groups">
+        <field name="name">Caissière</field>
+        <field name="privilege_id" ref="privilege_magazin_access"/>
+        <field name="comment">Accès POS uniquement en tant qu'utilisateur. Aucune action dashboard.</field>
+        <field name="implied_ids" eval="[(4, ref('point_of_sale.group_pos_user'))]"/>
+    </record>
+
+    <!-- ============================================================
+         2. SUPERVISEUR / ASSISTANTE
+         - Vente : Tous les documents
+         - POS : Admin
+         - Comptabilité : Facturation
+         - Inventaire : Utilisateur
+         Dashboard : Accès POS Factures & Encaissements
+    ============================================================ -->
+    <record id="group_superviseur" model="res.groups">
+        <field name="name">Superviseur / Assistante</field>
+        <field name="privilege_id" ref="privilege_magazin_access"/>
+        <field name="comment">POS admin. Vente tous docs. Comptabilité facturation. Inventaire user. Dashboard : Factures et Encaissements.</field>
+        <field name="implied_ids" eval="[
+            (4, ref('sales_team.group_sale_salesman_all_leads')),
+            (4, ref('point_of_sale.group_pos_manager')),
+            (4, ref('account.group_account_invoice')),
+            (4, ref('stock.group_stock_user')),
+        ]"/>
+    </record>
+
+    <!-- ============================================================
+         3. ASSISTANT MAGASIN
+         - Vente : Tous les documents
+         - POS : Admin
+         - Comptabilité : Facturation
+         - Achat : Admin
+         - Inventaire : Admin
+         Dashboard : Accès POS Factures & Encaissements
+    ============================================================ -->
+    <record id="group_assistant_magasin" model="res.groups">
+        <field name="name">Assistant Magasin</field>
+        <field name="privilege_id" ref="privilege_magazin_access"/>
+        <field name="comment">POS admin. Vente tous docs. Comptabilité facturation. Achat admin. Inventaire admin. Dashboard : Factures et Encaissements.</field>
+        <field name="implied_ids" eval="[
+            (4, ref('sales_team.group_sale_salesman_all_leads')),
+            (4, ref('point_of_sale.group_pos_manager')),
+            (4, ref('account.group_account_invoice')),
+            (4, ref('purchase.group_purchase_manager')),
+            (4, ref('stock.group_stock_manager')),
+        ]"/>
+    </record>
+
+    <!-- ============================================================
+         4. RESPONSABLE MAGASIN
+         - Vente : Admin
+         - POS : Admin
+         - Comptabilité : Facturation
+         - Achat : Admin
+         - Inventaire : Admin
+         Dashboard : Accès aux actions POS d'achat
+    ============================================================ -->
+    <record id="group_responsable_magasin" model="res.groups">
+        <field name="name">Responsable Magasin</field>
+        <field name="privilege_id" ref="privilege_magazin_access"/>
+        <field name="comment">POS admin. Vente admin. Comptabilité facturation. Achat admin. Inventaire admin. Dashboard : Actions POS Achat.</field>
+        <field name="implied_ids" eval="[
+            (4, ref('sales_team.group_sale_manager')),
+            (4, ref('point_of_sale.group_pos_manager')),
+            (4, ref('account.group_account_invoice')),
+            (4, ref('purchase.group_purchase_manager')),
+            (4, ref('stock.group_stock_manager')),
+        ]"/>
+    </record>
+
+    <!-- ============================================================
+         5. DSI / IT
+         - Accès complet tous modules
+    ============================================================ -->
+    <record id="group_dsi_it" model="res.groups">
+        <field name="name">DSI / IT</field>
+        <field name="privilege_id" ref="privilege_magazin_access"/>
+        <field name="comment">Accès complet POS et tous modules. Accès technique.</field>
+        <field name="implied_ids" eval="[
+            (4, ref('sales_team.group_sale_manager')),
+            (4, ref('point_of_sale.group_pos_manager')),
+            (4, ref('account.group_account_manager')),
+            (4, ref('purchase.group_purchase_manager')),
+            (4, ref('stock.group_stock_manager')),
+            (4, ref('base.group_system')),
+        ]"/>
+    </record>
+
+    <!-- ============================================================
+         6. COMMERCIAL
+         - Vente : Admin
+         - POS : Aucun accès
+         - Comptabilité : Facturation
+         - Inventaire : Utilisateur
+    ============================================================ -->
+    <record id="group_commercial" model="res.groups">
+        <field name="name">Commercial</field>
+        <field name="privilege_id" ref="privilege_magazin_access"/>
+        <field name="comment">Vente admin. Comptabilité facturation. Inventaire utilisateur. Pas d'accès POS.</field>
+        <field name="implied_ids" eval="[
+            (4, ref('sales_team.group_sale_manager')),
+            (4, ref('account.group_account_invoice')),
+            (4, ref('stock.group_stock_user')),
+        ]"/>
+    </record>
+
+</odoo>

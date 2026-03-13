@@ -2,9 +2,13 @@
 <templates xml:space="preserve">
     <t t-inherit="point_of_sale.ProductInfoPopup" t-inherit-mode="extension">
 
-        <xpath expr="//div[@class='section-inventory mt-3 mb-4 pb-4 border-bottom text-start']" position="replace">
+        <xpath expr="//div[@class='section-inventory mt-3 mb-4 pb-4 border-bottom text-start']/h3" position="replace">
             <div class="sections section-variant">
                 <h1>Info article</h1>
+            </div>
+        </xpath>
+        <xpath expr="//div[@class='section-inventory mt-3 mb-4 pb-4 border-bottom text-start']/div" position="replace">
+            <div class="sections section-variant-invisible">
             </div>
         </xpath>
 

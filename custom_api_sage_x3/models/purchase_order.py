@@ -32,18 +32,95 @@ class PurchaseOrderSageX3Optimized(models.Model):
         else:
             raise UserError("La commande doit être marquée comme urgente pour cette action.")
 
+    def action_submit_all_pending_to_sage_x3(self):
+        """
+        Soumet à SAGE X3 toutes les commandes d'achat non encore envoyées
+        de la société courante.
+        """
+        pending_orders = self.search([
+            ('company_id',        '=',  self.env.company.id),
+            ('state',             'in', ['x3_pending']),
+            ('sage_x3_submitted', '=',  False),
+            ('sage_x3_validated', '=',  False),
+        ])
+
+        if not pending_orders:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Information',
+                    'message': 'Aucune commande en attente de soumission à SAGE X3',
+                    'type': 'warning',
+                    'sticky': False,
+                }
+            }
+
+        ok      = 0
+        ko      = 0
+        errors  = []
+
+        for order in pending_orders:
+            try:
+                order._submit_to_sage_x3()
+
+                # Confirmer la commande si validée par SAGE X3
+                if order.sage_x3_validated:
+                    order.button_confirm()
+                    ok += 1
+                else:
+                    ko += 1
+                    errors.append(f"{order.name} : {order.sage_x3_error or 'Rejetée'}")
+
+                # Commit intermédiaire tous les 10 ordres
+                if (ok + ko) % 10 == 0:
+                    self.env.cr.commit()
+
+            except UserError as e:
+                ko += 1
+                errors.append(f"{order.name} : {str(e)}")
+            except Exception as e:
+                ko += 1
+                errors.append(f"{order.name} : Erreur inattendue — {str(e)}")
+
+        self.env.cr.commit()
+
+        # Construction du message de résultat
+        message = (
+            f"Traitement terminé sur {len(pending_orders)} commandes :\n\n"
+            f"✅ Envoyées avec succès : {ok}\n"
+            f"❌ Échecs              : {ko}"
+        )
+        if errors:
+            message += "\n\nDétail des erreurs :\n" + "\n".join(f"• {e}" for e in errors)
+
+        notif_type = 'success' if ko == 0 else ('warning' if ok > 0 else 'danger')
+        title      = '✅ Envoi terminé' if ko == 0 else f'⚠️ {ok} succès / {ko} échecs'
+
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': title,
+                'message': message,
+                'type': notif_type,
+                'sticky': True,
+            }    
+        }
+
+
     def action_submit_to_sage_x3(self):
         """Soumettre la commande à SAGE X3"""
         self.ensure_one()
         
-        if self.state not in ['draft', 'sent']:
-            raise UserError("Seules les commandes en brouillon peuvent être soumises")
+        if self.state not in ['x3_pending']:
+            raise UserError("Seules les commandes en attente de validation SAGE X3 peuvent être soumises")
         
         if self.sage_x3_validated:
             raise UserError("Déjà validée par SAGE X3")
         
         try:
-            self.submit_to_sage_x3()
+            self._submit_to_sage_x3()
 
             if self.sage_x3_validated:
                 self.button_confirm()
@@ -69,7 +146,7 @@ class PurchaseOrderSageX3Optimized(models.Model):
                 }
             }
 
-    def submit_to_sage_x3(self):
+    def _submit_to_sage_x3(self):
         """Soumet à SAGE X3"""
         self.ensure_one()
         
@@ -276,6 +353,44 @@ class PurchaseOrderSageX3Optimized(models.Model):
         except Exception as e:
             _logger.exception("❌ [THREAD] Erreur import: %s", str(e))
 
+    
+    def action_import_all_receive_external_source(self):
+        """
+        Import en masse,
+        Cette méthode pour mettre a jours en masse toutes les commandes avec les livraisons reçues de SAGE X3
+        """
+
+        purchases = self.search([
+            ('company_id', '=', self.env.company.id),
+            ('state', '=', 'purchase')
+        ])
+        
+        success_count = 0
+        error_count = 0
+        errors = []
+        
+        for idx, purchase in enumerate(purchases, 1):
+            try:
+                
+                purchase._job_import_deliveries()
+                success_count += 1
+                
+                if idx % 10 == 0:
+                    self.env.cr.commit()
+                
+            except Exception as e:
+                error_count += 1
+                errors.append(f"{purchase.name}: {str(e)}")
+        
+        self.env.cr.commit()
+        
+        return {
+            'success': success_count,
+            'errors': error_count,
+            'error_details': errors
+        }
+        
+
     @api.model
     def _job_import_deliveries(self):
         """
@@ -287,11 +402,6 @@ class PurchaseOrderSageX3Optimized(models.Model):
         # Récupérer la société courante
         current_company = self.env.company
         company_name = current_company.name
-        
-        _logger.info("="*80)
-        _logger.info("🚀 [JOB] Démarrage import SAGE X3 - %s", start_time)
-        _logger.info("🏢 [JOB] Société: %s (ID: %s)", company_name, current_company.id)
-        _logger.info("="*80)
         
         try:
             # 1. Authentification
@@ -343,10 +453,6 @@ class PurchaseOrderSageX3Optimized(models.Model):
             
             # 9. Statistiques finales
             duration = (datetime.now() - start_time).total_seconds()
-            _logger.info("="*80)
-            _logger.info("✅ [JOB] Import terminé en %.2f secondes pour %s", duration, company_name)
-            _logger.info("📊 Stats: %s", stats)
-            _logger.info("="*80)
             
             # 10. Notification utilisateur
             self._notify_import_completion(stats, duration, company_name)

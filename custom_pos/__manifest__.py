@@ -9,8 +9,8 @@
 #############################################################################
 {
     'name': 'Personnalisation du Point de vente',
-    'version': '19.0',
     'category': 'POS',
+    'version': '1.0.0',
     'summary': """Customisation de Point de vente pour Odoo 19.0""",
     'description': """Adaptation du module Point de vente pour répondre aux besoins 
         spécifiques des utilisateurs d'Odoo 19.0.""",
@@ -18,13 +18,9 @@
     'company': 'Partenaires Succes',
     'maintainer': 'Adams KONE',
     'website': "https://www.partenairesucces.com/",
-    'depends': [
-        'sale', 
-        'point_of_sale', 
-        'account', 
-        'pos_loyalty',
-    ],
+    'depends': ['sale', 'point_of_sale', 'account', 'pos_loyalty'],
     'data': [
+        'security/groups.xml',
         'security/ir.model.access.csv',
         'security/security.xml',
         'security/pos_security.xml',

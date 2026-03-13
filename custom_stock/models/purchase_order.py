@@ -19,3 +19,10 @@ class PurchaseOrderSageX3Optimized(models.Model):
         ('vridi', 'VRIDI'),
         ('local', 'Local/Autres'),
     ], string="Type de fournisseur", default='vridi', copy=False)
+
+    state = fields.Selection(selection_add=[
+        ('x3_pending', 'En attente X3'),
+    ])
+
+    def action_pending_to_sage_x3(self):
+        self.write({'state': 'x3_pending'})

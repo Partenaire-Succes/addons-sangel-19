@@ -30,6 +30,15 @@
                 </div>
             </xpath>
 
+            <xpath expr="//button[@name='button_confirm']" position="before">
+                <!-- Bouton Soumettre à SAGE X3 -->
+                <button name="action_pending_to_sage_x3" 
+                        string="Mettre en attente SAGE X3" 
+                        type="object"
+                        class="oe_highlight"
+                        invisible="state not in ['draft', 'sent'] or sage_x3_validated == True or type_command != 'normal' or type_supplier != 'local'"/>
+            </xpath>
+
             <xpath expr="//field[@name='partner_id']" position="after">
                 <field name="type_supplier" 
                        widget="selection"

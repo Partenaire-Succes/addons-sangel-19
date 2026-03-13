@@ -223,77 +223,24 @@ class PosActionsDashboard(models.Model):
     @api.model
     def action_import_products(self, *args, **kwargs):
         """Exécute l'action d'import des produits"""
-        try:
-            products = self.env['product.template'].search([
-                ('company_id', '=', self.env.company.id)
-            ])
-            
-            if not products:
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'title': 'Import Produits',
-                        'message': 'Aucun produit à importer',
-                        'type': 'info',
-                    }
-                }
-            
-            return products.action_import_from_external_source()
+        return self.env['product.template'].action_import_products_external_source()
         
-        except Exception as e:
-            raise UserError(f"Erreur lors de l'import des produits: {str(e)}")
-
     @api.model
     def action_import_contacts(self, *args, **kwargs):
         """Exécute l'action d'import des contacts"""
-        try:
-            contacts = self.env['res.partner'].search([
-                ('company_id', '=', self.env.company.id)
-            ])
-            
-            if not contacts:
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'title': 'Import Contacts',
-                        'message': 'Aucun contact à importer',
-                        'type': 'info',
-                    }
-                }
-            
-            return contacts.action_import_from_external_source()
+        return self.env['res.partner'].action_import_from_external_source()
         
-        except Exception as e:
-            raise UserError(f"Erreur lors de l'import des contacts: {str(e)}")
-
     @api.model
     def action_validate_purchases(self, *args, **kwargs):
-        """Exécute l'action de validation des achats"""
-        try:
-            company_id = self.env.company.id
-            purchases = self.env['purchase.order'].search([
-                ('company_id', '=', company_id),
-                ('state', 'in', ['draft', 'sent'])
-            ])
-            
-            if not purchases:
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'title': 'Information',
-                        'message': 'Aucun achat à valider',
-                        'type': 'warning',
-                        'sticky': False,
-                    }
-                }
-            
-            return purchases.action_submit_to_sage_x3()
+        """Exécute l'action de validation des achats vers SAGE X3."""
+        return self.env['purchase.order'].action_submit_all_pending_to_sage_x3()
         
-        except Exception as e:
-            raise UserError(f"Erreur lors de la validation des achats: {str(e)}")
+
+    @api.model
+    def action_receive_purchases(self, *args, **kwargs):
+        """Exécute l'action de validation des achats"""
+        return self.env['purchase.order'].action_import_all_receive_external_source()
+     
 
     @api.model
     def action_send_invoices_x3(self, *args, **kwargs):

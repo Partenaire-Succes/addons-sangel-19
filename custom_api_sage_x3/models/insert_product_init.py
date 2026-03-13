@@ -25,7 +25,7 @@ class ProductTemplateImport(models.Model):
 
     # @job
     def import_products_job(self):
-        self.action_import_from_external_source()
+        self.action_import_products_external_source()
 
     def action_delete_products_no_company(self):
         products = self.env['product.template'].with_context(
@@ -60,7 +60,7 @@ class ProductTemplateImport(models.Model):
             time.sleep(5)
         raise UserError("Échec de récupération des données après plusieurs tentatives.")
 
-    def action_import_from_external_source(self):
+    def action_import_products_external_source(self):
         """Importation des produits depuis l'API SAGE X3 avec gestion d'erreurs et commits réguliers."""
         try:
             auth_data = {"username": USERNAME, "password": PASSWORD}
@@ -809,5 +809,5 @@ class ProductTemplateImport(models.Model):
 class ProductProduct(models.Model):
     _inherit = 'product.product'
 
-    def action_import_from_external_source(self):
-        return self.product_tmpl_id.action_import_from_external_source()
+    def action_import_products_external_source(self):
+        return self.product_tmpl_id.action_import_products_external_source()
