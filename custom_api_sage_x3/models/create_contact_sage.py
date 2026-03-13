@@ -38,6 +38,9 @@ class ResPartnerImport(models.Model):
             time.sleep(5)
         raise UserError("Échec de récupération des données après plusieurs tentatives.")
 
+    def import_contacts(self):
+        return self.action_import_contacts_external_source()
+
     def action_import_contacts_external_source(self):
         """Importation des contacts/clients depuis l'API SAGE X3 avec gestion d'erreurs et commits réguliers."""
         try:
