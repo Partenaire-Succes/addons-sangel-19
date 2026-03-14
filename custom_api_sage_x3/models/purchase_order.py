@@ -362,8 +362,22 @@ class PurchaseOrderSageX3Optimized(models.Model):
 
         purchases = self.search([
             ('company_id', '=', self.env.company.id),
-            ('state', '=', 'purchase')
+            ('sage_x3_submitted', '=', True),
+            ('sage_x3_validated', '=', True),
+            ('sage_x3_delivery_received', '=', False),
         ])
+
+        if not purchases:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Information',
+                    'message': 'Aucune commande en attente de mise à jour de livraisons reçues de SAGE X3',
+                    'type': 'warning',
+                    'sticky': False,
+                }
+            }
         
         success_count = 0
         error_count = 0
@@ -494,6 +508,7 @@ class PurchaseOrderSageX3Optimized(models.Model):
             ('company_id', '=', company.id),
             ('sage_x3_submitted', '=', True),
             ('sage_x3_validated', '=', True),
+            ('sage_x3_delivery_received', '=', False),
         ])
         
         # Créer un set des références valides pour cette société
@@ -570,6 +585,7 @@ class PurchaseOrderSageX3Optimized(models.Model):
             ('company_id', '=', company_id),
             ('sage_x3_submitted', '=', True),
             ('sage_x3_validated', '=', True),
+            ('sage_x3_delivery_received', '=', False),
             ('state', 'in', ['purchase', 'to approve'])
         ])
         

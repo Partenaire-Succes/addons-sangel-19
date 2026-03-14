@@ -7,6 +7,11 @@
             </div>
         </xpath>
 
+        <xpath expr="//div[@class='section-inventory mt-3 mb-4 pb-4 border-bottom text-start']/h3[@class='section-title']" position="replace">
+            <div class="sections section-variant-invisible-inventory">
+            </div>
+        </xpath>
+
         <xpath expr="//div[@class='section-supplier mt-3 mb-4 pb-4 border-bottom text-start']" position="replace">
              <div class="section section-variants">
             </div>

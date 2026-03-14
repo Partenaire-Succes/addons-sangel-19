@@ -84,7 +84,9 @@ class PosActionsDashboard(models.Model):
         # Achats en attente de validation
         purchase_to_validate = self.env['purchase.order'].search_count([
             ('company_id', '=', company_id),
-            ('state', 'in', ['draft', 'sent'])
+            ('state',             'in', ['x3_pending']),
+            ('sage_x3_submitted', '=',  False),
+            ('sage_x3_validated', '=',  False),
         ])
         
         # Factures en attente d'envoi
@@ -92,7 +94,6 @@ class PosActionsDashboard(models.Model):
             ('company_id', '=', company_id),
             ('move_type', 'in', ['out_invoice', 'out_refund']),
             ('state', '=', 'posted'),
-            # ('x3_sent', '=', False)  # Décommentez si vous avez ce champ
         ])
         
         # Sessions ouvertes
@@ -105,12 +106,20 @@ class PosActionsDashboard(models.Model):
         pos_count = self.env['pos.config'].search_count([
             ('company_id', '=', company_id)
         ])
+
+        purchase_to_receive = self.env['purchase.order'].search_count([
+            ('company_id', '=', company_id),
+            ('sage_x3_submitted', '=', True),
+            ('sage_x3_validated', '=', True),
+            ('sage_x3_delivery_received', '=', False),
+        ])
         
         return {
             'product_count': product_count,
             'contact_count': contact_count,
             'purchase_to_validate': purchase_to_validate,
             'invoices_to_send': invoices_to_send,
+            'purchase_to_receive': purchase_to_receive,
             'open_sessions': open_sessions,
             'pos_count': pos_count,
         }
@@ -223,54 +232,120 @@ class PosActionsDashboard(models.Model):
     @api.model
     def action_import_products(self, *args, **kwargs):
         """Exécute l'action d'import des produits"""
-        return self.env['product.template'].action_import_products_external_source()
+        if self.env.user.has_group('custom_pos.group_dsi_it'):
+            return self.env['product.template'].action_import_products_external_source()
+        else:
+            return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': 'Information',
+                        'message': 'Vous n\'avez pas les permissions nécessaires pour importer les produits.',
+                        'type': 'warning',
+                        'sticky': False,
+                    }
+                }
         
     @api.model
     def action_import_contacts(self, *args, **kwargs):
         """Exécute l'action d'import des contacts"""
-        return self.env['res.partner'].action_import_from_external_source()
+        if self.env.user.has_group('custom_pos.group_dsi_it'):
+            return self.env['res.partner'].action_import_from_external_source()
+        else:
+            return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': 'Information',
+                        'message': 'Vous n\'avez pas les permissions nécessaires pour importer les contacts.',
+                        'type': 'warning',
+                        'sticky': False,
+                    }
+                }
         
     @api.model
     def action_validate_purchases(self, *args, **kwargs):
         """Exécute l'action de validation des achats vers SAGE X3."""
-        return self.env['purchase.order'].action_submit_all_pending_to_sage_x3()
-        
+        it = self.env.user.has_group('custom_pos.group_dsi_it')
+        respo = self.env.user.has_group('custom_pos.group_responsable_magasin')
+        if it or respo:
+            return self.env['purchase.order'].action_submit_all_pending_to_sage_x3()
+        else:
+            return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': 'Information',
+                        'message': 'Vous n\'avez pas les permissions nécessaires pour valider les achats.',
+                        'type': 'warning',
+                        'sticky': False,
+                    }
+                }
+
 
     @api.model
     def action_receive_purchases(self, *args, **kwargs):
         """Exécute l'action de validation des achats"""
-        return self.env['purchase.order'].action_import_all_receive_external_source()
-     
+        it = self.env.user.has_group('custom_pos.group_dsi_it')
+        respo = self.env.user.has_group('custom_pos.group_responsable_magasin')
+        if it or respo:
+            return self.env['purchase.order'].action_import_all_receive_external_source()
+        else:
+            return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': 'Information',
+                        'message': 'Vous n\'avez pas les permissions nécessaires pour recevoir les achats.',
+                        'type': 'warning',
+                        'sticky': False,
+                    }
+                }
+
 
     @api.model
     def action_send_invoices_x3(self, *args, **kwargs):
         company_id = self.env.company.id
+        it = self.env.user.has_group('custom_pos.group_dsi_it')
+        super = self.env.user.has_group('custom_pos.group_superviseur')
+        assist = self.env.user.has_group('custom_pos.group_assistant_magasin')
+        if it or super or assist:
+            invoices = self.env['account.move'].search([
+                ('company_id', '=', company_id),
+                ('move_type', 'in', ['out_invoice', 'out_refund']),
+                ('state', '=', 'posted')
+            ])
 
-        invoices = self.env['account.move'].search([
-            ('company_id', '=', company_id),
-            ('move_type', 'in', ['out_invoice', 'out_refund']),
-            ('state', '=', 'posted')
-        ])
+            if not invoices:
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': 'Information',
+                        'message': 'Aucune facture à envoyer',
+                        'type': 'warning',
+                        'sticky': False,
+                    }
+                }
 
-        if not invoices:
             return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': 'Information',
-                    'message': 'Aucune facture à envoyer',
-                    'type': 'warning',
-                    'sticky': False,
+                'type': 'ir.actions.act_window',
+                'name': 'Sélectionner la période',
+                'res_model': 'sage.x3.send.wizard',
+                'views': [[False, 'form']],
+                'target': 'new',
+                'context': {
+                    'default_company_id': self.env.company.id
                 }
             }
-
-        return {
-            'type': 'ir.actions.act_window',
-            'name': 'Sélectionner la période',
-            'res_model': 'sage.x3.send.wizard',
-            'views': [[False, 'form']],
-            'target': 'new',
-            'context': {
-                'default_company_id': self.env.company.id
-            }
-        }
+        else:
+            return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': 'Information',
+                        'message': 'Vous n\'avez pas les permissions nécessaires pour envoyer les factures à X3.',
+                        'type': 'warning',
+                        'sticky': False,
+                    }
+                }

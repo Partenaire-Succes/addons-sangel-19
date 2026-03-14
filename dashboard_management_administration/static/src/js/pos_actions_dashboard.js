@@ -146,6 +146,28 @@ class PosActionsDashboard extends Component {
         }
     }
 
+    async onReceivePurchases() {
+        try {
+            const action = await this.orm.call(
+                "pos.actions.dashboard",
+                "action_receive_purchases",
+                [[]]
+            );
+
+            if (action) {
+                await this.action.doAction(action);
+            }
+
+        } catch (error) {
+            console.error("Erreur réelle :", error);
+            this.notification.add(
+                error.message || "Erreur lors de la réception des commandes",
+                { type: "danger" }
+            );
+        }
+    }
+
+
     async onSendInvoicesX3() {
         try {
             const action = await this.orm.call(

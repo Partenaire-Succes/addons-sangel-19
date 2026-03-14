@@ -71,6 +71,22 @@
                         </div>
 
                         <div class="o_action_card">
+                            <div class="o_action_icon bg-warning">
+                                <i class="fa fa-truck fa-2x"/>
+                            </div>
+                            <div class="o_action_content">
+                                <h4>Reception Achats</h4>
+                                <p class="text-muted"><t t-esc="state.data.statistics.purchase_to_receive"/> en attente</p>
+                                <button class="btn btn-sm btn-warning" 
+                                        t-on-click="onReceivePurchases"
+                                        t-att-disabled="isActionLoading('action_receive_purchases')">
+                                    <i class="fa fa-truck" t-att-class="{'fa-spin fa-spinner': isActionLoading('action_receive_purchases')}"/>
+                                    Recevoir
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="o_action_card">
                             <div class="o_action_icon bg-danger">
                                 <i class="fa fa-file-text fa-2x"/>
                             </div>
@@ -85,6 +101,7 @@
                                 </button>
                             </div>
                         </div>
+                        
                     </div>
                 </div>
 

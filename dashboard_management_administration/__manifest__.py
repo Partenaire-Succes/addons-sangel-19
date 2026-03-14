@@ -22,6 +22,7 @@
         'purchase',
         'custom_api_sage_x3',
         'custom_stock',
+        'custom_pos',
     ],
     'data': [
         'security/ir.model.access.csv',
