@@ -76,6 +76,8 @@ class SageX3SendWizard(models.TransientModel):
             ('payment_type', '=', 'inbound'),
             ('partner_type', '=', 'customer'),
             ('state', '=', 'paid'),
+            ('pos_payment_method_id', '=', False),
+            ('pos_session_id', '=', False),
             ('sage_x3_sent', '=', False),
             ('company_id', '=', company.id),
             ('date', '>=', self.date_from),         # ✅ Ajout filtre date

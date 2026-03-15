@@ -3,7 +3,7 @@
     'summary': 'Summery',
     'description': 'Le module permet de personnaliser les rapports PDF',
     'category': 'Sales/account',
-    'author': 'Alexandre Koua',
+    'author': 'Alexandre Koua, Adama KONE',
     'company': 'Partenaires Succes',
     'maintainer': 'Alexandre Koua',
     'website': "https://www.partenairesucces.com/",

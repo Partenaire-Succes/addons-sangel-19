@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Intégration SAGE X3 — Commandes d'achat
-Auteur  : Koua Alexandre
+Auteur  : Adama KONE 
 Version : 2.0.0 (production)
 """
 

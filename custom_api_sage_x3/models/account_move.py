@@ -123,21 +123,32 @@ class AccountMoveSageX3(models.Model):
         Retourne:
             dict: Données au format SAGE X3 ou None si pas de données
         """
-        _logger.info("🔍 Recherche sessions POS pour %s le %s", company.name, target_date)
         
         # ISOLATION STRICTE: Ne récupérer QUE les sessions de CETTE société
         pos_sessions = self.env['pos.session'].search([
-            ('company_id', '=', company.id),  # ← FILTRE SOCIÉTÉ OBLIGATOIRE
+            ('company_id', '=', company.id),
             ('start_at', '>=', datetime.combine(target_date, datetime.min.time())),
             ('start_at', '<=', datetime.combine(target_date, datetime.max.time())),
-            ('state', '=', 'closed'),
-            ('sage_x3_sent', '=', False),
         ])
-        
+
         if not pos_sessions:
-            _logger.info("ℹ️  Aucune session POS fermée pour %s le %s", company.name, target_date)
             return None
-        
+
+        # sessions ouvertes
+        open_sessions = pos_sessions.filtered(lambda s: s.state != 'closed')
+
+        # 🔴 si une seule session ouverte → bloquer
+        if open_sessions:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Session POS ouverte',
+                    'message': "Au moins une session POS est encore ouverte. Veuillez fermer toutes les sessions avant d'envoyer les données à SAGE X3.",
+                    'type': 'warning',
+                    'sticky': True,
+                }
+            }
         # Regroupement des paiements
         # payments_cash: {(account_code, payment_method_name): total_amount} - GROUPÉ
         # payments_credit_lines: [liste de lignes] - AUCUN REGROUPEMENT
@@ -151,6 +162,7 @@ class AccountMoveSageX3(models.Model):
             session_total = 0
             payments = self.env['pos.payment'].search([
                 ('session_id', '=', session.id)
+                ('sage_x3_sent' '=', False),
             ])
             
             for payment in payments:
@@ -367,11 +379,11 @@ class AccountMoveSageX3(models.Model):
     def _mark_invoices_as_sent(self, company, target_date, piece_number):
         """
         Marque les factures de la journée comme envoyées à SAGE X3
-        
         IMPORTANT: Ne marque QUE les factures de la société concernée
         """
+
         invoices = self.search([
-            ('company_id', '=', company.id),  # ← Isolation par société
+            ('company_id', '=', company.id),
             ('move_type', '=', 'out_invoice'),
             ('state', '=', 'posted'),
             ('invoice_date', '=', target_date),
@@ -379,13 +391,17 @@ class AccountMoveSageX3(models.Model):
         ])
 
         pos_sessions = self.env['pos.session'].search([
-            ('company_id', '=', company.id),  # ← FILTRE SOCIÉTÉ OBLIGATOIRE
+            ('company_id', '=', company.id),
             ('start_at', '>=', datetime.combine(target_date, datetime.min.time())),
             ('start_at', '<=', datetime.combine(target_date, datetime.max.time())),
-            ('state', '=', 'closed'),
+        ])
+
+        pos_payments = self.env['pos.payment'].search([
+            ('session_id', 'in', pos_sessions.ids),
             ('sage_x3_sent', '=', False),
         ])
-        
+
+        # Marquer les factures
         if invoices:
             invoices.write({
                 'sage_x3_sent': True,
@@ -393,9 +409,10 @@ class AccountMoveSageX3(models.Model):
                 'sage_x3_piece_type': 'FACLI',
                 'sage_x3_piece_number': piece_number,
             })
-            
-        if pos_sessions:
-            pos_sessions.write({
+
+        # Marquer les paiements POS
+        if pos_payments:
+            pos_payments.write({
                 'sage_x3_sent': True,
                 'sage_x3_sent_date': fields.Datetime.now(),
                 'sage_x3_piece_number': piece_number,
