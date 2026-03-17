@@ -50,7 +50,6 @@ class AccountMoveSageX3(models.Model):
                 errors.append(f"{invoice.name}: {str(e)}")
         
         self.env.cr.commit()
-        _logger.info("📊 Succès: %s | Erreurs: %s", success_count, error_count)
         
         return {
             'success': success_count,
@@ -167,7 +166,6 @@ class AccountMoveSageX3(models.Model):
             # Compte de produit
             account = line.account_id
             if not account:
-                _logger.warning("⚠️ Ligne sans compte: %s", line.name)
                 continue
             
             # Montant TTC 
@@ -276,7 +274,6 @@ class AccountMoveSageX3(models.Model):
             if attempt < MAX_RETRIES - 1:
                 import time
                 wait_time = 2 * (attempt + 1)
-                _logger.info("⏳ Attente %ss avant nouvelle tentative...", wait_time)
                 time.sleep(wait_time)
         
         # Échec après tous les retries
@@ -354,7 +351,6 @@ class AccountPaymentSageX3(models.Model):
         success_count = 0
         error_count = 0
         errors = []
-        _logger.info("📊 Nombre de paiements: %s", len(payments))
         
         for idx, payment in enumerate(payments, 1):
             try:
@@ -563,7 +559,6 @@ class AccountPaymentSageX3(models.Model):
             if attempt < MAX_RETRIES - 1:
                 import time
                 wait_time = 2 * (attempt + 1)
-                _logger.info("⏳ Attente %ss avant nouvelle tentative...", wait_time)
                 time.sleep(wait_time)
         
         # Échec après tous les retries

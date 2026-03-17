@@ -49,7 +49,6 @@ class AccountMoveSageX3(models.Model):
             
             # Vérification que la société existe et est active
             if not company.exists():
-                _logger.error("❌ Société ID %s introuvable", company_id)
                 continue
             
             try:
@@ -71,9 +70,6 @@ class AccountMoveSageX3(models.Model):
                             self._send_daily_to_sage_x3_api(accounting_data, company, current_date)
                             success_count += 1
                             company_success += 1
-                            _logger.info("✅ %s - %s: Envoyé avec succès", company.name, current_date)
-                        else:
-                            _logger.info("ℹ️  %s - %s: Aucune donnée à envoyer", company.name, current_date)
                         
                         # Commit après chaque journée pour éviter de perdre les données
                         self.env.cr.commit()
@@ -88,10 +84,6 @@ class AccountMoveSageX3(models.Model):
                     
                     # Passer au jour suivant
                     current_date = fields.Date.add(current_date, days=1)
-                
-                _logger.info("")
-                _logger.info("📊 Résumé société %s: %s succès / %s erreurs", 
-                           company.name, company_success, company_errors)
                     
             except Exception as e:
                 error_count += 1
@@ -169,20 +161,16 @@ class AccountMoveSageX3(models.Model):
                 payment_method = payment.payment_method_id
                 
                 if not payment_method:
-                    _logger.warning("⚠️  Paiement sans méthode dans session %s", session.name)
                     continue
                 
                 # Compte de débit = journal du moyen de paiement
                 debit_account = payment_method.journal_id.default_account_id
                 
                 if not debit_account:
-                    _logger.warning("⚠️  Compte de débit manquant pour '%s' (session %s)", 
-                                  payment_method.name, session.name)
                     if payment_method.is_limit:
                         # Fallback pour paiements crédit sans compte configuré
                         debit_account = company.sage_x3_account_customer_default_id
                         if not debit_account:
-                            _logger.error("❌ Compte client par défaut manquant pour %s", company.name)
                             continue
                     else:
                         continue
@@ -215,8 +203,6 @@ class AccountMoveSageX3(models.Model):
                         })
                     else:
                         # Pas de compte client configuré
-                        _logger.warning("⚠️  Client '%s' sans customer_id (session %s) - traité comme comptant", 
-                                      partner.name if partner else "Inconnu", session.name)
                         # Traiter comme comptant
                         payment_key = (debit_account.code, payment_method.name)
                         payments_cash[payment_key] += amount
@@ -230,7 +216,6 @@ class AccountMoveSageX3(models.Model):
         
         # Vérifier qu'on a bien des données
         if not payments_cash and not payments_credit_lines:
-            _logger.warning("⚠️  Aucun paiement valide trouvé pour %s le %s", company.name, target_date)
             return None
         
         # Construction des lignes d'écriture
@@ -273,7 +258,6 @@ class AccountMoveSageX3(models.Model):
         total_amount = sum(line['amount'] for line in lines)
         
         if total_amount == 0:
-            _logger.warning("⚠️  Total nul pour %s le %s", company.name, target_date)
             return None
         
         # 3. LIGNE CRÉDIT - Total des ventes (contrepartie unique)
@@ -474,7 +458,6 @@ class AccountMoveSageX3(models.Model):
             if attempt < MAX_RETRIES - 1:
                 import time
                 wait_time = 2 * (attempt + 1)  # Backoff progressif: 2s, 4s, 6s
-                _logger.info("⏳ Attente %ss avant nouvelle tentative...", wait_time)
                 time.sleep(wait_time)
         
         # Échec après tous les retries
