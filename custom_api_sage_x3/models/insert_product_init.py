@@ -4,11 +4,10 @@ from odoo import fields, models, api
 from odoo.exceptions import UserError
 import time
 import gc
-from odoo.tools import float_compare
 
 _logger = logger.getLogger(__name__)
 
-BASE_URL = "http://172.16.2.150:8040"
+BASE_URL = "http://172.16.2.150:8030"
 AUTH_URL = f"{BASE_URL}/api/Auth/login"
 ITEMS_URL = f"{BASE_URL}/api/Items"
 USERNAME = "odoo"
@@ -64,116 +63,110 @@ class ProductTemplateImport(models.Model):
     def action_import_products_external_source(self):
         """Importation des produits depuis l'API SAGE X3 avec gestion d'erreurs et commits réguliers."""
         try:
-            # ── Authentification ──────────────────────────────────────────────
             auth_data = {"username": USERNAME, "password": PASSWORD}
             response = requests.post(AUTH_URL, json=auth_data, timeout=15)
-
             if response.status_code not in (200, 201):
                 raise UserError(f"Erreur d'authentification : {response.text}")
 
-            try:
-                token = response.json().get("token")
-            except Exception:
-                raise UserError("Réponse API invalide (JSON attendu)")
-
+            token = response.json().get("token")
             if not token:
                 raise UserError("Token d'authentification manquant dans la réponse.")
 
-            headers = {
-                "Authorization": f"Bearer {token}",
-                "Accept": "application/json"
-            }
-
-            # ── Parcours des pages (streaming, sans tout charger en RAM) ──────
+            headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+            all_items = []
             page = 1
             start_time = time.time()
 
             while page <= MAX_PAGES:
-
                 if time.time() - start_time > 300:
+                    _logger.warning("⏱️ Import interrompu : durée maximale atteinte")
                     break
 
                 params = {"pageNumber": page, "pageSize": PAGE_SIZE}
                 response = self.safe_get(ITEMS_URL, headers, params)
-
-                # ── Validation JSON de la réponse ─────────────────────────────
-                try:
-                    data = response.json()
-                except Exception:
-                    raise UserError("Réponse API invalide (JSON attendu)")
-
+                data = response.json()
                 items = data.get("items", [])
-
-                # ── Traitement produit par produit ────────────────────────────
-                for idx, item in enumerate(items, start=1):
-                    try:
-                        vals = self.prepare_product_values(item)
-
-                        # Filtres de validation
-                        if not vals.get("default_code"):
-                            continue
-
-                        if "SF" in str(vals.get("default_code", "")).upper():
-                            continue
-
-                        if not any([
-                            vals.get('is_yop_demi_gros'),
-                            vals.get('is_yop_detail'),
-                            vals.get('is_synacass_ci'),
-                            vals.get('is_square'),
-                            vals.get('is_bassam'),
-                            vals.get('is_koumassi'),
-                        ]):
-                            continue
-
-                        existing = self.search(
-                            [("default_code", "=", vals["default_code"])],
-                            limit=1
-                        )
-
-                        if existing:
-                            # ── Comparaison float sécurisée (V1) ─────────────
-                            new_price = vals.get("list_price", 0)
-                            if float_compare(existing.list_price, new_price, precision_digits=2) != 0:
-                                old_price = existing.list_price
-                                existing.write({'list_price': new_price})
-
-                            self._create_pricelist_items(existing, item)
-                            supplier_count = self._update_product_suppliers(existing, item)
-
-                        else:
-                            product = self.create(vals)
-                            self._create_pricelist_items(product, item)
-                            supplier_count = self._update_product_suppliers(product, item)
-
-                        # ── Commit régulier + libération mémoire (V2) ─────────
-                        if idx % COMMIT_STEP == 0:
-                            self.env.cr.commit()
-                            gc.collect()
-
-                    except Exception as e:
-                        _logger.exception("❌ Erreur produit %s : %s", item.get("itmdeS1_0"), str(e))
-
-                        # ── Rollback robuste + environnement propre (V2) ──────
-                        try:
-                            if not self.env.cr.closed:
-                                self.env.cr.rollback()
-                                self.env.invalidate_all()
-                            else:
-                                _logger.warning("⚠️ Curseur déjà fermé, rollback impossible")
-                            self = self.env['product.template'].sudo()
-                        except Exception as rollback_error:
-                            _logger.warning("⚠️ Rollback échoué : %s", str(rollback_error))
+                all_items.extend(items)
+                _logger.info("📦 Page %s récupérée (%s produits)", page, len(items))
 
                 if not data.get("hasNextPage", False):
                     break
-
                 page += 1
 
-            # ── Commit final + résumé ─────────────────────────────────────────
+            created, updated, skipped, errors, price_updated, suppliers_added = 0, 0, 0, 0, 0, 0
+
+            for idx, item in enumerate(all_items, start=1):
+                try:
+                    vals = self.prepare_product_values(item)
+                    if not vals.get("default_code"):
+                        _logger.warning("⚠️ Produit ignoré sans default_code : %s", vals.get("name"))
+                        skipped += 1
+                        continue
+                    if "SF" in str(vals.get("default_code", "")).upper():
+                        _logger.info("⏭️ Produit ignoré (code SF) : %s", vals.get("default_code"))
+                        skipped += 1
+                        continue
+
+                    existing = self.search([("default_code", "=", vals["default_code"])], limit=1)
+
+                    if existing:
+                        new_list_price = vals.get("list_price", 0)
+                        if existing.list_price != new_list_price:
+                            old_price = existing.list_price
+                            existing.write({'list_price': new_list_price})
+                            _logger.info("💰 Prix mis à jour pour %s : %.2f → %.2f",
+                                         existing.default_code, old_price, new_list_price)
+                            price_updated += 1
+
+                        _logger.info("🔄 Produit existant : %s - Mise à jour des listes de prix", existing.name)
+                        self._create_pricelist_items(existing, item)
+                        supplier_count = self._update_product_suppliers(existing, item)
+                        if supplier_count > 0:
+                            suppliers_added += supplier_count
+                        
+                        updated += 1
+                    else:
+                        product = self.create(vals)
+                        created += 1
+                        _logger.info("✅ Produit créé : %s (%s)", product.name, product.default_code)
+                        self._create_pricelist_items(product, item)
+                        supplier_count = self._update_product_suppliers(product, item)
+                        if supplier_count > 0:
+                            suppliers_added += supplier_count
+
+                    if idx % COMMIT_STEP == 0:
+                        self.env.cr.commit()
+                        gc.collect()
+                        _logger.info("💾 Commit effectué après %s produits", idx)
+
+                except Exception as e:
+                    errors += 1
+                    _logger.exception("❌ Erreur produit %s : %s", item.get("itmdeS1_0"), str(e))
+                    try:
+                        if not self.env.cr.closed:
+                            self.env.cr.rollback()
+                            self.env.invalidate_all()
+                        else:
+                            _logger.warning("⚠️ Curseur déjà fermé, impossible de rollback")
+                        # Recréer un environnement propre pour continuer
+                        self = self.env['product.template'].sudo()
+                    except Exception as rollback_error:
+                        _logger.warning("⚠️ Rollback échoué : %s", str(rollback_error))
+
             self.env.cr.commit()
+            _logger.info("=" * 50)
+            _logger.info("=== RÉSUMÉ IMPORTATION PRODUITS ===")
+            _logger.info("=" * 50)
+            _logger.info("✅ Créés        : %s", created)
+            _logger.info("🔄 Mis à jour   : %s", updated)
+            _logger.info("💰 Prix modifiés: %s", price_updated)
+            _logger.info("🏭 Fournisseurs : %s", suppliers_added)
+            _logger.info("⏩ Ignorés      : %s", skipped)
+            _logger.info("❌ Erreurs      : %s", errors)
+            _logger.info("=" * 50)
 
         except Exception as e:
+            _logger.exception("🚨 Échec global de l'importation : %s", str(e))
             raise UserError("L'importation des produits a échoué.")
         
     # ----------------------------------------------------------
@@ -206,10 +199,13 @@ class ProductTemplateImport(models.Model):
             if len(barcode) == 13 and barcode.startswith('27') and barcode.endswith('0000000'):
                 old_barcode = barcode
                 barcode = self.fix_gs1_barcode(barcode)
+                _logger.info("🔧 Code-barres GS1 corrigé : %s → %s", old_barcode, barcode)
             
             # Vérifier si le code-barres (corrigé ou non) existe déjà
             existing = self.search([("barcode", "=", barcode)], limit=1)
             if existing:
+                _logger.warning("⚠️ Code-barres déjà utilisé (%s) par %s — barcode ignoré", 
+                            barcode, existing.default_code)
                 barcode = False
 
         vals = {
@@ -219,7 +215,7 @@ class ProductTemplateImport(models.Model):
             "description": item.get("itmdeS2_0", ""),
             "list_price": self._get_ht_price(item.get("ypV_SAN_0"), item.get("vacitM_0")),
             "taxes_id": self._get_taxes_id(item.get("vacitM_0")),
-            "supplier_taxes_id": False,
+            # "supplier_taxes_id": self._get_supplier_taxes_id(item.get("vacitM_0")),
             "price_unit_ttc": self._safe_float(item.get("ypV_SAN_0")),
             "uom_id": self._get_uom_id(item.get("saU_0")),
             "prod_cond": item.get("ypcB1_0", ""),
@@ -272,6 +268,7 @@ class ProductTemplateImport(models.Model):
         elif vals in [0, 1]:
             return False
         else:
+            _logger.warning("⚠️ Valeur non reconnue pour boolean : %s", value)
             return False
     
 
@@ -300,6 +297,7 @@ class ProductTemplateImport(models.Model):
         supplier_code = self._safe_string(item.get("yG5FRS_0"))
         
         if not supplier_code:
+            _logger.debug("⏭️ Pas de fournisseur pour le produit %s", product.default_code)
             return 0
         
         try:
@@ -321,6 +319,7 @@ class ProductTemplateImport(models.Model):
                     'supplier_rank': 1,
                     'is_company': True,
                 })
+                _logger.info("➕ Fournisseur créé : %s (%s)", supplier.name, supplier_code)
             
             # Vérifier si une ligne fournisseur existe déjà
             existing_supplierinfo = SupplierInfo.search([
@@ -329,6 +328,7 @@ class ProductTemplateImport(models.Model):
             ], limit=1)
             
             if existing_supplierinfo:
+                _logger.debug("🔄 Ligne fournisseur existante pour %s", product.default_code)
                 return 0
             else:
                 # Créer la ligne fournisseur
@@ -339,9 +339,13 @@ class ProductTemplateImport(models.Model):
                     'primary': True,
                     'currency_id': self.env.company.currency_id.id,
                 })
+                _logger.info("🏭 Fournisseur ajouté au produit %s : %s", 
+                           product.default_code, supplier.name)
                 return 1
                 
         except Exception as e:
+            _logger.error("❌ Erreur ajout fournisseur pour %s : %s", 
+                        product.default_code, str(e))
             return 0
 
 
@@ -389,15 +393,21 @@ class ProductTemplateImport(models.Model):
 
             # Ne créer que si le prix existe et est > 0
             if not price_value_ttc or price_value_ttc <= 0:
+                _logger.debug("⏭️ Prix ignoré pour %s (%s) : %.2f",
+                            product.default_code, display_name, price_value_ttc or 0)
                 continue
 
             # Conversion TTC → HT puis application du multiplicateur
             price_value = round(self._get_ht_price(price_value_ttc, tax_code) * multiplier, 2)
+            _logger.debug("💱 %s | TTC: %.2f → HT: %.2f × %.2f = %.2f (taxe: %s)",
+                        display_name, price_value_ttc,
+                        price_value / multiplier, multiplier, price_value, tax_code)
 
             try:
                 pricelist = self.env.ref(xml_id, raise_if_not_found=False)
 
                 if not pricelist:
+                    _logger.warning("⚠️ Liste de prix introuvable : %s", xml_id)
                     continue
 
                 existing_item = PricelistItem.search([
@@ -700,6 +710,7 @@ class ProductTemplateImport(models.Model):
         
         # Vérifier que la longueur est correcte (13 caractères pour EAN-13)
         if len(barcode_str) != 13:
+            _logger.info(f"Attention : Le code {barcode_str} n'a pas 13 caractères.")
             return barcode_str
 
         # Extraire les 12 premiers chiffres (le préfixe + code article + padding)
@@ -749,10 +760,20 @@ class ProductTemplateImport(models.Model):
                     ], limit=1)
                     
                     if existing_with_new_barcode:
+                        _logger.warning(
+                            "⚠️ Le code-barres corrigé %s est déjà utilisé par le produit %s. "
+                            "Conservation du code-barres original %s pour %s",
+                            new_barcode, existing_with_new_barcode.default_code,
+                            old_barcode, product.default_code
+                        )
                         return
                     
                     # Mettre à jour le code-barres du produit
                     product.write({'barcode': new_barcode})
+                    _logger.info(
+                        "✅ Code-barres corrigé pour %s : %s → %s",
+                        product.default_code, old_barcode, new_barcode
+                    )
                     
                 except Exception as e:
                     _logger.error(

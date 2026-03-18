@@ -8,7 +8,7 @@ import gc
 
 _logger = logger.getLogger(__name__)
 
-BASE_URL = "http://172.16.2.150:8040"
+BASE_URL = "http://172.16.2.150:8030"
 AUTH_URL = f"{BASE_URL}/api/Auth/login"
 CUSTOMERS_URL = f"{BASE_URL}/api/Customers"
 USERNAME = "odoo"
@@ -60,8 +60,10 @@ class ResPartnerImport(models.Model):
             start_time = time.time()
 
             # Récupération des données paginées
+            _logger.info("🚀 Démarrage de l'importation des contacts...")
             while page <= MAX_PAGES:
                 if time.time() - start_time > 300:
+                    _logger.warning("⏱️ Import interrompu : durée maximale atteinte (5 minutes)")
                     break
 
                 params = {"pageNumber": page, "pageSize": PAGE_SIZE}
@@ -69,10 +71,13 @@ class ResPartnerImport(models.Model):
                 data = response.json()
                 customers = data.get("items", [])
                 all_customers.extend(customers)
+                _logger.info("📦 Page %s récupérée (%s contacts)", page, len(customers))
 
                 if not data.get("hasNextPage", False):
                     break
                 page += 1
+
+            _logger.info("✅ Récupération terminée : %s contacts à traiter", len(all_customers))
 
             created, updated, skipped, errors = 0, 0, 0, 0
 
@@ -83,6 +88,7 @@ class ResPartnerImport(models.Model):
                     
                     # Vérification du code client (customer_id)
                     if not vals.get("customer_id"):
+                        _logger.warning("⚠️ Contact ignoré sans code client : %s", vals.get("name"))
                         skipped += 1
                         continue
 
@@ -92,16 +98,19 @@ class ResPartnerImport(models.Model):
                     if existing:
                         # Mise à jour du contact existant
                         existing.write(vals)
+                        _logger.info("🔄 Contact mis à jour : %s (%s)", existing.name, existing.customer_id)
                         updated += 1
                     else:
                         # Création d'un nouveau contact
                         contact = self.create(vals)
                         created += 1
+                        _logger.info("✅ Contact créé : %s (%s)", contact.name, contact.customer_id)
 
                     # Commit périodique
                     if idx % COMMIT_STEP == 0:
                         self.env.cr.commit()
                         gc.collect()
+                        _logger.info("💾 Commit effectué après %s contacts", idx)
 
                 except Exception as e:
                     errors += 1
@@ -248,6 +257,7 @@ class ResPartnerImport(models.Model):
                 return rec.id
             # Création automatique si n'existe pas
             new_rec = self.env["res.partner.category"].create({"name": name})
+            _logger.info("➕ Catégorie créée : %s", name)
             return new_rec.id
         except Exception as e:
             _logger.warning("⚠️ Erreur création catégorie '%s' : %s", name, str(e))
@@ -261,6 +271,7 @@ class ResPartnerImport(models.Model):
             rec = self.env["res.currency"].search([("name", "=", name)], limit=1)
             if rec:
                 return rec.id
+            _logger.warning("⚠️ Devise introuvable : %s", name)
             return False
         except Exception as e:
             _logger.warning("⚠️ Erreur recherche devise '%s' : %s", name, str(e))
@@ -274,6 +285,7 @@ class ResPartnerImport(models.Model):
             rec = self.env["res.users"].search([("name", "ilike", name)], limit=1)
             if rec:
                 return rec.id
+            _logger.debug("ℹ️ Utilisateur introuvable : %s", name)
             return False
         except Exception as e:
             _logger.warning("⚠️ Erreur recherche utilisateur '%s' : %s", name, str(e))
@@ -292,6 +304,7 @@ class ResPartnerImport(models.Model):
                 "name": name,
                 "note": f"Condition de paiement: {name}",
             })
+            _logger.info("➕ Condition de paiement créée : %s", name)
             return new_rec.id
         except Exception as e:
             _logger.warning("⚠️ Erreur création condition paiement '%s' : %s", name, str(e))

@@ -1,7 +1,5 @@
 import requests
 import logging
-import threading
-import odoo
 from odoo import fields, models, api, _
 from odoo.exceptions import UserError
 import json
@@ -10,7 +8,7 @@ from collections import defaultdict
 
 _logger = logging.getLogger(__name__)
 
-BASE_URL = "http://172.16.2.150:8040"
+BASE_URL = "http://172.16.2.150:8030"
 AUTH_URL = f"{BASE_URL}/api/Auth/login"
 ORDERS_SEND_URL = f"{BASE_URL}/api/Orders/batch"
 ORDERS_RECEIVE_URL = f"{BASE_URL}/api/Orders/deliveries"
@@ -318,7 +316,11 @@ class PurchaseOrderSageX3Optimized(models.Model):
                 has_queue_job = False
         
         if not has_queue_job:
-
+            # Fallback: Méthode avec threading
+            _logger.info("📌 queue_job non disponible, utilisation de threading")
+            
+            import threading
+            
             # Lancer dans un thread séparé
             thread = threading.Thread(
                 target=model._threaded_import_deliveries,
@@ -341,7 +343,7 @@ class PurchaseOrderSageX3Optimized(models.Model):
     def _threaded_import_deliveries(cls, dbname, uid, context):
         """Méthode exécutée dans un thread séparé (fallback sans queue_job)"""
         try:
-            
+            import odoo
             with odoo.api.Environment.manage():
                 registry = odoo.registry(dbname)
                 with registry.cursor() as cr:
@@ -428,6 +430,7 @@ class PurchaseOrderSageX3Optimized(models.Model):
             params = {'since': last_import.isoformat()} if last_import else None
             
             # 3. Récupération des livraisons
+            _logger.info("📡 Récupération des livraisons depuis %s", last_import or "début")
             response = self._safe_get(ORDERS_RECEIVE_URL, headers, params=params)
             
             if response.status_code != 200:
@@ -437,6 +440,7 @@ class PurchaseOrderSageX3Optimized(models.Model):
             deliveries = self._parse_deliveries_response(response.text)
             
             if not deliveries:
+                _logger.info("✅ Aucune livraison à traiter pour %s", company_name)
                 return {'updated': 0, 'errors': 0}
             
             _logger.info("📦 %s livraisons totales reçues", len(deliveries))
@@ -445,7 +449,10 @@ class PurchaseOrderSageX3Optimized(models.Model):
             deliveries_filtered = self._filter_deliveries_by_company(deliveries, current_company)
             
             if not deliveries_filtered:
+                _logger.info("✅ Aucune livraison pour la société %s", company_name)
                 return {'updated': 0, 'errors': 0, 'filtered': len(deliveries)}
+            
+            _logger.info("📦 %s livraisons à traiter pour %s", len(deliveries_filtered), company_name)
             
             # 6. Pré-chargement des données pour optimiser
             order_cache, product_cache = self._preload_data(deliveries_filtered, current_company.id)
@@ -458,10 +465,17 @@ class PurchaseOrderSageX3Optimized(models.Model):
             # 8. Mise à jour de la date du dernier import
             self._update_last_import_date(current_company.id)
             
+            # 9. Statistiques finales
+            duration = (datetime.now() - start_time).total_seconds()
+            
+            # 10. Notification utilisateur
+            self._notify_import_completion(stats, duration, company_name)
+            
             return stats
             
         except Exception as e:
             _logger.exception("❌ [JOB] Erreur fatale pour %s: %s", company_name, str(e))
+            self._notify_import_error(str(e), company_name)
             raise
 
     def _filter_deliveries_by_company(self, deliveries, company):
@@ -506,6 +520,9 @@ class PurchaseOrderSageX3Optimized(models.Model):
             if str(d.get("referenceCommandeClient", "")).strip() in valid_refs
         ]
         
+        _logger.info("🔍 Filtrage société '%s': %s/%s livraisons retenues", 
+                    company.name, len(filtered), len(deliveries))
+        
         return filtered
 
     def _parse_deliveries_response(self, response_text):
@@ -514,6 +531,9 @@ class PurchaseOrderSageX3Optimized(models.Model):
         """
         try:
             # Parse incrémental si très gros JSON
+            if len(response_text) > 10_000_000:  # > 10MB
+                _logger.info("⚠️ JSON volumineux (%s MB), parsing optimisé", len(response_text) / 1_000_000)
+            
             raw = json.loads(response_text)
             
             # Extraction des livraisons
@@ -557,6 +577,8 @@ class PurchaseOrderSageX3Optimized(models.Model):
         if not order_refs:
             return order_cache, product_cache
         
+        _logger.info("🔄 Pré-chargement de %s commandes pour société ID %s", len(order_refs), company_id)
+        
         # Charger toutes les commandes en une seule requête (avec filtre société)
         orders = self.search([
             ('name', 'in', order_refs),
@@ -578,12 +600,17 @@ class PurchaseOrderSageX3Optimized(models.Model):
                 if article:
                     all_articles.add(article)
         
+        _logger.info("🔄 Pré-chargement de %s produits", len(all_articles))
+        
         products = self.env['product.product'].search([
             ('default_code', 'in', list(all_articles))
         ])
         
         # Cache {default_code: product_id}
         product_cache = {p.default_code: p.id for p in products}
+        
+        _logger.info("✅ Caches initialisés: %s commandes, %s produits", 
+                    len(order_cache), len(product_cache))
         
         return order_cache, product_cache
 
@@ -595,6 +622,10 @@ class PurchaseOrderSageX3Optimized(models.Model):
         for batch_start in range(0, total, BATCH_SIZE):
             batch_end = min(batch_start + BATCH_SIZE, total)
             batch = deliveries[batch_start:batch_end]
+            
+            progress = (batch_end / total) * 100
+            _logger.info("🔄 Lot %s-%s/%s (%.1f%%) - Société ID %s", 
+                        batch_start + 1, batch_end, total, progress, company_id)
             
             # Traiter le lot
             batch_stats = self._process_batch(batch, batch_start, order_cache, product_cache)
@@ -658,6 +689,9 @@ class PurchaseOrderSageX3Optimized(models.Model):
                 })
                 
                 stats['updated'] += 1
+                
+                if i % 10 == 0:  # Log tous les 10
+                    _logger.info("✅ Traité: %s/%s", i, len(batch) + offset)
                 
             except Exception as e:
                 _logger.error("❌ Erreur livraison #%s: %s", i, str(e))
@@ -776,11 +810,51 @@ class PurchaseOrderSageX3Optimized(models.Model):
         param_key = f'sage_x3.last_import_date.company_{company_id}'
         config.set_param(param_key, datetime.now().isoformat())
 
-    
+    def _notify_import_completion(self, stats, duration, company_name):
+        """Notification de fin"""
+        message = f"""
+        ✅ Import terminé en {duration:.1f}s
+        🏢 Société: {company_name}
+        
+        • Total: {stats['total']}
+        • Mises à jour: {stats['updated']}
+        • Lignes: {stats['lines']}
+        • Erreurs: {stats['errors']}
+        • Ignorées: {stats['skipped']}
+        """
+        
+        # Notifier les managers
+        user = self.env.user
+        if user:
+            self.env['bus.bus']._sendone(
+                user.partner_id,
+                'simple_notification',
+                {
+                    'title': f'✅ Import SAGE X3 terminé - {company_name}',
+                    'message': message,
+                    'type': 'success',
+                }
+            )
+
+    def _notify_import_error(self, error_msg, company_name):
+        """Notification d'erreur"""
+        user = self.env.user
+        if user:
+            self.env['bus.bus']._sendone(
+                user.partner_id,
+                'simple_notification',
+                {
+                    'title': f'❌ Erreur import SAGE X3 - {company_name}',
+                    'message': f'Société: {company_name}\n{error_msg}',
+                        'type': 'danger',
+                        'sticky': True,
+                    }
+                )
 
     @api.model
     def cron_import_deliveries(self):
         """Cron job avec détection automatique queue_job/threading"""
+        _logger.info("🕐 [CRON] Import planifié")
         
         # Vérifier si queue_job est disponible
         if 'queue.job' in self.env:
@@ -789,12 +863,14 @@ class PurchaseOrderSageX3Optimized(models.Model):
                     description="[CRON] Import SAGE X3",
                     priority=5
                 )._job_import_deliveries()
+                _logger.info("✅ [CRON] Job queue_job créé")
             except Exception as e:
                 _logger.error("❌ [CRON] Erreur queue_job: %s", str(e))
                 # Fallback direct
                 self._job_import_deliveries()
         else:
             # Exécution directe sans queue_job
+            _logger.info("📌 [CRON] Exécution directe (pas de queue_job)")
             self._job_import_deliveries()
         
         return True
