@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ═══════════════════════════════════════ -->
+    <!--  WIZARD FORM VIEW                       -->
+    <!-- ═══════════════════════════════════════ -->
+    <record id="view_cfao_dashboard_wizard_form" model="ir.ui.view">
+        <field name="name">cfao.dashboard.wizard.form</field>
+        <field name="model">cfao.dashboard.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Tableau de Bord Quotidien CFAO">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <i class="fa fa-bar-chart"/> Tableau de Bord Quotidien
+                        </h1>
+                        <h3 style="color:#F26522;">CFAO Retail</h3>
+                    </div>
+
+                    <group>
+                        <group string="Paramètres du rapport">
+                            <field name="analysis_date"
+                                   widget="date"
+                                   options="{'datepicker': {'warn_future': true}}"/>
+                            <field name="company_ids"
+                                   widget="many2many_tags"
+                                   options="{'no_create': true}"/>
+                        </group>
+                        <group string="Options">
+                            <field name="report_format" widget="radio"/>
+                        </group>
+                    </group>
+
+                    <div class="alert alert-info" role="alert">
+                        <i class="fa fa-info-circle"/> Le rapport inclura les périodes :
+                        <strong>Jour</strong>, <strong>Semaine</strong>,
+                        <strong>Mois</strong> et <strong>Année (YTD)</strong>
+                        pour chaque société sélectionnée.
+                    </div>
+                </sheet>
+
+                <footer>
+                    <button name="action_print_report"
+                            string="Imprimer le Rapport PDF"
+                            type="object"
+                            class="btn-primary"
+                            icon="fa-print"/>
+                    <button string="Annuler"
+                            class="btn-secondary"
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- ═══════════════════════════════════════ -->
+    <!--  MENU ACTION                            -->
+    <!-- ═══════════════════════════════════════ -->
+    <record id="action_cfao_dashboard_wizard" model="ir.actions.act_window">
+        <field name="name">Tableau de Bord Quotidien</field>
+        <field name="res_model">cfao.dashboard.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_cfao_dashboard_wizard_form"/>
+        <field name="target">new</field>
+        <field name="context">{}</field>
+    </record>
+
+    <!-- Menu principal CFAO -->
+    <menuitem id="menu_cfao_root"
+              name="CFAO Retail"
+              sequence="50"
+              web_icon="cfao_dashboard_report,static/description/icon.png"/>
+
+    <menuitem id="menu_cfao_reports"
+              name="Rapports"
+              parent="menu_cfao_root"
+              sequence="10"/>
+
+    <menuitem id="menu_cfao_dashboard"
+              name="Tableau de Bord Quotidien"
+              parent="menu_cfao_reports"
+              action="action_cfao_dashboard_wizard"
+              sequence="10"/>
+
+</odoo>

@@ -159,6 +159,7 @@ class StockExcelImportWizard(models.TransientModel):
                 quant = env["stock.quant"].create({
                     "product_id": product.id,
                     "location_id": self.location_id.id,
+                    "allowed_company_ids": [self.company_id.id],
                     "inventory_quantity": line.quantity,
                 })
 

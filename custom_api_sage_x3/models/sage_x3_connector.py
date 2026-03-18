@@ -67,7 +67,7 @@ class PurchaseOrderSageX3(models.Model):
         Lit toute la configuration SAGE X3 depuis ir.config_parameter.
 
         Clés requises :
-            sage_x3.base_url   — URL de base de l'API (ex: http://172.16.2.150:8030)
+            sage_x3.base_url   — URL de base de l'API (ex: http://172.16.2.150:8040)
             sage_x3.username   — Nom d'utilisateur API
             sage_x3.password   — Mot de passe API
 

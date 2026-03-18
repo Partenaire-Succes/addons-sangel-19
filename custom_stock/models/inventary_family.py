@@ -24,6 +24,7 @@ class CategoryProductInherit(models.Model):
      _rec_name = 'code'
 
      code = fields.Char(string='Code')
+     is_imported = fields.Boolean(string='Importer', default=False)
 
 class SubFamilyInventory(models.Model):
      _name = 'sub.family.inventory'

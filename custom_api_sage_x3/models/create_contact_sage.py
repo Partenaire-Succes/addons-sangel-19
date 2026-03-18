@@ -8,7 +8,7 @@ import gc
 
 _logger = logger.getLogger(__name__)
 
-BASE_URL = "http://172.16.2.150:8030"
+BASE_URL = "http://172.16.2.150:8040"
 AUTH_URL = f"{BASE_URL}/api/Auth/login"
 CUSTOMERS_URL = f"{BASE_URL}/api/Customers"
 USERNAME = "odoo"

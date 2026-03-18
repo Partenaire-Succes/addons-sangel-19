@@ -10,7 +10,7 @@ from collections import defaultdict
 
 _logger = logging.getLogger(__name__)
 
-BASE_URL = "http://172.16.2.150:8030"
+BASE_URL = "http://172.16.2.150:8040"
 AUTH_URL = f"{BASE_URL}/api/Auth/login"
 ORDERS_SEND_URL = f"{BASE_URL}/api/Orders/batch"
 ORDERS_RECEIVE_URL = f"{BASE_URL}/api/Orders/deliveries"

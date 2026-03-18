@@ -1,0 +1,328 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TEMPLATE PRINCIPAL
+     IMPORTANT : dans Odoo QWeb, les variables dans les attributs
+     HTML doivent utiliser t-attf-* avec la syntaxe #{variable}
+     et NON pas style="{variable}" qui ne s'interpole pas.
+════════════════════════════════════════════════════════════════ -->
+<template id="cfao_dashboard_main">
+<t t-call="web.html_container">
+<t t-foreach="docs" t-as="doc">
+
+    <!-- o = res.company record requis par web.external_layout -->
+    <t t-set="o"       t-value="doc['company']"/>
+    <t t-set="company" t-value="doc['company']"/>
+
+    <t t-call="web.external_layout">
+        <div class="page" style="font-family:Arial,sans-serif; font-size:8px; color:#111;">
+
+            <!-- ══ EN-TÊTE ══ -->
+            <table style="width:100%; border-collapse:collapse;
+                          border-bottom:3px solid #228df2; margin-bottom:8px;">
+                <tr>
+                    <td style="width:18%; vertical-align:middle;">
+                        <span style="font-size:15px; font-weight:bold; color:#F26522;">SANgel</span><br/>
+                        <span style="font-size:7px; color:#888; letter-spacing:2px;">Côte d'Ivoire</span>
+                    </td>
+                    <td style="text-align:center; vertical-align:middle;">
+                        <div style="font-size:14px; font-weight:bold; font-style:italic; color:#1A1A2E;">
+                            Tableau de bord quotidien du
+                            <t t-esc="doc['analysis_date'].strftime('%d/%m/%Y')"/>
+                        </div>
+                        <div style="font-size:9px; color:#555; margin-top:2px;">
+                            <t t-esc="doc['company'].name"/>
+                        </div>
+                    </td>
+                    <td style="width:18%; text-align:right; vertical-align:top;
+                               font-size:7px; color:#aaa;">
+                        Imprime le <t t-esc="doc['analysis_date'].strftime('%d/%m/%Y')"/>
+                    </td>
+                </tr>
+            </table>
+
+            <!-- ══ BOUCLE SUR LES 4 PÉRIODES ══ -->
+            <t t-foreach="doc['period_blocks']" t-as="block">
+                <div style="margin-bottom:10px;">
+
+                    <!-- BANDEAU COLORÉ — t-attf-style avec #{} obligatoire en QWeb -->
+                    <div t-attf-style="
+                        background-color:#{block['color']};
+                        color:white;
+                        font-weight:bold;
+                        font-size:9px;
+                        padding:4px 10px;
+                        border-radius:3px 3px 0 0;
+                        margin-bottom:0;
+                    ">
+                        <t t-esc="block['label']"/>
+                        <span style="font-weight:normal; margin-left:10px; font-size:8px;">
+                            <t t-esc="block['meta']"/>
+                        </span>
+                    </div>
+
+                    <!-- TABLEAU -->
+                    <table style="width:100%; border-collapse:collapse; font-size:7px;">
+                        <thead>
+                            <!-- Ligne 1 : groupes de colonnes -->
+                            <tr style="background-color:#4C1D95; color:white;
+                                       text-align:center; font-weight:bold; font-size:7px;">
+                                <th rowspan="2" style="text-align:left; padding:2px 4px;
+                                    border:1px solid #6D28D9; white-space:nowrap;">
+                                    Categorie
+                                </th>
+                                <th colspan="6" style="border:1px solid #6D28D9; padding:2px;">
+                                    CA (en millier)
+                                </th>
+                                <th colspan="2" style="border:1px solid #6D28D9; padding:2px;">
+                                    Ecart / Budgete (k)
+                                </th>
+                                <th colspan="2" style="border:1px solid #6D28D9; padding:2px;">
+                                    Debits
+                                </th>
+                                <th colspan="7" style="border:1px solid #6D28D9; padding:2px;">
+                                    Marge (en millier)
+                                </th>
+                                <th colspan="2" style="border:1px solid #6D28D9; padding:2px;">
+                                    Panier Moyen
+                                </th>
+                                <th colspan="3" style="border:1px solid #6D28D9; padding:2px;">
+                                    Stock receptionne (k)
+                                </th>
+                            </tr>
+                            <!-- Ligne 2 : sous-colonnes -->
+                            <tr style="background-color:#5B21B6; color:white;
+                                       text-align:center; font-size:6.5px;">
+                                <th style="border:1px solid #6D28D9; padding:1px 2px;">Kilo TTC</th>
+                                <th style="border:1px solid #6D28D9; padding:1px 2px;">Kilo HT</th>
+                                <th style="border:1px solid #6D28D9; padding:1px 2px;">% N-1</th>
+                                <th style="border:1px solid #6D28D9; padding:1px 2px;">% Promo</th>
+                                <th style="border:1px solid #6D28D9; padding:1px 2px;">% Imp</th>
+                                <th style="border:1px solid #6D28D9; padding:1px 2px;">% Loc.</th>
+                                <th style="border:1px solid #6D28D9; padding:1px 2px;">Kilo</th>
+                                <th style="border:1px solid #6D28D9; padding:1px 2px;">% Bud</th>
+                                <th style="border:1px solid #6D28D9; padding:1px 2px;">Kilo</th>
+                                <th style="border:1px solid #6D28D9; padding:1px 2px;">% Prog</th>
+                                <th style="border:1px solid #6D28D9; padding:1px 2px;">Kilo</th>
+                                <th style="border:1px solid #6D28D9; padding:1px 2px;">%</th>
+                                <th style="border:1px solid #6D28D9; padding:1px 2px;">% Imp</th>
+                                <th style="border:1px solid #6D28D9; padding:1px 2px;">% Loc.</th>
+                                <th style="border:1px solid #6D28D9; padding:1px 2px;">% hs promo</th>
+                                <th style="border:1px solid #6D28D9; padding:1px 2px;">% Promo</th>
+                                <th style="border:1px solid #6D28D9; padding:1px 2px;">% Dem</th>
+                                <th style="border:1px solid #6D28D9; padding:1px 2px;">Montant</th>
+                                <th style="border:1px solid #6D28D9; padding:1px 2px;">% N-1</th>
+                                <th style="border:1px solid #6D28D9; padding:1px 2px;">Qte (k)</th>
+                                <th style="border:1px solid #6D28D9; padding:1px 2px;">Valo PV (k)</th>
+                                <th style="border:1px solid #6D28D9; padding:1px 2px;">Couv</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="block['rows']" t-as="row">
+                                <t t-set="kpis"     t-value="row['kpis']"/>
+                                <t t-set="is_total" t-value="row.get('type') == 'total'"/>
+
+                                <!-- Ligne données : fond blanc, TOTAL GENERAL en gras uniquement -->
+                                <tr t-attf-style="
+                                    font-weight:#{'bold' if is_total else 'normal'};
+                                    font-size:7px;
+                                    border-top:#{' 2px solid #4C1D95' if is_total else 'none'};
+                                ">
+
+                                    <!-- Nom catégorie -->
+                                    <td style="padding:2px 4px; border:1px solid #E5E7EB;
+                                               text-align:left; white-space:nowrap;">
+                                        <t t-esc="row.get('fullname', row['name'])"/>
+                                    </td>
+
+                                    <!-- CA TTC -->
+                                    <td style="padding:2px 3px; border:1px solid #E5E7EB; text-align:right;">
+                                        <t t-esc="'{:,.2f}'.format(kpis['ca_ttc']).replace(',', ' ')"/>
+                                    </td>
+                                    <!-- CA HT -->
+                                    <td style="padding:2px 3px; border:1px solid #E5E7EB; text-align:right;">
+                                        <t t-esc="'{:,.2f}'.format(kpis['ca_ht']).replace(',', ' ')"/>
+                                    </td>
+
+                                    <!-- % N-1 coloré -->
+                                    <td style="padding:2px 3px; border:1px solid #E5E7EB; text-align:right;">
+                                        <t t-if="not is_total and kpis['pct_n1'] &lt; 0">
+                                            <span style="color:#DC2626; font-weight:bold;">
+                                                <t t-esc="'{:.2f}'.format(kpis['pct_n1'])"/>
+                                            </span>
+                                        </t>
+                                        <t t-elif="not is_total and kpis['pct_n1'] &gt; 0">
+                                            <span style="color:#16A34A;">
+                                                <t t-esc="'{:.2f}'.format(kpis['pct_n1'])"/>
+                                            </span>
+                                        </t>
+                                        <t t-else="">
+                                            <t t-esc="'{:.2f}'.format(kpis['pct_n1'])"/>
+                                        </t>
+                                    </td>
+
+                                    <!-- % Promo -->
+                                    <td style="padding:2px 3px; border:1px solid #E5E7EB; text-align:right;">
+                                        <t t-esc="'{:.2f}'.format(kpis['pct_promo'])"/>
+                                    </td>
+                                    <!-- % Imp -->
+                                    <td style="padding:2px 3px; border:1px solid #E5E7EB; text-align:right;">
+                                        <t t-esc="'{:.2f}'.format(kpis['pct_import'])"/>
+                                    </td>
+                                    <!-- % Loc -->
+                                    <td style="padding:2px 3px; border:1px solid #E5E7EB; text-align:right;">
+                                        <t t-esc="'{:.2f}'.format(kpis['pct_local'])"/>
+                                    </td>
+
+                                    <!-- Ecart Budget coloré -->
+                                    <td style="padding:2px 3px; border:1px solid #E5E7EB; text-align:right;">
+                                        <t t-if="not is_total and kpis['ecart_budget'] &lt; 0">
+                                            <span style="color:#DC2626; font-weight:bold;">
+                                                <t t-esc="'{:,.2f}'.format(kpis['ecart_budget']).replace(',', ' ')"/>
+                                            </span>
+                                        </t>
+                                        <t t-elif="not is_total and kpis['ecart_budget'] &gt; 0">
+                                            <span style="color:#16A34A;">
+                                                <t t-esc="'{:,.2f}'.format(kpis['ecart_budget']).replace(',', ' ')"/>
+                                            </span>
+                                        </t>
+                                        <t t-else="">
+                                            <span style="color:#9CA3AF;">-</span>
+                                        </t>
+                                    </td>
+
+                                    <!-- % Bud coloré -->
+                                    <td style="padding:2px 3px; border:1px solid #E5E7EB; text-align:right;">
+                                        <t t-if="not is_total and kpis['pct_budget'] &lt; 0">
+                                            <span style="color:#DC2626; font-weight:bold;">
+                                                <t t-esc="'{:.2f}'.format(kpis['pct_budget'])"/>
+                                            </span>
+                                        </t>
+                                        <t t-else="">
+                                            <t t-esc="'{:.2f}'.format(kpis['pct_budget'])"/>
+                                        </t>
+                                    </td>
+
+                                    <!-- Débits (nombre tickets) -->
+                                    <td style="padding:2px 3px; border:1px solid #E5E7EB; text-align:right;">
+                                        <t t-esc="'{:,d}'.format(int(kpis['debits'])).replace(',', ' ')"/>
+                                    </td>
+
+                                    <!-- % Prog Débits coloré -->
+                                    <td style="padding:2px 3px; border:1px solid #E5E7EB; text-align:right;">
+                                        <t t-if="not is_total and kpis['pct_prog'] &lt; 0">
+                                            <span style="color:#DC2626; font-weight:bold;">
+                                                <t t-esc="'{:.2f}'.format(kpis['pct_prog'])"/>
+                                            </span>
+                                        </t>
+                                        <t t-elif="not is_total and kpis['pct_prog'] &gt; 0">
+                                            <span style="color:#16A34A;">
+                                                <t t-esc="'{:.2f}'.format(kpis['pct_prog'])"/>
+                                            </span>
+                                        </t>
+                                        <t t-else="">
+                                            <t t-esc="'{:.2f}'.format(kpis['pct_prog'])"/>
+                                        </t>
+                                    </td>
+
+                                    <!-- Marge colorée si négative -->
+                                    <td style="padding:2px 3px; border:1px solid #E5E7EB; text-align:right;">
+                                        <t t-if="not is_total and kpis['marge'] &lt; 0">
+                                            <span style="color:#DC2626; font-weight:bold;">
+                                                <t t-esc="'{:,.2f}'.format(kpis['marge']).replace(',', ' ')"/>
+                                            </span>
+                                        </t>
+                                        <t t-else="">
+                                            <t t-esc="'{:,.2f}'.format(kpis['marge']).replace(',', ' ')"/>
+                                        </t>
+                                    </td>
+
+                                    <!-- % Marge -->
+                                    <td style="padding:2px 3px; border:1px solid #E5E7EB; text-align:right;">
+                                        <t t-esc="'{:.2f}'.format(kpis['pct_marge'])"/>
+                                    </td>
+                                    <!-- % Marge Imp -->
+                                    <td style="padding:2px 3px; border:1px solid #E5E7EB; text-align:right;">
+                                        <t t-esc="'{:.2f}'.format(kpis['pct_marge_import'])"/>
+                                    </td>
+                                    <!-- % Marge Loc -->
+                                    <td style="padding:2px 3px; border:1px solid #E5E7EB; text-align:right;">
+                                        <t t-esc="'{:.2f}'.format(kpis['pct_marge_local'])"/>
+                                    </td>
+                                    <!-- % hs Promo -->
+                                    <td style="padding:2px 3px; border:1px solid #E5E7EB; text-align:right;">
+                                        <t t-esc="'{:.2f}'.format(kpis['pct_hs_promo'])"/>
+                                    </td>
+                                    <!-- % Promo Marge -->
+                                    <td style="padding:2px 3px; border:1px solid #E5E7EB; text-align:right;">
+                                        <t t-esc="'{:.2f}'.format(kpis['pct_promo_marge'])"/>
+                                    </td>
+
+                                    <!-- % Dem coloré -->
+                                    <td style="padding:2px 3px; border:1px solid #E5E7EB; text-align:right;">
+                                        <t t-if="not is_total and kpis['pct_dem'] &lt; 0">
+                                            <span style="color:#DC2626; font-weight:bold;">
+                                                <t t-esc="'{:.2f}'.format(kpis['pct_dem'])"/>
+                                            </span>
+                                        </t>
+                                        <t t-elif="not is_total and kpis['pct_dem'] &gt; 0">
+                                            <span style="color:#16A34A;">
+                                                <t t-esc="'{:.2f}'.format(kpis['pct_dem'])"/>
+                                            </span>
+                                        </t>
+                                        <t t-else="">
+                                            <t t-esc="'{:.2f}'.format(kpis['pct_dem'])"/>
+                                        </t>
+                                    </td>
+
+                                    <!-- Panier Moyen Montant -->
+                                    <td style="padding:2px 3px; border:1px solid #E5E7EB; text-align:right;">
+                                        <t t-esc="'{:,.0f}'.format(kpis['panier_moyen']).replace(',', ' ')"/>
+                                    </td>
+
+                                    <!-- Panier % N-1 coloré -->
+                                    <td style="padding:2px 3px; border:1px solid #E5E7EB; text-align:right;">
+                                        <t t-if="not is_total and kpis['pct_panier_n1'] &lt; 0">
+                                            <span style="color:#DC2626; font-weight:bold;">
+                                                <t t-esc="'{:.2f}'.format(kpis['pct_panier_n1'])"/>
+                                            </span>
+                                        </t>
+                                        <t t-elif="not is_total and kpis['pct_panier_n1'] &gt; 0">
+                                            <span style="color:#16A34A;">
+                                                <t t-esc="'{:.2f}'.format(kpis['pct_panier_n1'])"/>
+                                            </span>
+                                        </t>
+                                        <t t-else="">
+                                            <t t-esc="'{:.2f}'.format(kpis['pct_panier_n1'])"/>
+                                        </t>
+                                    </td>
+
+                                    <!-- Stock Qté -->
+                                    <td style="padding:2px 3px; border:1px solid #E5E7EB; text-align:right;">
+                                        <t t-esc="'{:,.2f}'.format(kpis['stock_qty']).replace(',', ' ')"/>
+                                    </td>
+                                    <!-- Stock Valo PV -->
+                                    <td style="padding:2px 3px; border:1px solid #E5E7EB; text-align:right;">
+                                        <t t-esc="'{:,.2f}'.format(kpis['stock_valo']).replace(',', ' ')"/>
+                                    </td>
+                                    <!-- Couverture -->
+                                    <td style="padding:2px 3px; border:1px solid #E5E7EB; text-align:right;">
+                                        <t t-esc="'{:.2f}'.format(kpis['couverture'])"/>
+                                    </td>
+
+                                </tr>
+                            </t><!-- /foreach row -->
+                        </tbody>
+                    </table>
+                </div>
+            </t><!-- /foreach block -->
+
+        </div><!-- /.page -->
+    </t><!-- /web.external_layout -->
+
+</t><!-- /foreach doc -->
+</t><!-- /html_container -->
+</template>
+
+</odoo>
