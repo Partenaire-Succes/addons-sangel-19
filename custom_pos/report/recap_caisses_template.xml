@@ -1,0 +1,637 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+<data>
+
+<!-- ================================================================ -->
+<!-- Wrapper : web.external_layout garantit UTF-8 dans <head>         -->
+<!-- Boucle sur chaque POS retourné par get_report_data()             -->
+<!-- ================================================================ -->
+<template id="report_recap_caisses">
+    <t t-call="web.html_container">
+        <t t-foreach="docs" t-as="doc">
+            <t t-call="web.external_layout">
+                <div class="page">
+                    <t t-call="custom_pos.report_recap_caisses_document">
+                        <t t-set="data" t-value="doc.get_report_data()"/>
+                    </t>
+                </div>
+            </t>
+        </t>
+    </t>
+</template>
+
+<!-- ================================================================ -->
+<!-- Document (une section par POS)                                    -->
+<!-- ================================================================ -->
+<template id="report_recap_caisses_document">
+    <style>
+        .rc-report { font-family: Arial, Helvetica, sans-serif; font-size: 9pt; color: #1a1a1a; }
+        .rc-report table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        .rc-report td, .rc-report th { padding: 4px 6px; border: 1px solid #b0b0b0; }
+        .rc-report .section-title {
+            display: inline-block;
+            white-space: nowrap;
+            background: #2c3e50; color: #ffffff; font-weight: bold;
+            font-size: 10pt; padding: 5px 10px; margin: 10px 0 4px 0;
+            letter-spacing: 0.5px;
+        }
+        .rc-report .th-group {
+            background: #34495e; color: #ffffff; font-weight: bold;
+            text-align: center; font-size: 8.5pt; padding: 4px 4px;
+        }
+        .rc-report .th-sub {
+            background: #ecf0f1; font-weight: bold; text-align: center;
+            font-size: 7.5pt; padding: 3px 3px; border-top: 2px solid #2c3e50;
+        }
+        .rc-report .row-total   { background: #d5e8d4; font-weight: bold; border-top: 2px solid #2c3e50; }
+        .rc-report .row-total2  { background: #dae8fc; font-weight: bold; border-top: 2px solid #2c3e50; }
+        .rc-report .row-grand-total { background: #2c3e50; color: #ffffff; font-weight: bold; }
+        .rc-report .row-alt     { background: #f5f8fa; }
+        .rc-report .row-italic  { font-style: italic; color: #555; }
+        .rc-report .row-bold    { font-weight: bold; }
+        .rc-report .num         { text-align: right; white-space: nowrap; }
+        .rc-report .highlight   { font-weight: bold; }
+        .rc-main-title {
+            text-align: center; font-size: 17pt; font-weight: bold;
+            color: #2c3e50; letter-spacing: 1px; padding: 8px 0 6px 0;
+            border-bottom: 3px solid #2c3e50; margin-bottom: 8px;
+        }
+        .rc-header-info { margin-bottom: 8px; font-size: 9pt; }
+        .rc-header-info table { border: none; margin-bottom: 0; }
+        .rc-header-info td { border: none; padding: 2px 4px; }
+        .rc-mini-header { font-size: 8pt; border-bottom: 1px solid #999; margin-bottom: 6px; padding-bottom: 4px; }
+        .rc-mini-header table { border: none; margin-bottom: 0; }
+        .rc-mini-header td { border: none; padding: 1px 4px; }
+        .rc-page2 { page-break-before: always; }
+        .rc-footer { text-align: right; font-size: 7.5pt; margin-top: 8px; color: #888; border-top: 1px solid #ccc; padding-top: 4px; }
+    </style>
+
+    <t t-set="h"           t-value="data.get('header', {})"/>
+    <t t-set="ca"          t-value="data.get('ca_detaille', {})"/>
+    <t t-set="enc"         t-value="data.get('encaissements', {})"/>
+    <t t-set="rows"        t-value="enc.get('rows', {})"/>
+    <t t-set="total1"      t-value="enc.get('total1', {})"/>
+    <t t-set="total2"      t-value="enc.get('total2', {})"/>
+    <t t-set="tgen"        t-value="enc.get('total_general', {})"/>
+    <t t-set="remises"     t-value="data.get('remises_fidelites', {})"/>
+    <t t-set="titres"      t-value="data.get('titres_detail', [])"/>
+    <t t-set="repartition" t-value="data.get('repartition_encaissements', [])"/>
+    <t t-set="tva_list"    t-value="data.get('tva_repartition', [])"/>
+
+    <div class="rc-report" style="padding: 6mm 8mm;">
+
+        <!-- ============================================================ -->
+        <!-- TITRE PRINCIPAL CENTRE                                        -->
+        <!-- ============================================================ -->
+        <div class="rc-main-title">RÉCAPITULATIF DES CAISSES</div>
+
+        <!-- ============================================================ -->
+        <!-- EN-TÊTE PAGE 1                                               -->
+        <!-- ============================================================ -->
+        <div class="rc-header-info">
+            <table>
+                <tr>
+                    <td style="width:55%; vertical-align:top;">
+                        <strong style="font-size:11pt; color:#2c3e50;"><t t-esc="h.get('company_name', '')"/></strong><br/>
+                        Poste(s) : <strong><t t-esc="h.get('postes', '')"/></strong><br/>
+                        <t t-if="h.get('lieu')">
+                            Lieu : <strong><t t-esc="h.get('lieu', '')"/></strong><br/>
+                        </t>
+                        Caissier(s) : <strong><t t-esc="h.get('caissiers', '')"/></strong>
+                    </td>
+                    <td style="width:45%; text-align:right; vertical-align:top;">
+                        Édition des chiffres du
+                        <strong><t t-esc="h.get('date_from').strftime('%d/%m/%Y') if h.get('date_from') else ''"/></strong>
+                        au
+                        <strong><t t-esc="h.get('date_to').strftime('%d/%m/%Y') if h.get('date_to') else ''"/></strong>
+                        <br/>
+                        <span style="color:#666;">Édité le <t t-esc="h.get('print_date', '')"/></span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 1 : Chiffre d'affaires détaillé                      -->
+        <!-- ============================================================ -->
+        <div class="section-title">Chiffre d'affaires détaillé</div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th class="th-group" style="width:18%; text-align:left;"></th>
+                    <th class="th-group" style="width:10%; text-align:left;"></th>
+                    <th class="th-group" style="width:14%;">CA HT</th>
+                    <th class="th-group" style="width:14%;">CA TTC</th>
+                    <th class="th-group" style="width:14%;">Marge</th>
+                    <th class="th-group" style="width:12%;">% Marge</th>
+                    <th class="th-group" style="width:12%;">% Marque</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- COMPTANT -->
+                <tr class="row-bold">
+                    <td>Comptant</td><td>Total</td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(ca.get('comptant',{}).get('ca_ht',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(ca.get('comptant',{}).get('ca_ttc',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(ca.get('comptant',{}).get('marge',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:.2f}'.format(ca.get('comptant',{}).get('pct_marge',0))"/></td>
+                    <td class="num"><t t-esc="'{:.2f}'.format(ca.get('comptant',{}).get('pct_marque',0))"/></td>
+                </tr>
+                <tr class="row-alt row-italic">
+                    <td style="padding-left:16px;"></td><td>Ventes locales</td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(ca.get('comptant',{}).get('ca_ht',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(ca.get('comptant',{}).get('ca_ttc',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(ca.get('comptant',{}).get('marge',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:.2f}'.format(ca.get('comptant',{}).get('pct_marge',0))"/></td>
+                    <td class="num"><t t-esc="'{:.2f}'.format(ca.get('comptant',{}).get('pct_marque',0))"/></td>
+                </tr>
+                <tr class="row-italic">
+                    <td style="padding-left:16px;"></td><td>Exportation HT</td>
+                    <td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0,00</td><td class="num">0,00</td>
+                </tr>
+                <tr class="row-alt row-italic">
+                    <td style="padding-left:16px;"></td><td>Rétrocessions</td>
+                    <td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0,00</td><td class="num">0,00</td>
+                </tr>
+                <!-- AVOIR ÉMIS -->
+                <tr class="row-bold">
+                    <td>Avoir émis</td><td>Total</td>
+                    <td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0,00</td><td class="num">0,00</td>
+                </tr>
+                <tr class="row-alt row-italic">
+                    <td style="padding-left:16px;"></td><td>Ventes locales</td>
+                    <td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0,00</td><td class="num">0,00</td>
+                </tr>
+                <tr class="row-italic">
+                    <td style="padding-left:16px;"></td><td>Exportation HT</td>
+                    <td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0,00</td><td class="num">0,00</td>
+                </tr>
+                <tr class="row-alt row-italic">
+                    <td style="padding-left:16px;"></td><td>Rétrocessions</td>
+                    <td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0,00</td><td class="num">0,00</td>
+                </tr>
+                <!-- EN COMPTE FACTURÉ -->
+                <tr class="row-bold">
+                    <td>En compte facturé</td><td>Total</td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(ca.get('en_compte_facture',{}).get('ca_ht',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(ca.get('en_compte_facture',{}).get('ca_ttc',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(ca.get('en_compte_facture',{}).get('marge',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:.2f}'.format(ca.get('en_compte_facture',{}).get('pct_marge',0))"/></td>
+                    <td class="num"><t t-esc="'{:.2f}'.format(ca.get('en_compte_facture',{}).get('pct_marque',0))"/></td>
+                </tr>
+                <tr class="row-alt row-italic">
+                    <td style="padding-left:16px;"></td><td>Ventes locales</td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(ca.get('en_compte_facture',{}).get('ca_ht',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(ca.get('en_compte_facture',{}).get('ca_ttc',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(ca.get('en_compte_facture',{}).get('marge',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:.2f}'.format(ca.get('en_compte_facture',{}).get('pct_marge',0))"/></td>
+                    <td class="num"><t t-esc="'{:.2f}'.format(ca.get('en_compte_facture',{}).get('pct_marque',0))"/></td>
+                </tr>
+                <tr class="row-italic">
+                    <td style="padding-left:16px;"></td><td>Exportation HT</td>
+                    <td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0,00</td><td class="num">0,00</td>
+                </tr>
+                <tr class="row-alt row-italic">
+                    <td style="padding-left:16px;"></td><td>Rétrocessions</td>
+                    <td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0,00</td><td class="num">0,00</td>
+                </tr>
+                <!-- TOTAL DU CA -->
+                <tr class="row-grand-total">
+                    <td colspan="2">Total du CA</td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(ca.get('total',{}).get('ca_ht',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(ca.get('total',{}).get('ca_ttc',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(ca.get('total',{}).get('marge',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:.2f}'.format(ca.get('total',{}).get('pct_marge',0))"/></td>
+                    <td class="num"><t t-esc="'{:.2f}'.format(ca.get('total',{}).get('pct_marque',0))"/></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 2 : Encaissements / Décaissements                    -->
+        <!-- ============================================================ -->
+        <div class="section-title">Récapitulatif des encaissements / décaissements TTC</div>
+
+        <t t-set="r_esp" t-value="rows.get('especes', {})"/>
+        <t t-set="r_chq" t-value="rows.get('cheques', {})"/>
+        <t t-set="r_crt" t-value="rows.get('cartes', {})"/>
+        <t t-set="r_tit" t-value="rows.get('titres', {})"/>
+        <t t-set="r_avr" t-value="rows.get('avoir', {})"/>
+        <t t-set="r_ecr" t-value="rows.get('ecart_regl', {})"/>
+
+        <table style="font-size: 8pt;">
+            <thead>
+                <tr>
+                    <th class="th-group" rowspan="2" style="width:13%; text-align:left;"></th>
+                    <th class="th-group" style="width:8%;">Tiroir caisse</th>
+                    <th class="th-group" colspan="4" style="width:34%;">Encaissements</th>
+                    <th class="th-group" colspan="2" style="width:16%;">Décaissements</th>
+                    <th class="th-group" style="width:8%;">FDC Finaux</th>
+                    <th class="th-group" style="width:8%;">Écarts</th>
+                </tr>
+                <tr>
+                    <th class="th-sub">FDC init.</th>
+                    <th class="th-sub">Comptants</th>
+                    <th class="th-sub">Acomptes perçus</th>
+                    <th class="th-sub">Règlements de dûs</th>
+                    <th class="th-sub" style="background:#c8daea; color:#1a1a1a;">Total</th>
+                    <th class="th-sub">Prélèv.</th>
+                    <th class="th-sub" style="background:#c8daea; color:#1a1a1a;">Total</th>
+                    <th class="th-sub"></th>
+                    <th class="th-sub"></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="row-bold">
+                    <td>Espèces</td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(r_esp.get('fdc_init',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(r_esp.get('comptants',0)).replace(',', ' ')"/></td>
+                    <td class="num">0</td><td class="num">0</td>
+                    <td class="num highlight"><t t-esc="'{:,.0f}'.format(r_esp.get('total_enc',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(r_esp.get('prelev',0)).replace(',', ' ')"/></td>
+                    <td class="num highlight"><t t-esc="'{:,.0f}'.format(r_esp.get('total_dec',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(r_esp.get('fdc_final',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(r_esp.get('ecart',0)).replace(',', ' ')"/></td>
+                </tr>
+                <tr class="row-alt row-bold">
+                    <td>Chèques</td>
+                    <td class="num">0</td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(r_chq.get('comptants',0)).replace(',', ' ')"/></td>
+                    <td class="num">0</td><td class="num">0</td>
+                    <td class="num highlight"><t t-esc="'{:,.0f}'.format(r_chq.get('total_enc',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(r_chq.get('prelev',0)).replace(',', ' ')"/></td>
+                    <td class="num highlight"><t t-esc="'{:,.0f}'.format(r_chq.get('total_dec',0)).replace(',', ' ')"/></td>
+                    <td class="num">0</td><td class="num">0</td>
+                </tr>
+                <tr class="row-bold">
+                    <td>Cartes</td>
+                    <td class="num">0</td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(r_crt.get('comptants',0)).replace(',', ' ')"/></td>
+                    <td class="num">0</td><td class="num">0</td>
+                    <td class="num highlight"><t t-esc="'{:,.0f}'.format(r_crt.get('total_enc',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(r_crt.get('prelev',0)).replace(',', ' ')"/></td>
+                    <td class="num highlight"><t t-esc="'{:,.0f}'.format(r_crt.get('total_dec',0)).replace(',', ' ')"/></td>
+                    <td class="num">0</td><td class="num">0</td>
+                </tr>
+                <tr class="row-alt row-bold">
+                    <td>Titres de paiements</td>
+                    <td class="num">0</td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(r_tit.get('comptants',0)).replace(',', ' ')"/></td>
+                    <td class="num">0</td><td class="num">0</td>
+                    <td class="num highlight"><t t-esc="'{:,.0f}'.format(r_tit.get('total_enc',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(r_tit.get('prelev',0)).replace(',', ' ')"/></td>
+                    <td class="num highlight"><t t-esc="'{:,.0f}'.format(r_tit.get('total_dec',0)).replace(',', ' ')"/></td>
+                    <td class="num">0</td><td class="num">0</td>
+                </tr>
+                <tr class="row-bold">
+                    <td>Avoir</td>
+                    <td class="num">0</td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(r_avr.get('comptants',0)).replace(',', ' ')"/></td>
+                    <td class="num">0</td><td class="num">0</td>
+                    <td class="num highlight"><t t-esc="'{:,.0f}'.format(r_avr.get('total_enc',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(r_avr.get('prelev',0)).replace(',', ' ')"/></td>
+                    <td class="num highlight"><t t-esc="'{:,.0f}'.format(r_avr.get('total_dec',0)).replace(',', ' ')"/></td>
+                    <td class="num">0</td><td class="num">0</td>
+                </tr>
+                <tr class="row-alt row-bold">
+                    <td>Virements / Traites</td>
+                    <td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td>
+                    <td class="num highlight">0</td>
+                    <td class="num">0</td><td class="num highlight">0</td>
+                    <td class="num">0</td><td class="num">0</td>
+                </tr>
+                <tr class="row-bold">
+                    <td>Écarts de règlement</td>
+                    <td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td>
+                    <td class="num highlight">0</td>
+                    <td class="num">0</td><td class="num highlight">0</td>
+                    <td class="num">0</td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(r_ecr.get('ecart',0)).replace(',', ' ')"/></td>
+                </tr>
+                <tr class="row-total">
+                    <td>Total 1</td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(total1.get('fdc_init',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(total1.get('comptants',0)).replace(',', ' ')"/></td>
+                    <td class="num">0</td><td class="num">0</td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(total1.get('total_enc',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(total1.get('prelev',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(total1.get('total_dec',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(total1.get('fdc_final',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(total1.get('ecart',0)).replace(',', ' ')"/></td>
+                </tr>
+                <tr class="row-italic">
+                    <td colspan="2">Avoir déduits</td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(total2.get('avoir_deduits',0)).replace(',', ' ')"/></td>
+                    <td class="num">0</td><td class="num">0</td>
+                    <td class="num highlight"><t t-esc="'{:,.0f}'.format(total2.get('avoir_deduits',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(total2.get('avoir_deduits',0)).replace(',', ' ')"/></td>
+                    <td class="num highlight"><t t-esc="'{:,.0f}'.format(total2.get('avoir_deduits',0)).replace(',', ' ')"/></td>
+                    <td class="num">0</td><td class="num">0</td>
+                </tr>
+                <tr class="row-alt row-italic">
+                    <td colspan="2">Acomptes déduits</td>
+                    <td class="num">0</td><td class="num">0</td><td class="num">0</td>
+                    <td class="num highlight">0</td>
+                    <td class="num">0</td><td class="num highlight">0</td>
+                    <td class="num">0</td><td class="num">0</td>
+                </tr>
+                <tr class="row-total2">
+                    <td colspan="2">Total 2</td>
+                    <td class="num"></td><td class="num">0</td><td class="num">0</td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(total2.get('total_enc',0)).replace(',', ' ')"/></td>
+                    <td class="num"></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(total2.get('total_dec',0)).replace(',', ' ')"/></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(total2.get('fdc_final',0)).replace(',', ' ')"/></td>
+                    <td class="num">0</td>
+                </tr>
+                <tr class="row-italic">
+                    <td colspan="2">Avoirs émis</td>
+                    <td class="num">0</td><td class="num"></td><td class="num"></td>
+                    <td class="num highlight">0</td>
+                    <td class="num"></td><td class="num highlight">0</td>
+                    <td class="num"></td><td class="num"></td>
+                </tr>
+                <tr class="row-alt row-italic">
+                    <td colspan="2">Mise en compte</td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(enc.get('mise_en_compte',0)).replace(',', ' ')"/></td>
+                    <td class="num"></td><td class="num"></td>
+                    <td class="num highlight"><t t-esc="'{:,.0f}'.format(enc.get('mise_en_compte',0)).replace(',', ' ')"/></td>
+                    <td class="num"></td><td class="num highlight">0</td>
+                    <td class="num"></td><td class="num"></td>
+                </tr>
+                <tr class="row-grand-total">
+                    <td colspan="2">Total général</td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(tgen.get('total_enc',0)).replace(',', ' ')"/></td>
+                    <td class="num">0</td><td class="num">0</td>
+                    <td class="num"></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(tgen.get('total_dec',0)).replace(',', ' ')"/></td>
+                    <td class="num">0</td>
+                    <td class="num"></td><td class="num"></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <table style="width:35%;">
+            <tr class="row-bold">
+                <td>Total des chèques à échoir</td>
+                <td class="num" style="width:35%;">0</td>
+            </tr>
+        </table>
+
+        <!-- ============================================================ -->
+        <!-- PAGE 2                                                        -->
+        <!-- ============================================================ -->
+        <div class="rc-page2"/>
+
+        <!-- En-tête page 2 -->
+        <div class="rc-mini-header">
+            <table>
+                <tr>
+                    <td style="width:60%;">
+                        <strong><t t-esc="h.get('company_name', '')"/></strong> —
+                        Poste(s) : <t t-esc="h.get('postes', '')"/>
+                        <t t-if="h.get('lieu')"> | Lieu : <t t-esc="h.get('lieu', '')"/></t>
+                         | Caissier(s) : <t t-esc="h.get('caissiers', '')"/> |
+                        Chiffres du <t t-esc="h.get('date_from').strftime('%d/%m/%Y') if h.get('date_from') else ''"/>
+                        au <t t-esc="h.get('date_to').strftime('%d/%m/%Y') if h.get('date_to') else ''"/>
+                    </td>
+                    <td style="width:40%; text-align:right;">
+                        <strong>RÉCAPITULATIF DES CAISSES</strong> —
+                        Édité le <t t-esc="h.get('print_date', '')"/>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 3 : Remises fidélités                                 -->
+        <!-- ============================================================ -->
+        <div class="section-title">Remises fidélités</div>
+
+        <table style="width:90%;">
+            <thead>
+                <tr>
+                    <th class="th-group" style="width:20%; text-align:left;"></th>
+                    <th class="th-group" style="width:10%;">Nombre total</th>
+                    <th class="th-group" style="width:14%;">Montant total</th>
+                    <th class="th-group" style="width:10%; background:#c0392b;">Nb réduction</th>
+                    <th class="th-group" style="width:16%; background:#c0392b;">Montant déduit</th>
+                    <th class="th-group" style="width:10%; background:#27ae60;">Nb ajout</th>
+                    <th class="th-group" style="width:16%; background:#27ae60;">Montant ajout</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="row-bold">Porte-monnaie</td>
+                    <td class="num"><t t-esc="remises.get('porte_monnaie_count', 0)"/></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(remises.get('porte_monnaie_total', 0)).replace(',', ' ')"/></td>
+                    <td class="num" style="background:#fdecea;"><t t-esc="remises.get('nb_reduction', 0)"/></td>
+                    <td class="num" style="background:#fdecea; font-weight:bold;"><t t-esc="'{:,.0f}'.format(remises.get('montant_deduit', 0)).replace(',', ' ')"/></td>
+                    <td class="num" style="background:#eafaf1;"><t t-esc="remises.get('nb_ajout', 0)"/></td>
+                    <td class="num" style="background:#eafaf1; font-weight:bold;"><t t-esc="'{:,.0f}'.format(remises.get('montant_ajout', 0)).replace(',', ' ')"/></td>
+                </tr>
+            </tbody>
+        </table>
+        <div style="font-size:7.5pt; color:#666; margin-bottom:10px; font-style:italic;">
+            Réduction : montant prélevé sur la carte pour compléter un paiement.
+            Ajout : monnaie rendue sur la carte quand la caissière n'a pas de monnaie à rendre.
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 4 : Détail des titres de paiements                   -->
+        <!-- ============================================================ -->
+        <div class="section-title">Détail des titres de paiements</div>
+
+        <table style="width:55%;">
+            <thead>
+                <tr>
+                    <th class="th-group" style="text-align:left; width:50%;">Mode de paiement</th>
+                    <th class="th-group" style="width:25%;">Nombre</th>
+                    <th class="th-group" style="width:25%;">Montant TTC</th>
+                </tr>
+            </thead>
+            <tbody>
+                <t t-if="titres">
+                    <t t-foreach="titres" t-as="titre">
+                        <tr t-att-class="'row-alt' if titre_index % 2 == 0 else ''">
+                            <td><t t-esc="titre.get('name', '')"/></td>
+                            <td class="num"><t t-esc="titre.get('count', 0)"/></td>
+                            <td class="num"><t t-esc="'{:,.0f}'.format(titre.get('total', 0)).replace(',', ' ')"/></td>
+                        </tr>
+                    </t>
+                    <tr class="row-total">
+                        <td>Total titres</td>
+                        <td class="num"><t t-esc="sum(t.get('count',0) for t in titres)"/></td>
+                        <td class="num"><t t-esc="'{:,.0f}'.format(sum(t.get('total',0) for t in titres)).replace(',', ' ')"/></td>
+                    </tr>
+                </t>
+                <t t-else="">
+                    <tr><td colspan="3" style="color:#888; font-style:italic;">Aucun titre de paiement enregistré</td></tr>
+                </t>
+            </tbody>
+        </table>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 5 : Cartes cadeaux                                   -->
+        <!-- ============================================================ -->
+        <div class="section-title">Cartes cadeaux</div>
+
+        <table style="width:40%;">
+            <thead>
+                <tr>
+                    <th class="th-group" style="text-align:left; width:50%;"></th>
+                    <th class="th-group" style="width:25%;">Nombre</th>
+                    <th class="th-group" style="width:25%;">Montant</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>Achats</td><td class="num">0</td><td class="num">0</td></tr>
+                <tr class="row-alt"><td>Consommées</td><td class="num">0</td><td class="num">0</td></tr>
+            </tbody>
+        </table>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 6 : Répartition des encaissements                    -->
+        <!-- ============================================================ -->
+        <div class="section-title">Répartition des encaissements</div>
+
+        <table style="width:70%;">
+            <thead>
+                <tr>
+                    <th class="th-group" style="text-align:left; width:28%;">Modalité</th>
+                    <th class="th-group" style="width:14%;">Nombre</th>
+                    <th class="th-group" style="width:14%;">% répartition</th>
+                    <th class="th-group" style="width:22%;">Montant TTC</th>
+                    <th class="th-group" style="width:14%;">% répartition</th>
+                </tr>
+            </thead>
+            <tbody>
+                <t t-foreach="repartition" t-as="rep">
+                    <tr t-att-class="'row-alt' if rep_index % 2 == 0 else ''">
+                        <td class="row-bold"><t t-esc="rep.get('label', '')"/></td>
+                        <td class="num"><t t-esc="rep.get('count', 0)"/></td>
+                        <td class="num"><t t-esc="'{:.2f}'.format(rep.get('pct_count', 0))"/>%</td>
+                        <td class="num"><t t-esc="'{:,.0f}'.format(rep.get('montant', 0)).replace(',', ' ')"/></td>
+                        <td class="num"><t t-esc="'{:.2f}'.format(rep.get('pct_montant', 0))"/>%</td>
+                    </tr>
+                </t>
+                <tr class="row-grand-total">
+                    <td>Total</td>
+                    <td class="num"><t t-esc="sum(r.get('count',0) for r in repartition)"/></td>
+                    <td class="num"></td>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(sum(r.get('montant',0) for r in repartition)).replace(',', ' ')"/></td>
+                    <td class="num"></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 7 : Répartition TVA ventes locales                   -->
+        <!-- ============================================================ -->
+        <div class="section-title">Répartition de la TVA — ventes locales</div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th class="th-group" style="text-align:left; width:26%;"></th>
+                    <t t-foreach="tva_list" t-as="tva">
+                        <th class="th-group" style="width:10%;">
+                            0 / TVA <t t-esc="'{:.0f}%'.format(tva.get('tax_percent', 0))"/>
+                        </th>
+                    </t>
+                    <th class="th-group" style="width:12%;">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="row-bold">
+                    <td>CA TTC</td>
+                    <t t-foreach="tva_list" t-as="tva">
+                        <td class="num"><t t-esc="'{:,.0f}'.format(tva.get('ca_ttc',0)).replace(',', ' ')"/></td>
+                    </t>
+                    <td class="num highlight"><t t-esc="'{:,.0f}'.format(sum(t.get('ca_ttc',0) for t in tva_list)).replace(',', ' ')"/></td>
+                </tr>
+                <tr class="row-alt row-bold">
+                    <td>Base HT issue des doc.</td>
+                    <t t-foreach="tva_list" t-as="tva">
+                        <td class="num"><t t-esc="'{:,.0f}'.format(tva.get('base_ht',0)).replace(',', ' ')"/></td>
+                    </t>
+                    <td class="num highlight"><t t-esc="'{:,.0f}'.format(sum(t.get('base_ht',0) for t in tva_list)).replace(',', ' ')"/></td>
+                </tr>
+                <tr class="row-italic">
+                    <td style="padding-left:14px;">Articles tenus en stock</td>
+                    <t t-foreach="tva_list" t-as="tva">
+                        <td class="num"><t t-esc="'{:,.0f}'.format(tva.get('articles_tenus',0)).replace(',', ' ')"/></td>
+                    </t>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(sum(t.get('articles_tenus',0) for t in tva_list)).replace(',', ' ')"/></td>
+                </tr>
+                <tr class="row-alt row-italic">
+                    <td style="padding-left:14px;">Articles non tenus en stock</td>
+                    <t t-foreach="tva_list" t-as="tva">
+                        <td class="num"><t t-esc="'{:,.0f}'.format(tva.get('articles_non_tenus',0)).replace(',', ' ')"/></td>
+                    </t>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(sum(t.get('articles_non_tenus',0) for t in tva_list)).replace(',', ' ')"/></td>
+                </tr>
+                <tr class="row-bold">
+                    <td>TVA issue des doc.</td>
+                    <t t-foreach="tva_list" t-as="tva">
+                        <td class="num"><t t-esc="'{:,.0f}'.format(tva.get('tva',0)).replace(',', ' ')"/></td>
+                    </t>
+                    <td class="num highlight"><t t-esc="'{:,.0f}'.format(sum(t.get('tva',0) for t in tva_list)).replace(',', ' ')"/></td>
+                </tr>
+                <tr class="row-alt row-italic">
+                    <td style="padding-left:14px;">Articles tenus en stock</td>
+                    <t t-foreach="tva_list" t-as="tva">
+                        <td class="num"><t t-esc="'{:,.0f}'.format(tva.get('tva_tenus',0)).replace(',', ' ')"/></td>
+                    </t>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(sum(t.get('tva_tenus',0) for t in tva_list)).replace(',', ' ')"/></td>
+                </tr>
+                <tr class="row-italic">
+                    <td style="padding-left:14px;">Articles non tenus en stock</td>
+                    <t t-foreach="tva_list" t-as="tva">
+                        <td class="num"><t t-esc="'{:,.0f}'.format(tva.get('tva_non_tenus',0)).replace(',', ' ')"/></td>
+                    </t>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(sum(t.get('tva_non_tenus',0) for t in tva_list)).replace(',', ' ')"/></td>
+                </tr>
+                <tr style="border:none;"><td colspan="99" style="border:none; padding:2px; background:transparent;"></td></tr>
+                <tr class="row-alt row-bold">
+                    <td>Base HT calculée</td>
+                    <t t-foreach="tva_list" t-as="tva">
+                        <td class="num"><t t-esc="'{:,.0f}'.format(tva.get('base_calc',0)).replace(',', ' ')"/></td>
+                    </t>
+                    <td class="num highlight"><t t-esc="'{:,.0f}'.format(sum(t.get('base_calc',0) for t in tva_list)).replace(',', ' ')"/></td>
+                </tr>
+                <tr class="row-bold">
+                    <td>TVA calculée</td>
+                    <t t-foreach="tva_list" t-as="tva">
+                        <td class="num"><t t-esc="'{:,.0f}'.format(tva.get('tva_calc',0)).replace(',', ' ')"/></td>
+                    </t>
+                    <td class="num highlight"><t t-esc="'{:,.0f}'.format(sum(t.get('tva_calc',0) for t in tva_list)).replace(',', ' ')"/></td>
+                </tr>
+                <tr class="row-alt">
+                    <td>Écart d'arrondis</td>
+                    <t t-foreach="tva_list" t-as="tva">
+                        <td class="num"><t t-esc="'{:,.0f}'.format(tva.get('ecart',0)).replace(',', ' ')"/></td>
+                    </t>
+                    <td class="num"><t t-esc="'{:,.0f}'.format(sum(t.get('ecart',0) for t in tva_list)).replace(',', ' ')"/></td>
+                </tr>
+                <tr>
+                    <td>% Écart</td>
+                    <t t-foreach="tva_list" t-as="tva">
+                        <td class="num"><t t-esc="'{:.2f}'.format(tva.get('pct_ecart',0))"/></td>
+                    </t>
+                    <td class="num">0,00</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Pied de page -->
+        <div class="rc-footer">
+            2/2 — <t t-esc="h.get('company_name', '')"/> — Récapitulatif des Caisses édité le <t t-esc="h.get('print_date', '')"/>
+        </div>
+
+    </div>
+</template>
+
+</data>
+</odoo>

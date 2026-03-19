@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- ============================================================ -->
+        <!-- Wizard form view                                              -->
+        <!-- ============================================================ -->
+        <record id="view_recap_caisses_wizard_form" model="ir.ui.view">
+            <field name="name">recap.caisses.wizard.form</field>
+            <field name="model">recap.caisses.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Récapitulatif des Caisses">
+                    <group>
+                        <group string="Période">
+                            <field name="date_from"/>
+                            <field name="date_to"/>
+                        </group>
+                        <group string="Société">
+                            <field name="company_id"
+                                   options="{'no_create': True}"
+                                   readonly="1"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Filtres">
+                            <field name="config_ids"
+                                   widget="many2many_tags"
+                                   placeholder="Tous les postes de la société"/>
+                        </group>
+                        <group string="Caissiers (période)">
+                            <field name="caissier_ids"
+                                   widget="many2many_tags"
+                                   placeholder="Sélectionnez la période pour charger les caissiers"/>
+                        </group>
+                    </group>
+                    <footer>
+                        <button name="action_print_report"
+                                string="Télécharger PDF"
+                                type="object"
+                                class="btn-primary"/>
+                        <button string="Annuler" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <!-- ============================================================ -->
+        <!-- Window action                                                 -->
+        <!-- ============================================================ -->
+        <record id="action_recap_caisses_wizard" model="ir.actions.act_window">
+            <field name="name">Récapitulatif des Caisses</field>
+            <field name="res_model">recap.caisses.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+            <field name="view_id" ref="view_recap_caisses_wizard_form"/>
+        </record>
+
+        <!-- ============================================================ -->
+        <!-- Menu item sous POS > Reporting                               -->
+        <!-- ============================================================ -->
+        <menuitem
+            id="menu_recap_caisses_wizard"
+            name="Récapitulatif des Caisses"
+            parent="point_of_sale.menu_point_rep"
+            action="action_recap_caisses_wizard"
+            sequence="30"/>
+    </data>
+</odoo>
