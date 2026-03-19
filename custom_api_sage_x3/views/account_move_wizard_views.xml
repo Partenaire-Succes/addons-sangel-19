@@ -30,6 +30,8 @@
                     <group>
                         <field name="count_invoices"/>
                         <field name="count_payments"/>
+                        <field name="count_pos_sessions"/>
+
                     </group>
                 </group>
                 <footer>

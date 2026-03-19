@@ -94,6 +94,7 @@ class PosActionsDashboard(models.Model):
             ('company_id', '=', company_id),
             ('move_type', 'in', ['out_invoice', 'out_refund']),
             ('state', '=', 'posted'),
+            ('sage_x3_submitted', '=', False),
         ])
         
         # Sessions ouvertes

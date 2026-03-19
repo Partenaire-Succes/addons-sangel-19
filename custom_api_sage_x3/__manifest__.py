@@ -22,10 +22,11 @@
     ],
     'data': [
         'security/ir.model.access.csv',
+        'data/sage_x3_config.xml',
         'views/product_template_views.xml',
         # 'views/res_partner_views.xml',
         'views/purchase_order_views.xml',
-        # 'views/account_move_views.xml',
+        'views/account_move_views.xml',
         'views/account_move_wizard_views.xml',
     ],
 
