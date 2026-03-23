@@ -43,23 +43,48 @@ class ProductProduct(models.Model):
         )
         return res
 
-    def _load_pos_data(self, data):
+    @api.model
+    def _load_pos_data_read(self, records, config):
         """
-        Charger les produits avec leurs codes-barres multiples pour le POS
+        Injecte secondary_barcodes sur chaque produit envoyé au POS.
+        Tous les codes-barres sont inclus (actif ou non),
+        afin que chaque code-barres soit scannable en caisse.
+        is_active_barcode reste dédié à l'impression d'étiquette uniquement.
+        Cherche par product_id ET product_template_id pour couvrir les deux cas.
         """
-        res = super()._load_pos_data(data)
-
-        if not res or not isinstance(res, list):
+        res = super()._load_pos_data_read(records, config)
+        if not res:
             return res
 
-        product_barcodes = self.env['product.multiple.barcodes']
+        product_ids = [p['id'] for p in res if isinstance(p, dict) and 'id' in p]
+
+        # Récupérer les template_ids correspondants
+        products = self.browse(product_ids)
+        template_to_products = {}
+        for product in products:
+            tmpl_id = product.product_tmpl_id.id
+            template_to_products.setdefault(tmpl_id, []).append(product.id)
+        template_ids = list(template_to_products.keys())
+
+        # Chercher par product_id OU product_template_id
+        barcodes = self.env['product.multiple.barcodes'].search([
+            '|',
+            ('product_id', 'in', product_ids),
+            ('product_template_id', 'in', template_ids),
+        ])
+
+        barcodes_by_product = {}
+        for b in barcodes:
+            if b.product_id:
+                barcodes_by_product.setdefault(b.product_id.id, []).append(b.product_multi_barcode)
+            elif b.product_template_id:
+                for pid in template_to_products.get(b.product_template_id.id, []):
+                    barcodes_by_product.setdefault(pid, []).append(b.product_multi_barcode)
 
         for product in res:
             if isinstance(product, dict) and 'id' in product:
-                secondary_barcodes = product_barcodes.search([
-                    ('product_id', '=', product['id'])
-                ]).mapped('product_multi_barcode')
-                product['secondary_barcodes'] = secondary_barcodes or []
+                # Préfixe _ obligatoire pour qu'Odoo 18/19 crée le getter JS (index.js ligne 314)
+                product['_secondary_barcodes'] = list(set(barcodes_by_product.get(product['id'], [])))
 
         return res
 

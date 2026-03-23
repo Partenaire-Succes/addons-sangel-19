@@ -2,6 +2,25 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+<<<<<<< HEAD
 filestore
 session
  
+=======
+
+.DS_Store
+*.pyc
+.pyc
+__pycache__
+sessions
+filestore
+
+*.pyc
+__pycache__
+/__pycache__
+./__pycache__
+
+sessions
+filestore
+
+>>>>>>> origin/marcel_dev
