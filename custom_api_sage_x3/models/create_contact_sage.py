@@ -42,7 +42,11 @@ class ResPartnerImport(models.Model):
             if not token:
                 raise UserError("Échec de l'authentification SAGE X3")
 
-            base_url, _, _ = self._get_sage_x3_config()
+            config = self._get_sage_x3_config()
+            if isinstance(config, dict):
+                base_url = config.get('base_url') or config.get(0)
+            else:
+                base_url = config[0]
             customers_url  = f"{base_url}/api/Customers"
             headers        = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
 

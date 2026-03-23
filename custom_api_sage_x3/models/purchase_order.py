@@ -135,7 +135,11 @@ class PurchaseOrderSageX3(models.Model):
         if not token:
             raise UserError("Échec de l'authentification SAGE X3")
 
-        base_url, _, _ = self._get_sage_x3_config()
+        config = self._get_sage_x3_config()
+        if isinstance(config, dict):
+            base_url = config.get('base_url') or config.get(0)
+        else:
+            base_url = config[0]
         orders_url     = f"{base_url}/api/Orders/batch"
         order_data     = self._prepare_order_for_sage_x3()
 
@@ -341,7 +345,11 @@ class PurchaseOrderSageX3(models.Model):
             if not token:
                 raise UserError("Échec de l'authentification SAGE X3")
 
-            base_url, _, _ = self._get_sage_x3_config()
+            config = self._get_sage_x3_config()
+            if isinstance(config, dict):
+                base_url = config.get('base_url') or config.get(0)
+            else:
+                base_url = config[0]
             receive_url    = f"{base_url}/api/Orders/deliveries"
             headers        = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
 

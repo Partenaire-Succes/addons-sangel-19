@@ -61,7 +61,11 @@ class ProductTemplateImport(models.Model):
             if not token:
                 raise UserError("Échec de l'authentification SAGE X3")
 
-            base_url, _, _ = self._get_sage_x3_config()
+            config = self._get_sage_x3_config()
+            if isinstance(config, dict):
+                base_url = config.get('base_url') or config.get(0)
+            else:
+                base_url = config[0]
             items_url      = f"{base_url}/api/Items"
             headers        = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
 
@@ -251,7 +255,7 @@ class ProductTemplateImport(models.Model):
 
     def _get_or_create_tax_group(self, amount, company):
         name = f"TVA {amount}%"
-        env  = self.env['account.tax.group'].with_company(company)
+        env  = self.env['account.tax.group'].sudo().with_company(company)
         rec  = env.search([("name", "=", name), ("company_id", "=", company.id)], limit=1)
         if rec:
             return rec
@@ -264,46 +268,70 @@ class ProductTemplateImport(models.Model):
             )
 
     def _get_or_create_tax(self, name, amount, company):
-        env_tax = self.env['account.tax'].with_company(company)
+        """Cherche ou crée une taxe pour une société donnée."""
+        # sudo() pour contourner les règles multi-sociétés lors de la création
+        env_tax = self.env['account.tax'].sudo().with_company(company)
         tax = env_tax.search([
-            ("amount", "=", amount),
-            ("amount_type", "=", "percent"),
-            ("type_tax_use", "=", "sale"),
-            ("company_id", "=", company.id),
+            ("amount",       "=",  amount),
+            ("amount_type",  "=",  "percent"),
+            ("type_tax_use", "=",  "sale"),
+            ("company_id",   "=",  company.id),
         ], limit=1)
         if tax:
             return tax
-        group = self._get_or_create_tax_group(amount, company)
+
+        group      = self._get_or_create_tax_group(amount, company)
+        country_id = company.country_id.id if company.country_id else False
+        if not country_id:
+            country    = self.env['res.country'].search([('code', '=', 'CI')], limit=1)
+            country_id = country.id if country else self.env['res.country'].search([], limit=1).id
+
         return env_tax.create({
-            "name": name,
-            "amount": amount,
-            "amount_type": "percent",
+            "name":         name,
+            "amount":       amount,
+            "amount_type":  "percent",
             "type_tax_use": "sale",
             "tax_group_id": group.id,
-            "company_id": company.id,
+            "company_id":   company.id,
+            "country_id":   country_id,
         })
 
     def _get_taxes_id(self, tax_code):
-        """TVA vente — Many2many toutes sociétés."""
+        """
+        Crée la taxe dans TOUTES les sociétés (pour qu'elle existe partout),
+        mais n'assigne au produit QUE la taxe de la société courante.
+        Odoo 19 interdit d'assigner des taxes d'autres sociétés via Many2many.
+        """
         amount = self._extract_tax_amount(tax_code)
         if not amount:
             return []
-        tax_ids = [
-            self._get_or_create_tax(f"TVA {amount}%", amount, company).id
-            for company in self.env['res.company'].search([])
-        ]
-        return [(6, 0, tax_ids)]
+
+        current_company = self.env.company
+
+        # S'assurer que la taxe existe dans toutes les sociétés
+        for company in self.env['res.company'].sudo().search([]):
+            self._get_or_create_tax(f"TVA {amount}%", amount, company)
+
+        # N'assigner que la taxe de la société courante au produit
+        current_tax = self._get_or_create_tax(f"TVA {amount}%", amount, current_company)
+        return [(6, 0, [current_tax.id])]
 
     def _get_airsi_taxes_id(self, tax_code):
-        """AIRSI — Many2many toutes sociétés."""
+        """TVA vente — Many2many société courante uniquement."""
         amount = self._extract_tax_amount(tax_code)
         if not amount:
             return []
-        tax_ids = [
-            self._get_or_create_tax(f"TVA AIRSI {amount}%", amount, company).id
-            for company in self.env['res.company'].search([])
-        ]
-        return [(6, 0, tax_ids)]
+
+        current_company = self.env.company
+
+        # S'assurer que la taxe AIRSI existe dans toutes les sociétés
+        for company in self.env['res.company'].sudo().search([]):
+            self._get_or_create_tax(f"TVA AIRSI {amount}%", amount, company)
+
+        # N'assigner que la taxe de la société courante
+        current_tax = self._get_or_create_tax(f"TVA AIRSI {amount}%", amount, current_company)
+        return [(6, 0, [current_tax.id])]
+    
 
     # =========================================================================
     # PRÉPARATION DES VALEURS PRODUIT
@@ -338,6 +366,7 @@ class ProductTemplateImport(models.Model):
             "description":       item.get("itmdeS2_0", ""),
             "list_price":        self._get_ht_price(item.get("ypV_SAN_0"), tax_code),
             "taxes_id":          self._get_taxes_id(tax_code),
+            "supplier_taxes_id": False,
             "price_unit_ttc":    self._safe_float(item.get("ypV_SAN_0")),
             "uom_id":            self._get_uom_id(item.get("saU_0")),
             "prod_cond":         item.get("ypcB1_0", ""),
@@ -471,6 +500,7 @@ class ProductTemplateImport(models.Model):
             "is_bassam":        self._verify_boolean(item.get("yafbsM_0")),
             "is_koumassi":      self._verify_boolean(item.get("yafkouM_0")),
             "allowed_company_ids": self._get_allowed_company_ids(item),
+            "supplier_taxes_id": False,
         })
 
         for xml_id, api_field, display_name, multiplier in pricelist_mappings:
