@@ -33,7 +33,7 @@
     <!-- ========== MENU ========== -->
     <menuitem id="menu_report_daily_sales_wizard"
               name="Rapport du chiffre d'affaires"
-              parent="stock.menu_warehouse_report"
+              parent="custom_reports.menu_reports_sale"
               action="action_report_daily_sales_wizard"
               sequence="100"/>
 

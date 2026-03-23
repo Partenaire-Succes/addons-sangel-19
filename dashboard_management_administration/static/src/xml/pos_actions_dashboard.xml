@@ -18,41 +18,6 @@
             </t>
 
             <t t-if="!state.loading and state.data">
-                <!-- Boutons principaux en surbrillance -->
-                <div class="o_main_actions">
-                    <button class="btn btn-lg btn-highlight btn-import" 
-                            t-on-click="onImportAllData"
-                            t-att-disabled="isActionLoading('action_import_all_data')">
-                        <div class="btn-icon">
-                            <i class="fa fa-download fa-3x" t-att-class="{'fa-spin fa-spinner': isActionLoading('action_import_all_data')}"/>
-                        </div>
-                        <div class="btn-content">
-                            <h3>Import Données</h3>
-                            <p>Mettre à jour les contacts et articles</p>
-                            <div class="btn-stats">
-                                <span><i class="fa fa-users"/> <t t-esc="state.data.statistics.contact_count"/> contacts</span>
-                                <span><i class="fa fa-cube"/> <t t-esc="state.data.statistics.product_count"/> produits</span>
-                            </div>
-                        </div>
-                    </button>
-
-                    <button class="btn btn-lg btn-highlight btn-process" 
-                            t-on-click="onProcessDocuments"
-                            t-att-disabled="isActionLoading('action_process_documents')">
-                        <div class="btn-icon">
-                            <i class="fa fa-check-circle fa-3x" t-att-class="{'fa-spin fa-spinner': isActionLoading('action_process_documents')}"/>
-                        </div>
-                        <div class="btn-content">
-                            <h3>Clôturez votre session du jour</h3>
-                            <p>Valider achats et envoyer factures à X3</p>
-                            <div class="btn-stats">
-                                <span><i class="fa fa-shopping-cart"/> <t t-esc="state.data.statistics.purchase_to_validate"/> achats</span>
-                                <span><i class="fa fa-file-text"/> <t t-esc="state.data.statistics.invoices_to_send"/> factures</span>
-                            </div>
-                        </div>
-                    </button>
-                </div>
-
                 <!-- Actions rapides -->
                 <div class="o_quick_actions">
                     <h3><i class="fa fa-bolt"/> Actions rapides</h3>
@@ -106,12 +71,28 @@
                         </div>
 
                         <div class="o_action_card">
+                            <div class="o_action_icon bg-warning">
+                                <i class="fa fa-truck fa-2x"/>
+                            </div>
+                            <div class="o_action_content">
+                                <h4>Reception Achats</h4>
+                                <p class="text-muted"><t t-esc="state.data.statistics.purchase_to_receive"/> en attente</p>
+                                <button class="btn btn-sm btn-warning" 
+                                        t-on-click="onReceivePurchases"
+                                        t-att-disabled="isActionLoading('action_receive_purchases')">
+                                    <i class="fa fa-truck" t-att-class="{'fa-spin fa-spinner': isActionLoading('action_receive_purchases')}"/>
+                                    Recevoir
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="o_action_card">
                             <div class="o_action_icon bg-danger">
                                 <i class="fa fa-file-text fa-2x"/>
                             </div>
                             <div class="o_action_content">
                                 <h4>Envoi Factures X3</h4>
-                                <p class="text-muted"><t t-esc="state.data.statistics.invoices_to_send"/> à envoyer</p>
+                                <p class="text-muted"><t t-esc="state.data?.statistics?.invoices_to_send || 0"/> à envoyer</p>
                                 <button class="btn btn-sm btn-danger" 
                                         t-on-click="onSendInvoicesX3"
                                         t-att-disabled="isActionLoading('action_send_invoices_x3')">
@@ -120,6 +101,7 @@
                                 </button>
                             </div>
                         </div>
+                        
                     </div>
                 </div>
 

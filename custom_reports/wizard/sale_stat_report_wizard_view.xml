@@ -50,7 +50,7 @@
     <!-- Menu -->
     <menuitem id="menu_sale_stat_report"
               name="Rapport de Ventes"
-              parent="sale.menu_sale_report"
+              parent="custom_reports.menu_reports_sale"
               action="action_sale_stat_report_wizard"
               sequence="50"/>
 </odoo>

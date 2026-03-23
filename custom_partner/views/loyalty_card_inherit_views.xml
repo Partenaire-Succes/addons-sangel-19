@@ -9,6 +9,27 @@
                 <xpath expr="//field[@name='code']" position="attributes">
                     <attribute name="readonly">0</attribute>
                 </xpath>
+
+                <xpath expr="//form" position="inside">
+                    <header>
+                        <button name="update_code_from_partner"
+                                type="object"
+                                string="Mettre les partenaire"
+                                icon="fa-sync"
+                                class="btn-primary"/>
+                    </header>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="action_update_code_from_partner" model="ir.actions.server">
+            <field name="name">Mettre les partenaire sur les cartes</field>
+            <field name="model_id" ref="model_loyalty_card"/>
+            <field name="binding_model_id" ref="model_loyalty_card"/>
+            <field name="binding_view_types">list</field>
+            <field name="state">code</field>
+            <field name="code">
+        action = records.update_code_from_partner()
             </field>
         </record>
     </data>

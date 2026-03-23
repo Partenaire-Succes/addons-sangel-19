@@ -8,4 +8,5 @@ from . import (
     stock_valorise_report_wizard,
     suplier_return_report_wizard,
     cadencier_sale,
+    catalog_product_report_wizard,
 )

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_custom_reports_root"
+              name="Analyse et Rapports"
+              parent="dashboard_management_administration.menu_demi_gros_root"
+              sequence="2"/>
+
+    <menuitem id="menu_reports_sale"
+              name="Ventes et Clients"
+              parent="menu_custom_reports_root"
+              sequence="2"/>
+
+    <menuitem id="menu_reports_purchase"
+              name="Fournisseurs et Achats"
+              parent="menu_custom_reports_root"
+              sequence="3"/>
+
+    <menuitem id="menu_reports_stock"
+              name="Stock et Inventaire"
+              parent="menu_custom_reports_root"
+              sequence="4"/>
+</odoo>

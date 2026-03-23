@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!--
+            Paramètres de connexion SAGE X3
+            noupdate="1" = ces valeurs ne seront PAS écrasées lors d'une mise à jour du module.
+            Pour les modifier : Paramètres > Technique > Paramètres système
+        -->
+
+        <record id="sage_x3_base_url" model="ir.config_parameter">
+            <field name="key">sage_x3.base_url</field>
+            <field name="value">http://172.16.2.150:8040</field>
+        </record>
+
+        <record id="sage_x3_username" model="ir.config_parameter">
+            <field name="key">sage_x3.username</field>
+            <field name="value">odoo</field>
+        </record>
+
+        <record id="sage_x3_password" model="ir.config_parameter">
+            <field name="key">sage_x3.password</field>
+            <field name="value">InterfaceX3_Odoo</field>
+        </record>
+
+    </data>
+</odoo>

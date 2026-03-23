@@ -57,4 +57,10 @@
               action="action_product_price_history_wizard"
               sequence="15"/>
 
+    <menuitem id="menu_product_price_history_report_wizard"
+              name="Créer un Rapport"
+              parent="menu_product_price_monitor_root_report"
+              action="action_product_price_history_wizard"
+              sequence="2"/>
+
 </odoo>

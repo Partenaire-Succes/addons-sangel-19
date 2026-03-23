@@ -81,8 +81,12 @@ class ProductTemplateInherit(models.Model):
     airsi_tax_id = fields.Many2one(
         'account.tax',
         string='Taxe AIRSI',
-        domain=[('is_airsi', '=', True)],
         help='Taxe AIRSI à appliquer pour les clients à limite avec paiement à crédit'
+    )
+    airsi_taxes_id = fields.Many2many(
+        'account.tax',
+        string='Taxes AIRSI',
+        help='Taxes AIRSI à appliquer pour les clients à limite avec paiement à crédit'
     )
 
     # Nouveau champ pour activer/désactiver la synchronisation
@@ -411,13 +415,13 @@ class ProductProduct(models.Model):
         related='product_tmpl_id.code_article',
     )
 
-    @api.depends('name', 'default_code')
-    def _compute_display_name(self):
-        for product in self:
-            if product.default_code:
-                product.display_name = f"{product.default_code}"
-            else:
-                product.display_name = product.name
+    # @api.depends('name', 'default_code')
+    # def _compute_display_name(self):
+    #     for product in self:
+    #         if product.default_code:
+    #             product.display_name = f"{product.default_code}"
+    #         else:
+    #             product.display_name = product.name
 
     # Related fields for product catalog display
     max_qty_orderpoint = fields.Float(

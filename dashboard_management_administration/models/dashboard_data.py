@@ -36,7 +36,20 @@ class DashboardManagementAdmin(models.Model):
             ('state', 'in', ['sale', 'done'])
         ]
         orders = self.env['sale.order'].search(domain, limit=LIMIT, order="date_order desc")
-        total = sum(self.env['sale.order'].search(domain).mapped('amount_total'))
+        all_orders = self.env['sale.order'].search(domain)
+
+        def compute_marge(order):
+            return sum(
+                (line.price_unit - line.product_id.standard_price) * line.product_uom_qty
+                for line in order.order_line
+                if line.product_id
+            )
+
+        marge_cache = {o.id: compute_marge(o) for o in all_orders}
+
+        total = sum(all_orders.mapped('amount_total'))
+        marge = sum(marge_cache.values())
+        marge_percent = round(marge / sum(all_orders.mapped('amount_untaxed')) * 100, 2) if total else 0
 
         return {
             'orders': [{
@@ -45,9 +58,13 @@ class DashboardManagementAdmin(models.Model):
                 'date': o.date_order.strftime('%Y-%m-%d'),
                 'amount': o.amount_total,
                 'state': o.state,
+                'marge': marge_cache[o.id],
+                'marge_percent': round(marge_cache[o.id] / o.amount_untaxed * 100 if o.amount_untaxed else 0, 2),
             } for o in orders],
             'total': total,
-            'count': self.env['sale.order'].search_count(domain),
+            'count': len(all_orders),
+            'marge': marge,
+            'marge_percent': marge_percent,
             'domain': domain,
             'model': 'sale.order',
         }
@@ -61,7 +78,16 @@ class DashboardManagementAdmin(models.Model):
             ('state', 'in', ['paid', 'done', 'invoiced'])
         ]
         orders = self.env['pos.order'].search(domain, limit=LIMIT, order="date_order desc")
-        total = sum(self.env['pos.order'].search(domain).mapped('amount_total'))
+        all_orders = self.env['pos.order'].search(domain)
+
+        def compute_marge(order):
+            return sum(line.margin for line in order.lines if line.margin)
+
+        marge_cache = {o.id: compute_marge(o) for o in all_orders}
+
+        total = sum(all_orders.mapped('amount_total'))
+        marge = sum(marge_cache.values())
+        marge_percent = round(marge / sum(all_orders.mapped('amount_total')) * 100, 2) if total else 0
 
         return {
             'orders': [{
@@ -70,9 +96,13 @@ class DashboardManagementAdmin(models.Model):
                 'date': o.date_order.strftime('%Y-%m-%d %H:%M'),
                 'amount': o.amount_total,
                 'session': o.session_id.name,
+                'marge': marge_cache[o.id],
+                'marge_percent': round(marge_cache[o.id] / o.amount_total * 100 if o.amount_total else 0, 2),
             } for o in orders],
             'total': total,
-            'count': self.env['pos.order'].search_count(domain),
+            'count': len(all_orders),
+            'marge': marge,
+            'marge_percent': marge_percent,
             'domain': domain,
             'model': 'pos.order',
         }
@@ -156,23 +186,28 @@ class DashboardManagementAdmin(models.Model):
         
         return top_clients
 
+    
     def _get_statistiques(self, date_from, date_to):
         """Calcule les statistiques globales"""
         ventes = self._get_ventes_demi_gros(date_from, date_to)
         pos = self._get_ventes_pos_demi(date_from, date_to)
         achats = self._get_achats_commande(date_from, date_to)
-        
+
         total_revenus = ventes['total'] + pos['total']
-        marge_brute = total_revenus - achats['total']
-        taux_marge = (marge_brute / total_revenus * 100) if total_revenus > 0 else 0
-        
+        marge_brute = ventes['marge'] + pos['marge']
+        taux_marge = round(marge_brute / total_revenus * 100, 2) if total_revenus > 0 else 0,
+
         return {
             'total_ventes': ventes['total'],
             'total_pos': pos['total'],
             'total_achats': achats['total'],
             'total_revenus': total_revenus,
             'marge_brute': marge_brute,
-            'taux_marge': round(taux_marge, 2),
+            'taux_marge': taux_marge,
+            'marge_ventes': ventes['marge'],
+            'marge_pos': pos['marge'],
+            'marge_pos_percent': pos['marge_percent'],
+            'marge_ventes_percent': ventes['marge_percent'],
             'nb_commandes_ventes': ventes['count'],
             'nb_commandes_pos': pos['count'],
             'nb_commandes_achats': achats['count'],

@@ -21,7 +21,7 @@ class PosOrder(models.Model):
             Dict avec error, access_required, code_acces, message
         """
         # Si l'utilisateur a group_pos_admin, pas de vérification
-        if self.env.user.has_group('custom_pos.group_pos_admin'):
+        if self.env.user.has_group('custom_pos.group_superviseur'):
             return {
                 'error': False,
                 'access_required': False,
@@ -30,7 +30,7 @@ class PosOrder(models.Model):
             }
         
         # Si l'utilisateur n'a même pas group_pos_user, pas de restriction non plus
-        if not self.env.user.has_group('custom_pos.group_pos_user'):
+        if not self.env.user.has_group('custom_pos.group_caissiere'):
             return {
                 'error': False,
                 'access_required': False,
@@ -60,7 +60,7 @@ class PosOrder(models.Model):
         products = self.env['product.product'].browse(product_ids)
 
         # Si l'utilisateur est admin, pas de vérification
-        if self.env.user.has_group('custom_pos.group_pos_admin'):
+        if self.env.user.has_group('custom_pos.group_superviseur'):
             return {
                 'error': False,
                 'access_required': False,
@@ -127,7 +127,7 @@ class PosOrder(models.Model):
             Dict avec error, access_required, code_acces, message
         """
         # Si l'utilisateur a group_pos_admin ou supérieur, pas de vérification
-        if self.env.user.has_group('custom_pos.group_pos_admin'):
+        if self.env.user.has_group('custom_pos.group_superviseur'):
             return {
                 'error': False,
                 'access_required': False,
@@ -136,7 +136,7 @@ class PosOrder(models.Model):
             }
         
         # Si l'utilisateur n'a même pas group_pos_user, pas de restriction
-        if not self.env.user.has_group('custom_pos.group_pos_user'):
+        if not self.env.user.has_group('custom_pos.group_caissiere'):
             return {
                 'error': False,
                 'access_required': False,

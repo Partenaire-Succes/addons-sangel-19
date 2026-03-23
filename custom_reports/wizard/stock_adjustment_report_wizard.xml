@@ -47,7 +47,7 @@
         <!-- ========== MENU ========== -->
         <menuitem id="menu_stock_adjustment_report"
                   name="Rapport d'ajustement de stock"
-                  parent="stock.menu_warehouse_report"
+                  parent="custom_reports.menu_reports_stock"
                   action="action_stock_adjustment_report"
                   sequence="100"/>
 

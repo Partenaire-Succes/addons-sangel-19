@@ -42,7 +42,7 @@
 
     <menuitem id="menu_cadencier_wizard"
               name="Cadencier Stat Articles"
-              parent="sale.menu_sale_report"
+              parent="custom_reports.menu_reports_sale"
               action="action_cadencier_wizard"
               sequence="1"/>
 

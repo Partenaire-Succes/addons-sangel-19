@@ -72,8 +72,7 @@
     <!-- Menu dans Rapports -->
     <menuitem id="menu_reception_fournisseur_report"
               name="Rapports Réceptions Fournisseurs"
-              parent="stock.menu_warehouse_report"
+              parent="custom_reports.menu_reports_purchase"
               action="action_reception_fournisseur_wizard"
-              sequence="20"
-              groups="stock.group_stock_user"/>
+              sequence="20"/>
 </odoo>

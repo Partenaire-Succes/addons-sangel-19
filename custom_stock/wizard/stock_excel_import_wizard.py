@@ -3,6 +3,9 @@ from odoo.exceptions import UserError
 import base64
 import io
 from openpyxl import load_workbook
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 class StockExcelImportWizard(models.TransientModel):
@@ -59,12 +62,13 @@ class StockExcelImportWizard(models.TransientModel):
 
         headers = [str(h).strip() for h in rows[0]]
 
-        required_columns = ["product_code", "quantity", "cost"]
+        required_columns = ["product_code", "product_state", "quantity", "cost"]
         for col in required_columns:
             if col not in headers:
                 raise UserError(_("Missing column: %s") % col)
 
         product_index = headers.index("product_code")
+        status_index = headers.index("product_state")
         qty_index = headers.index("quantity")
         cost_index = headers.index("cost")
 
@@ -81,6 +85,7 @@ class StockExcelImportWizard(models.TransientModel):
                 continue
 
             product_code = str(row[product_index]).strip()
+            product_state = str(row[status_index]).strip() if row[status_index] else False
             quantity = float(row[qty_index] or 0.0)
             cost = float(row[cost_index] or 0.0)
 
@@ -92,6 +97,7 @@ class StockExcelImportWizard(models.TransientModel):
             lines_vals.append((0, 0, {
                 "product_code": product_code,
                 "product_id": product.id if product else False,
+                "p_state": product_state,
                 "quantity": quantity,
                 "cost": cost,
                 "found": bool(product),
@@ -121,15 +127,24 @@ class StockExcelImportWizard(models.TransientModel):
             allowed_company_ids=[self.company_id.id]
         ))
         quants_to_apply = env["stock.quant"]
-        count_no_dispo = 0
-        list_no_dispo = []
         count_lines = len(self.line_ids.filtered(lambda l: l.found))
 
         for line in self.line_ids.filtered(lambda l: l.found):
 
             product = line.product_id.with_company(self.company_id)
 
-            # Update cost safely (standard cost)
+            status = self.env["product.status"].search([
+                ("code", "=", line.p_state),
+                ("active", "=", True)
+            ], limit=1)
+
+            if status:
+                # ✅ Écrire sur le template avec le bon contexte société
+                tmpl = product.product_tmpl_id.with_context(
+                    allowed_company_ids=[self.company_id.id]
+                ).with_company(self.company_id)
+                tmpl.current_company_status_id = status.id
+
             if product:
                 product.standard_price = line.cost
 
@@ -141,11 +156,10 @@ class StockExcelImportWizard(models.TransientModel):
             if quant:
                 quant.inventory_quantity = line.quantity
             else:
-                count_no_dispo += 1
-                list_no_dispo.append(line.product_code)
                 quant = env["stock.quant"].create({
                     "product_id": product.id,
                     "location_id": self.location_id.id,
+                    "company_id": self.company_id.id,
                     "inventory_quantity": line.quantity,
                 })
 
@@ -162,8 +176,8 @@ class StockExcelImportWizard(models.TransientModel):
                 'tag': 'display_notification',
                 'params': {
                     'title': 'Mise à jour du stock ligne total : %s' % count_lines,
-                    'message': "Import terminé avec succès." if count_no_dispo == 0 else f"Import terminé avec {count_no_dispo} produits non disponibles : {', '.join(list_no_dispo)}",
-                    'type': 'success' if count_no_dispo == 0 else 'warning',
+                    'message': "Import terminé avec succès.",
+                    'type': 'success',
                 }
             }
 
@@ -179,5 +193,6 @@ class StockExcelImportLine(models.TransientModel):
     product_code = fields.Char("Code article")
     quantity = fields.Float("Quantité")
     cost = fields.Float("Coût")
+    p_state = fields.Char("Statut Article", readonly=True)
 
     found = fields.Boolean("Produit trouvé")

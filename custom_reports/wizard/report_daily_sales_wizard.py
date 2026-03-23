@@ -21,7 +21,7 @@ class ReportDailySalesWizard(models.TransientModel):
         ('sale', 'Ventes (Sales)'),
         ('pos', 'Point de Vente (POS)'),
         ('all', 'Vente et Point de vente')
-    ], string='Source', required=True, default='sale')
+    ], string='Source', required=True, default='all')
 
     company_id = fields.Many2one(
         'res.company',
@@ -71,13 +71,24 @@ class ReportDailySalesWizard(models.TransientModel):
                     for line in order_lines
                 )
                 marge = ca_ht - cout_total
-                remises = sum(
+                remises = 0.0
+                remise_line = sum(
                     l.price_unit * l.product_uom_qty * (l.discount or 0.0) / 100.0
                     for l in order_lines
                 )
+                remise_global = sum(
+                    l.price_unit * l.product_uom_qty
+                    for l in order_lines
+                    if l.price_unit < 0
+                )
+                remises = remise_line - remise_global
                 nb_clients = len(orders)
                 # FIX 4 : champ correct pour panier_qte
-                total_qte = sum(order_lines.mapped('product_uom_qty'))
+                total_qte = sum(
+                    line.product_uom_qty
+                    for line in order_lines
+                    if line.price_unit >= 0
+                )
 
             elif self.report_type == 'pos':
                 orders = self.env['pos.order'].search([
@@ -102,12 +113,23 @@ class ReportDailySalesWizard(models.TransientModel):
                     for line in order_lines
                 )
                 marge = ca_ht - cout_total
-                remises = sum(
+                remises = 0.0
+                remise_line = sum(
                     l.price_unit * l.qty * (l.discount or 0.0) / 100.0
                     for l in order_lines
                 )
+                remise_global = sum(
+                    l.price_unit * l.qty
+                    for l in order_lines
+                    if l.price_unit < 0
+                )
+                remises = remise_line - remise_global
                 nb_clients = len(orders)
-                total_qte = sum(order_lines.mapped('qty'))
+                total_qte = sum(
+                    line.qty
+                    for line in order_lines
+                    if line.price_unit >= 0
+                )
 
             else:  # 'all' : ventes + POS combinés
                 # --- Ventes ---
@@ -128,11 +150,22 @@ class ReportDailySalesWizard(models.TransientModel):
                     for line in sale_order_lines
                 )
                 sale_marge = sale_ca_ht - sale_cout_total
-                sale_remises = sum(
+                sale_remises = 0.0
+                sale_remise_line = sum(
                     l.price_unit * l.product_uom_qty * (l.discount or 0.0) / 100.0
                     for l in sale_order_lines
                 )
-                sale_qte = sum(sale_order_lines.mapped('product_uom_qty'))
+                sale_remise_global = sum(
+                    l.price_unit * l.product_uom_qty
+                    for l in sale_order_lines
+                    if l.price_unit < 0
+                )
+                sale_remises = sale_remise_line - sale_remise_global
+                sale_qte = sum(
+                    line.product_uom_qty
+                    for line in sale_order_lines
+                    if line.price_unit >= 0
+                )
 
                 # --- POS ---
                 pos_orders = self.env['pos.order'].search([
@@ -156,11 +189,22 @@ class ReportDailySalesWizard(models.TransientModel):
                     for line in pos_order_lines
                 )
                 pos_marge = pos_ca_ht - pos_cout_total
-                pos_remises = sum(
+                pos_remises = 0.0
+                pos_remise_line = sum(
                     l.price_unit * l.qty * (l.discount or 0.0) / 100.0
                     for l in pos_order_lines
                 )
-                pos_qte = sum(pos_order_lines.mapped('qty'))
+                pos_remise_global = sum(
+                    l.price_unit * l.qty
+                    for l in pos_order_lines
+                    if l.price_unit < 0
+                )
+                pos_remises = pos_remise_line - pos_remise_global
+                pos_qte = sum(
+                    line.qty
+                    for line in pos_order_lines
+                    if line.price_unit >= 0
+                )
 
                 # FIX 1 : ca_ht défini dans le bloc else
                 ca_ht = sale_ca_ht + pos_ca_ht
@@ -184,6 +228,7 @@ class ReportDailySalesWizard(models.TransientModel):
                 ('date_from', '<', fields.Datetime.to_datetime(next_day)),
             ])
             budget = sum(budget_lines.mapped('budget_amount'))
+            budget_marge = sum(budget_lines.mapped('budget_marge'))
 
             data.append({
                 'jour': jour,
@@ -191,6 +236,7 @@ class ReportDailySalesWizard(models.TransientModel):
                 'ca_ht': ca_ht,
                 'ca_ttc': ca_ttc,
                 'budget': budget,
+                'budget_marge': budget_marge,
                 'marge': marge,
                 'pct_marge': pct_marge,
                 'nb_clients': nb_clients,
@@ -217,6 +263,7 @@ class ReportDailySalesWizard(models.TransientModel):
             'ca_ht': total_ca_ht,
             'ca_ttc': total_ca_ttc,
             'budget': sum(l['budget'] for l in lignes),
+            'budget_marge': sum(l['budget_marge'] for l in lignes),
             'marge': total_marge,
             'pct_marge': (total_marge / total_ca_ht * 100.0) if total_ca_ht else 0.0,
             'nb_clients': sum(l['nb_clients'] for l in lignes),

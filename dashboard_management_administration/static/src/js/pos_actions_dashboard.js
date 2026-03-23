@@ -41,27 +41,31 @@ class PosActionsDashboard extends Component {
     }
 
     async executeAction(actionName, params = {}) {
-        const actionKey = JSON.stringify({ actionName, params });
+        const actionKey = actionName;
         this.state.actionLoading[actionKey] = true;
-        
+
         try {
             const result = await this.orm.call(
                 "pos.actions.dashboard",
                 actionName,
-                [],
+                [[]],
                 params
             );
-            
+            console.log("Action retournée :", result);
             if (result && result.type) {
                 await this.action.doAction(result);
             }
-            
+
             await this.loadData();
+
         } catch (error) {
-            console.error(`Erreur lors de l'exécution de ${actionName}:`, error);
-            this.notification.add(error.message || "Une erreur est survenue", {
-                type: "danger"
-            });
+            console.error(`Erreur ${actionName}:`, error);
+
+            this.notification.add(
+                error?.data?.message || error.message || "Erreur serveur",
+                { type: "danger" }
+            );
+
         } finally {
             this.state.actionLoading[actionKey] = false;
         }
@@ -80,19 +84,109 @@ class PosActionsDashboard extends Component {
     }
 
     async onImportProducts() {
-        await this.executeAction('action_import_products');
+        try {
+            const action = await this.orm.call(
+                "pos.actions.dashboard",
+                "action_import_products",
+                [[]]
+            );
+
+            if (action) {
+                await this.action.doAction(action);
+            }
+
+        } catch (error) {
+            console.error("Erreur réelle :", error);
+            this.notification.add(
+                error.message || "Erreur lors de la synchronisation des produits",
+                { type: "danger" }
+            );
+        }
     }
 
     async onImportContacts() {
-        await this.executeAction('action_import_contacts');
+        try {
+            const action = await this.orm.call(
+                "pos.actions.dashboard",
+                "action_import_contacts",
+                [[]]
+            );
+
+            if (action) {
+                await this.action.doAction(action);
+            }
+
+        } catch (error) {
+            console.error("Erreur réelle :", error);
+            this.notification.add(
+                error.message || "Erreur lors de la synchronisation des contacts",
+                { type: "danger" }
+            );
+        }
     }
 
     async onValidatePurchases() {
-        await this.executeAction('action_validate_purchases');
+        try {
+            const action = await this.orm.call(
+                "pos.actions.dashboard",
+                "action_validate_purchases",
+                [[]]
+            );
+
+            if (action) {
+                await this.action.doAction(action);
+            }
+
+        } catch (error) {
+            console.error("Erreur réelle :", error);
+            this.notification.add(
+                error.message || "Erreur lors de l'envoi des demandes d'approvisionnement",
+                { type: "danger" }
+            );
+        }
     }
 
+    async onReceivePurchases() {
+        try {
+            const action = await this.orm.call(
+                "pos.actions.dashboard",
+                "action_receive_purchases",
+                [[]]
+            );
+
+            if (action) {
+                await this.action.doAction(action);
+            }
+
+        } catch (error) {
+            console.error("Erreur réelle :", error);
+            this.notification.add(
+                error.message || "Erreur lors de la réception des commandes",
+                { type: "danger" }
+            );
+        }
+    }
+
+
     async onSendInvoicesX3() {
-        await this.executeAction('action_send_invoices_x3');
+        try {
+            const action = await this.orm.call(
+                "pos.actions.dashboard",
+                "action_send_invoices_x3",
+                [[]]
+            );
+
+            if (action) {
+                await this.action.doAction(action);
+            }
+
+        } catch (error) {
+            console.error("Erreur réelle :", error);
+            this.notification.add(
+                error.message || "Erreur lors de l'envoi des factures",
+                { type: "danger" }
+            );
+        }
     }
     async onRefresh() {
         await this.loadData();

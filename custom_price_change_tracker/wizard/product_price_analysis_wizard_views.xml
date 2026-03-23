@@ -60,4 +60,11 @@
               action="action_product_price_analysis_wizard"
               sequence="30"/>
 
+    <menuitem id="menu_product_price_analysis_report_wizard"
+              name="Analyse des Prix"
+              parent="menu_product_price_monitor_root_report"
+              action="action_product_price_analysis_wizard"
+              sequence="3"/>
+
+
 </odoo>

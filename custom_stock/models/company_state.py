@@ -92,3 +92,15 @@ class ProductTemplate(models.Model):
                     })
             elif line:
                 line.unlink()
+
+
+class ProductProduct(models.Model):
+    _inherit = 'product.product'
+
+    current_company_status_id = fields.Many2one(
+        'product.status',
+        string="Statut (magasin courant)",
+        related='product_tmpl_id.current_company_status_id',
+        store=False,
+        readonly=True
+    )

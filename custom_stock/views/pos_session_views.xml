@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_pos_session_form_sage_x3" model="ir.ui.view">
+        <field name="name">pos.session.form.sage_x3</field>
+        <field name="model">pos.session</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_session_form"/>
+        <field name="arch" type="xml">
+            
+            <!-- Onglet SAGE X3 -->
+            <xpath expr="//group" position="after">
+                <group name="sage_x3" string="SAGE X3">
+                    <field name="sage_x3_sent" readonly="1"/>
+                    <field name="sage_x3_piece_number" readonly="1"/>
+                    <field name="sage_x3_sent_date" readonly="1"/>
+                </group>
+            </xpath>
+            
+        </field>
+    </record>
+</odoo>

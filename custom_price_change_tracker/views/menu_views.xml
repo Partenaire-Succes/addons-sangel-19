@@ -6,6 +6,11 @@
               parent="stock.menu_stock_inventory_control"
               sequence="100"/>
 
+    <menuitem id="menu_product_price_monitor_root_report"
+              name="Surveillance Prix"
+              parent="custom_reports.menu_custom_reports_root"
+              sequence="1"/>
+
     <!-- Menu Historique -->
     <menuitem id="menu_product_price_history"
               name="Historique des prix"

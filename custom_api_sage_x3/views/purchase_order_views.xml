@@ -6,24 +6,6 @@
         <field name="model">purchase.order</field>
         <field name="inherit_id" ref="purchase.purchase_order_form"/>
         <field name="arch" type="xml">
-
-            <xpath expr="//button[@name='action_rfq_send'][1]" position="attributes">
-                <attribute name="invisible">1</attribute>
-            </xpath>
-            <xpath expr="//button[@name='action_rfq_send'][2]" position="attributes">
-                <attribute name="invisible">1</attribute>
-            </xpath>
-            <xpath expr="//button[@name='action_rfq_send'][3]" position="attributes">
-                <attribute name="invisible">1</attribute>
-            </xpath>
-            <xpath expr="//button[@name='button_confirm'][1]" position="attributes">
-                <attribute name="invisible">type_supplier == 'vridi' or state not in ['draft', 'sent']</attribute>
-            </xpath>
-            <xpath expr="//button[@name='button_confirm'][2]" position="attributes">
-                <attribute name="invisible">1</attribute>
-            </xpath>
-            
-            
             <!-- Boutons dans le header -->
             <xpath expr="//button[@name='button_confirm']" position="before">
                 <!-- Bouton Soumettre à SAGE X3 -->
@@ -32,17 +14,6 @@
                         type="object"
                         class="oe_highlight"
                         invisible="state not in ['draft', 'sent'] or sage_x3_validated == True or type_command != 'urgent' or type_supplier != 'vridi'"/>
-
-                <button name="action_submit_to_sage_x3" 
-                        string="Soumettre à SAGE X3" 
-                        type="object" 
-                        class="oe_highlight"
-                        invisible="1"/>
-
-                <button name="action_import_deliveries" 
-                        string="Importer livraisons" 
-                        type="object" 
-                        class="oe_highlight"/>
             </xpath>
         </field>
     </record>
@@ -59,7 +30,7 @@ action = model.action_import_deliveries()
     </record>
     
     <!-- Menu pour les actions SAGE X3 -->
-    <menuitem 
+    <!-- <menuitem 
         id="menu_purchase_sage_x3"
         name="SAGE X3"
         parent="purchase.menu_purchase_root"
@@ -70,6 +41,6 @@ action = model.action_import_deliveries()
         name="Importer livraisons"
         parent="menu_purchase_sage_x3"
         action="action_import_sage_x3_deliveries"
-        sequence="10"/>
+        sequence="10"/> -->
         
 </odoo>

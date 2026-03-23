@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-inherit="point_of_sale.ProductInfoPopup" t-inherit-mode="extension">
+        <xpath expr="//div[@class='section-inventory mt-3 mb-4 pb-4 border-bottom text-start']/div[@class='section-inventory-body']" position="replace">
+            <div class="sections section-variant-invisible">
+                <h1>Info article</h1>
+            </div>
+        </xpath>
+
+        <xpath expr="//div[@class='section-inventory mt-3 mb-4 pb-4 border-bottom text-start']/h3[@class='section-title']" position="replace">
+            <div class="sections section-variant-invisible-inventory">
+            </div>
+        </xpath>
+
+        <xpath expr="//div[@class='section-supplier mt-3 mb-4 pb-4 border-bottom text-start']" position="replace">
+             <div class="section section-variants">
+            </div>
+        </xpath>
+    </t>
+
+    <t t-inherit="pos_self_order.ProductInfoPopup" t-inherit-mode="extension">
+        <xpath expr="//div[@class='section-self-order-availability mt-3 mb-4 pb-4 border-bottom text-start d-flex align-items-center']" position="replace">
+            <div class="section section-variants">
+            </div>
+        </xpath>
+    </t>
+</templates>

@@ -10,7 +10,7 @@
 from odoo import api, fields, models, _
 
 
-class ManagmentAdmin(models.Model):
+class ManagmentAdmin(models.TransientModel):
     _name = 'managment.admin'
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _rec_name = 'name'
@@ -21,9 +21,9 @@ class ManagmentAdmin(models.Model):
     date_from = fields.Date(string='Date de début', required=True)
     date_to = fields.Date(string='Date de fin', required=True)
     company_id = fields.Many2one('res.company', string='Company', default=lambda self: self.env.company)
-    pos_order_ids = fields.One2many('pos.order', 'managment_admin_id', string='Commandes POS')
-    sale_order_ids = fields.One2many('sale.order', 'managment_admin_id', string='Commandes Vente')
-    purchase_order_ids = fields.One2many('purchase.order', 'managment_admin_id', string='Commandes Achat')
+    # pos_order_ids = fields.One2many('pos.order', 'managment_admin_id', string='Commandes POS')
+    # sale_order_ids = fields.One2many('sale.order', 'managment_admin_id', string='Commandes Vente')
+    # purchase_order_ids = fields.One2many('purchase.order', 'managment_admin_id', string='Commandes Achat')
 
     @api.model
     def get_grouped_data(self, date_from=None, date_to=None):

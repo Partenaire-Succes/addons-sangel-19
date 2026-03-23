@@ -143,8 +143,13 @@
             </field>
         </record>
 
-
         <!-- Menu principal -->
+
+        <menuitem id="menu_reliquat_root"
+              name="Non livré"
+              parent="custom_reports.menu_custom_reports_root"
+              sequence="6"/>
+
         <menuitem id="menu_reliquat_main"
                   name="Non livré"
                   parent="stock.menu_stock_root"
@@ -155,6 +160,14 @@
                   parent="menu_reliquat_main"
                   action="action_reliquat_report"
                   sequence="10"/>
+
+        <menuitem id="menu_reliquat_report"
+                  name="Rapports des Non livrés"
+                  parent="menu_reliquat_root"
+                  action="action_reliquat_report"
+                  sequence="10"/>
+
+        
 
         <!-- <menuitem id="menu_reliquat_tree_view"
                   name="Reliquats"

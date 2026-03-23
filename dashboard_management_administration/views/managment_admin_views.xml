@@ -23,66 +23,27 @@
                         </group>
                     </group>
 
-                    <notebook>
-                        <page string="Ventes" name="sales">
-                            <group>
-                                <button name="action_view_sale_orders" 
-                                        type="object" 
-                                        string="Voir toutes les ventes"
-                                        class="btn-primary"
-                                        icon="fa-eye"/>
-                            </group>
-                            <field name="sale_order_ids" readonly="1">
-                                <list>
-                                    <field name="name"/>
-                                    <field name="partner_id"/>
-                                    <field name="date_order"/>
-                                    <field name="amount_total" sum="Total"/>
-                                    <field name="state"/>
-                                </list>
-                            </field>
-                        </page>
+                    <footer>
+                        <button name="action_view_sale_orders"
+                                type="object"
+                                string="Voir les ventes"
+                                class="btn-primary"/>
 
-                        <page string="Achats" name="purchases">
-                            <group>
-                                <button name="action_view_purchase_orders" 
-                                        type="object" 
-                                        string="Voir tous les achats"
-                                        class="btn-primary"
-                                        icon="fa-eye"/>
-                            </group>
-                            <field name="purchase_order_ids" readonly="1">
-                                <list>
-                                    <field name="name"/>
-                                    <field name="partner_id"/>
-                                    <field name="date_order"/>
-                                    <field name="amount_total" sum="Total"/>
-                                    <field name="state"/>
-                                </list>
-                            </field>
-                        </page>
+                        <button name="action_view_purchase_orders"
+                                type="object"
+                                string="Voir les achats"
+                                class="btn-secondary"/>
 
-                        <page string="Point de Vente" name="pos">
-                            <group>
-                                <button name="action_view_pos_orders" 
-                                        type="object" 
-                                        string="Voir toutes les commandes POS"
-                                        class="btn-primary"
-                                        icon="fa-eye"/>
-                            </group>
-                            <field name="pos_order_ids" readonly="1">
-                                <list>
-                                    <field name="name"/>
-                                    <field name="partner_id"/>
-                                    <field name="session_id"/>
-                                    <field name="config_id"/>
-                                    <field name="date_order"/>
-                                    <field name="amount_total" sum="Total"/>
-                                    <field name="state"/>
-                                </list>
-                            </field>
-                        </page>
-                    </notebook>
+                        <button name="action_view_pos_orders"
+                                type="object"
+                                string="Voir le POS"
+                                class="btn-info"/>
+
+                        <button string="Fermer"
+                                special="cancel"
+                                class="btn-light"/>
+                    </footer>
+
                 </sheet>
                 <chatter/>
             </form>
