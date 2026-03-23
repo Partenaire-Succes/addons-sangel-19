@@ -125,7 +125,11 @@ patch(PosOrder.prototype, {
             (sum, stat) => sum + (stat.points?.balance || 0),
             0
         );
-    }
+    },
+
+    getCashierName() {
+        return this.user_id?.name || "";
+    },
 });
 
 // VERIFICATION: Check if patch was applied successfully
