@@ -16,11 +16,11 @@
         'views/stock_picking_views.xml',
     ],
 
-    # 'assets': {
-    #     'point_of_sale._assets_pos': [
-    #         'custom_multi_barcode_for_products/static/src/js/pos_multi_barcode.js',
-    #     ],
-    # },
+    'assets': {
+        'point_of_sale._assets_pos': [
+            'custom_multi_barcode_for_products/static/src/js/pos_multi_barcode.js',
+        ],
+    },
 
     'license': 'AGPL-3',
     'installable': True,
