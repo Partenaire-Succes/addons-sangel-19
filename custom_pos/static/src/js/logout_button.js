@@ -13,6 +13,10 @@ patch(LoginScreen.prototype, {
         this.dialog = useService("dialog");
     },
 
+    get isCaissiere() {
+        return this.pos.user?._is_caissiere || false;
+    },
+
     async confirmLogout() {
         const confirmed = await ask(this.dialog, {
             title: _t("Confirmation"),

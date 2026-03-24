@@ -3,6 +3,12 @@
 
     <t t-inherit="point_of_sale.LoginScreen" t-inherit-mode="extension">
 
+        <!-- Cacher le bouton Backend pour le groupe Caissière -->
+        <xpath expr="//button[contains(@class,'select-logout')]" position="attributes">
+            <attribute name="t-if">!isCaissiere</attribute>
+        </xpath>
+
+        <!-- Bouton Déconnexion (visible pour tous) -->
         <xpath expr="//button[contains(@class,'select-logout')]" position="after">
             <button class="btn btn-outline-danger btn-lg ms-2 d-flex align-items-center gap-2" t-on-click="confirmLogout">
                 <i class="fa fa-sign-out-alt"/>
