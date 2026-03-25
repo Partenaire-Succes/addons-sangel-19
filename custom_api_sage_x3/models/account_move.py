@@ -439,7 +439,7 @@ class AccountMoveSageX3(models.Model):
             "type": "FACLI",
             "numero": "",
             "site": company.sage_x3_site,
-            "date": invoice.invoice_date.strftime("%Y-%m-%d"),
+            "date": invoice.invoice_date.strftime("%y%m%d"),
             "journal": company.sage_x3_journal_sale,
             "reference": f"FACLI_{company_code}_{invoice.name.replace('/', '_')}",
             "devise": "XOF",

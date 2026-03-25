@@ -134,7 +134,7 @@ class PosActionsDashboard(models.Model):
             # Commandes en attente de soumission à SAGE X3
             'purchase_to_validate': self.env['purchase.order'].search_count([
                 ('company_id',        '=',  company_id),
-                ('state',             'in', ['x3_pending']),
+                ('state',             'in', ['sent']),
                 ('sage_x3_submitted', '=',  False),
                 ('sage_x3_validated', '=',  False),
             ]),
@@ -152,6 +152,7 @@ class PosActionsDashboard(models.Model):
             # Commandes validées par SAGE X3 mais livraison non encore reçue
             'purchase_to_receive': self.env['purchase.order'].search_count([
                 ('company_id',                '=',  company_id),
+                ('state',                     'in', ['purchase']),
                 ('sage_x3_submitted',         '=',  True),
                 ('sage_x3_validated',         '=',  True),
                 ('sage_x3_delivery_received', '=',  False),
@@ -324,7 +325,7 @@ class PosActionsDashboard(models.Model):
         try:
             purchases = self.env['purchase.order'].search([
                 ('company_id',        '=',  company_id),
-                ('state',             'in', ['x3_pending']),
+                ('state',             'in', ['sent']),
                 ('sage_x3_submitted', '=',  False),
                 ('sage_x3_validated', '=',  False),
             ])

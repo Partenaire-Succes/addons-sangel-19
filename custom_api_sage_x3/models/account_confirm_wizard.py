@@ -202,6 +202,6 @@ class SageX3SendWizard(models.TransientModel):
                 'message': message,
                 'type': notif_type,
                 'sticky': True,
-                'next': {'type': 'ir.actions.client', 'tag': 'reload'},
+                'next': {'type': 'ir.actions.client'},
             }
         }
