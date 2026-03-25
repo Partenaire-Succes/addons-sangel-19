@@ -1,183 +1,237 @@
-import requests
 import time
 import logging
-import json
-from odoo import models, api
+import requests
+
+from odoo import models
 from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
-TIMEOUT = 30
+TIMEOUT     = 30
 MAX_RETRIES = 3
+TOKEN_TTL   = 3600  # 1 heure
 
-# Cache token en mémoire (par process Odoo)
-# Structure : { db_name: { 'token': str, 'expires_at': float } }
-_TOKEN_CACHE = {}
+# Cache token en mémoire (partagé entre toutes les instances du worker)
+_TOKEN_CACHE  = {}   # {company_id: token}
+_TOKEN_EXPIRY = {}   # {company_id: timestamp}
 
 
 class SageX3Mixin(models.AbstractModel):
-    """
-    Mixin réutilisable pour tous les modèles qui communiquent avec SAGE X3.
-    Centralise : configuration, authentification, envoi HTTP avec retry.
-    """
-    _name = 'sage.x3.mixin'
-    _description = 'Mixin SAGE X3'
+    _name        = 'sage.x3.mixin'
+    _description = 'Mixin SAGE X3 — Config, auth, cache token, HTTP'
 
-    # -------------------------------------------------------------------------
-    # Configuration (lue depuis ir.config_parameter)
-    # -------------------------------------------------------------------------
+    # =========================================================================
+    # CONFIGURATION
+    # =========================================================================
 
     def _get_sage_x3_config(self):
         """
-        Retourne la configuration SAGE X3 depuis les paramètres système.
-        Configurable dans : Paramètres > Technique > Paramètres système
-        Clés attendues :
-            sage_x3.base_url   → ex. http://172.16.2.150:8040
-            sage_x3.username   → ex. odoo
-            sage_x3.password   → ex. InterfaceX3_Odoo
+        Retourne un dict de configuration depuis ir.config_parameter.
+
+        Clés à créer dans Paramètres > Technique > Paramètres système :
+            sage_x3.base_url  →  http://172.16.2.150:8040
+            sage_x3.username  →  odoo
+            sage_x3.password  →  InterfaceX3_Odoo
         """
-        get = lambda key: self.env['ir.config_parameter'].sudo().get_param(key)
-
-        base_url = get('sage_x3.base_url')
-        username = get('sage_x3.username')
-        password = get('sage_x3.password')
-
-        if not base_url or not username or not password:
-            raise UserError(
-                "Configuration SAGE X3 incomplète.\n"
-                "Veuillez renseigner dans Paramètres > Technique > Paramètres système :\n"
-                "  • sage_x3.base_url\n"
-                "  • sage_x3.username\n"
-                "  • sage_x3.password"
-            )
+        params   = self.env['ir.config_parameter'].sudo()
+        base_url = params.get_param('sage_x3.base_url', 'http://172.16.2.150:8040')
+        username = params.get_param('sage_x3.username', 'odoo')
+        password = params.get_param('sage_x3.password', 'InterfaceX3_Odoo')
 
         return {
-            'base_url': base_url.rstrip('/'),
-            'auth_url': f"{base_url.rstrip('/')}/api/Auth/login",
-            'accounting_url': f"{base_url.rstrip('/')}/api/Accounting/entries/batch",
-            'username': username,
-            'password': password,
+            'base_url':       base_url,
+            'username':       username,
+            'password':       password,
+            'auth_url':       f"{base_url}/api/Auth/login",
+            'accounting_url': f"{base_url}/api/Accounting/entries/batch",
+            'customers_url':  f"{base_url}/api/Customers",
+            'items_url':      f"{base_url}/api/Items",
+            'orders_url':     f"{base_url}/api/Orders/batch",
+            'deliveries_url': f"{base_url}/api/Orders/deliveries",
         }
 
-    # -------------------------------------------------------------------------
-    # Authentification avec cache token
-    # -------------------------------------------------------------------------
+    # =========================================================================
+    # HELPERS MÉTIER
+    # =========================================================================
+
+    def _get_company_code(self, company):
+        """Retourne un code société robuste (code > lib_company > 5 premiers caractères)."""
+        return (
+            getattr(company, 'lib_company', None)
+            or company.name[:5]
+        ).upper()
+
+    def _build_ligne(self, site, compte, sens, montant, libelle, tiers='', devise='XOF'):
+        """
+        Construit une ligne d'écriture au format SAGE X3 (noms de champs français).
+
+        Format attendu par l'API :
+          { "site": "VRIDI", "compte": "41110000", "tiers": "CLI01",
+            "libelle": "...", "sens": 1, "montant": 10000, "devise": "XOF" }
+
+        sens : 1 = Débit | -1 = Crédit
+        tiers: code tiers SAGE X3 (vide si pas de tiers)
+        """
+        ligne = {
+            "site":    site,
+            "compte":  compte,
+            "libelle": libelle,
+            "sens":    sens,
+            "montant": montant,
+            "devise":  devise,
+        }
+        if tiers:
+            ligne["tiers"] = tiers
+        return ligne
+
+    def _build_ecriture(self, type_piece, site, date_yymmdd, journal,
+                        libelle, lignes, devise='XOF'):
+        """
+        Construit une écriture au format SAGE X3.
+
+        Format attendu :
+          { "type": "FACLI", "site": "VRIDI", "date": "260323",
+            "journal": "VTE", "libelle": "...", "devise": "XOF", "lignes": [...] }
+
+        date_yymmdd : chaîne au format YYMMDD (ex: "260323" pour le 23/03/2026)
+        """
+        return {
+            "type":    type_piece,
+            "site":    site,
+            "date":    date_yymmdd,
+            "journal": journal,
+            "libelle": libelle,
+            "devise":  devise,
+            "lignes":  lignes,
+        }
+
+    # =========================================================================
+    # AUTHENTIFICATION AVEC CACHE TOKEN
+    # =========================================================================
 
     def _authenticate_sage_x3(self):
-        """
-        Authentification SAGE X3 avec cache en mémoire.
-        Le token est réutilisé pendant 50 minutes (durée conservative).
-        Un nouveau token est demandé à l'expiration ou en cas d'erreur 401.
-        """
-        db_name = self.env.cr.dbname
-        cache = _TOKEN_CACHE.get(db_name, {})
+        """Authentification avec cache token TTL 1h. Évite un appel par document."""
+        company_id = self.env.company.id
+        now        = time.time()
 
-        # Vérifier si le token en cache est encore valide
-        if cache.get('token') and cache.get('expires_at', 0) > time.time():
-            _logger.debug("🔑 Token SAGE X3 en cache (valide)")
-            return cache['token']
+        if company_id in _TOKEN_CACHE and now < _TOKEN_EXPIRY.get(company_id, 0):
+            _logger.debug("🔑 Token SAGE X3 depuis le cache (société %s)", company_id)
+            return _TOKEN_CACHE[company_id]
 
-        # Obtenir un nouveau token
-        token = self._fetch_new_sage_x3_token()
-        if token:
-            _TOKEN_CACHE[db_name] = {
-                'token': token,
-                'expires_at': time.time() + 50 * 60  # 50 minutes
-            }
-        return token
+        config = self._get_sage_x3_config()
 
-    def _fetch_new_sage_x3_token(self):
-        """Appel HTTP d'authentification, retourne le token ou None."""
         try:
-            config = self._get_sage_x3_config()
-            _logger.debug("🔐 Authentification SAGE X3...")
-
+            _logger.debug("🔐 Authentification SAGE X3 (société %s)...", company_id)
             response = requests.post(
                 config['auth_url'],
                 json={"username": config['username'], "password": config['password']},
-                timeout=15
+                timeout=15,
             )
 
             if response.status_code in (200, 201):
                 token = response.json().get("token")
                 if token:
-                    _logger.debug("✅ Authentification SAGE X3 réussie")
+                    _TOKEN_CACHE[company_id]  = token
+                    _TOKEN_EXPIRY[company_id] = now + TOKEN_TTL
+                    _logger.debug("✅ Authentification réussie")
                     return token
-                _logger.error("❌ Token absent dans la réponse SAGE X3")
+                _logger.error("❌ Token absent dans la réponse")
                 return None
 
-            _logger.error("❌ Échec authentification SAGE X3: HTTP %s", response.status_code)
+            _logger.error("❌ Échec auth HTTP %s", response.status_code)
             return None
 
         except Exception as e:
-            _logger.error("❌ Erreur authentification SAGE X3: %s", str(e))
+            _logger.error("❌ Erreur authentification: %s", str(e))
             return None
 
     def _invalidate_sage_x3_token(self):
-        """Invalide le cache token (à appeler sur réponse 401)."""
-        _TOKEN_CACHE.pop(self.env.cr.dbname, None)
+        """Force le renouvellement du token au prochain appel (ex: 401)."""
+        company_id = self.env.company.id
+        _TOKEN_CACHE.pop(company_id, None)
+        _TOKEN_EXPIRY.pop(company_id, None)
 
-    # -------------------------------------------------------------------------
-    # Envoi HTTP avec retry
-    # -------------------------------------------------------------------------
+    # =========================================================================
+    # POST HTTP AVEC RETRY
+    # =========================================================================
 
     def _safe_post(self, url, headers, data, timeout=TIMEOUT):
-        """
-        POST HTTP avec retry automatique et backoff progressif.
-        Sur réponse 401, invalide le token et lève une exception claire.
-        Backoff : 2s, 4s, 6s entre les tentatives.
-        """
+        """POST avec retry et backoff (2s, 4s, 6s). Gère le 401 automatiquement."""
         last_exception = None
 
         for attempt in range(MAX_RETRIES):
             try:
-                _logger.debug("📡 Tentative %s/%s: POST %s", attempt + 1, MAX_RETRIES, url)
-
+                _logger.debug("📡 POST tentative %s/%s: %s", attempt + 1, MAX_RETRIES, url)
                 response = requests.post(url, headers=headers, json=data, timeout=timeout)
 
                 if response.status_code in (200, 201):
-                    _logger.debug("✅ Requête SAGE X3 réussie")
                     return response
 
-                # Token expiré → invalider le cache immédiatement
-                if response.status_code == 401:
+                if response.status_code == 401 and attempt == 0:
+                    _logger.warning("🔄 Token expiré (401) — renouvellement...")
                     self._invalidate_sage_x3_token()
-                    raise Exception("Token SAGE X3 invalide ou expiré (401)")
+                    new_token = self._authenticate_sage_x3()
+                    if new_token:
+                        headers = {**headers, "Authorization": f"Bearer {new_token}"}
+                    continue
 
-                _logger.warning(
-                    "⚠️ HTTP %s (tentative %s/%s) — %s",
-                    response.status_code, attempt + 1, MAX_RETRIES, response.text[:200]
-                )
+                _logger.warning("⚠️ HTTP %s (tentative %s/%s)",
+                                response.status_code, attempt + 1, MAX_RETRIES)
                 last_exception = Exception(f"HTTP {response.status_code}: {response.text}")
 
             except requests.exceptions.Timeout:
                 _logger.warning("⏱️ Timeout (tentative %s/%s)", attempt + 1, MAX_RETRIES)
-                last_exception = Exception("Timeout de connexion SAGE X3")
+                last_exception = Exception("Timeout")
 
             except Exception as e:
-                _logger.warning("❌ Erreur tentative %s/%s: %s", attempt + 1, MAX_RETRIES, str(e))
+                _logger.warning("❌ Erreur réseau (tentative %s/%s): %s",
+                                attempt + 1, MAX_RETRIES, str(e))
                 last_exception = e
 
-            # Backoff avant nouvelle tentative (sauf dernière)
             if attempt < MAX_RETRIES - 1:
-                wait_time = 2 * (attempt + 1)
-                _logger.info("⏳ Attente %ss avant nouvelle tentative...", wait_time)
-                time.sleep(wait_time)
+                wait = 2 * (attempt + 1)
+                _logger.info("⏳ Attente %ss avant retry...", wait)
+                time.sleep(wait)
 
-        raise last_exception or Exception("Échec après tous les retries SAGE X3")
+        raise last_exception or Exception("Échec après tous les retries")
 
-    # -------------------------------------------------------------------------
-    # Helper commun : code société
-    # -------------------------------------------------------------------------
+    # =========================================================================
+    # GET HTTP AVEC RETRY
+    # =========================================================================
 
-    def _get_company_code(self, company):
+    def _safe_get(self, url, headers, params=None, timeout=TIMEOUT):
+        """GET avec retry (pour imports paginés)."""
+        last_exc = None
+
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                response = requests.get(url, headers=headers, params=params, timeout=timeout)
+                if response.status_code in (200, 201):
+                    return response
+                _logger.warning("⚠️ HTTP %s (tentative %s)", response.status_code, attempt)
+                last_exc = Exception(f"HTTP {response.status_code}")
+            except requests.exceptions.RequestException as e:
+                _logger.warning("⚠️ Exception réseau (tentative %s): %s", attempt, str(e))
+                last_exc = e
+            time.sleep(5)
+
+        raise UserError(f"Échec GET après {MAX_RETRIES} tentatives : {last_exc}")
+
+    # =========================================================================
+    # EXTRACTION DU NUMÉRO DE PIÈCE
+    # =========================================================================
+
+    def _extract_piece_number(self, response, fallback_reference):
         """
-        Retourne le code court de la société (max 5 caractères, majuscules).
-        Essaie dans l'ordre : company.code → company.lib_company → 5 premiers chars du nom.
+        Extrait le numéro de pièce de la réponse texte CSV de SAGE X3.
+        Format : G;FACLI;;SIEGE;110226;VTE;FACLI_SAN_REF;XOF;STDCO
+                                                          ↑ index 6
         """
-        code = (
-            getattr(company, 'code', None)
-            or getattr(company, 'lib_company', None)
-            or company.name[:5]
-        )
-        return (code or 'UNKNW').upper()
+        try:
+            first_line = response.text.strip().splitlines()[0]
+            parts      = first_line.split(";")
+            if len(parts) >= 7 and parts[6]:
+                return parts[6]
+        except Exception:
+            _logger.warning("⚠️ Impossible d'extraire le n° de pièce depuis SAGE X3")
+        return fallback_reference

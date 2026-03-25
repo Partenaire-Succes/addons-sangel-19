@@ -118,6 +118,9 @@
                     <field name="sage_x3_error" readonly="1" invisible="not sage_x3_error"/>
                 </group>
             </xpath>
+            <xpath expr="" position="inside">
+                <field name="num_costomer_bank" />
+            </xpath>
         </field>
     </record>
 
