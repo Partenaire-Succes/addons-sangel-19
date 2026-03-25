@@ -20,8 +20,8 @@
             <field name="name">Récapitulatif des Caisses</field>
             <field name="model">recap.caisses.wizard</field>
             <field name="report_type">qweb-pdf</field>
-            <field name="report_name">custom_pos.report_recap_caisses</field>
-            <field name="report_file">custom_pos.report_recap_caisses</field>
+            <field name="report_name">custom_reports.report_recap_caisses</field>
+            <field name="report_file">custom_reports.report_recap_caisses</field>
             <field name="paperformat_id" ref="paperformat_recap_caisses"/>
             <field name="binding_model_id" eval="False"/>
         </record>

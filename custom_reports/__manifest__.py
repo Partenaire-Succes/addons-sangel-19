@@ -39,6 +39,9 @@
         'wizard/cadencier_sale_view.xml',
         'report/report_catalog_template.xml',
         'wizard/catalog_product_report_wizard.xml',
+        'report/recap_caisses_report.xml',
+        'report/recap_caisses_template.xml',
+        'wizard/recap_caisses_wizard_views.xml',
     ],
     'installable': True,
     'auto_install': False

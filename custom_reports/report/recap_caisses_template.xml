@@ -11,7 +11,7 @@
         <t t-foreach="docs" t-as="doc">
             <t t-call="web.external_layout">
                 <div class="page">
-                    <t t-call="custom_pos.report_recap_caisses_document">
+                    <t t-call="custom_reports.report_recap_caisses_document">
                         <t t-set="data" t-value="doc.get_report_data()"/>
                     </t>
                 </div>
