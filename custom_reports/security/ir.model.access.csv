@@ -9,3 +9,4 @@ access_stock_adjustment_report_wizard_user,stock.adjustment.report.wizard.user,m
 access_report_daily_sales_wizard_user,report.daily.sales.wizard.user,model_report_daily_sales_wizard,,1,1,1,1
 access_cadencier_ventes_wizard_user,cadencier.ventes.wizard.user,model_cadencier_ventes_wizard,,1,1,1,1
 access_product_report_wizard,product.report.wizard,model_product_report_wizard,,1,1,1,1
+access_retours_consolides_report_wizard,retours.consolides.report.wizard,model_retours_consolides_report_wizard,,1,1,1,1

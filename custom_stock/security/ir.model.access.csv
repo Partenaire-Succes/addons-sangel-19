@@ -31,3 +31,15 @@ access_product_status_user,product.status user,model_product_status,base.group_u
 access_product_company_status_user,product.company.status user,model_product_company_status,base.group_user,1,1,1,0
 access_stock_excel_import_wizard,stock.excel.import.wizard,model_stock_excel_import_wizard,,1,1,1,1
 access_stock_excel_import_line,stock.excel.import.line,model_stock_excel_import_line,,1,1,1,1
+
+access_reception_directe_wizard,reception.directe.wizard,model_reception_directe_wizard,,1,1,1,1
+access_reception_directe_wizard_line,reception.directe.wizard.line,model_reception_directe_wizard_line,,1,1,1,1
+
+access_retour_carton_wizard,retour.carton.wizard,model_retour_carton_wizard,,1,1,1,1
+access_retour_carton_wizard_line,retour.carton.wizard.line,model_retour_carton_wizard_line,,1,1,1,1
+
+access_retour_inventaire_wizard,retour.inventaire.wizard,model_retour_inventaire_wizard,,1,1,1,1
+access_retour_inventaire_wizard_line,retour.inventaire.wizard.line,model_retour_inventaire_wizard_line,,1,1,1,1
+
+access_retour_fournisseur_wizard,retour.fournisseur.wizard,model_retour_fournisseur_wizard,,1,1,1,1
+access_retour_fournisseur_wizard_line,retour.fournisseur.wizard.line,model_retour_fournisseur_wizard_line,,1,1,1,1

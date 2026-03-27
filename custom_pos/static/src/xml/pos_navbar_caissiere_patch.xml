@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!--
+        PATCH NAVBAR — Restrictions par groupe
+        ─────────────────────────────────────────────────────────────────────
+        ANALYSE DU PROBLÈME :
+          - position="attributes" + t-if → fonctionne sur <button> (HTML natif)
+          - position="attributes" + t-if → NE fonctionne PAS sur <DropdownItem> (composant OWL)
+          → Raison : QWeb ne peut pas ajouter t-if à un composant OWL sans t-if existant
+
+        SOLUTION UTILISÉE :
+          - reloadProducts : avait déjà un t-if → position="attributes" remplace → OK
+          - closePos       : n'avait PAS de t-if → position="replace" + wrapper <t t-if> → OK
+
+        1. "Backend"               → caché pour les Caissières  (isCaissiere getter)
+        2. "Recharger les données" → visible uniquement pour DSI (isDsiIt getter)
+    -->
+    <t t-inherit="point_of_sale.Navbar" t-inherit-mode="extension">
+
+        <!-- 1. Backend : position="replace" + <t t-if> car DropdownItem sans t-if existant -->
+        <xpath expr="//DropdownItem[normalize-space()='Backend']" position="replace">
+            <t t-if="!isCaissiere">
+                <DropdownItem onSelected="() => pos.closePos()">
+                    Backend
+                </DropdownItem>
+            </t>
+        </xpath>
+
+        <!-- 2. Recharger les données : position="attributes" car t-if existant → remplacement -->
+        <xpath expr="//DropdownItem[contains(@onSelected, 'reloadProducts')]" position="attributes">
+            <attribute name="t-if">!this.pos.data.network.offline and isDsiIt</attribute>
+        </xpath>
+
+    </t>
+
+    <!--
+        PATCH TICKET SCREEN — Bouton "Détails"
+        ─────────────────────────────────────────────────────────────────────
+        Redirige vers onClickDetails() pour contrôle code caissière.
+        position="attributes" sur <button> HTML natif → fonctionne
+    -->
+    <t t-inherit="point_of_sale.TicketScreen" t-inherit-mode="extension">
+
+        <xpath expr="//button[contains(@class, 'edit-order-payment')]" position="attributes">
+            <attribute name="t-on-click">() => this.onClickDetails(_selectedSyncedOrder)</attribute>
+        </xpath>
+
+    </t>
+
+</templates>

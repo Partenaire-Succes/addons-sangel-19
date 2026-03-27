@@ -1,2 +1,6 @@
 from . import product_select_wizard
 from . import stock_excel_import_wizard
+from . import reception_directe_wizard
+from . import retour_carton_wizard
+from . import retour_inventaire_wizard
+from . import retour_fournisseur_wizard

@@ -62,6 +62,7 @@
             "/custom_pos/static/src/js/payment_screen_patch.js",
             "/custom_pos/static/src/js/ProductScreen.js",
             "/custom_pos/static/src/js/ticket_screen_refund_patch.js",
+            "/custom_pos/static/src/js/pos_navbar_patch.js",
             # Other XML files
             "/custom_pos/static/src/xml/cash_move_hide_cash_in.xml",
             "/custom_pos/static/src/xml/cash_move_list_popup_patch.xml",
@@ -74,6 +75,8 @@
             "/custom_pos/static/src/xml/logout_button.xml",
             #Info product
             "/custom_pos/static/src/xml/pos_product_info_hide_inventory.xml",
+            # Navbar + TicketScreen restrictions caissière/DSI
+            "/custom_pos/static/src/xml/pos_navbar_caissiere_patch.xml",
         ],
     },
 }

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <record id="view_retour_carton_wizard_form" model="ir.ui.view">
+        <field name="name">retour.carton.wizard.form</field>
+        <field name="model">retour.carton.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Conversion carton → sachets">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>Ouvrir des cartons</h1>
+                        <h3 class="text-muted">Le stock carton sera réduit, les unités/sachets ajoutés</h3>
+                    </div>
+
+                    <group>
+                        <field name="location_id"
+                               options="{'no_create': True}"
+                               required="1"/>
+                        <field name="notes" placeholder="Référence, raison de l'ouverture…"/>
+                    </group>
+
+                    <field name="line_ids">
+                        <list editable="bottom"
+                              decoration-danger="qty > stock_carton">
+                            <field name="product_id"
+                                   options="{'no_create': True}"
+                                   required="1"
+                                   string="Carton"/>
+                            <field name="stock_carton"
+                                   string="En stock"
+                                   readonly="1"/>
+                            <field name="qty"
+                                   string="Qté à ouvrir"
+                                   required="1"/>
+                            <field name="child_product_id"
+                                   string="Produit unité"
+                                   readonly="1"/>
+                            <field name="sachets_qty"
+                                   string="Unités obtenues"
+                                   readonly="1"/>
+                        </list>
+                    </field>
+
+                    <div class="alert alert-warning mt-2" role="alert"
+                         style="font-size: 85%;">
+                        Les lignes en <strong>rouge</strong> = stock insuffisant — la conversion sera bloquée.
+                    </div>
+                </sheet>
+
+                <footer>
+                    <button name="action_valider"
+                            string="Convertir"
+                            type="object"
+                            class="btn-primary"
+                            data-hotkey="q"
+                            confirm="Confirmer l'ouverture des cartons ? Le stock sera ajusté immédiatement."/>
+                    <button string="Annuler"
+                            class="btn-secondary"
+                            special="cancel"
+                            data-hotkey="x"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action popup -->
+    <record id="action_retour_carton_wizard" model="ir.actions.act_window">
+        <field name="name">Ouvrir des cartons</field>
+        <field name="res_model">retour.carton.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Menus -->
+    <menuitem
+        id="menu_retour_carton_root"
+        name="Retours"
+        parent="stock.menu_stock_root"
+        sequence="26"
+        groups="custom_pos.group_superviseur,custom_pos.group_assistant_magasin,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
+    />
+    <menuitem
+        id="menu_retour_carton_new"
+        name="Ouvrir des cartons (carton → unités)"
+        parent="menu_retour_carton_root"
+        action="action_retour_carton_wizard"
+        sequence="10"
+        groups="custom_pos.group_superviseur,custom_pos.group_assistant_magasin,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
+    />
+
+</odoo>
