@@ -43,7 +43,7 @@ class SageX3Mixin(models.AbstractModel):
             'username':       username,
             'password':       password,
             'auth_url':       f"{base_url}/api/Auth/login",
-            'accounting_url': f"{base_url}/api/Accounting/entries/batch",
+            'accounting_url': f"{base_url}/api/AccountingEntries/batch",
             'customers_url':  f"{base_url}/api/Customers",
             'items_url':      f"{base_url}/api/Items",
             'orders_url':     f"{base_url}/api/Orders/batch",
@@ -84,21 +84,21 @@ class SageX3Mixin(models.AbstractModel):
             ligne["tiers"] = tiers
         return ligne
 
-    def _build_ecriture(self, type_piece, site, date_yymmdd, journal,
+    def _build_ecriture(self, type_piece, site, date_ddmmyy, journal,
                         libelle, lignes, devise='XOF'):
         """
         Construit une écriture au format SAGE X3.
 
         Format attendu :
-          { "type": "FACLI", "site": "VRIDI", "date": "260323",
+          { "type": "FACLI", "site": "VRIDI", "date": "230326",
             "journal": "VTE", "libelle": "...", "devise": "XOF", "lignes": [...] }
 
-        date_yymmdd : chaîne au format YYMMDD (ex: "260323" pour le 23/03/2026)
+        date_ddmmyy : chaîne au format YYMMDD (ex: "230326" pour le 23/03/2026)
         """
         return {
             "type":    type_piece,
             "site":    site,
-            "date":    date_yymmdd,
+            "date":    date_ddmmyy,
             "journal": journal,
             "libelle": libelle,
             "devise":  devise,
@@ -221,17 +221,36 @@ class SageX3Mixin(models.AbstractModel):
     # EXTRACTION DU NUMÉRO DE PIÈCE
     # =========================================================================
 
-    def _extract_piece_number(self, response, fallback_reference):
-        """
-        Extrait le numéro de pièce de la réponse texte CSV de SAGE X3.
-        Format : G;FACLI;;SIEGE;110226;VTE;FACLI_SAN_REF;XOF;STDCO
-                                                          ↑ index 6
-        """
+    def _extract_x3_results(self, response, fallback_reference):
+        """Extrait message + numéro pour chaque pièce retournée par SAGE X3."""
+        results = []
+
         try:
-            first_line = response.text.strip().splitlines()[0]
-            parts      = first_line.split(";")
-            if len(parts) >= 7 and parts[6]:
-                return parts[6]
-        except Exception:
-            _logger.warning("⚠️ Impossible d'extraire le n° de pièce depuis SAGE X3")
-        return fallback_reference
+            response_data = response.json()
+
+            if not isinstance(response_data, list):
+                return [{
+                    "message": "Réponse invalide SAGE X3",
+                    "piece": fallback_reference
+                }]
+
+            for res in response_data:
+                if res.get("success"):
+                    results.append({
+                        "message": res.get("message", ""),
+                        "piece": res.get("x3DocumentNumber") or fallback_reference
+                    })
+                else:
+                    results.append({
+                        "message": res.get("message", "Erreur inconnue"),
+                        "piece": None
+                    })
+
+        except Exception as e:
+            _logger.warning(f"⚠️ Erreur extraction X3: {e}")
+            return [{
+                "message": "Erreur lecture réponse X3",
+                "piece": fallback_reference
+            }]
+
+        return results

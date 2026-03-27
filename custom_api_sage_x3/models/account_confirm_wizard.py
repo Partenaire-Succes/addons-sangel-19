@@ -1,46 +1,66 @@
-from odoo import fields, models, api, _
-from odoo.exceptions import UserError, ValidationError
 import logging
+
+from odoo import fields, models, api
+from odoo.exceptions import ValidationError
 
 _logger = logging.getLogger(__name__)
 
 
 class SageX3SendWizard(models.TransientModel):
-    _name = 'sage.x3.send.wizard'
+    """
+    Wizard d'envoi vers SAGE X3.
+
+    Lance 2 flux en séquence :
+      1. Récap journalier POS (ENCAI + DECAI)
+         → inclut automatiquement les account.payment du jour dans l'ENCAI
+      2. Factures et avoirs classiques hors POS (FACLI / AVCLI)
+
+    Note : les account.payment ne sont PAS envoyés séparément.
+    Ils sont intégrés dans l'ENCAI journalier du flux POS.
+    """
+    _name        = 'sage.x3.send.wizard'
     _description = 'Wizard envoi SAGE X3'
 
     date_from = fields.Date(
-        string="Date début",
-        required=True,
-        default=fields.Date.today,
+        string   = "Date début",
+        required = True,
+        default  = fields.Date.today,
     )
     date_to = fields.Date(
-        string="Date fin",
-        required=True,
-        default=fields.Date.today,
+        string   = "Date fin",
+        required = True,
+        default  = fields.Date.today,
     )
     company_ids = fields.Many2many(
         'res.company',
-        string="Sociétés",
-        required=True,
-        default=lambda self: [(6, 0, self.env.company.ids)],
-    )
-    count_invoices = fields.Integer(
-        string="Factures à envoyer",
-        compute="_compute_counts",
-    )
-    count_payments = fields.Integer(
-        string="Paiements à envoyer",
-        compute="_compute_counts",
-    )
-    count_pos_sessions = fields.Integer(
-        string="Sessions POS à envoyer",
-        compute="_compute_counts",
+        string   = "Sociétés",
+        required = True,
+        default  = lambda self: [(6, 0, self.env.company.ids)],
     )
 
-    # -------------------------------------------------------------------------
-    # Contraintes
-    # -------------------------------------------------------------------------
+    # Compteurs affichés dans le formulaire wizard
+    count_pos_sessions = fields.Integer(
+        string  = "Jours POS à envoyer",
+        compute = "_compute_counts",
+    )
+    count_invoices = fields.Integer(
+        string  = "Factures classiques à envoyer",
+        compute = "_compute_counts",
+    )
+    count_refunds = fields.Integer(
+        string  = "Avoirs à envoyer",
+        compute = "_compute_counts",
+    )
+    count_payments = fields.Integer(
+        string  = "Règlements inclus dans l'ENCAI",
+        compute = "_compute_counts",
+        help    = "Ces règlements seront inclus dans le récap ENCAI journalier, "
+                  "pas envoyés séparément.",
+    )
+
+    # =========================================================================
+    # CONTRAINTES ET COMPTEURS
+    # =========================================================================
 
     @api.constrains('date_from', 'date_to')
     def _check_dates(self):
@@ -50,158 +70,150 @@ class SageX3SendWizard(models.TransientModel):
                     "La date de début doit être antérieure ou égale à la date de fin."
                 )
 
-    # -------------------------------------------------------------------------
-    # Compteurs (informatifs)
-    # -------------------------------------------------------------------------
-
     @api.depends('date_from', 'date_to', 'company_ids')
     def _compute_counts(self):
         for wizard in self:
             if not wizard.date_from or not wizard.date_to or not wizard.company_ids:
-                wizard.count_invoices = 0
-                wizard.count_payments = 0
                 wizard.count_pos_sessions = 0
+                wizard.count_invoices     = 0
+                wizard.count_refunds      = 0
+                wizard.count_payments     = 0
                 continue
 
             company_ids = wizard.company_ids.ids
 
-            # Factures classiques (hors POS)
+            # Sessions POS fermées avec paiements non envoyés
+            pos_sessions = self.env['pos.session'].search([
+                ('company_id', 'in', company_ids),
+                ('state',      '=',  'closed'),
+                ('start_at',   '>=', wizard.date_from),
+                ('start_at',   '<=', wizard.date_to),
+            ])
+            sessions_with_pending = self.env['pos.payment'].search([
+                ('session_id',   'in', pos_sessions.ids),
+                ('sage_x3_sent', '=',  False),
+            ]).mapped('session_id')
+            wizard.count_pos_sessions = len(sessions_with_pending)
+
+            # Factures classiques hors POS
             wizard.count_invoices = self.env['account.move'].search_count([
-                ('move_type', '=', 'out_invoice'),
-                ('state', '=', 'posted'),
-                ('sage_x3_sent', '=', False),
-                ('pos_order_ids', '=', False),
-                ('company_id', 'in', company_ids),
-                ('invoice_date', '>=', wizard.date_from),
-                ('invoice_date', '<=', wizard.date_to),
+                ('move_type',     '=',  'out_invoice'),
+                ('state',         '=',  'posted'),
+                ('sage_x3_sent',  '=',  False),
+                ('pos_order_ids', '=',  False),
+                ('company_id',    'in', company_ids),
+                ('invoice_date',  '>=', wizard.date_from),
+                ('invoice_date',  '<=', wizard.date_to),
             ])
 
-            # Paiements clients (hors POS)
+            # Avoirs classiques hors POS
+            wizard.count_refunds = self.env['account.move'].search_count([
+                ('move_type',     '=',  'out_refund'),
+                ('state',         '=',  'posted'),
+                ('sage_x3_sent',  '=',  False),
+                ('pos_order_ids', '=',  False),
+                ('company_id',    'in', company_ids),
+                ('invoice_date',  '>=', wizard.date_from),
+                ('invoice_date',  '<=', wizard.date_to),
+            ])
+
+            # Règlements clients qui seront inclus dans l'ENCAI (info seulement)
             wizard.count_payments = self.env['account.payment'].search_count([
-                ('payment_type', '=', 'inbound'),
-                ('partner_type', '=', 'customer'),
-                ('state', '=', 'paid'),
-                ('sage_x3_sent', '=', False),
-                ('pos_payment_method_id', '=', False),
-                ('pos_session_id', '=', False),
-                ('company_id', 'in', company_ids),
-                ('date', '>=', wizard.date_from),
-                ('date', '<=', wizard.date_to),
+                ('payment_type', '=',  'inbound'),
+                ('partner_type', '=',  'customer'),
+                ('state',        '=',  'paid'),
+                ('pos_order_id', '=',  False),
+                ('partner_id', '!=', False),
+                ('sage_x3_sent', '=',  False),
+                ('company_id',   'in', company_ids),
+                ('date',         '>=', wizard.date_from),
+                ('date',         '<=', wizard.date_to),
             ])
 
-            # Sessions POS clôturées non envoyées
-            wizard.count_pos_sessions = self.env['pos.session'].search_count([
-                ('company_id', 'in', company_ids),
-                ('state', '=', 'closed'),
-                ('start_at', '>=', str(wizard.date_from)),
-                ('start_at', '<=', str(wizard.date_to) + ' 23:59:59'),
-            ])
-
-    # -------------------------------------------------------------------------
-    # Action principale
-    # -------------------------------------------------------------------------
+    # =========================================================================
+    # ACTION PRINCIPALE
+    # =========================================================================
 
     def action_confirm_send(self):
-        """Lance l'envoi pour toutes les sociétés sélectionnées."""
+        """
+        Lance les envois dans cet ordre :
+          1. Récap journalier POS → ENCAI (ventes + règlements) + DECAI
+          2. Factures classiques hors POS → FACLI
+          3. Avoirs classiques hors POS   → AVCLI
+
+        Les account.payment sont inclus dans l'ENCAI du flux POS (étape 1).
+        Ils ne sont jamais envoyés séparément pour éviter les doublons.
+        """
         self.ensure_one()
 
-        account = self.env['account.move']
-        payment = self.env['account.payment']
+        company_ids    = self.company_ids.ids
+        account_model  = self.env['account.move']
 
-        # CORRECTION : utiliser company_ids (multi-société), pas env.company
-        company_ids = self.company_ids.ids
-
-        # Factures classiques (hors POS) — TOUTES les sociétés sélectionnées
-        pending_invoices = account.search([
-            ('move_type', '=', 'out_invoice'),
-            ('state', '=', 'posted'),
-            ('sage_x3_sent', '=', False),
-            ('pos_order_ids', '=', False),
-            ('company_id', 'in', company_ids),
-            ('invoice_date', '>=', self.date_from),
-            ('invoice_date', '<=', self.date_to),
+        # Factures et avoirs classiques hors POS (les deux types ensemble)
+        pending_invoices_and_refunds = account_model.search([
+            ('move_type',     'in', ['out_invoice', 'out_refund']),
+            ('state',         '=',  'posted'),
+            ('sage_x3_sent',  '=',  False),
+            ('pos_order_ids', '=',  False),
+            ('sage_sent',     '=',  True),
+            ('company_id',    'in', company_ids),
+            ('invoice_date',  '>=', self.date_from),
+            ('invoice_date',  '<=', self.date_to),
         ])
 
-        # Paiements clients (hors POS) — TOUTES les sociétés sélectionnées
-        pending_payments = payment.search([
-            ('payment_type', '=', 'inbound'),
-            ('partner_type', '=', 'customer'),
-            ('state', '=', 'paid'),
-            ('sage_x3_sent', '=', False),
-            ('pos_payment_method_id', '=', False),
-            ('pos_session_id', '=', False),
-            ('company_id', 'in', company_ids),
-            ('date', '>=', self.date_from),
-            ('date', '<=', self.date_to),
-        ])
+        _logger.info(
+            "📤 Envoi SAGE X3 | Sociétés: %s | Période: %s → %s | "
+            "Factures/Avoirs: %s",
+            self.company_ids.mapped('name'),
+            self.date_from,
+            self.date_to,
+            len(pending_invoices_and_refunds),
+        )
 
-        # --- Lancement des envois ---
-        result_pos = account._process_bulk_send_to_sage_x3(
+        # ── Flux 1 : Récap journalier POS (ENCAI + DECAI) ────────────────────
+        # Inclut automatiquement les account.payment du jour dans l'ENCAI
+        result_pos = account_model._process_bulk_send_to_sage_x3(
             self.date_from, self.date_to, company_ids
         )
-        result_sale = account._process_bulk_send_classic_invoices_to_sage_x3(
-            pending_invoices.ids
-        )
-        result_payments = payment._process_bulk_send_payments_to_sage_x3(
-            pending_payments.ids
+
+        # ── Flux 2 : Factures et avoirs classiques (FACLI / AVCLI) ───────────
+        result_invoices = account_model._process_bulk_send_classic_invoices_to_sage_x3(
+            pending_invoices_and_refunds.ids
         )
 
-        # --- Résumé ---
-        total_success = result_pos['success'] + result_sale['success'] + result_payments['success']
-        total_errors = result_pos['errors'] + result_sale['errors'] + result_payments['errors']
+        # ── Résumé ────────────────────────────────────────────────────────────
+        total_success = result_pos['success'] + result_invoices['success']
+        total_errors  = result_pos['errors']  + result_invoices['errors']
 
         if total_errors == 0:
-            title = '✅ Envoi terminé'
-            message = (
-                f"Toutes les données ont été envoyées avec succès.\n"
-                f"• Récaps POS : {result_pos['success']}\n"
-                f"• Factures classiques : {result_sale['success']}\n"
-                f"• Paiements : {result_payments['success']}"
+            title      = "✅ Envoi terminé avec succès"
+            notif_type = "success"
+            message    = (
+                f"Toutes les données ont été envoyées.\n"
+                f"• Récap caisse POS  : {result_pos['success']} journée(s)\n"
+                f"• Factures / Avoirs : {result_invoices['success']}"
             )
-            notif_type = 'success'
         else:
-            title = '⚠️ Envoi terminé avec erreurs'
-            lines = [
-                f"• Récaps POS : {result_pos['success']} succès / {result_pos['errors']} erreur(s)",
-                f"• Factures classiques : {result_sale['success']} succès / {result_sale['errors']} erreur(s)",
-                f"• Paiements : {result_payments['success']} succès / {result_payments['errors']} erreur(s)",
-            ]
-
-            # Détail des 5 premières erreurs
-            all_errors = (
-                result_pos['error_details']
-                + result_sale['error_details']
-                + result_payments['error_details']
+            title      = "⚠️ Envoi terminé avec erreurs"
+            notif_type = "warning"
+            message    = (
+                f"Récap caisse POS  : {result_pos['success']} succès "
+                f"/ {result_pos['errors']} erreur(s)\n"
+                f"Factures / Avoirs : {result_invoices['success']} succès "
+                f"/ {result_invoices['errors']} erreur(s)"
             )
-            if all_errors:
-                lines.append("\nDétail des erreurs (5 premières) :")
-                lines += [f"  - {e}" for e in all_errors[:5]]
-
-            message = '\n'.join(lines)
-            notif_type = 'warning'
-
-        # Journaliser le résumé complet
-        _logger.info(
-            "📊 Envoi SAGE X3 terminé — %s succès / %s erreur(s)",
-            total_success, total_errors
-        )
-        if total_errors > 0:
-            all_errors = (
-                result_pos['error_details']
-                + result_sale['error_details']
-                + result_payments['error_details']
-            )
-            for err in all_errors:
-                _logger.error("   ❌ %s", err)
+            # Logger le détail des erreurs
+            for err in result_pos['error_details'] + result_invoices['error_details']:
+                _logger.error("❌ %s", err)
 
         return {
             'type': 'ir.actions.client',
-            'tag': 'display_notification',
+            'tag':  'display_notification',
             'params': {
-                'title': title,
+                'title':   title,
                 'message': message,
-                'type': notif_type,
-                'sticky': True,
-                'next': {'type': 'ir.actions.client'},
-            }
+                'type':    notif_type,
+                'sticky':  True,
+                'next':    None,  # <-- plus d'erreur
+            },
         }

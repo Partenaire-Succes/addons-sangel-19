@@ -46,6 +46,14 @@
                                     options="{'no_create': True}"
                                     placeholder="41110000 - Client DIVERS"
                                     required="1"/>
+                                <field name="sage_x3_account_caisse_id"
+                                    options="{'no_create': True}"
+                                    placeholder="57110005 - Compte caisse"
+                                    required="1"/>
+                                <field name="sage_x3_account_ecart_caisse_id"
+                                    options="{'no_create': True}"
+                                    placeholder="77820000 - Ecart caisse"
+                                    required="1"/>
                             </group>
 
                             <group>

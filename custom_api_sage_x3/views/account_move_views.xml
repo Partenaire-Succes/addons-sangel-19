@@ -25,23 +25,4 @@
         </field>
     </record>
 
-    <record id="view_account_payment_btn_form_sage_x3" model="ir.ui.view">
-        <field name="name">account.payment.form.sage.x3</field>
-        <field name="model">account.payment</field>
-        <field name="inherit_id" ref="account.view_account_payment_form"/>
-        <field name="arch" type="xml">
-            
-            <!-- Champs SAGE X3 -->
-            <xpath expr="//header/button[@name='action_draft']" position="after">
-                <button name="action_send_all_pending_payments_to_sage_x3"
-                        type="object"
-                        string="Envoyer à SAGE X3"
-                        class="btn-primary"
-                        invisible="payment_type != 'inbound' or partner_type != 'customer' or sage_x3_sent"
-                        groups="account.group_account_manager"
-                        help="Envoie le paiement à SAGE X3"/>
-            </xpath>
-        </field>
-    </record>
-
 </odoo>

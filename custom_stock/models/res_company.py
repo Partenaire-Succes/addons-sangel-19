@@ -57,7 +57,7 @@ class ResCompany(models.Model):
      )
      sage_x3_journal_caisse = fields.Char(
           string="Journal caisse SAGE Magasin",
-          default="CAISSE",
+          default="CYL",
           help="Code journal caisse (ex: CAISSE)"
      )
      
@@ -75,6 +75,16 @@ class ResCompany(models.Model):
           string="Compte client par défaut",
           # domain="[('account_type', '=', 'asset_receivable'), ('company_id', '=', id)]",
           help="Compte 41110000 pour les clients DIVERS"
+     )
+     sage_x3_account_caisse_id = fields.Many2one(
+          'account.account',
+          string="Compte caisse",
+          help="Compte 57110005 pour les caisses des magasins"
+     )
+     sage_x3_account_ecart_caisse_id = fields.Many2one(
+          'account.account',
+          string="Compte de l'ecart de caisse",
+          help="Compte 77820000 pour les ecarts de caisses des magasins"
      )
      
      # Envoi automatique
