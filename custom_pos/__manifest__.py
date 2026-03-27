@@ -22,26 +22,24 @@
     'data': [
         'security/groups.xml',
         'security/ir.model.access.csv',
-        'security/security.xml',
+        # 'security/security.xml',
         'security/pos_security.xml',
         'data/ir_sequence_data.xml',
         'report/prelevement_ticket_report.xml',
         'report/prelevement_ticket_template.xml',
         'report/cloture_caisse_report.xml',
         'report/cloture_caisse_template.xml',
-        'report/recap_caisses_report.xml',
-        'report/recap_caisses_template.xml',
         'views/pos_config_inherit_views.xml',
         'views/pos_payment_method_inherit_views.xml',
         'views/pos_session_inherit_views.xml',
         'views/pos_order_promo_report_views.xml',
-        'views/recap_caisses_wizard_views.xml',
+        
     ],
     'images': ['static/description/banner.png'],
     'license': 'AGPL-3',
     'installable': True,
     'auto_install': False,
-    'application': False,
+    'application': True,
     
     "assets": {
         "point_of_sale._assets_pos": [

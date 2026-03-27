@@ -28,27 +28,37 @@ class ResCompany(models.Model):
      sage_x3_site = fields.Char(
           string="Site SAGE X3",
           default="SIEGE",
-          help="Code du site dans SAGE X3 (ex: SIEGE, ABIDJAN, etc.)"
+          help="Code du site dans SAGE X3"
+     )
+     sage_x3_type_facli = fields.Char(
+          string="Facture client SAGE X3",
+          default="FACLI",
+          help="Type de pièce facture client"
+     )
+     sage_x3_avcli = fields.Char(
+          string="Avoir client SAGE X3",
+          default="AVCLI",
+          help="Type de pièce avoir client"
+     )
+     sage_x3_type_encai = fields.Char(
+          string="Encaissement client SAGE X3",
+          default="ENCAI",
+          help="Type de pièce encaissement client"
+     )
+     sage_x3_type_decai = fields.Char(
+          string="Decaissement client SAGE X3",
+          default="DECAI",
+          help="Type de pièce decaissement client"
      )
      sage_x3_journal_sale = fields.Char(
           string="Journal ventes SAGE X3",
           default="VTE",
           help="Code journal des ventes (ex: VTE)"
      )
-
-
-     
-
-
-     sage_x3_journal_cash = fields.Char(
-          string="Journal caisse SAGE X3",
+     sage_x3_journal_caisse = fields.Char(
+          string="Journal caisse SAGE Magasin",
           default="CAISSE",
           help="Code journal caisse (ex: CAISSE)"
-     )
-     sage_x3_journal_bank = fields.Char(
-          string="Journal banque SAGE X3",
-          default="BQ",
-          help="Code journal banque (ex: BQ)"
      )
      
      # Compte de vente
@@ -65,38 +75,6 @@ class ResCompany(models.Model):
           string="Compte client par défaut",
           # domain="[('account_type', '=', 'asset_receivable'), ('company_id', '=', id)]",
           help="Compte 41110000 pour les clients DIVERS"
-     )
-     
-     # Comptes de trésorerie
-     sage_x3_account_cash_id = fields.Many2one(
-          'account.account',
-          string="Compte Espèces",
-          # domain="[('company_id', '=', id)]",
-          help="Compte 57xxxxx pour les paiements espèces"
-     )
-     sage_x3_account_check_id = fields.Many2one(
-          'account.account',
-          string="Compte Chèque",
-          # domain="[('company_id', '=', id)]",
-          help="Compte 521xxxxx pour les paiements chèque"
-     )
-     sage_x3_account_transfer_id = fields.Many2one(
-          'account.account',
-          string="Compte Virement",
-          # domain="[('company_id', '=', id)]",
-          help="Compte 585xxxxx pour les virements"
-     )
-     sage_x3_account_mobile_money_id = fields.Many2one(
-          'account.account',
-          string="Compte Mobile Money",
-          # domain="[('company_id', '=', id)]",
-          help="Compte pour Mobile Money"
-     )
-     sage_x3_account_tpe_id = fields.Many2one(
-          'account.account',
-          string="Compte TPE",
-          # domain="[('company_id', '=', id)]",
-          help="Compte pour paiements par TPE/Carte bancaire"
      )
      
      # Envoi automatique

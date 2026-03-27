@@ -26,7 +26,18 @@
                     <page name="sage_x3_accounting" string="SAGE X3 Comptabilité">
                         
                         <group string="Comptes Comptables">
-                            <group string="Ventes">
+                            <group string="Types de pieces">
+                                <field name="sage_x3_type_facli" required="1"/>
+                                <field name="sage_x3_avcli" required="1"/>
+                                <field name="sage_x3_type_encai" required="1"/>
+                                <field name="sage_x3_type_decai" required="1"/>
+                            </group>
+                            <group string="Journaux">
+                                <field name="sage_x3_site" required="1"/>
+                                <field name="sage_x3_journal_sale" required="1"/>
+                                <field name="sage_x3_journal_caisse" required="1"/>
+                            </group>
+                            <group string="Comptes">
                                 <field name="sage_x3_account_sale_id" 
                                     options="{'no_create': True}"
                                     placeholder="701xxxxx - Compte de vente unique"

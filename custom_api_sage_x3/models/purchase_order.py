@@ -36,7 +36,7 @@ class PurchaseOrderSageX3(models.Model):
         """Soumet toutes les commandes en attente de la société courante."""
         pending_orders = self.search([
             ('company_id',        '=',  self.env.company.id),
-            ('state',             'in', ['x3_pending']),
+            ('state',             'in', ['sent']),
             ('sage_x3_submitted', '=',  False),
             ('sage_x3_validated', '=',  False),
         ])
@@ -294,6 +294,7 @@ class PurchaseOrderSageX3(models.Model):
         """Mise à jour en masse des commandes avec leurs livraisons SAGE X3."""
         purchases = self.search([
             ('company_id',                '=',  self.env.company.id),
+            ('state',                     'in', ['purchase']),
             ('sage_x3_submitted',         '=',  True),
             ('sage_x3_validated',         '=',  True),
             ('sage_x3_delivery_received', '=',  False),

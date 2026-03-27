@@ -65,7 +65,7 @@ class RecapCaissesWizard(models.TransientModel):
 
     def action_print_report(self):
         self.ensure_one()
-        return self.env.ref('custom_pos.action_report_recap_caisses').report_action(self)
+        return self.env.ref('custom_reports.action_report_recap_caisses').report_action(self)
 
     # ------------------------------------------------------------------
     # Helpers

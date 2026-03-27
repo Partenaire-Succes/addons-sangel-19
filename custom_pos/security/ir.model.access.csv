@@ -1,8 +1,6 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_report_pos_order_promo_user,report.pos.order.promo user,model_report_pos_order_promo,point_of_sale.group_pos_user,1,0,0,0
 access_report_pos_order_promo_manager,report.pos.order.promo manager,model_report_pos_order_promo,point_of_sale.group_pos_manager,1,0,0,0
-access_recap_caisses_wizard_user,recap.caisses.wizard user,model_recap_caisses_wizard,point_of_sale.group_pos_user,1,1,1,1
-access_recap_caisses_wizard_manager,recap.caisses.wizard manager,model_recap_caisses_wizard,point_of_sale.group_pos_manager,1,1,1,1
 access_caissiere_pos_order,caissiere_pos_order,point_of_sale.model_pos_order,custom_pos.group_caissiere,1,1,1,0
 access_caissiere_pos_session,caissiere_pos_session,point_of_sale.model_pos_session,custom_pos.group_caissiere,1,1,0,0
 access_caissiere_pos_payment,caissiere_pos_payment,point_of_sale.model_pos_payment,custom_pos.group_caissiere,1,1,1,0

@@ -43,6 +43,7 @@
     ],
     'license': 'LGPL-3',
     'installable': True,
+    'application': True,
     'auto_install': False,
     
     'assets': {

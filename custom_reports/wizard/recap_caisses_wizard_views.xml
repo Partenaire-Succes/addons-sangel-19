@@ -60,7 +60,7 @@
         <menuitem
             id="menu_recap_caisses_wizard"
             name="Récapitulatif des Caisses"
-            parent="point_of_sale.menu_point_rep"
+            parent="custom_reports.menu_reports_sale"
             action="action_recap_caisses_wizard"
             sequence="30"/>
     </data>

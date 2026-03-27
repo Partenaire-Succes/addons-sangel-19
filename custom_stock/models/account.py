@@ -68,3 +68,7 @@ class AccountPaymentSageX3(models.Model):
         readonly=True,
         copy=False
     )
+    num_costomer_bank = fields.Char(
+        string="Numéro de compte bancaire client",
+        copy=False
+    )
