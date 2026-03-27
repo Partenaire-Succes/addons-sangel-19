@@ -39,6 +39,9 @@
         'wizard/cadencier_sale_view.xml',
         'report/report_catalog_template.xml',
         'wizard/catalog_product_report_wizard.xml',
+        'wizard/retours_consolides_report_wizard_views.xml',
+        'report/report_retours_consolides_template.xml',
+
         'report/recap_caisses_report.xml',
         'report/recap_caisses_template.xml',
         'wizard/recap_caisses_wizard_views.xml',

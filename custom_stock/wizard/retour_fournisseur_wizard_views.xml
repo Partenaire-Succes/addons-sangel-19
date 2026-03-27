@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         VUE FORMULAIRE — Retour fournisseur
+         BLOC 5 : Création bon de retour + avoir optionnel
+         Syntaxe Odoo 19 : invisible/readonly directs, pas d'attrs
+         ══════════════════════════════════════════════════════════════════════ -->
+
+    <record id="view_retour_fournisseur_wizard_form" model="ir.ui.view">
+        <field name="name">retour.fournisseur.wizard.form</field>
+        <field name="model">retour.fournisseur.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Retour fournisseur">
+
+                <sheet>
+                    <div class="oe_title">
+                        <h1>Retour fournisseur</h1>
+                        <h3 class="text-muted">Bon de retour stock + avoir comptable optionnel</h3>
+                    </div>
+
+                    <group>
+                        <group string="Fournisseur et dates">
+                            <field name="partner_id"
+                                   options="{'no_create': True, 'no_create_edit': True}"
+                                   required="1"/>
+                            <field name="scheduled_date"/>
+                            <field name="ref_externe"
+                                   placeholder="N° retour, référence litige…"/>
+                        </group>
+                        <group string="Stock et options">
+                            <field name="location_src_id"
+                                   options="{'no_create': True}"/>
+                            <field name="generer_avoir"/>
+                            <field name="notes"
+                                   placeholder="Raison du retour, informations complémentaires…"/>
+                        </group>
+                    </group>
+
+                    <!-- Bannière avoir -->
+                    <div class="alert alert-warning" role="alert"
+                         invisible="not generer_avoir">
+                        <i class="fa fa-file-text-o"/>
+                        Un avoir fournisseur <strong>(brouillon)</strong> sera créé automatiquement
+                        pour la valeur des articles retournés. Vous devrez le valider manuellement.
+                    </div>
+
+                    <notebook>
+                        <page string="Articles à retourner">
+                            <field name="line_ids">
+                                <list editable="bottom"
+                                      decoration-danger="qty > stock_disponible">
+                                    <field name="product_id"
+                                           options="{'no_create': True}"
+                                           required="1"/>
+                                    <field name="stock_disponible"
+                                           string="Stock dispo"
+                                           readonly="1"/>
+                                    <field name="qty"
+                                           string="Qté à retourner"
+                                           required="1"/>
+                                    <field name="product_uom_id"
+                                           options="{'no_create': True}"/>
+                                    <field name="price_unit"
+                                           string="Prix unitaire"/>
+                                </list>
+                            </field>
+                            <div class="alert alert-info mt-2" role="alert">
+                                <i class="fa fa-info-circle"/>
+                                Les lignes en <strong>rouge</strong> indiquent un stock insuffisant.
+                                Le picking sera créé mais pourrait ne pas être disponible à la validation.
+                            </div>
+                        </page>
+                    </notebook>
+                </sheet>
+
+                <footer>
+                    <button
+                        name="action_valider"
+                        string="Créer le bon de retour"
+                        type="object"
+                        class="btn-primary"
+                        data-hotkey="q"
+                        confirm="Confirmer la création du bon de retour fournisseur ?"
+                    />
+                    <button
+                        string="Annuler"
+                        class="btn-secondary"
+                        special="cancel"
+                        data-hotkey="x"
+                    />
+                </footer>
+
+            </form>
+        </field>
+    </record>
+
+    <!-- Vue liste dédiée retours fournisseur -->
+    <record id="view_retour_fournisseur_picking_list" model="ir.ui.view">
+        <field name="name">retour.fournisseur.picking.list</field>
+        <field name="model">stock.picking</field>
+        <field name="arch" type="xml">
+            <list string="Historique retours fournisseur"
+                  default_order="scheduled_date desc">
+                <field name="name" string="Référence"/>
+                <field name="scheduled_date" string="Date"/>
+                <field name="partner_id" string="Fournisseur"/>
+                <field name="location_id" string="Depuis"/>
+                <field name="origin" string="Référence retour"/>
+                <field name="note" string="Notes"/>
+                <field name="state" string="État"
+                       decoration-success="state == 'done'"
+                       decoration-warning="state == 'assigned'"
+                       decoration-muted="state == 'cancel'"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Action liste historique retours fournisseur -->
+    <record id="action_retour_fournisseur_list" model="ir.actions.act_window">
+        <field name="name">Historique retours fournisseur</field>
+        <field name="res_model">stock.picking</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_retour_fournisseur_picking_list"/>
+        <field name="domain">[('location_dest_id.usage', '=', 'supplier'), ('picking_type_code', '=', 'incoming')]</field>
+        <field name="context">{}</field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         ACTION WINDOW wizard
+         ══════════════════════════════════════════════════════════════════════ -->
+
+    <record id="action_retour_fournisseur_wizard" model="ir.actions.act_window">
+        <field name="name">Retour fournisseur</field>
+        <field name="res_model">retour.fournisseur.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="context">{}</field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         MENUS — Sous le menu "Retours" existant (créé par BLOC 3)
+         Accès restreint : pas de Caissières
+         ══════════════════════════════════════════════════════════════════════ -->
+
+    <menuitem
+        id="menu_retour_fournisseur_new"
+        name="Nouveau retour fournisseur"
+        parent="custom_stock.menu_retour_carton_root"
+        action="action_retour_fournisseur_wizard"
+        sequence="20"
+        groups="custom_pos.group_superviseur,custom_pos.group_assistant_magasin,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
+    />
+    <menuitem
+        id="menu_retour_fournisseur_list"
+        name="Historique retours fournisseur"
+        parent="custom_stock.menu_retour_carton_root"
+        action="action_retour_fournisseur_list"
+        sequence="30"
+        groups="custom_pos.group_superviseur,custom_pos.group_assistant_magasin,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
+    />
+
+</odoo>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!--
+        BLOC 4 — Héritage de la vue physical.inventory
+        Ajout du bouton "Générer un avoir" dans le header,
+        visible uniquement quand state='done' ET qu'il y a des manquants.
+        Position : après le bouton "Imprimer Inventaire".
+    -->
+
+    <record id="view_physical_inventory_form_retour_inherit" model="ir.ui.view">
+        <field name="name">physical.inventory.form.retour.inherit</field>
+        <field name="model">physical.inventory</field>
+        <field name="inherit_id" ref="custom_stock.view_physical_inventory_form"/>
+        <field name="arch" type="xml">
+
+            <xpath expr="//button[@name='action_print_inventaire_report']" position="after">
+                <button
+                    name="action_open_retour_inventaire"
+                    string="Générer un avoir"
+                    type="object"
+                    class="btn-warning"
+                    icon="fa-file-text-o"
+                    invisible="state != 'done'"
+                    groups="custom_pos.group_superviseur,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
+                    help="Génère un avoir ou une facture fournisseur pour les manquants détectés lors de l'inventaire."
+                />
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>

@@ -2,12 +2,10 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-<<<<<<< HEAD
-<<<<<<< HEAD
+
 filestore
 session
  
-=======
 
 .DS_Store
 *.pyc
@@ -24,6 +22,4 @@ __pycache__
 sessions
 filestore
 
->>>>>>> origin/marcel_dev
-=======
->>>>>>> 0ebd013e7b51c338792b57258903933a0b2a7a69
+

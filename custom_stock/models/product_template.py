@@ -136,6 +136,21 @@ class ProductTemplateInherit(models.Model):
 
     old_price = fields.Float("Ancien prix", readonly=True)
 
+    purchase_new_price = fields.Float(
+        string="Nouveau prix d'achat",
+        digits='Product Price',
+        default=0.0,
+        help="Prix d'achat saisi lors d'une réception directe. "
+             "Si renseigné (> 0), c'est ce prix qui est utilisé comme coût de référence "
+             "à la place du prix standard.",
+    )
+    effective_cost = fields.Float(
+        string="Coût effectif",
+        compute="_compute_effective_cost",
+        digits='Product Price',
+        help="Coût effectif = nouveau prix d'achat si défini, sinon prix standard.",
+    )
+
     ##################################- Champs Sage X3 ##################################
 
     cat_gestion_id = fields.Many2one(
@@ -279,6 +294,15 @@ class ProductTemplateInherit(models.Model):
                 units = tmpl.pack_child_product_id.qty_available
                 tmpl.pack_equiv_units_available = units
                 tmpl.pack_equiv_cartons_available = units // tmpl.pack_qty
+
+    @api.depends('standard_price', 'purchase_new_price')
+    def _compute_effective_cost(self):
+        for tmpl in self:
+            tmpl.effective_cost = (
+                tmpl.purchase_new_price
+                if tmpl.purchase_new_price and tmpl.purchase_new_price > 0
+                else tmpl.standard_price
+            )
 
     @api.constrains("is_pack_parent", "pack_child_product_id", "pack_qty")
     def _check_pack_config(self):

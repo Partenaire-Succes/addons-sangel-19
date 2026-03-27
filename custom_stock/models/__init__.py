@@ -29,4 +29,5 @@ from . import (
     stock_product_multicompany_view,
     account,
     company_state,
+    physical_inventory_retour,
 )

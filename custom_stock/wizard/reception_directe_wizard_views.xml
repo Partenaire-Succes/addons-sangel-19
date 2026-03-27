@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <record id="view_reception_directe_wizard_form" model="ir.ui.view">
+        <field name="name">reception.directe.wizard.form</field>
+        <field name="model">reception.directe.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Réception directe sans commande">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>Réception directe</h1>
+                    </div>
+
+                    <group>
+                        <group>
+                            <field name="partner_id"
+                                   options="{'no_create': True, 'no_create_edit': True}"
+                                   placeholder="Fournisseur (facultatif)"/>
+                            <field name="scheduled_date"/>
+                        </group>
+                        <group>
+                            <field name="location_dest_id"
+                                   options="{'no_create': True}"/>
+                            <field name="notes" placeholder="Référence BL, remarque…"/>
+                        </group>
+                    </group>
+
+                    <field name="line_ids">
+                        <list editable="bottom"
+                              decoration-warning="nouveau_prix &gt; 0">
+                            <field name="product_id"
+                                   options="{'no_create': True}"
+                                   required="1"/>
+                            <field name="qty" required="1"/>
+                            <field name="product_uom_id"
+                                   options="{'no_create': True}"/>
+                            <field name="price_unit"
+                                   string="Coût actuel"
+                                   readonly="1"/>
+                            <field name="nouveau_prix"
+                                   string="Nouveau prix d'achat"
+                                   optional="show"/>
+                        </list>
+                    </field>
+
+                    <div class="alert alert-info mt-2" role="alert"
+                         style="font-size: 85%;">
+                        <strong>Nouveau prix d'achat :</strong>
+                        Laisser à 0 pour conserver le coût actuel.
+                        Si renseigné, il devient le nouveau coût de référence du produit.
+                        Les lignes en <strong>orange</strong> ont un nouveau prix saisi.
+                    </div>
+                </sheet>
+
+                <footer>
+                    <button name="action_valider"
+                            string="Valider la réception"
+                            type="object"
+                            class="btn-primary"
+                            data-hotkey="q"
+                            confirm="Confirmer la réception ? Le stock sera mis à jour immédiatement."/>
+                    <button string="Annuler"
+                            class="btn-secondary"
+                            special="cancel"
+                            data-hotkey="x"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_reception_directe_wizard" model="ir.actions.act_window">
+        <field name="name">Nouvelle réception directe</field>
+        <field name="res_model">reception.directe.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Vue liste dédiée réceptions directes -->
+    <record id="view_reception_directe_picking_list" model="ir.ui.view">
+        <field name="name">reception.directe.picking.list</field>
+        <field name="model">stock.picking</field>
+        <field name="arch" type="xml">
+            <list string="Historique réceptions directes"
+                  default_order="scheduled_date desc">
+                <field name="name" string="Référence"/>
+                <field name="scheduled_date" string="Date"/>
+                <field name="partner_id" string="Fournisseur"/>
+                <field name="location_dest_id" string="Destination"/>
+                <field name="note" string="Référence / Notes"/>
+                <field name="state" string="État"
+                       decoration-success="state == 'done'"
+                       decoration-warning="state == 'assigned'"
+                       decoration-muted="state == 'cancel'"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Action liste historique (pickings créés) -->
+    <record id="action_reception_directe_list" model="ir.actions.act_window">
+        <field name="name">Historique réceptions directes</field>
+        <field name="res_model">stock.picking</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_reception_directe_picking_list"/>
+        <field name="domain">[('origin', '=', 'Réception Directe'), ('picking_type_code', '=', 'incoming')]</field>
+        <field name="context">{'search_default_done': 1}</field>
+    </record>
+
+    <!-- Menus -->
+    <menuitem
+        id="menu_reception_directe_root"
+        name="Réceptions Directes"
+        parent="stock.menu_stock_root"
+        sequence="25"
+        groups="custom_pos.group_superviseur,custom_pos.group_assistant_magasin,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
+    />
+    <menuitem
+        id="menu_reception_directe_new"
+        name="Nouvelle réception directe"
+        parent="menu_reception_directe_root"
+        action="action_reception_directe_wizard"
+        sequence="10"
+        groups="custom_pos.group_superviseur,custom_pos.group_assistant_magasin,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
+    />
+    <menuitem
+        id="menu_reception_directe_list"
+        name="Historique des réceptions"
+        parent="menu_reception_directe_root"
+        action="action_reception_directe_list"
+        sequence="20"
+        groups="custom_pos.group_superviseur,custom_pos.group_assistant_magasin,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
+    />
+
+</odoo>

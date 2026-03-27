@@ -1,0 +1,349 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <template id="report_retours_consolides_document">
+        <t t-call="web.html_container">
+        <t t-foreach="docs" t-as="doc">
+        <t t-set="data" t-value="doc._get_report_data()"/>
+        <t t-call="web.external_layout">
+            <div class="page">
+
+                <style>
+                    body, .page { font-family: Arial, sans-serif; font-size: 9pt; color: #1a1a1a; }
+
+                    /* ── En-tête rapport ── */
+                    .rpt-header {
+                        border-top: 3px solid #1a5276;
+                        border-bottom: 1px solid #1a5276;
+                        padding: 8px 0 6px 0;
+                        margin-bottom: 12px;
+                    }
+                    .rpt-title {
+                        font-size: 13pt;
+                        font-weight: bold;
+                        color: #1a5276;
+                        letter-spacing: 0.5px;
+                        text-transform: uppercase;
+                    }
+                    .rpt-meta {
+                        font-size: 8.5pt;
+                        color: #555;
+                        margin-top: 3px;
+                    }
+                    .rpt-meta strong { color: #1a1a1a; }
+
+                    /* ── Titres de section ── */
+                    .sec-title {
+                        font-size: 10.5pt;
+                        font-weight: bold;
+                        color: #fff;
+                        background-color: #1a5276;
+                        padding: 5px 10px;
+                        margin: 16px 0 0 0;
+                        border-radius: 2px 2px 0 0;
+                    }
+                    .sec-subtitle {
+                        font-size: 8pt;
+                        color: #777;
+                        font-style: italic;
+                        margin: 0 0 5px 0;
+                        padding: 2px 4px;
+                        background: #eaf2f8;
+                        border-left: 3px solid #aed6f1;
+                    }
+
+                    /* ── Tableaux ── */
+                    table.tbl {
+                        width: 100%;
+                        border-collapse: collapse;
+                        font-size: 8pt;
+                        margin-bottom: 4px;
+                    }
+                    table.tbl thead tr {
+                        background-color: #d6eaf8;
+                    }
+                    table.tbl th {
+                        border: 1px solid #85c1e9;
+                        padding: 4px 6px;
+                        font-weight: bold;
+                        color: #1a5276;
+                        white-space: nowrap;
+                    }
+                    table.tbl td {
+                        border: 1px solid #d0d0d0;
+                        padding: 3px 6px;
+                        vertical-align: middle;
+                    }
+                    table.tbl tbody tr:nth-child(even) td {
+                        background-color: #f5f9fd;
+                    }
+                    table.tbl tbody tr:hover td {
+                        background-color: #eaf4fb;
+                    }
+                    .num { text-align: right; white-space: nowrap; }
+                    .ctr { text-align: center; }
+
+                    /* ── Prix modifié ── */
+                    .prix-modifie {
+                        color: #c0392b;
+                        font-weight: bold;
+                    }
+                    .badge-nouveau {
+                        background: #fdebd0;
+                        border: 1px solid #f0a500;
+                        color: #7d4000;
+                        border-radius: 3px;
+                        padding: 0 4px;
+                        font-size: 7pt;
+                        font-weight: bold;
+                    }
+
+                    /* ── Lignes de total ── */
+                    tr.tr-subtotal td {
+                        background-color: #d6eaf8 !important;
+                        font-weight: bold;
+                        border-top: 2px solid #1a5276;
+                        font-size: 8.5pt;
+                    }
+
+                    /* ── Statuts avoir ── */
+                    .etat-draft { color: #856404; font-style: italic; }
+                    .etat-posted { color: #1e8449; font-weight: bold; }
+
+                    /* ── Message vide ── */
+                    .empty-msg {
+                        color: #888;
+                        font-style: italic;
+                        padding: 6px 10px;
+                        background: #fafafa;
+                        border: 1px dashed #ccc;
+                        margin: 4px 0 10px 0;
+                        font-size: 8pt;
+                    }
+
+                    /* ── Récapitulatif ── */
+                    table.tbl-recap {
+                        width: 45%;
+                        margin-left: 55%;
+                        border-collapse: collapse;
+                        margin-top: 20px;
+                        font-size: 9pt;
+                    }
+                    table.tbl-recap td {
+                        padding: 5px 8px;
+                        border: 1px solid #aaa;
+                    }
+                    .recap-label { color: #333; }
+                    .recap-row td { background-color: #eaf2f8; }
+                    .recap-total td {
+                        background-color: #1a5276;
+                        color: #fff;
+                        font-weight: bold;
+                        font-size: 10pt;
+                        border-color: #1a5276;
+                    }
+                    .recap-total .num { font-size: 11pt; }
+                </style>
+
+                <!-- ══ EN-TÊTE ══════════════════════════════════════════════ -->
+                <div class="rpt-header">
+                    <div class="rpt-title">Rapport Consolidé — Retours et Réceptions</div>
+                    <div class="rpt-meta">
+                        Période : <strong><t t-esc="data['date_from']"/> au <t t-esc="data['date_to']"/></strong>
+                        &amp;nbsp;&amp;nbsp;·&amp;nbsp;&amp;nbsp;
+                        Société : <strong><t t-esc="data['company'].name"/></strong>
+                        &amp;nbsp;&amp;nbsp;·&amp;nbsp;&amp;nbsp;
+                        Devise : <strong><t t-esc="data['currency'].name"/></strong>
+                    </div>
+                </div>
+
+                <!-- ══ SECTION 1 : Réceptions directes ═════════════════════ -->
+                <div class="sec-title">1 · Réceptions directes (sans bon de commande)</div>
+                <div class="sec-subtitle">
+                    Entrées de stock validées manuellement — le prix de réception est le coût gravé sur le mouvement.
+                    Les prix en rouge indiquent un coût modifié par rapport au prix standard.
+                </div>
+
+                <t t-if="data['receptions_directes']">
+                    <table class="tbl">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Référence</th>
+                                <th>Fournisseur</th>
+                                <th>Article</th>
+                                <th class="num">Qté</th>
+                                <th class="ctr">UdM</th>
+                                <th class="num">Prix standard</th>
+                                <th class="num">Prix réception</th>
+                                <th class="num">Montant</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="data['receptions_directes']" t-as="row">
+                                <tr>
+                                    <td><t t-esc="row['date']"/></td>
+                                    <td><t t-esc="row['reference']"/></td>
+                                    <td><t t-esc="row['fournisseur']"/></td>
+                                    <td><t t-esc="row['produit']"/></td>
+                                    <td class="num"><t t-esc="'%.2f' % row['qty']"/></td>
+                                    <td class="ctr"><t t-esc="row['uom']"/></td>
+                                    <td class="num"><t t-esc="'%.2f' % row['prix_standard']"/></td>
+                                    <td class="num">
+                                        <t t-if="row['a_nouveau_prix']">
+                                            <span class="prix-modifie">
+                                                <t t-esc="'%.2f' % row['prix_reception']"/>
+                                            </span>
+                                            <span class="badge-nouveau">MAJ</span>
+                                        </t>
+                                        <t t-else="">
+                                            <t t-esc="'%.2f' % row['prix_reception']"/>
+                                        </t>
+                                    </td>
+                                    <td class="num"><t t-esc="data['fmt'](row['montant'])"/></td>
+                                </tr>
+                            </t>
+                            <tr class="tr-subtotal">
+                                <td colspan="8" class="num">Sous-total réceptions directes</td>
+                                <td class="num"><t t-esc="data['fmt'](data['total_receptions'])"/></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </t>
+                <t t-else="">
+                    <p class="empty-msg">Aucune réception directe validée sur cette période.</p>
+                </t>
+
+                <!-- ══ SECTION 2 : Retours fournisseurs ════════════════════ -->
+                <div class="sec-title">2 · Retours fournisseurs</div>
+                <div class="sec-subtitle">
+                    Sorties de stock vers le fournisseur — bons de retour créés et validés.
+                </div>
+
+                <t t-if="data['retours_fournisseur']">
+                    <table class="tbl">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Référence BdR</th>
+                                <th>Réf. externe</th>
+                                <th>Fournisseur</th>
+                                <th>Article</th>
+                                <th class="num">Qté</th>
+                                <th class="ctr">UdM</th>
+                                <th class="num">Prix unitaire</th>
+                                <th class="num">Montant</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="data['retours_fournisseur']" t-as="row">
+                                <tr>
+                                    <td><t t-esc="row['date']"/></td>
+                                    <td><t t-esc="row['reference']"/></td>
+                                    <td><t t-esc="row['origine']"/></td>
+                                    <td><t t-esc="row['fournisseur']"/></td>
+                                    <td><t t-esc="row['produit']"/></td>
+                                    <td class="num"><t t-esc="'%.2f' % row['qty']"/></td>
+                                    <td class="ctr"><t t-esc="row['uom']"/></td>
+                                    <td class="num"><t t-esc="'%.2f' % row['prix_unitaire']"/></td>
+                                    <td class="num"><t t-esc="data['fmt'](row['montant'])"/></td>
+                                </tr>
+                            </t>
+                            <tr class="tr-subtotal">
+                                <td colspan="8" class="num">Sous-total retours fournisseurs</td>
+                                <td class="num"><t t-esc="data['fmt'](data['total_retours_four'])"/></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </t>
+                <t t-else="">
+                    <p class="empty-msg">Aucun retour fournisseur validé sur cette période.</p>
+                </t>
+
+                <!-- ══ SECTION 3 : Retours inventaires ═════════════════════ -->
+                <div class="sec-title">3 · Retours inventaires — Avoirs fournisseurs</div>
+                <div class="sec-subtitle">
+                    Documents comptables (avoirs) générés depuis les inventaires physiques — aucun mouvement de stock.
+                </div>
+
+                <t t-if="data['retours_inventaire']">
+                    <table class="tbl">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>N° Avoir</th>
+                                <th>Réf. inventaire</th>
+                                <th>Fournisseur</th>
+                                <th>Article</th>
+                                <th class="num">Qté</th>
+                                <th class="num">Prix unitaire</th>
+                                <th class="num">Montant</th>
+                                <th class="ctr">État</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="data['retours_inventaire']" t-as="row">
+                                <tr>
+                                    <td><t t-esc="row['date']"/></td>
+                                    <td><t t-esc="row['reference']"/></td>
+                                    <td><t t-esc="row['origine']"/></td>
+                                    <td><t t-esc="row['fournisseur']"/></td>
+                                    <td><t t-esc="row['produit']"/></td>
+                                    <td class="num"><t t-esc="'%.2f' % row['qty']"/></td>
+                                    <td class="num"><t t-esc="'%.2f' % row['prix_unitaire']"/></td>
+                                    <td class="num"><t t-esc="data['fmt'](row['montant'])"/></td>
+                                    <td class="ctr">
+                                        <span t-attf-class="etat-{{ row['etat_code'] }}">
+                                            <t t-esc="row['etat']"/>
+                                        </span>
+                                    </td>
+                                </tr>
+                            </t>
+                            <tr class="tr-subtotal">
+                                <td colspan="7" class="num">Sous-total avoirs inventaires</td>
+                                <td class="num"><t t-esc="data['fmt'](data['total_retours_inv'])"/></td>
+                                <td/>
+                            </tr>
+                        </tbody>
+                    </table>
+                </t>
+                <t t-else="">
+                    <p class="empty-msg">Aucun avoir inventaire sur cette période.</p>
+                </t>
+
+                <!-- ══ RÉCAPITULATIF ════════════════════════════════════════ -->
+                <table class="tbl-recap">
+                    <tr class="recap-row">
+                        <td class="recap-label">Réceptions directes</td>
+                        <td class="num"><t t-esc="data['fmt'](data['total_receptions'])"/></td>
+                    </tr>
+                    <tr class="recap-row">
+                        <td class="recap-label">Retours fournisseurs</td>
+                        <td class="num"><t t-esc="data['fmt'](data['total_retours_four'])"/></td>
+                    </tr>
+                    <tr class="recap-row">
+                        <td class="recap-label">Avoirs inventaires</td>
+                        <td class="num"><t t-esc="data['fmt'](data['total_retours_inv'])"/></td>
+                    </tr>
+                    <tr class="recap-total">
+                        <td><strong>TOTAL GÉNÉRAL</strong></td>
+                        <td class="num"><t t-esc="data['fmt'](data['grand_total'])"/></td>
+                    </tr>
+                </table>
+
+            </div>
+        </t>
+        </t>
+        </t>
+    </template>
+
+    <record id="action_report_retours_consolides" model="ir.actions.report">
+        <field name="name">Rapport Consolidé Retours</field>
+        <field name="model">retours.consolides.report.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">custom_reports.report_retours_consolides_document</field>
+        <field name="report_file">custom_reports.report_retours_consolides_document</field>
+        <field name="paperformat_id" ref="base.paperformat_euro"/>
+    </record>
+
+</odoo>

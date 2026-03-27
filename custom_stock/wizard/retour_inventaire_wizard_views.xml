@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         VUE FORMULAIRE — Wizard retour inventaire → avoir/facture fournisseur
+         BLOC 4 : Génération document comptable depuis physical.inventory
+         ══════════════════════════════════════════════════════════════════════ -->
+
+    <record id="view_retour_inventaire_wizard_form" model="ir.ui.view">
+        <field name="name">retour.inventaire.wizard.form</field>
+        <field name="model">retour.inventaire.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Générer un avoir / une facture fournisseur">
+                <header>
+                    <button
+                        name="action_generer_document"
+                        string="Générer le document"
+                        type="object"
+                        class="btn-primary"
+                        confirm="Confirmer la génération du document comptable ?"
+                    />
+                    <button
+                        string="Annuler"
+                        class="btn-secondary"
+                        special="cancel"
+                    />
+                </header>
+
+                <sheet>
+                    <div class="oe_title">
+                        <h1>Retour inventaire — Document fournisseur</h1>
+                    </div>
+
+                    <!-- Bannière d'info -->
+                    <div class="alert alert-info" role="alert">
+                        <i class="fa fa-info-circle"/>
+                        Les lignes ci-dessous correspondent aux <strong>manquants</strong>
+                        détectés lors de l'inventaire physique
+                        <strong><field name="inventory_id" readonly="1" nolabel="1"/></strong>.
+                        Sélectionnez les lignes à inclure et ajustez les quantités si nécessaire.
+                    </div>
+
+                    <group>
+                        <group string="Document à générer">
+                            <field name="type_document"/>
+                            <field name="invoice_date"/>
+                            <field name="ref_externe"
+                                   placeholder="N° BL, référence contrat…"/>
+                        </group>
+                        <group string="Fournisseur">
+                            <field name="partner_id"
+                                   options="{'no_create': True}"/>
+                            <field name="inventory_id" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Lignes manquantes">
+                            <field name="line_ids">
+                                <list editable="bottom"
+                                      decoration-muted="not selected">
+                                    <field name="selected" widget="boolean_toggle"/>
+                                    <field name="product_id" readonly="1"/>
+                                    <field name="qty_manquant" readonly="1"
+                                           string="Manquant constaté"/>
+                                    <field name="qty_retour"
+                                           string="Qté incluse"/>
+                                    <field name="price_unit"/>
+                                    <field name="subtotal" readonly="1" sum="Total"/>
+                                    <field name="inventory_line_id" column_invisible="1"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         ACTION — ouverture du wizard depuis physical.inventory
+         ══════════════════════════════════════════════════════════════════════ -->
+
+    <record id="action_retour_inventaire_wizard" model="ir.actions.act_window">
+        <field name="name">Générer un avoir / une facture</field>
+        <field name="res_model">retour.inventaire.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="context">{}</field>
+    </record>
+
+</odoo>

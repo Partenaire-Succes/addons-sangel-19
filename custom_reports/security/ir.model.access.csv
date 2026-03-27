@@ -9,5 +9,6 @@ access_stock_adjustment_report_wizard_user,stock.adjustment.report.wizard.user,m
 access_report_daily_sales_wizard_user,report.daily.sales.wizard.user,model_report_daily_sales_wizard,,1,1,1,1
 access_cadencier_ventes_wizard_user,cadencier.ventes.wizard.user,model_cadencier_ventes_wizard,,1,1,1,1
 access_product_report_wizard,product.report.wizard,model_product_report_wizard,,1,1,1,1
+access_retours_consolides_report_wizard,retours.consolides.report.wizard,model_retours_consolides_report_wizard,,1,1,1,1
 access_recap_caisses_wizard_user,recap.caisses.wizard_user,model_recap_caisses_wizard,point_of_sale.group_pos_user,1,1,1,1
 access_recap_caisses_wizard_manager,recap.caisses.wizard_manager,model_recap_caisses_wizard,point_of_sale.group_pos_manager,1,1,1,1

@@ -2,6 +2,7 @@
 {
     'name': 'CFAO - Tableau de Bord Quotidien',
     'version': '19.0.1.0.0',
+    'sequence': -16,
     'category': 'Sales/Reporting',
     'summary': 'Rapport quotidien multi-société : CA, Marge, Débits, Stock par rayon',
     'description': """
@@ -29,6 +30,6 @@
         'report/cfao_dashboard_template.xml',
     ],
     'installable': True,
-    'application': False,
+    'application': True,
     'license': 'LGPL-3',
 }

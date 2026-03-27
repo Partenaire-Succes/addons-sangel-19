@@ -1,10 +1,100 @@
 /** @odoo-module **/
 
 import { TicketScreen } from "@point_of_sale/app/screens/ticket_screen/ticket_screen";
+import { InvoiceButton } from "@point_of_sale/app/screens/ticket_screen/invoice_button/invoice_button";
 import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 import { _t } from "@web/core/l10n/translation";
 import { rpc } from "@web/core/network/rpc";
 import { patch } from "@web/core/utils/patch";
+
+// ============================================================
+// HELPER MODULE — Popup code d'accès (partagé par tous les patches)
+// ============================================================
+
+/**
+ * Affiche une popup code d'accès native DOM (sans dépendance OWL).
+ * @param {string} actionLabel  — libellé de l'action demandée
+ * @returns {Promise<string|null>}  — code saisi, ou null si annulation
+ */
+function _showCodePromptDialog(actionLabel) {
+    return new Promise((resolve) => {
+        const overlay = document.createElement("div");
+        overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;";
+
+        const box = document.createElement("div");
+        box.style.cssText = "background:#fff;padding:24px;border-radius:8px;box-shadow:0 0 15px rgba(0,0,0,0.3);min-width:340px;max-width:460px;";
+
+        const title = document.createElement("h3");
+        title.style.cssText = "color:#e67e22;margin-bottom:12px;font-size:16px;";
+        title.innerText = "🔐 Code d'accès requis";
+        box.appendChild(title);
+
+        const msg = document.createElement("p");
+        msg.style.cssText = "margin-bottom:14px;color:#555;font-size:14px;white-space:pre-wrap;";
+        msg.innerText = `Action : ${actionLabel}\nUn code d'accès superviseur est requis.`;
+        box.appendChild(msg);
+
+        const input = document.createElement("input");
+        input.type = "password";
+        input.placeholder = "Entrez le code d'accès";
+        input.style.cssText = "width:100%;padding:10px;margin-bottom:14px;border:1px solid #ccc;border-radius:4px;font-size:15px;box-sizing:border-box;";
+        box.appendChild(input);
+
+        const btnRow = document.createElement("div");
+        btnRow.style.cssText = "display:flex;justify-content:flex-end;gap:10px;";
+
+        const cancelBtn = document.createElement("button");
+        cancelBtn.innerText = "Annuler";
+        cancelBtn.style.cssText = "padding:9px 20px;border:1px solid #ccc;border-radius:4px;background:#f8f9fa;cursor:pointer;font-size:14px;";
+        cancelBtn.onclick = () => { document.body.removeChild(overlay); resolve(null); };
+
+        const okBtn = document.createElement("button");
+        okBtn.innerText = "Valider";
+        okBtn.style.cssText = "padding:9px 20px;border:none;border-radius:4px;background:#e67e22;color:#fff;cursor:pointer;font-size:14px;";
+        okBtn.onclick = () => { document.body.removeChild(overlay); resolve(input.value); };
+
+        input.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") okBtn.click();
+            else if (e.key === "Escape") cancelBtn.click();
+        });
+
+        btnRow.appendChild(cancelBtn);
+        btnRow.appendChild(okBtn);
+        box.appendChild(btnRow);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+        input.focus();
+    });
+}
+
+/**
+ * Vérifie si la caissière est autorisée à effectuer une action.
+ * @param {boolean} isCaissiere    — this.pos.user._is_caissiere
+ * @param {string}  code_acces     — this.pos.config.code_acces
+ * @param {object}  dialog         — service dialog (this.dialog)
+ * @param {string}  actionLabel    — libellé de l'action
+ * @returns {Promise<boolean>}
+ */
+async function _checkCaissiereCodeAccess(isCaissiere, code_acces, dialog, actionLabel) {
+    if (!isCaissiere) return true;
+    if (!code_acces) {
+        dialog.add(AlertDialog, {
+            title: _t("Action non autorisée"),
+            body: _t("Aucun code d'accès configuré. Contactez votre administrateur."),
+        });
+        return false;
+    }
+    const input = await _showCodePromptDialog(actionLabel);
+    if (input === null) return false;
+    if (input !== code_acces) {
+        dialog.add(AlertDialog, {
+            title: _t("Code incorrect"),
+            body: _t("Le code saisi est invalide. Action annulée."),
+        });
+        return false;
+    }
+    return true;
+}
 
 console.warn("🔴 ticket_screen_refund_patch.js LOADED - Patching TicketScreen for refund authorization");
 
@@ -209,3 +299,62 @@ patch(TicketScreen.prototype, {
 });
 
 console.warn("✅ ticket_screen_refund_patch.js - TicketScreen patched successfully");
+
+// ============================================================
+// PATCH 2 : TicketScreen — Verrouillage "Imprimer le ticket" + "Détails"
+// ============================================================
+patch(TicketScreen.prototype, {
+
+    /**
+     * Patch : Imprimer le ticket — verrouillé pour les caissières
+     * (doPrint wrapping this.print → patch ici intercepte bien avant l'impression)
+     */
+    async print(order) {
+        const ok = await _checkCaissiereCodeAccess(
+            this.pos.user._is_caissiere,
+            this.pos.config.code_acces,
+            this.dialog,
+            _t("Imprimer le ticket")
+        );
+        if (!ok) return;
+        return super.print(...arguments);
+    },
+
+    /**
+     * Nouvelle méthode : Détails — appelée depuis le patch XML
+     * Verrouillée pour les caissières avant d'ouvrir les détails
+     */
+    async onClickDetails(order) {
+        const ok = await _checkCaissiereCodeAccess(
+            this.pos.user._is_caissiere,
+            this.pos.config.code_acces,
+            this.dialog,
+            _t("Détails commande")
+        );
+        if (!ok) return;
+        this.pos.orderDetails(order);
+    },
+});
+
+// ============================================================
+// PATCH 3 : InvoiceButton — Verrouillage "Facture"
+// POURQUOI ICI et non dans onInvoiceOrder de TicketScreen ?
+// → onInvoiceOrder (TicketScreen) est un CALLBACK appelé APRÈS que la facture
+//   est déjà créée côté serveur. Intercepter ici (_invoiceOrder) bloque
+//   AVANT toute création de facture, au tout début du traitement.
+// ============================================================
+patch(InvoiceButton.prototype, {
+
+    async _invoiceOrder() {
+        const ok = await _checkCaissiereCodeAccess(
+            this.pos.user._is_caissiere,
+            this.pos.config.code_acces,
+            this.dialog,
+            _t("Facture")
+        );
+        if (!ok) return;
+        return super._invoiceOrder(...arguments);
+    },
+});
+
+console.warn("✅ ticket_screen_refund_patch.js - Patch 2 (Détails/Impression) + Patch 3 (InvoiceButton) appliqués");
