@@ -50,9 +50,13 @@
                                     options="{'no_create': True}"
                                     placeholder="57110005 - Compte caisse"
                                     required="1"/>
-                                <field name="sage_x3_account_ecart_caisse_id"
+                                <field name="sage_x3_account_sale_tva_18_id"
                                     options="{'no_create': True}"
-                                    placeholder="77820000 - Ecart caisse"
+                                    placeholder="44310000 - TVA 18"
+                                    required="1"/>
+                                <field name="sage_x3_account_sale_tva_9_id"
+                                    options="{'no_create': True}"
+                                    placeholder="44310000 - TVA 9"
                                     required="1"/>
                             </group>
 

@@ -200,7 +200,7 @@ class PurchaseOrderSageX3(models.Model):
             "commandes": [{
                 "siteVente":               "VRIDI",
                 "DateCommande":            (self.date_order or datetime.now()).isoformat(),
-                "Client":                  self.company_id.code_company or "01",
+                "Client":                  self.company_id.lib_company or "YOP01",
                 "Devise":                  self.currency_id.name or "XOF",
                 "Magasin":                 self.company_id.name or "PRINCIPAL",
                 "ReferenceCommandeClient": self.name,

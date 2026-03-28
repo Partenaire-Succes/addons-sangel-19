@@ -174,7 +174,6 @@ class AccountMoveSageX3(models.Model):
         sale_account = company.sage_x3_account_sale_id
         cust_account = company.sage_x3_account_customer_default_id
         caisse_acct  = company.sage_x3_account_caisse_id
-        ecart_acct   = company.sage_x3_account_ecart_caisse_id
         magasin      = self._get_company_code(company)
         date_yy      = target_date.strftime("%d%m%y")
         date_fr      = target_date.strftime("%d/%m/%Y")
@@ -185,7 +184,6 @@ class AccountMoveSageX3(models.Model):
             ("Compte vente",           sale_account),
             ("Compte client",          cust_account),
             ("Compte caisse",          caisse_acct),
-            ("Compte écart de caisse", ecart_acct),
         ]:
             if not val:
                 raise UserError(f"{label} non configuré pour {company.name}")
