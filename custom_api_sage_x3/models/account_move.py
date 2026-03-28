@@ -137,9 +137,12 @@ class AccountMoveSageX3(models.Model):
                 product=line.product_id,
             )
 
-            for tax in tax_res['taxes']:
-                taux = round(tax['rate'] * 100, 2)  # taux fiable
-                grouped_tax[taux] += tax['amount']
+            for tax_line in tax_res['taxes']:
+                tax_id = tax_line['id']
+                tax = self.env['account.tax'].browse(tax_id)
+
+                taux = tax.amount  # ✅ fiable (9, 18, etc.)
+                grouped_tax[taux] += tax_line['amount']
 
         return grouped_tax
 
@@ -402,12 +405,12 @@ class AccountMoveSageX3(models.Model):
                 lignes_encai.append(self._build_ligne(
                     site    = site,
                     compte  = compte.code if hasattr(compte, 'code') else compte,
-                    sens    = 1,
+                    sens    = -1,
                     montant = round(montant, 2),
                     libelle = f"TVA {taux_int}% {date_fr}",
                 ))
 
-                total_tax_encai += montant
+                total_encai += montant
 
         # [2] Règlements clients (account.payment) — 1 ligne par paiement
         for pmt in account_payments:
@@ -598,7 +601,7 @@ class AccountMoveSageX3(models.Model):
         _logger.info("✅ SAGE X3 OK — Pièces : %s", piece_numbers)
 
         # 🔥 Passage message + pièces
-        self._mark_daily_as_sent(company, target_date, piece_numbers, full_message)
+        # self._mark_daily_as_sent(company, target_date, piece_numbers, full_message)
 
     def _mark_daily_as_sent(self, company, target_date, piece_numbers, message):
         """Marque les paiements comme envoyés avec numéro + message."""
