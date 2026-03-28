@@ -13,5 +13,7 @@ class SaleOrder(models.Model):
     def action_apply_import_date(self):
         sale_order = self.env['sale.order'].search([('date_importation', '!=', False)])
         for so in sale_order:
-            so.action_confirm()
-            so.date_order = so.date_importation
+            if so.state != 'sale':
+                so.action_confirm()
+                so.date_order = so.date_importation
+                
