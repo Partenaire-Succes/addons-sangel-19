@@ -116,6 +116,61 @@ class AccountMoveSageX3(models.Model):
 
         return {'success': success_count, 'errors': error_count, 'error_details': errors}
 
+
+    def get_pos_lines_grouped_by_tva(self, pos_sessions):
+
+        if not pos_sessions:
+            return {}
+
+        lines = self.env['pos.order.line'].search([
+            ('order_id.session_id', 'in', pos_sessions.ids),
+            ('order_id.payment_ids.payment_method_id.is_limit', '=', False),
+            ('tax_ids', '!=', False),
+        ])
+
+        grouped_tax = defaultdict(float)
+
+        for line in lines:
+            tax_res = line.tax_ids.compute_all(
+                line.price_unit,
+                quantity=line.qty,
+                product=line.product_id,
+            )
+
+            for tax in tax_res['taxes']:
+                taux = round(tax['rate'] * 100, 2)  # taux fiable
+                grouped_tax[taux] += tax['amount']
+
+        return grouped_tax
+
+    def get_pos_lines_total_ht(self, pos_sessions):
+        """
+        Retourne le montant total HT des lignes POS
+        (hors taxes, basé sur Odoo compute_all pour être fiable)
+        """
+
+        if not pos_sessions:
+            return 0.0
+
+        lines = self.env['pos.order.line'].search([
+            ('order_id.session_id', 'in', pos_sessions.ids),
+            ('order_id.payment_ids.payment_method_id.is_limit', '=', False),
+        ])
+
+        total_ht = 0.0
+
+        for line in lines:
+            # Calcul officiel Odoo
+            tax_res = line.tax_ids.compute_all(
+                line.price_unit,
+                quantity=line.qty,
+                product=line.product_id,
+            )
+
+            total_ht += tax_res['total_excluded']  # HT
+
+        return round(total_ht, 2)
+
     def _prepare_daily_entry(self, company, target_date):
         """
         Prépare les écritures ENCAI et/ou DECAI pour UNE société, UN jour.
@@ -174,6 +229,8 @@ class AccountMoveSageX3(models.Model):
         sale_account = company.sage_x3_account_sale_id
         cust_account = company.sage_x3_account_customer_default_id
         caisse_acct  = company.sage_x3_account_caisse_id
+        sale_tva_9   = company.sage_x3_account_sale_tva_9_id
+        sale_tva_18  = company.sage_x3_account_sale_tva_18_id
         magasin      = self._get_company_code(company)
         date_yy      = target_date.strftime("%d%m%y")
         date_fr      = target_date.strftime("%d/%m/%Y")
@@ -205,6 +262,10 @@ class AccountMoveSageX3(models.Model):
         decai_individual_limit  = []
         decai_individual_food   = []
         decai_grouped_by_compte = {}   # clé = code compte, valeur = {montant, libelle}
+
+        if pos_sessions:
+            # Encaissement total
+            encai_pos_total = self.get_pos_lines_total_ht(pos_sessions)
 
         for session in pos_sessions:
             payments = self.env['pos.payment'].search([
@@ -261,9 +322,7 @@ class AccountMoveSageX3(models.Model):
                     })
 
                 else:
-                    # Encaissement total
-                    encai_pos_total += amount
-
+                    
                     if method.is_food:
                         # Individuel avec tiers
                         partner_name = partner.name if partner else ''
@@ -313,6 +372,7 @@ class AccountMoveSageX3(models.Model):
         # =====================================================================
         lignes_encai = []
         total_encai  = 0.0
+        total_tax_encai = 0.0
 
         # [1] Ventes POS groupées
         if encai_pos_total > 0:
@@ -324,6 +384,30 @@ class AccountMoveSageX3(models.Model):
                 libelle = f"VENTES {magasin} DU {date_fr}",
             ))
             total_encai += encai_pos_total
+
+        grouped_tax_compte = self.get_pos_lines_grouped_by_tva(pos_sessions)
+
+        for taux, montant in sorted(grouped_tax_compte.items()):
+
+            taux_int = int(round(taux))
+
+            if taux_int == 18:
+                compte = sale_tva_18
+            elif taux_int == 9:
+                compte = sale_tva_9
+            else:
+                continue  # ignore les autres taux
+
+            if montant > 0:
+                lignes_encai.append(self._build_ligne(
+                    site    = site,
+                    compte  = compte.code if hasattr(compte, 'code') else compte,
+                    sens    = 1,
+                    montant = round(montant, 2),
+                    libelle = f"TVA {taux_int}% {date_fr}",
+                ))
+
+                total_tax_encai += montant
 
         # [2] Règlements clients (account.payment) — 1 ligne par paiement
         for pmt in account_payments:
@@ -403,7 +487,7 @@ class AccountMoveSageX3(models.Model):
                 libelle = line['libelle'],
                 tiers   = line.get('tiers', ''),
             ))
-            total_decai += line['montant']
+            total_decai += line['montant']    
 
         # [3]+[4]+[5] Lignes groupées par compte (is_bank_card, is_cheque, is_titre_paiement)
         # → 1 seule ligne par code compte, triées par code compte
