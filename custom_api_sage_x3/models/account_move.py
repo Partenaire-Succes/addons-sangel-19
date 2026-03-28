@@ -676,42 +676,53 @@ class AccountMoveSageX3(models.Model):
             'sage_x3_error':        False,
         })
 
-    def _prepare_invoice_entry(self, invoice):
-        """
-        Prépare l'écriture FACLI (facture) ou AVCLI (avoir).
+    def _compute_tva(self, montant_ttc, taux):
+        if not montant_ttc:
+            return 0.0
 
-        FACLI : DÉBIT client (sens=+1) + CRÉDIT vente (sens=-1)
-        AVCLI : sens inversés
-        Mapping volontaire → toutes les lignes produit sur 1 compte vente SAGE X3.
-        """
-        company   = invoice.company_id
-        is_refund = (invoice.move_type == 'out_refund')
-        type_piece = "AVCLI" if is_refund else "FACLI"
+        # Sécurisation du taux (18 ou 0.18)
+        taux = taux / 100 if taux > 1 else taux
+
+        tva = montant_ttc * taux / (1 + taux)
+        return round(tva, 2)
+
+
+    def _prepare_invoice_entry(self, invoice):
+        company     = invoice.company_id
+        is_refund   = (invoice.move_type == 'out_refund')
+        type_piece  = "AVCLI" if is_refund else "FACLI"
 
         sens_client = -1 if is_refund else  1
         sens_vente  =  1 if is_refund else -1
 
-        receivable = company.sage_x3_account_customer_default_id
-        sale_acct  = company.sage_x3_account_sale_id
-        site       = company.sage_x3_site
-        journal    = company.sage_x3_journal_sale
+        receivable  = company.sage_x3_account_customer_default_id
+        sale_acct   = company.sage_x3_account_sale_id
+        sale_tva_9  = company.sage_x3_account_sale_tva_9_id
+        sale_tva_18 = company.sage_x3_account_sale_tva_18_id
+        site        = company.sage_x3_site
+        journal     = company.sage_x3_journal_sale
 
+        # 🔒 Vérification config
         for label, val in [
             ("Compte client", receivable),
             ("Compte vente",  sale_acct),
             ("Site SAGE X3",  site),
             ("Journal vente", journal),
+            ("Compte TVA 9%",  sale_tva_9),
+            ("Compte TVA 18%", sale_tva_18),
         ]:
             if not val:
                 raise UserError(f"{label} non configuré pour {company.name}")
 
-        third_party = invoice.partner_id.customer_id.strip()
+        third_party = (invoice.partner_id.customer_id or "").strip()
         date_yy     = invoice.invoice_date.strftime("%d%m%y")
         date_fr     = invoice.invoice_date.strftime("%d/%m/%Y")
         magasin     = self._get_company_code(company)
         lignes      = []
 
+        # =========================
         # Ligne client
+        # =========================
         lignes.append(self._build_ligne(
             site    = site,
             compte  = receivable.code,
@@ -721,34 +732,67 @@ class AccountMoveSageX3(models.Model):
             tiers   = third_party,
         ))
 
-        # Lignes produit regroupées par compte Odoo
-        # → toutes mappées sur le même compte SAGE X3 (volontaire)
-        product_totals = defaultdict(float)
+        # =========================
+        # TVA
+        # =========================
+        tax_facli = defaultdict(float)
+
         for line in invoice.invoice_line_ids:
             if line.display_type in ('line_section', 'line_note'):
                 continue
-            if not line.account_id or line.price_total == 0:
-                continue
-            product_totals[line.account_id.code] += line.price_total
 
-        if not product_totals:
+            # ⚠️ Correction : gérer plusieurs taxes
+            for tax in line.tax_ids:
+                if tax.amount == 9:
+                    tax_val = self._compute_tva(line.price_total, 0.09)
+                    tax_facli[sale_tva_9] += tax_val
+
+                elif tax.amount == 18:
+                    tax_val = self._compute_tva(line.price_total, 0.18)
+                    tax_facli[sale_tva_18] += tax_val
+
+        # =========================
+        # Ligne vente (HT)
+        # =========================
+        if not invoice.amount_untaxed:
             raise UserError(f"Aucune ligne de produit valide sur {invoice.name}")
 
-        for _odoo_code, amount in sorted(product_totals.items()):
+        if invoice.amount_untaxed > 0:
+            lignes.append(self._build_ligne(
+                site    = site,
+                compte  = sale_acct.code,
+                sens    = sens_vente,
+                montant = round(invoice.amount_untaxed, 2),
+                libelle = f"VENTES {date_fr}",
+            ))
+
+        # =========================
+        # Lignes TVA
+        # =========================
+        for account, amount in tax_facli.items():
             if amount > 0:
+                taux = 9 if account == sale_tva_9 else 18
+                
                 lignes.append(self._build_ligne(
                     site    = site,
-                    compte  = sale_acct.code,
+                    compte  = account.code,
                     sens    = sens_vente,
                     montant = round(amount, 2),
-                    libelle = f"VENTES {date_fr}",
+                    libelle = f"TVA {taux}% {date_fr}",
                 ))
 
-        return {"ecritures": [self._build_ecriture(
-            type_piece  = type_piece,
-            site        = site,
-            date_ddmmyy = date_yy,
-            journal     = journal,
-            libelle     = f"{type_piece} {magasin} {invoice.name}",
-            lignes      = lignes,
-        )]}
+        # =========================
+        # Écriture finale
+        # =========================
+        return {
+            "ecritures": [
+                self._build_ecriture(
+                    type_piece  = type_piece,
+                    site        = site,
+                    date_ddmmyy = date_yy,
+                    journal     = journal,
+                    libelle     = f"{type_piece} {magasin} {invoice.name}",
+                    lignes      = lignes,
+                )
+            ]
+        }
