@@ -25,6 +25,7 @@
         'views/product_template_inherit_views.xml',
         'views/product_product_inherit_views.xml',
         'views/sale_customer_invoice_views.xml',
+        'views/sale_order_inherit_views.xml',
 
 
 
