@@ -15,6 +15,12 @@ class RetoursConsolidesReportWizard(models.TransientModel):
     _name = 'retours.consolides.report.wizard'
     _description = 'Rapport Consolidé Retours et Réceptions'
 
+    type_rapport = fields.Selection([
+        ('receptions', 'Réceptions directes uniquement'),
+        ('retours',    'Retours uniquement (Fournisseurs + Inventaires)'),
+        ('tous',       'Tout (Réceptions + Retours)'),
+    ], string='Contenu du rapport', default='tous', required=True)
+
     date_from = fields.Date(
         string='Date de début',
         required=True,
@@ -160,11 +166,19 @@ class RetoursConsolidesReportWizard(models.TransientModel):
                 })
         return rows
 
+    def _get_type_label(self):
+        labels = {
+            'receptions': 'Réceptions directes',
+            'retours':    'Retours (Fournisseurs + Inventaires)',
+            'tous':       'Tout (Réceptions + Retours)',
+        }
+        return labels.get(self.type_rapport, '')
+
     def _get_report_data(self):
         """Structure complète des données pour le template QWeb."""
-        receptions = self._get_receptions_directes()
-        retours_four = self._get_retours_fournisseur()
-        retours_inv = self._get_retours_inventaire()
+        receptions   = self._get_receptions_directes()   if self.type_rapport in ('receptions', 'tous') else []
+        retours_four = self._get_retours_fournisseur()   if self.type_rapport in ('retours', 'tous')    else []
+        retours_inv  = self._get_retours_inventaire()    if self.type_rapport in ('retours', 'tous')    else []
 
         total_receptions = sum(r['montant'] for r in receptions)
         total_retours_four = sum(r['montant'] for r in retours_four)
@@ -178,6 +192,8 @@ class RetoursConsolidesReportWizard(models.TransientModel):
             'date_to': self._fmt_date(self.date_to),
             'company': self.company_id,
             'currency': currency,
+            'type_rapport': self.type_rapport,
+            'type_label': self._get_type_label(),
             'receptions_directes': receptions,
             'retours_fournisseur': retours_four,
             'retours_inventaire': retours_inv,

@@ -26,5 +26,15 @@
             <field name="paperformat_id" ref="base.paperformat_euro"/>
             <field name="print_report_name">'Décompte_%s_%s' % (object.name, object.date)</field>
         </record>
+        <!-- Rapport consolidé Retours & Réceptions (déclenché par le wizard) -->
+        <record id="action_report_retours_receptions" model="ir.actions.report">
+            <field name="name">Rapport Retours et Réceptions consolidé</field>
+            <field name="model">rapport.retours.receptions.wizard</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">custom_stock.report_retours_receptions</field>
+            <field name="report_file">custom_stock.report_retours_receptions</field>
+            <field name="paperformat_id" ref="base.paperformat_euro"/>
+            <field name="print_report_name">'Rapport_Retours_Receptions'</field>
+        </record>
     </data>
 </odoo>

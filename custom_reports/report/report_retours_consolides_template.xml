@@ -149,6 +149,8 @@
                 <div class="rpt-header">
                     <div class="rpt-title">Rapport Consolidé — Retours et Réceptions</div>
                     <div class="rpt-meta">
+                        Contenu : <strong><t t-esc="data['type_label']"/></strong>
+                        &amp;nbsp;&amp;nbsp;·&amp;nbsp;&amp;nbsp;
                         Période : <strong><t t-esc="data['date_from']"/> au <t t-esc="data['date_to']"/></strong>
                         &amp;nbsp;&amp;nbsp;·&amp;nbsp;&amp;nbsp;
                         Société : <strong><t t-esc="data['company'].name"/></strong>
@@ -158,6 +160,7 @@
                 </div>
 
                 <!-- ══ SECTION 1 : Réceptions directes ═════════════════════ -->
+                <t t-if="data['type_rapport'] in ('receptions', 'tous')">
                 <div class="sec-title">1 · Réceptions directes (sans bon de commande)</div>
                 <div class="sec-subtitle">
                     Entrées de stock validées manuellement — le prix de réception est le coût gravé sur le mouvement.
@@ -213,8 +216,10 @@
                 <t t-else="">
                     <p class="empty-msg">Aucune réception directe validée sur cette période.</p>
                 </t>
+                </t>
 
                 <!-- ══ SECTION 2 : Retours fournisseurs ════════════════════ -->
+                <t t-if="data['type_rapport'] in ('retours', 'tous')">
                 <div class="sec-title">2 · Retours fournisseurs</div>
                 <div class="sec-subtitle">
                     Sorties de stock vers le fournisseur — bons de retour créés et validés.
@@ -259,8 +264,10 @@
                 <t t-else="">
                     <p class="empty-msg">Aucun retour fournisseur validé sur cette période.</p>
                 </t>
+                </t>
 
                 <!-- ══ SECTION 3 : Retours inventaires ═════════════════════ -->
+                <t t-if="data['type_rapport'] in ('retours', 'tous')">
                 <div class="sec-title">3 · Retours inventaires — Avoirs fournisseurs</div>
                 <div class="sec-subtitle">
                     Documents comptables (avoirs) générés depuis les inventaires physiques — aucun mouvement de stock.
@@ -310,21 +317,26 @@
                 <t t-else="">
                     <p class="empty-msg">Aucun avoir inventaire sur cette période.</p>
                 </t>
+                </t>
 
                 <!-- ══ RÉCAPITULATIF ════════════════════════════════════════ -->
                 <table class="tbl-recap">
-                    <tr class="recap-row">
-                        <td class="recap-label">Réceptions directes</td>
-                        <td class="num"><t t-esc="data['fmt'](data['total_receptions'])"/></td>
-                    </tr>
-                    <tr class="recap-row">
-                        <td class="recap-label">Retours fournisseurs</td>
-                        <td class="num"><t t-esc="data['fmt'](data['total_retours_four'])"/></td>
-                    </tr>
-                    <tr class="recap-row">
-                        <td class="recap-label">Avoirs inventaires</td>
-                        <td class="num"><t t-esc="data['fmt'](data['total_retours_inv'])"/></td>
-                    </tr>
+                    <t t-if="data['type_rapport'] in ('receptions', 'tous')">
+                        <tr class="recap-row">
+                            <td class="recap-label">Réceptions directes</td>
+                            <td class="num"><t t-esc="data['fmt'](data['total_receptions'])"/></td>
+                        </tr>
+                    </t>
+                    <t t-if="data['type_rapport'] in ('retours', 'tous')">
+                        <tr class="recap-row">
+                            <td class="recap-label">Retours fournisseurs</td>
+                            <td class="num"><t t-esc="data['fmt'](data['total_retours_four'])"/></td>
+                        </tr>
+                        <tr class="recap-row">
+                            <td class="recap-label">Avoirs inventaires</td>
+                            <td class="num"><t t-esc="data['fmt'](data['total_retours_inv'])"/></td>
+                        </tr>
+                    </t>
                     <tr class="recap-total">
                         <td><strong>TOTAL GÉNÉRAL</strong></td>
                         <td class="num"><t t-esc="data['fmt'](data['grand_total'])"/></td>

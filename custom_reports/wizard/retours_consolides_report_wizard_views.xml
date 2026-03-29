@@ -15,15 +15,20 @@
                         </h3>
                     </div>
                     <group>
-                        <group string="Période">
-                            <field name="date_from" required="1"/>
-                            <field name="date_to" required="1"/>
+                        <group string="Contenu du rapport">
+                            <field name="type_rapport" widget="radio"/>
                         </group>
                         <group string="Société">
                             <field name="company_id"
                                    options="{'no_create': True}"
                                    groups="base.group_multi_company"
                                    readonly="1"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Période">
+                            <field name="date_from" required="1"/>
+                            <field name="date_to" required="1"/>
                         </group>
                     </group>
                 </sheet>

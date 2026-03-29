@@ -39,7 +39,7 @@
     'license': 'AGPL-3',
     'installable': True,
     'auto_install': False,
-    'application': True,
+    'application': False,
     
     "assets": {
         "point_of_sale._assets_pos": [

@@ -43,3 +43,5 @@ access_retour_inventaire_wizard_line,retour.inventaire.wizard.line,model_retour_
 
 access_retour_fournisseur_wizard,retour.fournisseur.wizard,model_retour_fournisseur_wizard,,1,1,1,1
 access_retour_fournisseur_wizard_line,retour.fournisseur.wizard.line,model_retour_fournisseur_wizard_line,,1,1,1,1
+
+access_rapport_retours_receptions_wizard,rapport.retours.receptions.wizard,model_rapport_retours_receptions_wizard,,1,1,1,1

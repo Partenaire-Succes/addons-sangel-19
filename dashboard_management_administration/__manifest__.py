@@ -20,7 +20,7 @@
         'sale_management',
         'point_of_sale',
         'purchase',
-        'custom_api_sage_x3',
+        # 'custom_api_sage_x3',
         'custom_stock',
         'custom_pos',
     ],
