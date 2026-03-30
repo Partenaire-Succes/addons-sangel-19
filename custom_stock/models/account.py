@@ -18,11 +18,17 @@ class AccountMoveSageX3(models.Model):
         copy=False,
         help="Indique si la facture a été envoyée à SAGE X3"
     )
+    sage_sent = fields.Boolean(
+        string="Doit etre envoyé",
+        default=False,
+        copy=False
+    )
     sage_x3_sent_date = fields.Datetime(
         string="Date envoi SAGE X3",
         readonly=True,
         copy=False
     )
+    sage_x3_piece = fields.Char(string="Type pièce SAGE X3", readonly=True, copy=False)
     sage_x3_piece_type = fields.Selection([
         ('FACLI', 'Facture client'),
         ('REGCLI', 'Règlement client'),
@@ -40,6 +46,10 @@ class AccountMoveSageX3(models.Model):
     sage_x3_error = fields.Text(
         string="Erreur SAGE X3",
         readonly=True,
+        copy=False
+    )
+    message = fields.Text(
+        string="Message",
         copy=False
     )
 
@@ -70,5 +80,9 @@ class AccountPaymentSageX3(models.Model):
     )
     num_costomer_bank = fields.Char(
         string="Numéro de compte bancaire client",
+        copy=False
+    )
+    message = fields.Text(
+        string="Message",
         copy=False
     )

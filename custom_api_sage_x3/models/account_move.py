@@ -526,7 +526,7 @@ class AccountMoveSageX3(models.Model):
                 site        = site,
                 date_ddmmyy = date_yy,
                 journal     = journal,
-                libelle     = f"ENCAISSEMENT CAISSE {magasin} DU {date_fr}",
+                libelle     = f"ENCAI CAISSE {magasin} DU {date_fr}",
                 lignes      = lignes_encai,
             ))
 
@@ -536,7 +536,7 @@ class AccountMoveSageX3(models.Model):
                 site        = site,
                 date_ddmmyy = date_yy,
                 journal     = journal,
-                libelle     = f"DECAISSEMENT CAISSE {magasin} DU {date_fr}",
+                libelle     = f"DECAI CAISSE {magasin} DU {date_fr}",
                 lignes      = lignes_decai,
             ))
 
@@ -722,7 +722,7 @@ class AccountMoveSageX3(models.Model):
         _logger.info("✅ SAGE X3 OK — Pièces : %s", piece_numbers)
 
         # 🔥 Passage message + pièces
-        self._mark_daily_as_sent(company, target_date, piece_numbers, full_message)
+        # self._mark_daily_as_sent(company, target_date, piece_numbers, full_message)
 
     def _mark_daily_as_sent(self, company, target_date, piece_numbers, message):
         """Marque les paiements comme envoyés avec numéro + message."""
