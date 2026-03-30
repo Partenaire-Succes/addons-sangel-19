@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="view_import_limit_credit_wizard_form" model="ir.ui.view">
+            <field name="name">import.limit.credit.wizard.form</field>
+            <field name="model">import.limit.credit.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Import Excel - Limite Crédit Consommée">
+
+                    <group invisible="state != 'draft'">
+                        <field name="file" filename="file_name" widget="binary"
+                               help="Fichier Excel avec colonnes : partner_id | Limite Credit Consommée"/>
+                        <field name="file_name" invisible="1"/>
+                    </group>
+
+                    <button name="action_load_file"
+                            type="object"
+                            string="Charger le fichier"
+                            class="btn-primary"
+                            invisible="state != 'draft'"/>
+
+                    <!-- Résumé après chargement -->
+                    <group invisible="state == 'draft'">
+                        <group>
+                            <field name="count_ok" string="Lignes valides" readonly="1"/>
+                            <field name="count_errors" string="Lignes en erreur" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <field name="line_ids" invisible="state == 'draft'" readonly="1">
+                        <list decoration-success="status == 'ok'"
+                              decoration-danger="status == 'partner_not_found'"
+                              decoration-warning="status == 'no_limit_credit'">
+                            <field name="partner_name" string="Nom (Excel)"/>
+                            <field name="partner_id" string="Client trouvé"/>
+                            <field name="limit_credit_id" string="Limite Crédit"/>
+                            <field name="amount_limit_consumed_old" string="Consommé actuel"
+                                   widget="monetary"/>
+                            <field name="amount_limit_consumed_new" string="Nouveau montant"
+                                   widget="monetary"/>
+                            <field name="status" string="Statut"/>
+                        </list>
+                    </field>
+
+                    <footer>
+                        <button name="action_confirm"
+                                type="object"
+                                string="Confirmer la mise à jour"
+                                class="btn-success"
+                                invisible="state != 'loaded'"/>
+                        <button string="Annuler" special="cancel"/>
+                    </footer>
+
+                </form>
+            </field>
+        </record>
+
+        <record id="action_import_limit_credit_wizard" model="ir.actions.act_window">
+            <field name="name">Import Excel - Limite Crédit Consommée</field>
+            <field name="res_model">import.limit.credit.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+        </record>
+
+        <menuitem id="menu_import_limit_credit"
+                  name="Import Excel Limite Crédit"
+                  parent="sale.menu_sale_config"
+                  action="action_import_limit_credit_wizard"
+                  sequence="14"/>
+
+    </data>
+</odoo>
