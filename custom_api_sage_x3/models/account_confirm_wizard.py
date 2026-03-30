@@ -40,19 +40,19 @@ class SageX3SendWizard(models.TransientModel):
 
     # Compteurs affichés dans le formulaire wizard
     count_pos_sessions = fields.Integer(
-        string  = "Jours POS à envoyer",
+        string  = "Sessions POS du Jours",
         compute = "_compute_counts",
     )
     count_invoices = fields.Integer(
-        string  = "Factures classiques à envoyer",
+        string  = "Factures: FACLI",
         compute = "_compute_counts",
     )
     count_refunds = fields.Integer(
-        string  = "Avoirs à envoyer",
+        string  = "Avoirs: AVCLI",
         compute = "_compute_counts",
     )
     count_payments = fields.Integer(
-        string  = "Règlements inclus dans l'ENCAI",
+        string  = "Règlements: ENCAI",
         compute = "_compute_counts",
         help    = "Ces règlements seront inclus dans le récap ENCAI journalier, "
                   "pas envoyés séparément.",
@@ -83,17 +83,13 @@ class SageX3SendWizard(models.TransientModel):
             company_ids = wizard.company_ids.ids
 
             # Sessions POS fermées avec paiements non envoyés
-            pos_sessions = self.env['pos.session'].search([
+            wizard.count_pos_sessions = self.env['pos.session'].search_count([
                 ('company_id', 'in', company_ids),
                 ('state',      '=',  'closed'),
+                ('sage_x3_sent', '=',  False),
                 ('start_at',   '>=', wizard.date_from),
                 ('start_at',   '<=', wizard.date_to),
             ])
-            sessions_with_pending = self.env['pos.payment'].search([
-                ('session_id',   'in', pos_sessions.ids),
-                ('sage_x3_sent', '=',  False),
-            ]).mapped('session_id')
-            wizard.count_pos_sessions = len(sessions_with_pending)
 
             # Factures classiques hors POS
             wizard.count_invoices = self.env['account.move'].search_count([

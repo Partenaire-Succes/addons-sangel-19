@@ -2,6 +2,7 @@ import json
 import logging
 from datetime import datetime
 from collections import defaultdict
+from unittest import result
 
 from odoo import fields, models, api
 from odoo.exceptions import UserError
@@ -196,6 +197,7 @@ class AccountMoveSageX3(models.Model):
         # Sessions POS du jour
         pos_sessions = self.env['pos.session'].search([
             ('company_id', '=', company.id),
+            ('sage_x3_sent', '=',  False),
             ('start_at',   '>=', dt_min),
             ('start_at',   '<=', dt_max),
         ])
@@ -262,7 +264,6 @@ class AccountMoveSageX3(models.Model):
         #   → 1 seule ligne par compte dans le DECAI final
         # =====================================================================
         encai_pos_total         = 0.0
-        decai_individual_limit  = []
         decai_individual_food   = []
         decai_grouped_by_compte = {}   # clé = code compte, valeur = {montant, libelle}
 
@@ -273,7 +274,6 @@ class AccountMoveSageX3(models.Model):
         for session in pos_sessions:
             payments = self.env['pos.payment'].search([
                 ('session_id',   '=',  session.id),
-                ('sage_x3_sent', '=',  False),
             ])
 
             for payment in payments:
@@ -315,17 +315,15 @@ class AccountMoveSageX3(models.Model):
                 )
 
                 # ── Routage par flag (exclusifs) ──────────────────────────────
-                if method.is_limit:
+                if not method.is_limit:
                     # Individuel avec tiers
-                    decai_individual_limit.append({
-                        "compte":  pay_account.code,
-                        "libelle": f"{method.name} DU {pay_date}",
-                        "montant": amount,
-                        "tiers":   tiers_code,
-                    })
+                    # decai_individual_limit.append({
+                    #     "compte":  pay_account.code,
+                    #     "libelle": f"{method.name} DU {pay_date}",
+                    #     "montant": amount,
+                    #     "tiers":   tiers_code,
+                    # })
 
-                else:
-                    
                     if method.is_food:
                         # Individuel avec tiers
                         partner_name = partner.name if partner else ''
@@ -467,17 +465,17 @@ class AccountMoveSageX3(models.Model):
         total_decai  = 0.0
 
         # Lignes individuelles (is_limit), triées (compte, tiers)
-        for line in sorted(decai_individual_limit,
-                           key=lambda x: (x['compte'], x.get('tiers', ''))):
-            lignes_decai.append(self._build_ligne(
-                site    = site,
-                compte  = line['compte'],
-                sens    = -1,
-                montant = round(line['montant'], 2),
-                libelle = line['libelle'],
-                tiers   = line.get('tiers', ''),
-            ))
-            total_decai += line['montant']
+        # for line in sorted(decai_individual_limit,
+        #                    key=lambda x: (x['compte'], x.get('tiers', ''))):
+        #     lignes_decai.append(self._build_ligne(
+        #         site    = site,
+        #         compte  = line['compte'],
+        #         sens    = 1,
+        #         montant = round(line['montant'], 2),
+        #         libelle = line['libelle'],
+        #         tiers   = line.get('tiers', ''),
+        #     ))
+        #     total_decai += line['montant']
 
         # Lignes individuelles (is_food), triées (compte, tiers)
         for line in sorted(decai_individual_food,
@@ -485,7 +483,7 @@ class AccountMoveSageX3(models.Model):
             lignes_decai.append(self._build_ligne(
                 site    = site,
                 compte  = line['compte'],
-                sens    = -1,
+                sens    = 1,
                 montant = round(line['montant'], 2),
                 libelle = line['libelle'],
                 tiers   = line.get('tiers', ''),
@@ -500,7 +498,7 @@ class AccountMoveSageX3(models.Model):
                 lignes_decai.append(self._build_ligne(
                     site    = site,
                     compte  = compte,
-                    sens    = -1,
+                    sens    = 1,
                     montant = round(montant, 2),
                     libelle = data['libelle'],
                 ))
@@ -511,7 +509,7 @@ class AccountMoveSageX3(models.Model):
             lignes_decai.append(self._build_ligne(
                 site    = site,
                 compte  = caisse_acct.code,
-                sens    = 1,
+                sens    = -1,
                 montant = round(total_decai, 2),
                 libelle = f"CAISSE {magasin} DU {date_fr}",
             ))
@@ -520,6 +518,7 @@ class AccountMoveSageX3(models.Model):
         # ASSEMBLAGE FINAL
         # =====================================================================
         ecritures = []
+        result  = self._ligne_ecritures_is_limit(pos_sessions)
 
         if lignes_encai and total_encai > 0:
             ecritures.append(self._build_ecriture(
@@ -541,10 +540,132 @@ class AccountMoveSageX3(models.Model):
                 lignes      = lignes_decai,
             ))
 
+        if result and result.get("ecritures"):
+            ecritures.extend(result["ecritures"])
+
         if not ecritures:
             _logger.info("ℹ️  Aucune écriture pour %s le %s",
                          company.name, target_date)
             return None
+
+        return {"ecritures": ecritures}
+
+    def _ligne_ecritures_is_limit(self, sessions):
+
+        company      = self.env.user.company_id
+        receivable   = company.sage_x3_account_customer_default_id
+        sale_acct    = company.sage_x3_account_sale_id
+        sale_tva_9   = company.sage_x3_account_sale_tva_9_id
+        sale_tva_18  = company.sage_x3_account_sale_tva_18_id
+        site         = company.sage_x3_site
+        journal      = company.sage_x3_journal_sale
+        type_piece   = "FACLI"
+
+        if not sessions:
+            return []
+
+        ecritures = []
+
+        for session in sessions:
+
+            payments = self.env['pos.payment'].search([
+                ('session_id', '=', session.id),
+                ('payment_method_id.is_limit', '=', True),
+            ])
+
+            for payment in payments:
+
+                partner = payment.partner_id
+
+                tiers_code = (partner.customer_id or "").strip() if partner else ""
+                partner_name = partner.name if partner else "CLIENT"
+
+                pay_date = payment.payment_date.strftime("%d%m%y") if payment.payment_date else ""
+                date_fr  = payment.payment_date.strftime("%d/%m/%Y") if payment.payment_date else ""
+
+                # ✅ Correction ici
+                lines = self.env['pos.order.line'].search([
+                    ('order_id', '=', payment.pos_order_id.id),
+                ])
+
+                total_ht = 0.0
+                grouped_tax = defaultdict(float)
+                lignes = []
+
+                for line in lines:
+
+                    tax_res = line.tax_ids.compute_all(
+                        line.price_unit,
+                        quantity=line.qty,
+                        product=line.product_id,
+                    )
+
+                    total_ht += tax_res['total_excluded']
+
+                    for tax_line in tax_res['taxes']:
+                        tax = self.env['account.tax'].browse(tax_line['id'])
+                        taux = tax.amount
+                        grouped_tax[taux] += tax_line['amount']
+
+                total_ht = round(total_ht, 2)
+
+                # =====================
+                # Ligne client
+                # =====================
+                lignes.append(self._build_ligne(
+                    site    = site,
+                    compte  = receivable.code,
+                    sens    = 1,
+                    montant = round(payment.amount, 2),
+                    libelle = f"Mise en compte {partner_name}",
+                    tiers   = tiers_code,
+                ))
+
+                # =====================
+                # Ligne vente HT
+                # =====================
+                lignes.append(self._build_ligne(
+                    site    = site,
+                    compte  = sale_acct.code,
+                    sens    = -1,
+                    montant = total_ht,
+                    libelle = f"CAISSE EN COMPTE {company.name} DU {date_fr}",
+                ))
+
+                # =====================
+                # Lignes TVA
+                # =====================
+                for taux, montant in sorted(grouped_tax.items()):
+
+                    taux_int = int(round(taux))
+
+                    if taux_int == 18:
+                        compte = sale_tva_18
+                    elif taux_int == 9:
+                        compte = sale_tva_9
+                    else:
+                        continue
+
+                    if montant > 0:
+                        lignes.append(self._build_ligne(
+                            site    = site,
+                            compte  = compte.code,
+                            sens    = -1,
+                            montant = round(montant, 2),
+                            libelle = f"TVA {taux_int}% {date_fr}",
+                        ))
+
+                # =====================
+                # Écriture
+                # =====================
+                ecritures.append(self._build_ecriture(
+                    type_piece  = type_piece,
+                    site        = site,
+                    date_ddmmyy = pay_date,
+                    journal     = journal,
+                    libelle     = f"Mise en compte {partner_name}",
+                    lignes      = lignes,
+                ))
 
         return {"ecritures": ecritures}
 
@@ -601,7 +722,7 @@ class AccountMoveSageX3(models.Model):
         _logger.info("✅ SAGE X3 OK — Pièces : %s", piece_numbers)
 
         # 🔥 Passage message + pièces
-        # self._mark_daily_as_sent(company, target_date, piece_numbers, full_message)
+        self._mark_daily_as_sent(company, target_date, piece_numbers, full_message)
 
     def _mark_daily_as_sent(self, company, target_date, piece_numbers, message):
         """Marque les paiements comme envoyés avec numéro + message."""
@@ -618,19 +739,14 @@ class AccountMoveSageX3(models.Model):
             ('start_at', '<=', dt_max),
         ])
 
-        pos_payments = self.env['pos.payment'].search([
-            ('session_id', 'in', pos_sessions.ids),
-            ('sage_x3_sent', '=', False),
-        ])
-
-        if pos_payments:
-            pos_payments.write({
+        if pos_sessions:
+            pos_sessions.write({
                 'sage_x3_sent': True,
                 'sage_x3_sent_date': fields.Datetime.now(),
                 'sage_x3_piece_number': piece_numbers,
                 'message': message,
             })
-            _logger.info("✅ %s paiement(s) POS marqués", len(pos_payments))
+            _logger.info("✅ %s session(s) POS marqués", len(pos_sessions))
 
         # ======================
         # 🔹 ACCOUNT PAYMENTS
