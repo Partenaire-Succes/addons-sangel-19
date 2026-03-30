@@ -28,6 +28,7 @@
         'wizard/generate_credit_food_views.xml',
         'wizard/generate_invoice_credit_food_views.xml',
         'wizard/update_limit_credit_views.xml',
+        'wizard/import_limit_credit_wizard_views.xml',
         'wizard/account_payment_register_inherit_views.xml',
         
         'views/food_credit_view.xml',
@@ -43,7 +44,6 @@
     ],
     'license': 'LGPL-3',
     'installable': True,
-    'application': True,
     'auto_install': False,
     
     'assets': {

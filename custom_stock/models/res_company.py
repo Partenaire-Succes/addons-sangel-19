@@ -57,7 +57,7 @@ class ResCompany(models.Model):
      )
      sage_x3_journal_caisse = fields.Char(
           string="Journal caisse SAGE Magasin",
-          default="CYL",
+          default="CAISSE",
           help="Code journal caisse (ex: CAISSE)"
      )
      

@@ -1,0 +1,331 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ══════════════════════════════════════════════════════════════════
+             DOCUMENT — Rapport Retours et Réceptions
+             doc = instance du wizard rapport.retours.receptions.wizard
+             Style identique au rapport custom_reports (CSS embarqué)
+             ══════════════════════════════════════════════════════════════════ -->
+
+        <template id="report_retours_receptions_document">
+            <t t-call="web.external_layout">
+                <div class="page">
+
+                    <style>
+                        body, .page { font-family: Arial, sans-serif; font-size: 9pt; color: #1a1a1a; }
+
+                        /* ── En-tête rapport ── */
+                        .rpt-header {
+                            border-top: 3px solid #1a5276;
+                            border-bottom: 1px solid #1a5276;
+                            padding: 8px 0 6px 0;
+                            margin-bottom: 12px;
+                        }
+                        .rpt-title {
+                            font-size: 13pt;
+                            font-weight: bold;
+                            color: #1a5276;
+                            letter-spacing: 0.5px;
+                            text-transform: uppercase;
+                        }
+                        .rpt-meta {
+                            font-size: 8.5pt;
+                            color: #555;
+                            margin-top: 3px;
+                        }
+                        .rpt-meta strong { color: #1a1a1a; }
+
+                        /* ── Titres de section ── */
+                        .sec-title {
+                            font-size: 10.5pt;
+                            font-weight: bold;
+                            color: #fff;
+                            background-color: #1a5276;
+                            padding: 5px 10px;
+                            margin: 16px 0 0 0;
+                            border-radius: 2px 2px 0 0;
+                        }
+                        .sec-subtitle {
+                            font-size: 8pt;
+                            color: #777;
+                            font-style: italic;
+                            margin: 0 0 5px 0;
+                            padding: 2px 4px;
+                            background: #eaf2f8;
+                            border-left: 3px solid #aed6f1;
+                        }
+
+                        /* ── Tableaux ── */
+                        table.tbl {
+                            width: 100%;
+                            border-collapse: collapse;
+                            font-size: 8pt;
+                            margin-bottom: 4px;
+                        }
+                        table.tbl thead tr {
+                            background-color: #d6eaf8;
+                        }
+                        table.tbl th {
+                            border: 1px solid #85c1e9;
+                            padding: 4px 6px;
+                            font-weight: bold;
+                            color: #1a5276;
+                            white-space: nowrap;
+                        }
+                        table.tbl td {
+                            border: 1px solid #d0d0d0;
+                            padding: 3px 6px;
+                            vertical-align: middle;
+                        }
+                        table.tbl tbody tr:nth-child(even) td {
+                            background-color: #f5f9fd;
+                        }
+                        .num { text-align: right; white-space: nowrap; }
+                        .ctr { text-align: center; }
+
+                        /* ── Lignes de total ── */
+                        tr.tr-subtotal td {
+                            background-color: #d6eaf8 !important;
+                            font-weight: bold;
+                            border-top: 2px solid #1a5276;
+                            font-size: 8.5pt;
+                        }
+
+                        /* ── Prix modifié (réceptions) ── */
+                        .prix-modifie { color: #c0392b; font-weight: bold; }
+                        .badge-nouveau {
+                            background: #fdebd0;
+                            border: 1px solid #f0a500;
+                            color: #7d4000;
+                            border-radius: 3px;
+                            padding: 0 4px;
+                            font-size: 7pt;
+                            font-weight: bold;
+                        }
+
+                        /* ── Message vide ── */
+                        .empty-msg {
+                            color: #888;
+                            font-style: italic;
+                            padding: 6px 10px;
+                            background: #fafafa;
+                            border: 1px dashed #ccc;
+                            margin: 4px 0 10px 0;
+                            font-size: 8pt;
+                        }
+
+                        /* ── Récapitulatif ── */
+                        table.tbl-recap {
+                            width: 45%;
+                            margin-left: 55%;
+                            border-collapse: collapse;
+                            margin-top: 20px;
+                            font-size: 9pt;
+                        }
+                        table.tbl-recap td {
+                            padding: 5px 8px;
+                            border: 1px solid #aaa;
+                        }
+                        .recap-label { color: #333; }
+                        .recap-row td { background-color: #eaf2f8; }
+                        .recap-total td {
+                            background-color: #1a5276;
+                            color: #fff;
+                            font-weight: bold;
+                            font-size: 10pt;
+                            border-color: #1a5276;
+                        }
+                    </style>
+
+                    <!-- Pré-calcul des données -->
+                    <t t-set="retours"        t-value="doc.get_retours()"/>
+                    <t t-set="receptions"     t-value="doc.get_receptions()"/>
+                    <!-- Totaux initialisés à 0 (mis à jour dans chaque section) -->
+                    <t t-set="total_retours_qty" t-value="0"/>
+                    <t t-set="total_retours_val" t-value="0"/>
+                    <t t-set="total_recep_qty"   t-value="0"/>
+                    <t t-set="total_recep_val"   t-value="0"/>
+
+                    <!-- ══ EN-TÊTE ══════════════════════════════════════════════ -->
+                    <div class="rpt-header">
+                        <div class="rpt-title">Rapport Retours &amp; Réceptions</div>
+                        <div class="rpt-meta">
+                            Contenu : <strong><t t-esc="doc.get_type_label()"/></strong>
+                            &#160;&#160;·&#160;&#160;
+                            Période : <strong><t t-esc="doc.get_periode_label()"/></strong>
+                            <t t-if="doc.partner_id">
+                                &#160;&#160;·&#160;&#160;
+                                Fournisseur : <strong><span t-field="doc.partner_id"/></strong>
+                            </t>
+                            &#160;&#160;·&#160;&#160;
+                            Édité le : <strong><t t-esc="doc.get_date_edition()"/></strong>
+                            &#160;&#160;·&#160;&#160;
+                            Par : <strong><t t-esc="user.name"/></strong>
+                        </div>
+                    </div>
+
+                    <!-- ══ SECTION 1 : Retours fournisseurs ════════════════════ -->
+                    <t t-if="doc.type_rapport in ('retours', 'tous')">
+                        <div class="sec-title">1 · Retours fournisseurs</div>
+                        <div class="sec-subtitle">
+                            Sorties de stock vers le fournisseur — bons de retour créés et validés.
+                        </div>
+
+                        <t t-if="retours">
+                            <t t-set="total_retours_qty" t-value="0"/>
+                            <t t-set="total_retours_val" t-value="0"/>
+                            <table class="tbl">
+                                <thead>
+                                    <tr>
+                                        <th>Référence</th>
+                                        <th>Date</th>
+                                        <th>Fournisseur</th>
+                                        <th>Article</th>
+                                        <th class="num">Qté</th>
+                                        <th class="ctr">UdM</th>
+                                        <th class="num">Prix unit.</th>
+                                        <th class="num">Montant</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="retours" t-as="picking">
+                                        <t t-foreach="picking.move_ids" t-as="move">
+                                            <t t-set="total_retours_qty" t-value="total_retours_qty + (move.product_uom_qty or 0)"/>
+                                            <t t-set="total_retours_val" t-value="total_retours_val + (move.product_uom_qty or 0) * (move.price_unit or 0)"/>
+                                            <tr>
+                                                <td><t t-esc="picking.name"/></td>
+                                                <td class="ctr"><t t-esc="picking.scheduled_date and picking.scheduled_date.strftime('%d/%m/%Y') or ''"/></td>
+                                                <td><t t-esc="picking.partner_id.name or '—'"/></td>
+                                                <td><t t-esc="move.product_id.display_name"/></td>
+                                                <td class="num"><t t-esc="'%.2f' % (move.product_uom_qty or 0)"/></td>
+                                                <td class="ctr"><t t-esc="move.product_uom.name"/></td>
+                                                <td class="num"><t t-esc="'%.2f' % (move.price_unit or 0)"/></td>
+                                                <td class="num"><t t-esc="'%.2f' % ((move.product_uom_qty or 0) * (move.price_unit or 0))"/></td>
+                                            </tr>
+                                        </t>
+                                    </t>
+                                </tbody>
+                                <tbody>
+                                    <tr class="tr-subtotal">
+                                        <td colspan="4" class="num">Sous-total retours</td>
+                                        <td class="num"><t t-esc="'%.2f' % total_retours_qty"/></td>
+                                        <td/>
+                                        <td/>
+                                        <td class="num"><t t-esc="'%.2f' % total_retours_val"/></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </t>
+                        <t t-else="">
+                            <p class="empty-msg">Aucun retour fournisseur trouvé sur la période sélectionnée.</p>
+                        </t>
+                    </t>
+
+                    <!-- ══ SECTION 2 : Réceptions directes ════════════════════ -->
+                    <t t-if="doc.type_rapport in ('receptions', 'tous')">
+                        <div class="sec-title">2 · Réceptions directes</div>
+                        <div class="sec-subtitle">
+                            Entrées de stock validées sans bon de commande.
+                        </div>
+
+                        <t t-if="receptions">
+                            <t t-set="total_recep_qty" t-value="0"/>
+                            <t t-set="total_recep_val" t-value="0"/>
+                            <table class="tbl">
+                                <thead>
+                                    <tr>
+                                        <th>Référence</th>
+                                        <th>Date</th>
+                                        <th>Fournisseur</th>
+                                        <th>Article</th>
+                                        <th class="num">Qté</th>
+                                        <th class="ctr">UdM</th>
+                                        <th class="num">Prix standard</th>
+                                        <th class="num">Prix réception</th>
+                                        <th class="num">Montant</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="receptions" t-as="picking">
+                                        <t t-foreach="picking.move_ids" t-as="move">
+                                            <t t-set="prix_std"    t-value="move.product_id.standard_price or 0"/>
+                                            <t t-set="prix_recep"  t-value="move.price_unit or 0"/>
+                                            <t t-set="a_maj"       t-value="prix_recep > 0 and abs(prix_recep - prix_std) > 0.001"/>
+                                            <t t-set="qty_move"    t-value="move.product_uom_qty or 0"/>
+                                            <t t-set="total_recep_qty" t-value="total_recep_qty + qty_move"/>
+                                            <t t-set="total_recep_val" t-value="total_recep_val + qty_move * prix_recep"/>
+                                            <tr>
+                                                <td><t t-esc="picking.name"/></td>
+                                                <td class="ctr"><t t-esc="picking.scheduled_date and picking.scheduled_date.strftime('%d/%m/%Y') or ''"/></td>
+                                                <td><t t-esc="picking.partner_id.name or '—'"/></td>
+                                                <td><t t-esc="move.product_id.display_name"/></td>
+                                                <td class="num"><t t-esc="'%.2f' % qty_move"/></td>
+                                                <td class="ctr"><t t-esc="move.product_uom.name"/></td>
+                                                <td class="num"><t t-esc="'%.2f' % prix_std"/></td>
+                                                <td class="num">
+                                                    <t t-if="a_maj">
+                                                        <span class="prix-modifie"><t t-esc="'%.2f' % prix_recep"/></span>
+                                                        &#160;<span class="badge-nouveau">MAJ</span>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <t t-esc="'%.2f' % prix_recep"/>
+                                                    </t>
+                                                </td>
+                                                <td class="num"><t t-esc="'%.2f' % (qty_move * prix_recep)"/></td>
+                                            </tr>
+                                        </t>
+                                    </t>
+                                </tbody>
+                                <tbody>
+                                    <tr class="tr-subtotal">
+                                        <td colspan="4" class="num">Sous-total réceptions</td>
+                                        <td class="num"><t t-esc="'%.2f' % total_recep_qty"/></td>
+                                        <td/>
+                                        <td/>
+                                        <td/>
+                                        <td class="num"><t t-esc="'%.2f' % total_recep_val"/></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </t>
+                        <t t-else="">
+                            <p class="empty-msg">Aucune réception directe trouvée sur la période sélectionnée.</p>
+                        </t>
+                    </t>
+
+                    <!-- ══ RÉCAPITULATIF ════════════════════════════════════════ -->
+                    <table class="tbl-recap">
+                        <t t-if="doc.type_rapport in ('retours', 'tous')">
+                            <tr class="recap-row">
+                                <td class="recap-label">Retours fournisseurs (<t t-esc="len(retours)"/> bon(s))</td>
+                                <td class="num"><t t-esc="'%.2f' % total_retours_val"/></td>
+                            </tr>
+                        </t>
+                        <t t-if="doc.type_rapport in ('receptions', 'tous')">
+                            <tr class="recap-row">
+                                <td class="recap-label">Réceptions directes (<t t-esc="len(receptions)"/> réception(s))</td>
+                                <td class="num"><t t-esc="'%.2f' % total_recep_val"/></td>
+                            </tr>
+                        </t>
+                        <tr class="recap-total">
+                            <td><strong>TOTAL GÉNÉRAL</strong></td>
+                            <td class="num"><t t-esc="'%.2f' % (total_retours_val + total_recep_val)"/></td>
+                        </tr>
+                    </table>
+
+                </div>
+            </t>
+        </template>
+
+        <!-- Template principal -->
+        <template id="report_retours_receptions">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="doc">
+                    <t t-call="custom_stock.report_retours_receptions_document"/>
+                </t>
+            </t>
+        </template>
+
+    </data>
+</odoo>
