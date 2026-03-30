@@ -94,3 +94,25 @@ class ResPartnerInherit(models.Model):
                 rec.discount_start_date = fields.Date.today()
             else:
                 rec.discount_start_date = False
+
+
+    def remove_duplicate_partners(self):
+        partners = self.env['res.partner'].search([
+            ('customer_id', '!=', False)
+        ], order='customer_id, id')
+
+        seen = {}
+        duplicates = self.env['res.partner']
+
+        for partner in partners:
+            key = partner.customer_id.strip()
+
+            if key in seen:
+                duplicates |= partner
+            else:
+                seen[key] = partner
+
+        # ⚠️ suppression
+        duplicates.unlink()
+
+        return True

@@ -8,6 +8,10 @@
             <field name="model">res.partner</field>
             <field name="inherit_id" ref="base.view_partner_form"/>
             <field name="arch" type="xml">
+                <xpath expr="//sheet" position="before">
+                    <button string="Suppression des doublons" 
+                        name="remove_duplicate_partners" type="object" class="oe_highlight"/>
+                </xpath>
                 <xpath expr="//field[@name='category_id']" position="attributes">
                     <attribute name="string">Catégorie client</attribute>
                 </xpath>

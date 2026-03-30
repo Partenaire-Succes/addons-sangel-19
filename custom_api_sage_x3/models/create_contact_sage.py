@@ -92,6 +92,10 @@ class ResPartnerImport(models.Model):
                         _logger.warning("⚠️ Contact ignoré sans code client : %s", vals.get("name"))
                         skipped += 1
                         continue
+                    if not vals.get("name"):
+                        _logger.warning("⚠️ Contact ignoré sans nom : %s", vals.get("customer_id"))
+                        skipped += 1
+                        continue
 
                     existing = partner_model.search(
                         [("customer_id", "=", vals["customer_id"])], limit=1
