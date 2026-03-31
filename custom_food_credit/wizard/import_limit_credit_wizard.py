@@ -88,7 +88,7 @@ class ImportLimitCreditWizard(models.TransientModel):
 
             # Recherche du partenaire (nom exact, insensible à la casse)
             partner = self.env['res.partner'].search(
-                [('name', '=ilike', partner_name)],
+                [('customer_id', '=ilike', partner_name)],
                 limit=1
             )
 
