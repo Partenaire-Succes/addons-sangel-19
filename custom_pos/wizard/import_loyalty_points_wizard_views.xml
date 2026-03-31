@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="view_import_loyalty_points_wizard_form" model="ir.ui.view">
+            <field name="name">import.loyalty.points.wizard.form</field>
+            <field name="model">import.loyalty.points.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Import Excel - Points Fidélité">
+
+                    <!-- Zone upload (état brouillon) -->
+                    <group invisible="state != 'draft'">
+                        <group string="Fichier à importer">
+                            <field name="file" filename="file_name" widget="binary"
+                                   help="Fichier Excel avec colonnes : code_carte | points"/>
+                            <field name="file_name" invisible="1"/>
+                        </group>
+                    </group>
+
+                    <!-- Bouton télécharger template (toujours visible en draft) -->
+                    <div invisible="state != 'draft'" class="mb-3">
+                        <button name="action_download_template"
+                                type="object"
+                                string="Télécharger le template Excel"
+                                class="btn-secondary"
+                                icon="fa-download"/>
+                    </div>
+
+                    <!-- Bouton charger -->
+                    <button name="action_load_file"
+                            type="object"
+                            string="Charger le fichier"
+                            class="btn-primary"
+                            invisible="state != 'draft'"/>
+
+                    <!-- Résumé après chargement -->
+                    <group invisible="state == 'draft'">
+                        <group string="Résumé">
+                            <field name="count_ok" string="Lignes valides" readonly="1"/>
+                            <field name="count_errors" string="Lignes en erreur" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <!-- Tableau des lignes -->
+                    <field name="line_ids" invisible="state == 'draft'" readonly="1">
+                        <list decoration-success="status == 'ok'"
+                              decoration-danger="status == 'card_not_found'">
+                            <field name="code_carte" string="Code Carte (Excel)"/>
+                            <field name="card_id" string="Carte trouvée"/>
+                            <field name="partner_id" string="Partenaire"/>
+                            <field name="program_id" string="Programme"/>
+                            <field name="points_old" string="Solde actuel"/>
+                            <field name="points_new" string="Nouveau solde"/>
+                            <field name="status" string="Statut"/>
+                        </list>
+                    </field>
+
+                    <footer>
+                        <button name="action_confirm"
+                                type="object"
+                                string="Confirmer la mise à jour"
+                                class="btn-success"
+                                invisible="state != 'loaded'"/>
+                        <button string="Annuler" special="cancel"/>
+                    </footer>
+
+                </form>
+            </field>
+        </record>
+
+        <record id="action_import_loyalty_points_wizard" model="ir.actions.act_window">
+            <field name="name">Import Excel Points Fidélité</field>
+            <field name="res_model">import.loyalty.points.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+        </record>
+
+        <menuitem id="menu_import_loyalty_points"
+                  name="Import Excel Points Fidélité"
+                  parent="point_of_sale.pos_config_menu_catalog"
+                  action="action_import_loyalty_points_wizard"
+                  groups="point_of_sale.group_pos_manager"
+                  sequence="95"/>
+
+    </data>
+</odoo>
