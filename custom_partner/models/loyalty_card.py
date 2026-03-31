@@ -18,9 +18,9 @@ class LoyaltyCard(models.Model):
         default=False
     )
 
-    _sql_constraints = [
-        ("code_unique", "unique(code)", "Le code-barres doit être unique !")
-    ]
+    # _sql_constraints = [
+    #     ("code_unique", "unique(code)", "Le code-barres doit être unique !")
+    # ]
 
     @api.model_create_multi
     def create(self, vals_list):
