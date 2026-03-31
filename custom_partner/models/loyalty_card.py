@@ -18,9 +18,9 @@ class LoyaltyCard(models.Model):
         default=False
     )
 
-    # _sql_constraints = [
-    #     ("code_unique", "unique(code)", "Le code-barres doit être unique !")
-    # ]
+    _sql_constraints = [
+        ("code_unique", "unique(code)", "Le code-barres doit être unique !")
+    ]
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -63,5 +63,7 @@ class LoyaltyCard(models.Model):
             partners = self.env["res.partner"].search([("customer_id", "=", card.code)], limit=1)
             if partners:
                 card.partner_id = partners.id
+                partners.barcode = card.code
             else:
                 card.partner_id = False
+                partners.barcode = False
