@@ -33,6 +33,7 @@
         'views/pos_payment_method_inherit_views.xml',
         'views/pos_session_inherit_views.xml',
         'views/pos_order_promo_report_views.xml',
+        'views/product_template_inherit_views.xml',
         'wizard/import_loyalty_points_wizard_views.xml',
     ],
     'images': ['static/description/banner.png'],

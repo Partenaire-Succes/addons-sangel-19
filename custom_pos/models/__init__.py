@@ -7,4 +7,4 @@
 #    Author: Adama KONE
 #
 #############################################################################
-from . import order_pos, pos_config, pos_payment_method, session, res_users
+from . import order_pos, pos_config, pos_payment_method, session, res_users, product_template
