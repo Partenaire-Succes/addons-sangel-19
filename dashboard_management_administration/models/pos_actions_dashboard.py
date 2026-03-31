@@ -120,8 +120,8 @@ class PosActionsDashboard(models.Model):
             # Produits accessibles à cette société
             'product_count': self.env['product.template'].search_count([
                 '|',
-                ('company_id', '=', company_id),
-                ('company_id', '=', False),
+                ('allowed_company_ids', 'in', [company_id]),
+                ('allowed_company_ids', '=', False),
             ]),
 
             # Contacts accessibles à cette société
@@ -143,11 +143,12 @@ class PosActionsDashboard(models.Model):
             # Ne compte que les factures clients hors POS non encore envoyées
             'invoices_to_send': self.env['account.move'].search_count([
                 ('company_id',     '=',  company_id),
-                ('move_type',      '=',  'out_invoice'),
+                ('move_type',     'in', ['out_invoice', 'out_refund']),
                 ('state',          '=',  'posted'),
                 ('sage_x3_sent',   '=',  False),
                 ('pos_order_ids',  '=',  False),
             ]),
+            
 
             # Commandes validées par SAGE X3 mais livraison non encore reçue
             'purchase_to_receive': self.env['purchase.order'].search_count([

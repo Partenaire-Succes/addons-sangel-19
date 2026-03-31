@@ -63,10 +63,12 @@
                 <xpath expr="//field[@name='standard_price']" position="after">
                     <field name="purchase_new_price"
                            string="Nouveau prix d'achat"
+                           invisible="1"
                            help="Si renseigné, ce prix remplace le prix standard comme coût de référence."/>
                     <field name="effective_cost"
                            string="Coût effectif (utilisé)"
                            readonly="1"
+                           invisible="1"
                            help="= Nouveau prix si défini, sinon prix standard."/>
                 </xpath>
                 <xpath expr="//field[@name='supplier_taxes_id']" position="attributes">

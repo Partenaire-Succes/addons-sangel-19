@@ -12,12 +12,16 @@
         <field name="arch" type="xml">
             
             <!-- Onglet SAGE X3 -->
+            
+            <xpath expr="//field[@name='ref']" position="after">
+                <field name="sage_sent" invisible="0"/>
+            </xpath>
+
             <xpath expr="//notebook" position="inside">
                 <page name="sage_x3" string="SAGE X3" invisible="move_type != 'out_invoice'">
                     <group>
                         <group string="Statut SAGE X3">
                             <field name="sage_x3_sent" readonly="1"/>
-                            <field name="sage_x3_piece_type" readonly="1"/>
                             <field name="sage_x3_piece_number" readonly="1"/>
                             <field name="sage_x3_sent_date" readonly="1"/>
                         </group>
@@ -33,23 +37,23 @@
                         </group>
                     </group>
                     
-                    <!-- Indicateurs -->
-                    <group>
-                        <div class="alert alert-success" 
-                             invisible="not sage_x3_sent"
-                             style="margin: 10px;">
-                            <strong>✅ Facture envoyée à SAGE X3</strong>
-                            <p>N° Pièce: <field name="sage_x3_piece_number" readonly="1" nolabel="1"/></p>
-                        </div>
-                        
-                        <div class="alert alert-danger" 
-                             invisible="not sage_x3_error"
-                             style="margin: 10px;">
-                            <strong>❌ Erreur SAGE X3</strong>
-                            <p><field name="sage_x3_error" readonly="1" nolabel="1"/></p>
-                        </div>
-                    </group>
                 </page>
+            </xpath>
+
+            <xpath expr="//sheet" position="before">
+                <div class="alert alert-success" 
+                        invisible="not sage_x3_sent"
+                        style="margin: 10px;">
+                    <strong>✅ Facture envoyée à SAGE X3</strong>
+                    <p>N° Pièce: <field name="sage_x3_piece_number" readonly="1" nolabel="1"/></p>
+                </div>
+                
+                <div class="alert alert-danger" 
+                        invisible="not sage_x3_error"
+                        style="margin: 10px;">
+                    <strong>❌ Erreur SAGE X3</strong>
+                    <p><field name="sage_x3_error" readonly="1" nolabel="1"/></p>
+                </div>
             </xpath>
             
         </field>
@@ -108,14 +112,13 @@
         <field name="inherit_id" ref="account.view_account_payment_form"/>
         <field name="arch" type="xml">
             
-            <!-- Champs SAGE X3 -->
             <xpath expr="//group[@name='main_group']" position="after">
                 <group name="sage_x3_info" string="SAGE X3" 
                        invisible="payment_type != 'inbound' or partner_type != 'customer'">
                     <field name="sage_x3_sent" readonly="1"/>
                     <field name="sage_x3_piece_number" readonly="1"/>
                     <field name="sage_x3_sent_date" readonly="1"/>
-                    <field name="sage_x3_error" readonly="1" invisible="not sage_x3_error"/>
+                    <field name="message" readonly="1"/>
                 </group>
             </xpath>
             <xpath expr="//field[@name='partner_bank_id']" position="after">

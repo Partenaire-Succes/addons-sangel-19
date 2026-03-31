@@ -2,6 +2,7 @@ import json
 import logging
 from datetime import datetime
 from collections import defaultdict
+from unittest import result
 
 from odoo import fields, models, api
 from odoo.exceptions import UserError
@@ -116,6 +117,64 @@ class AccountMoveSageX3(models.Model):
 
         return {'success': success_count, 'errors': error_count, 'error_details': errors}
 
+
+    def get_pos_lines_grouped_by_tva(self, pos_sessions):
+
+        if not pos_sessions:
+            return {}
+
+        lines = self.env['pos.order.line'].search([
+            ('order_id.session_id', 'in', pos_sessions.ids),
+            ('order_id.payment_ids.payment_method_id.is_limit', '=', False),
+            ('tax_ids', '!=', False),
+        ])
+
+        grouped_tax = defaultdict(float)
+
+        for line in lines:
+            tax_res = line.tax_ids.compute_all(
+                line.price_unit,
+                quantity=line.qty,
+                product=line.product_id,
+            )
+
+            for tax_line in tax_res['taxes']:
+                tax_id = tax_line['id']
+                tax = self.env['account.tax'].browse(tax_id)
+
+                taux = tax.amount  # ✅ fiable (9, 18, etc.)
+                grouped_tax[taux] += tax_line['amount']
+
+        return grouped_tax
+
+    def get_pos_lines_total_ht(self, pos_sessions):
+        """
+        Retourne le montant total HT des lignes POS
+        (hors taxes, basé sur Odoo compute_all pour être fiable)
+        """
+
+        if not pos_sessions:
+            return 0.0
+
+        lines = self.env['pos.order.line'].search([
+            ('order_id.session_id', 'in', pos_sessions.ids),
+            ('order_id.payment_ids.payment_method_id.is_limit', '=', False),
+        ])
+
+        total_ht = 0.0
+
+        for line in lines:
+            # Calcul officiel Odoo
+            tax_res = line.tax_ids.compute_all(
+                line.price_unit,
+                quantity=line.qty,
+                product=line.product_id,
+            )
+
+            total_ht += tax_res['total_excluded']  # HT
+
+        return round(total_ht, 2)
+
     def _prepare_daily_entry(self, company, target_date):
         """
         Prépare les écritures ENCAI et/ou DECAI pour UNE société, UN jour.
@@ -138,6 +197,7 @@ class AccountMoveSageX3(models.Model):
         # Sessions POS du jour
         pos_sessions = self.env['pos.session'].search([
             ('company_id', '=', company.id),
+            ('sage_x3_sent', '=',  False),
             ('start_at',   '>=', dt_min),
             ('start_at',   '<=', dt_max),
         ])
@@ -174,7 +234,8 @@ class AccountMoveSageX3(models.Model):
         sale_account = company.sage_x3_account_sale_id
         cust_account = company.sage_x3_account_customer_default_id
         caisse_acct  = company.sage_x3_account_caisse_id
-        ecart_acct   = company.sage_x3_account_ecart_caisse_id
+        sale_tva_9   = company.sage_x3_account_sale_tva_9_id
+        sale_tva_18  = company.sage_x3_account_sale_tva_18_id
         magasin      = self._get_company_code(company)
         date_yy      = target_date.strftime("%d%m%y")
         date_fr      = target_date.strftime("%d/%m/%Y")
@@ -185,7 +246,6 @@ class AccountMoveSageX3(models.Model):
             ("Compte vente",           sale_account),
             ("Compte client",          cust_account),
             ("Compte caisse",          caisse_acct),
-            ("Compte écart de caisse", ecart_acct),
         ]:
             if not val:
                 raise UserError(f"{label} non configuré pour {company.name}")
@@ -204,14 +264,16 @@ class AccountMoveSageX3(models.Model):
         #   → 1 seule ligne par compte dans le DECAI final
         # =====================================================================
         encai_pos_total         = 0.0
-        decai_individual_limit  = []
         decai_individual_food   = []
         decai_grouped_by_compte = {}   # clé = code compte, valeur = {montant, libelle}
+
+        if pos_sessions:
+            # Encaissement total
+            encai_pos_total = self.get_pos_lines_total_ht(pos_sessions)
 
         for session in pos_sessions:
             payments = self.env['pos.payment'].search([
                 ('session_id',   '=',  session.id),
-                ('sage_x3_sent', '=',  False),
             ])
 
             for payment in payments:
@@ -253,18 +315,14 @@ class AccountMoveSageX3(models.Model):
                 )
 
                 # ── Routage par flag (exclusifs) ──────────────────────────────
-                if method.is_limit:
+                if not method.is_limit:
                     # Individuel avec tiers
-                    decai_individual_limit.append({
-                        "compte":  pay_account.code,
-                        "libelle": f"{method.name} DU {pay_date}",
-                        "montant": amount,
-                        "tiers":   tiers_code,
-                    })
-
-                else:
-                    # Encaissement total
-                    encai_pos_total += amount
+                    # decai_individual_limit.append({
+                    #     "compte":  pay_account.code,
+                    #     "libelle": f"{method.name} DU {pay_date}",
+                    #     "montant": amount,
+                    #     "tiers":   tiers_code,
+                    # })
 
                     if method.is_food:
                         # Individuel avec tiers
@@ -315,6 +373,7 @@ class AccountMoveSageX3(models.Model):
         # =====================================================================
         lignes_encai = []
         total_encai  = 0.0
+        total_tax_encai = 0.0
 
         # [1] Ventes POS groupées
         if encai_pos_total > 0:
@@ -326,6 +385,30 @@ class AccountMoveSageX3(models.Model):
                 libelle = f"VENTES {magasin} DU {date_fr}",
             ))
             total_encai += encai_pos_total
+
+        grouped_tax_compte = self.get_pos_lines_grouped_by_tva(pos_sessions)
+
+        for taux, montant in sorted(grouped_tax_compte.items()):
+
+            taux_int = int(round(taux))
+
+            if taux_int == 18:
+                compte = sale_tva_18
+            elif taux_int == 9:
+                compte = sale_tva_9
+            else:
+                continue  # ignore les autres taux
+
+            if montant > 0:
+                lignes_encai.append(self._build_ligne(
+                    site    = site,
+                    compte  = compte.code if hasattr(compte, 'code') else compte,
+                    sens    = -1,
+                    montant = round(montant, 2),
+                    libelle = f"TVA {taux_int}% {date_fr}",
+                ))
+
+                total_encai += montant
 
         # [2] Règlements clients (account.payment) — 1 ligne par paiement
         for pmt in account_payments:
@@ -382,17 +465,17 @@ class AccountMoveSageX3(models.Model):
         total_decai  = 0.0
 
         # Lignes individuelles (is_limit), triées (compte, tiers)
-        for line in sorted(decai_individual_limit,
-                           key=lambda x: (x['compte'], x.get('tiers', ''))):
-            lignes_decai.append(self._build_ligne(
-                site    = site,
-                compte  = line['compte'],
-                sens    = -1,
-                montant = round(line['montant'], 2),
-                libelle = line['libelle'],
-                tiers   = line.get('tiers', ''),
-            ))
-            total_decai += line['montant']
+        # for line in sorted(decai_individual_limit,
+        #                    key=lambda x: (x['compte'], x.get('tiers', ''))):
+        #     lignes_decai.append(self._build_ligne(
+        #         site    = site,
+        #         compte  = line['compte'],
+        #         sens    = 1,
+        #         montant = round(line['montant'], 2),
+        #         libelle = line['libelle'],
+        #         tiers   = line.get('tiers', ''),
+        #     ))
+        #     total_decai += line['montant']
 
         # Lignes individuelles (is_food), triées (compte, tiers)
         for line in sorted(decai_individual_food,
@@ -400,12 +483,12 @@ class AccountMoveSageX3(models.Model):
             lignes_decai.append(self._build_ligne(
                 site    = site,
                 compte  = line['compte'],
-                sens    = -1,
+                sens    = 1,
                 montant = round(line['montant'], 2),
                 libelle = line['libelle'],
                 tiers   = line.get('tiers', ''),
             ))
-            total_decai += line['montant']
+            total_decai += line['montant']    
 
         # [3]+[4]+[5] Lignes groupées par compte (is_bank_card, is_cheque, is_titre_paiement)
         # → 1 seule ligne par code compte, triées par code compte
@@ -415,7 +498,7 @@ class AccountMoveSageX3(models.Model):
                 lignes_decai.append(self._build_ligne(
                     site    = site,
                     compte  = compte,
-                    sens    = -1,
+                    sens    = 1,
                     montant = round(montant, 2),
                     libelle = data['libelle'],
                 ))
@@ -426,7 +509,7 @@ class AccountMoveSageX3(models.Model):
             lignes_decai.append(self._build_ligne(
                 site    = site,
                 compte  = caisse_acct.code,
-                sens    = 1,
+                sens    = -1,
                 montant = round(total_decai, 2),
                 libelle = f"CAISSE {magasin} DU {date_fr}",
             ))
@@ -435,6 +518,7 @@ class AccountMoveSageX3(models.Model):
         # ASSEMBLAGE FINAL
         # =====================================================================
         ecritures = []
+        result  = self._ligne_ecritures_is_limit(pos_sessions)
 
         if lignes_encai and total_encai > 0:
             ecritures.append(self._build_ecriture(
@@ -442,7 +526,7 @@ class AccountMoveSageX3(models.Model):
                 site        = site,
                 date_ddmmyy = date_yy,
                 journal     = journal,
-                libelle     = f"ENCAISSEMENT CAISSE {magasin} DU {date_fr}",
+                libelle     = f"ENCAI CAISSE {magasin} DU {date_fr}",
                 lignes      = lignes_encai,
             ))
 
@@ -452,14 +536,136 @@ class AccountMoveSageX3(models.Model):
                 site        = site,
                 date_ddmmyy = date_yy,
                 journal     = journal,
-                libelle     = f"DECAISSEMENT CAISSE {magasin} DU {date_fr}",
+                libelle     = f"DECAI CAISSE {magasin} DU {date_fr}",
                 lignes      = lignes_decai,
             ))
+
+        if result and result.get("ecritures"):
+            ecritures.extend(result["ecritures"])
 
         if not ecritures:
             _logger.info("ℹ️  Aucune écriture pour %s le %s",
                          company.name, target_date)
             return None
+
+        return {"ecritures": ecritures}
+
+    def _ligne_ecritures_is_limit(self, sessions):
+
+        company      = self.env.user.company_id
+        receivable   = company.sage_x3_account_customer_default_id
+        sale_acct    = company.sage_x3_account_sale_id
+        sale_tva_9   = company.sage_x3_account_sale_tva_9_id
+        sale_tva_18  = company.sage_x3_account_sale_tva_18_id
+        site         = company.sage_x3_site
+        journal      = company.sage_x3_journal_sale
+        type_piece   = "FACLI"
+
+        if not sessions:
+            return []
+
+        ecritures = []
+
+        for session in sessions:
+
+            payments = self.env['pos.payment'].search([
+                ('session_id', '=', session.id),
+                ('payment_method_id.is_limit', '=', True),
+            ])
+
+            for payment in payments:
+
+                partner = payment.partner_id
+
+                tiers_code = (partner.customer_id or "").strip() if partner else ""
+                partner_name = partner.name if partner else "CLIENT"
+
+                pay_date = payment.payment_date.strftime("%d%m%y") if payment.payment_date else ""
+                date_fr  = payment.payment_date.strftime("%d/%m/%Y") if payment.payment_date else ""
+
+                # ✅ Correction ici
+                lines = self.env['pos.order.line'].search([
+                    ('order_id', '=', payment.pos_order_id.id),
+                ])
+
+                total_ht = 0.0
+                grouped_tax = defaultdict(float)
+                lignes = []
+
+                for line in lines:
+
+                    tax_res = line.tax_ids.compute_all(
+                        line.price_unit,
+                        quantity=line.qty,
+                        product=line.product_id,
+                    )
+
+                    total_ht += tax_res['total_excluded']
+
+                    for tax_line in tax_res['taxes']:
+                        tax = self.env['account.tax'].browse(tax_line['id'])
+                        taux = tax.amount
+                        grouped_tax[taux] += tax_line['amount']
+
+                total_ht = round(total_ht, 2)
+
+                # =====================
+                # Ligne client
+                # =====================
+                lignes.append(self._build_ligne(
+                    site    = site,
+                    compte  = receivable.code,
+                    sens    = 1,
+                    montant = round(payment.amount, 2),
+                    libelle = f"Mise en compte {partner_name}",
+                    tiers   = tiers_code,
+                ))
+
+                # =====================
+                # Ligne vente HT
+                # =====================
+                lignes.append(self._build_ligne(
+                    site    = site,
+                    compte  = sale_acct.code,
+                    sens    = -1,
+                    montant = total_ht,
+                    libelle = f"CAISSE EN COMPTE {company.name} DU {date_fr}",
+                ))
+
+                # =====================
+                # Lignes TVA
+                # =====================
+                for taux, montant in sorted(grouped_tax.items()):
+
+                    taux_int = int(round(taux))
+
+                    if taux_int == 18:
+                        compte = sale_tva_18
+                    elif taux_int == 9:
+                        compte = sale_tva_9
+                    else:
+                        continue
+
+                    if montant > 0:
+                        lignes.append(self._build_ligne(
+                            site    = site,
+                            compte  = compte.code,
+                            sens    = -1,
+                            montant = round(montant, 2),
+                            libelle = f"TVA {taux_int}% {date_fr}",
+                        ))
+
+                # =====================
+                # Écriture
+                # =====================
+                ecritures.append(self._build_ecriture(
+                    type_piece  = type_piece,
+                    site        = site,
+                    date_ddmmyy = pay_date,
+                    journal     = journal,
+                    libelle     = f"Mise en compte {partner_name}",
+                    lignes      = lignes,
+                ))
 
         return {"ecritures": ecritures}
 
@@ -533,19 +739,14 @@ class AccountMoveSageX3(models.Model):
             ('start_at', '<=', dt_max),
         ])
 
-        pos_payments = self.env['pos.payment'].search([
-            ('session_id', 'in', pos_sessions.ids),
-            ('sage_x3_sent', '=', False),
-        ])
-
-        if pos_payments:
-            pos_payments.write({
+        if pos_sessions:
+            pos_sessions.write({
                 'sage_x3_sent': True,
                 'sage_x3_sent_date': fields.Datetime.now(),
                 'sage_x3_piece_number': piece_numbers,
                 'message': message,
             })
-            _logger.info("✅ %s paiement(s) POS marqués", len(pos_payments))
+            _logger.info("✅ %s session(s) POS marqués", len(pos_sessions))
 
         # ======================
         # 🔹 ACCOUNT PAYMENTS
@@ -676,42 +877,53 @@ class AccountMoveSageX3(models.Model):
             'sage_x3_error':        False,
         })
 
-    def _prepare_invoice_entry(self, invoice):
-        """
-        Prépare l'écriture FACLI (facture) ou AVCLI (avoir).
+    def _compute_tva(self, montant_ttc, taux):
+        if not montant_ttc:
+            return 0.0
 
-        FACLI : DÉBIT client (sens=+1) + CRÉDIT vente (sens=-1)
-        AVCLI : sens inversés
-        Mapping volontaire → toutes les lignes produit sur 1 compte vente SAGE X3.
-        """
-        company   = invoice.company_id
-        is_refund = (invoice.move_type == 'out_refund')
-        type_piece = "AVCLI" if is_refund else "FACLI"
+        # Sécurisation du taux (18 ou 0.18)
+        taux = taux / 100 if taux > 1 else taux
+
+        tva = montant_ttc * taux / (1 + taux)
+        return round(tva, 2)
+
+
+    def _prepare_invoice_entry(self, invoice):
+        company     = invoice.company_id
+        is_refund   = (invoice.move_type == 'out_refund')
+        type_piece  = "AVCLI" if is_refund else "FACLI"
 
         sens_client = -1 if is_refund else  1
         sens_vente  =  1 if is_refund else -1
 
-        receivable = company.sage_x3_account_customer_default_id
-        sale_acct  = company.sage_x3_account_sale_id
-        site       = company.sage_x3_site
-        journal    = company.sage_x3_journal_sale
+        receivable  = company.sage_x3_account_customer_default_id
+        sale_acct   = company.sage_x3_account_sale_id
+        sale_tva_9  = company.sage_x3_account_sale_tva_9_id
+        sale_tva_18 = company.sage_x3_account_sale_tva_18_id
+        site        = company.sage_x3_site
+        journal     = company.sage_x3_journal_sale
 
+        # 🔒 Vérification config
         for label, val in [
             ("Compte client", receivable),
             ("Compte vente",  sale_acct),
             ("Site SAGE X3",  site),
             ("Journal vente", journal),
+            ("Compte TVA 9%",  sale_tva_9),
+            ("Compte TVA 18%", sale_tva_18),
         ]:
             if not val:
                 raise UserError(f"{label} non configuré pour {company.name}")
 
-        third_party = invoice.partner_id.customer_id.strip()
+        third_party = (invoice.partner_id.customer_id or "").strip()
         date_yy     = invoice.invoice_date.strftime("%d%m%y")
         date_fr     = invoice.invoice_date.strftime("%d/%m/%Y")
         magasin     = self._get_company_code(company)
         lignes      = []
 
+        # =========================
         # Ligne client
+        # =========================
         lignes.append(self._build_ligne(
             site    = site,
             compte  = receivable.code,
@@ -721,34 +933,67 @@ class AccountMoveSageX3(models.Model):
             tiers   = third_party,
         ))
 
-        # Lignes produit regroupées par compte Odoo
-        # → toutes mappées sur le même compte SAGE X3 (volontaire)
-        product_totals = defaultdict(float)
+        # =========================
+        # TVA
+        # =========================
+        tax_facli = defaultdict(float)
+
         for line in invoice.invoice_line_ids:
             if line.display_type in ('line_section', 'line_note'):
                 continue
-            if not line.account_id or line.price_total == 0:
-                continue
-            product_totals[line.account_id.code] += line.price_total
 
-        if not product_totals:
+            # ⚠️ Correction : gérer plusieurs taxes
+            for tax in line.tax_ids:
+                if tax.amount == 9:
+                    tax_val = self._compute_tva(line.price_total, 0.09)
+                    tax_facli[sale_tva_9] += tax_val
+
+                elif tax.amount == 18:
+                    tax_val = self._compute_tva(line.price_total, 0.18)
+                    tax_facli[sale_tva_18] += tax_val
+
+        # =========================
+        # Ligne vente (HT)
+        # =========================
+        if not invoice.amount_untaxed:
             raise UserError(f"Aucune ligne de produit valide sur {invoice.name}")
 
-        for _odoo_code, amount in sorted(product_totals.items()):
+        if invoice.amount_untaxed > 0:
+            lignes.append(self._build_ligne(
+                site    = site,
+                compte  = sale_acct.code,
+                sens    = sens_vente,
+                montant = round(invoice.amount_untaxed, 2),
+                libelle = f"VENTES {date_fr}",
+            ))
+
+        # =========================
+        # Lignes TVA
+        # =========================
+        for account, amount in tax_facli.items():
             if amount > 0:
+                taux = 9 if account == sale_tva_9 else 18
+                
                 lignes.append(self._build_ligne(
                     site    = site,
-                    compte  = sale_acct.code,
+                    compte  = account.code,
                     sens    = sens_vente,
                     montant = round(amount, 2),
-                    libelle = f"VENTES {date_fr}",
+                    libelle = f"TVA {taux}% {date_fr}",
                 ))
 
-        return {"ecritures": [self._build_ecriture(
-            type_piece  = type_piece,
-            site        = site,
-            date_ddmmyy = date_yy,
-            journal     = journal,
-            libelle     = f"{type_piece} {magasin} {invoice.name}",
-            lignes      = lignes,
-        )]}
+        # =========================
+        # Écriture finale
+        # =========================
+        return {
+            "ecritures": [
+                self._build_ecriture(
+                    type_piece  = type_piece,
+                    site        = site,
+                    date_ddmmyy = date_yy,
+                    journal     = journal,
+                    libelle     = f"{type_piece} {magasin} {invoice.name}",
+                    lignes      = lignes,
+                )
+            ]
+        }
