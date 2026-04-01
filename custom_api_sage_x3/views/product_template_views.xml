@@ -17,7 +17,7 @@
                             invisible="1"
                             class="btn btn-secondary"/>
 
-                    <button name="normalize_taxes_all_companies" 
+                    <button name="clean_taxes_products" 
                             string="Normaliser les taxes" 
                             type="object" 
                             class="btn btn-secondary"/>

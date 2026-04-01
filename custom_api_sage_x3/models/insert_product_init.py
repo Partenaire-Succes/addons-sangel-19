@@ -26,6 +26,48 @@ class ProductTemplateImport(models.Model):
     # POINTS D'ENTRÉE
     # =========================================================================
 
+    def clean_taxes_products(self):
+        _logger.info("🚀 Nettoyage des taxes démarré")
+
+        codes = ['7604', '4595', '7605', '4311', '7577', '2218', '4129', '2184']
+
+        Product = self.env['product.template'].with_context(active_test=False)
+
+        # ------------------------------------------------------------------
+        # 1. SUPPRIMER TAXES D'ACHAT POUR TOUS LES PRODUITS
+        # ------------------------------------------------------------------
+        all_products = Product.search([])
+        total = len(all_products)
+
+        batch_size = 500
+
+        for i in range(0, total, batch_size):
+            batch = all_products[i:i + batch_size]
+
+            batch.write({
+                'supplier_taxes_id': [(6, 0, [])]
+            })
+
+            self.env.cr.commit()
+            _logger.info("💾 Taxes achat supprimées batch %s/%s", i, total)
+
+        # ------------------------------------------------------------------
+        # 2. SUPPRIMER TAXES DE VENTE POUR CERTAINS PRODUITS
+        # ------------------------------------------------------------------
+        products_target = Product.search([
+            ('default_code', 'in', codes)
+        ])
+
+        _logger.info("🎯 Produits ciblés: %s", len(products_target))
+
+        products_target.write({
+            'taxes_id': [(6, 0, [])]
+        })
+
+        self.env.cr.commit()
+
+        _logger.info("✅ Nettoyage terminé")
+
     def normalize_taxes_all_companies(self):
         _logger.info("🚀 Début normalisation des taxes multi-sociétés")
 

@@ -1,25 +1,53 @@
+```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
 
-    <!-- Extend PartnerLine to show food credit balance -->
-    <t t-name="custom_food_credit.PartnerLine" t-inherit="point_of_sale.PartnerLine" t-inherit-mode="extension">
-        
-        <!-- Desktop view: Add food credit balance in the balance cell -->
+    <t t-name="custom_food_credit.PartnerLine"
+       t-inherit="point_of_sale.PartnerLine"
+       t-inherit-mode="extension">
+
+        <!-- ===================== DESKTOP ===================== -->
         <xpath expr="//td[hasclass('partner-line-balance')]" position="inside">
-            <div t-if="props.partner.food_credit_balance > 0" class="pos-right-align text-success">
-                <t t-esc="env.utils.formatCurrency(props.partner.food_credit_balance)"/>
-                <span class="ms-1">crédit alimentaire</span>
-            </div>
+
+            <!-- Customer ID -->
+            <t t-if="props.partner.customer_id">
+                <div class="pos-right-align text-primary">
+                    ID: <t t-esc="props.partner.customer_id"/>
+                </div>
+            </t>
+
+            <!-- Crédit alimentaire -->
+            <t t-if="props.partner.food_credit_balance and props.partner.food_credit_balance > 0">
+                <div class="pos-right-align text-success">
+                    <t t-esc="env.utils.formatCurrency(props.partner.food_credit_balance)"/>
+                    <span class="ms-1">crédit alimentaire</span>
+                </div>
+            </t>
+
         </xpath>
-        
-        <!-- Mobile view: Add food credit balance after email section (inside the mobile partner-info div) -->
+
+        <!-- ===================== MOBILE ===================== -->
         <xpath expr="//t[@t-if='ui.isSmall']//div[hasclass('partner-line-email')]" position="after">
-            <div t-if="props.partner.food_credit_balance > 0" class="p-1 text-success">
-                <i class="fa fa-fw fa-cutlery me-2"/>
-                <t t-esc="env.utils.formatCurrency(props.partner.food_credit_balance)"/>
-                <span class="ms-1">crédit alimentaire</span>
-            </div>
+
+            <!-- Customer ID -->
+            <t t-if="props.partner.customer_id">
+                <div class="p-1 text-primary">
+                    ID: <t t-esc="props.partner.customer_id"/>
+                </div>
+            </t>
+
+            <!-- Crédit alimentaire -->
+            <t t-if="props.partner.food_credit_balance and props.partner.food_credit_balance > 0">
+                <div class="p-1 text-success">
+                    <i class="fa fa-fw fa-cutlery me-2"/>
+                    <t t-esc="env.utils.formatCurrency(props.partner.food_credit_balance)"/>
+                    <span class="ms-1">crédit alimentaire</span>
+                </div>
+            </t>
+
         </xpath>
+
     </t>
 
 </templates>
+```
