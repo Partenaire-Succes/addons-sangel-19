@@ -28,9 +28,9 @@
         </xpath>
 
         <!-- 2. Recharger les données : position="attributes" car t-if existant → remplacement -->
-        <xpath expr="//DropdownItem[contains(@onSelected, 'reloadProducts')]" position="attributes">
+        <!-- <xpath expr="//DropdownItem[contains(@onSelected, 'reloadProducts')]" position="attributes">
             <attribute name="t-if">!this.pos.data.network.offline and isDsiIt</attribute>
-        </xpath>
+        </xpath> -->
 
     </t>
 
