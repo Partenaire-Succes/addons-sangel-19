@@ -62,6 +62,7 @@
             "/custom_pos/static/src/js/ProductScreen.js",
             "/custom_pos/static/src/js/ticket_screen_refund_patch.js",
             "/custom_pos/static/src/js/pos_navbar_patch.js",
+            "/custom_pos/static/src/js/price_ttc_patch.js",
             # Other XML files
             "/custom_pos/static/src/xml/cash_move_hide_cash_in.xml",
             "/custom_pos/static/src/xml/cash_move_list_popup_patch.xml",
