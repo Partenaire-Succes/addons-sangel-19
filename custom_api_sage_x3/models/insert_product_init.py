@@ -26,21 +26,70 @@ class ProductTemplateImport(models.Model):
     # POINTS D'ENTRÉE
     # =========================================================================
 
-    def delete_taxes_sale_purchase(self):
-        products = self.env['product.template'].search([])
+    def normalize_taxes_all_companies(self):
+        _logger.info("🚀 Début normalisation des taxes multi-sociétés")
 
-        # ⚠️ Important en prod : on écrit par batch
-        batch_size = 500
+        Tax = self.env['account.tax'].sudo()
+        Company = self.env['res.company'].sudo()
+        products = self.env['product.template'].with_context(active_test=False).search([])
+
         total = len(products)
+        batch_size = 200
 
         for i in range(0, total, batch_size):
             batch = products[i:i + batch_size]
-            batch.write({
-                'taxes_id': [(6, 0, [])],
-                'supplier_taxes_id': [(6, 0, [])],
-            })
 
-        self.env.cr.commit()
+            for product in batch:
+                try:
+                    taxes = product.taxes_id
+
+                    # 🚫 Aucun taxe → skip
+                    if not taxes:
+                        continue
+
+                    # 🎯 On prend la première taxe (hypothèse : une seule taxe principale)
+                    base_tax = taxes[0]
+                    amount = base_tax.amount
+
+                    if not amount:
+                        product.write({'taxes_id': [(6, 0, [])]})
+                        continue
+
+                    new_tax_ids = []
+
+                    # 🔁 Boucle sur toutes les sociétés
+                    for company in Company.search([]):
+                        tax = Tax.with_company(company).search([
+                            ('amount', '=', amount),
+                            ('amount_type', '=', 'percent'),
+                            ('type_tax_use', '=', 'sale'),
+                            ('company_id', '=', company.id),
+                        ], limit=1)
+
+                        # ➕ Création si n'existe pas
+                        if not tax:
+                            tax = Tax.with_company(company).create({
+                                'name': f"TVA {amount}%",
+                                'amount': amount,
+                                'amount_type': 'percent',
+                                'type_tax_use': 'sale',
+                                'company_id': company.id,
+                            })
+
+                        new_tax_ids.append(tax.id)
+
+                    # 🔥 Appliquer toutes les taxes (multi société clean)
+                    product.write({
+                        'taxes_id': [(6, 0, new_tax_ids)]
+                    })
+
+                except Exception as e:
+                    _logger.error("❌ Erreur produit %s : %s", product.default_code, str(e))
+
+            self.env.cr.commit()
+            _logger.info("💾 Batch %s / %s traité", i, total)
+
+        _logger.info("✅ Normalisation terminée")
 
     def import_products_job(self):
         self.action_import_products_external_source()

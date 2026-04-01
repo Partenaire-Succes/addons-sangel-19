@@ -17,11 +17,9 @@
                             invisible="1"
                             class="btn btn-secondary"/>
 
-                    <button name="delete_taxes_sale_purchase" 
-                            string="Suppresion" 
+                    <button name="normalize_taxes_all_companies" 
+                            string="Normaliser les taxes" 
                             type="object" 
-                            icon="fa-upload" 
-                            invisible="1"
                             class="btn btn-secondary"/>
                 </xpath>
 
