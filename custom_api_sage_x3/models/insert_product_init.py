@@ -26,6 +26,22 @@ class ProductTemplateImport(models.Model):
     # POINTS D'ENTRÉE
     # =========================================================================
 
+    def delete_taxes_sale_purchase(self):
+        products = self.env['product.template'].search([])
+
+        # ⚠️ Important en prod : on écrit par batch
+        batch_size = 500
+        total = len(products)
+
+        for i in range(0, total, batch_size):
+            batch = products[i:i + batch_size]
+            batch.write({
+                'taxes_id': [(6, 0, [])],
+                'supplier_taxes_id': [(6, 0, [])],
+            })
+
+        self.env.cr.commit()
+
     def import_products_job(self):
         self.action_import_products_external_source()
 
@@ -236,18 +252,25 @@ class ProductTemplateImport(models.Model):
     # =========================================================================
 
     def _extract_tax_amount(self, tax_code):
-        """Extrait le montant numérique depuis un code taxe SAGE X3."""
         if not tax_code:
             return 0.0
+
+        tax_code = str(tax_code).strip().upper()
+
         try:
             if tax_code == "T18":
                 return 18.0
             elif tax_code == "T09":
                 return 9.0
+            elif tax_code == "T00":
+                return 0.0
+
             return float(tax_code)
+
         except ValueError:
             pass
-        numbers = re.findall(r"\d+\.?\d*", str(tax_code))
+
+        numbers = re.findall(r"\d+\.?\d*", tax_code)
         return float(numbers[0]) if numbers else 0.0
 
     def _get_ht_price(self, price, tax):
@@ -303,13 +326,15 @@ class ProductTemplateImport(models.Model):
 
     def _get_taxes_id(self, tax_code):
         """
-        Crée la taxe dans TOUTES les sociétés (pour qu'elle existe partout),
-        mais n'assigne au produit QUE la taxe de la société courante.
-        Odoo 19 interdit d'assigner des taxes d'autres sociétés via Many2many.
+        Retourne les taxes à appliquer au produit.
+        - Si taxe = 0% => supprime toutes les taxes
+        - Sinon => applique la taxe correcte
         """
         amount = self._extract_tax_amount(tax_code)
-        if not amount:
-            return []
+
+        # ✅ CAS CRITIQUE : PAS DE TAXE
+        if not amount or amount == 0.0:
+            return [(6, 0, [])]  # 🔥 supprime toutes les taxes
 
         current_company = self.env.company
 
@@ -317,24 +342,25 @@ class ProductTemplateImport(models.Model):
         for company in self.env['res.company'].sudo().search([]):
             self._get_or_create_tax(f"TVA {amount}%", amount, company)
 
-        # N'assigner que la taxe de la société courante au produit
+        # Appliquer uniquement la taxe de la société courante
         current_tax = self._get_or_create_tax(f"TVA {amount}%", amount, current_company)
+
         return [(6, 0, [current_tax.id])]
 
     def _get_airsi_taxes_id(self, tax_code):
-        """TVA vente — Many2many société courante uniquement."""
         amount = self._extract_tax_amount(tax_code)
-        if not amount:
-            return []
+
+        # ✅ PAS DE TAXE
+        if not amount or amount == 0.0:
+            return [(6, 0, [])]
 
         current_company = self.env.company
 
-        # S'assurer que la taxe AIRSI existe dans toutes les sociétés
         for company in self.env['res.company'].sudo().search([]):
             self._get_or_create_tax(f"TVA AIRSI {amount}%", amount, company)
 
-        # N'assigner que la taxe de la société courante
         current_tax = self._get_or_create_tax(f"TVA AIRSI {amount}%", amount, current_company)
+
         return [(6, 0, [current_tax.id])]
     
 
