@@ -240,6 +240,10 @@ class ProductTemplateImport(models.Model):
         if not tax_code:
             return 0.0
         try:
+            if tax_code == "T18":
+                return 18.0
+            elif tax_code == "T09":
+                return 9.0
             return float(tax_code)
         except ValueError:
             pass
@@ -486,6 +490,7 @@ class ProductTemplateImport(models.Model):
 
         product.write({
             "list_price":       self._get_ht_price(item.get("ypV_SAN_0"), tax_code),
+            "taxes_id":         self._get_taxes_id(tax_code),
             "price_unit_ttc":   self._safe_float(item.get("ypV_SAN_0")),
             "price_catalog":    self._safe_float(item.get("basprI_0")),
             "price_carton":     self._safe_float(item.get("ypxcA_0")),
