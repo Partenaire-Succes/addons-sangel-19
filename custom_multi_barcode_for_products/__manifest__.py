@@ -14,6 +14,7 @@
         'views/purchase_order_views.xml',
         'views/sale_order_views.xml',
         'views/stock_picking_views.xml',
+        'wizard/import_barcodes_wizard_views.xml',
     ],
 
     'assets': {
@@ -25,5 +26,5 @@
     'license': 'AGPL-3',
     'installable': True,
     'auto_install': False,
-    'application': True,
+    'application': False,
 }
