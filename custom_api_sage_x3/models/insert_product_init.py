@@ -484,17 +484,8 @@ class ProductTemplateImport(models.Model):
 
         base_price_ttc = self._safe_float(item.get("basprI_0"))
 
-        taxes_id = self._get_taxes_id(tax_code)
-        if not taxes_id:
-            tax = False
-            list_price =  self._safe_float(item.get("ypV_SAN_0"))
-        else:
-            tax = self._get_taxes_id(tax_code)
-            list_price = self._get_ht_price(item.get("ypV_SAN_0"), tax_code)
-
         product.write({
-            "list_price":       list_price,
-            "taxes_id":         tax,
+            "list_price":       self._get_ht_price(item.get("ypV_SAN_0"), tax_code),
             "price_unit_ttc":   self._safe_float(item.get("ypV_SAN_0")),
             "price_catalog":    self._safe_float(item.get("basprI_0")),
             "price_carton":     self._safe_float(item.get("ypxcA_0")),
