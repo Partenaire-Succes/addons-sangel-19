@@ -129,6 +129,7 @@ class ProductTemplateImport(models.Model):
                     )
 
                     if existing:
+                        update_product = tmpl_model.write(vals)
                         new_price = vals.get("list_price", 0)
                         if existing.list_price != new_price:
                             _logger.info("💰 Prix mis à jour %s : %.2f → %.2f",
