@@ -1,9 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
 
-    <!-- Extend PartnerLine to show food credit balance -->
+    <!-- Extend PartnerLine to show partner ID + food credit balance -->
     <t t-name="custom_food_credit.PartnerLine" t-inherit="point_of_sale.PartnerLine" t-inherit-mode="extension">
-        
+
+        <!-- Desktop view: Add partner ID inline after name -->
+        <xpath expr="//td[hasclass('text-break')]//b" position="after">
+            <t t-if="props.partner.barcode">
+                <small class="text-muted ms-1">#<t t-esc="props.partner.barcode"/></small>
+            </t>
+        </xpath>
+
+        <!-- Mobile view: Add partner ID inline after name -->
+        <xpath expr="//t[@t-if='ui.isSmall']//b" position="after">
+            <t t-if="props.partner.barcode">
+                <small class="text-muted ms-1">#<t t-esc="props.partner.barcode"/></small>
+            </t>
+        </xpath>
+
         <!-- Desktop view: Add food credit balance in the balance cell -->
         <xpath expr="//td[hasclass('partner-line-balance')]" position="inside">
             <div t-if="props.partner.food_credit_balance > 0" class="pos-right-align text-success">
@@ -11,8 +25,8 @@
                 <span class="ms-1">crédit alimentaire</span>
             </div>
         </xpath>
-        
-        <!-- Mobile view: Add food credit balance after email section (inside the mobile partner-info div) -->
+
+        <!-- Mobile view: Add food credit balance after email section -->
         <xpath expr="//t[@t-if='ui.isSmall']//div[hasclass('partner-line-email')]" position="after">
             <div t-if="props.partner.food_credit_balance > 0" class="p-1 text-success">
                 <i class="fa fa-fw fa-cutlery me-2"/>
