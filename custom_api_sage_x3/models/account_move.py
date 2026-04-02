@@ -590,6 +590,8 @@ class AccountMoveSageX3(models.Model):
                     ('order_id', '=', payment.pos_order_id.id),
                 ])
 
+                subtotal = sum(lines.mapped('price_total'))
+
                 total_ht = 0.0
                 grouped_tax = defaultdict(float)
                 lignes = []
@@ -630,7 +632,7 @@ class AccountMoveSageX3(models.Model):
                     site    = site,
                     compte  = sale_acct.code,
                     sens    = -1,
-                    montant = total_ht,
+                    montant = subtotal,
                     libelle = f"CAISSE EN COMPTE {company.name} DU {date_fr}",
                 ))
 
