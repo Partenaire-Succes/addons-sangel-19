@@ -9,9 +9,14 @@
             <!-- Onglet SAGE X3 -->
             <xpath expr="//group" position="after">
                 <group name="sage_x3" string="SAGE X3">
-                    <field name="sage_x3_sent" readonly="1"/>
-                    <field name="sage_x3_piece_number" readonly="1"/>
-                    <field name="sage_x3_sent_date" readonly="1"/>
+                    <group>
+                        <field name="sage_x3_piece_number"/>
+                        <field name="sage_x3_sent"/>
+                    </group>
+                    <group>
+                        <field name="sage_x3_sent_date"/>
+                        <field name="message"/>
+                    </group>
                 </group>
             </xpath>
             
