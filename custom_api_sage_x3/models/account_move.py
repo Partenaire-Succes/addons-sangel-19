@@ -590,9 +590,11 @@ class AccountMoveSageX3(models.Model):
                     ('order_id', '=', payment.pos_order_id.id),
                 ])
 
-                price_subtotal = sum(lines.mapped('price_subtotal'))  # Total HT
 
                 total_ht = 0.0
+
+                lines_with_tax = lines.filtered(lambda l: l.tax_ids)
+                
                 grouped_tax = defaultdict(float)
                 lignes = []
 
@@ -628,11 +630,14 @@ class AccountMoveSageX3(models.Model):
                 # =====================
                 # Ligne vente HT
                 # =====================
+                if not lines_with_tax:
+                    total_ht = round(payment.amount, 2)
+
                 lignes.append(self._build_ligne(
                     site    = site,
                     compte  = sale_acct.code,
                     sens    = -1,
-                    montant = price_subtotal,
+                    montant = total_ht,
                     libelle = f"CAISSE EN COMPTE {company.name} DU {date_fr}",
                 ))
 
