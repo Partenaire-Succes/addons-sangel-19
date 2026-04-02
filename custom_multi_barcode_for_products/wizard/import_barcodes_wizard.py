@@ -159,6 +159,10 @@ class ImportBarcodesWizard(models.TransientModel):
             if not barcode:
                 continue
 
+            if barcode or len(barcode) != 13 and barcode.startswith('27'):
+                _logger.info("⚠️ Ligne %d : code-barres '%s' semble être un GTIN-14, vérification GS1...", row_num, barcode)
+                barcode = self.fix_gs1_barcode(barcode)
+
             # Recherche du produit par code article (exact, unique)
             product = self.env['product.template'].search(
                 [('default_code', '=', product_code)],
@@ -215,6 +219,27 @@ class ImportBarcodesWizard(models.TransientModel):
     # -------------------------------------------------------------------------
     # CONFIRMER L'IMPORT
     # -------------------------------------------------------------------------
+
+    def fix_gs1_barcode(self, current_barcode):
+        """Recalcule la clé de contrôle GS1 d'un EAN-13."""
+        barcode_str = str(current_barcode).strip()
+        if len(barcode_str) != 13:
+            _logger.info("⚠️ Code %s : pas 13 caractères, ignoré", barcode_str)
+            return barcode_str
+
+        base_code = barcode_str[:12]
+        odd_sum = even_sum = 0
+        for i, digit in enumerate(base_code):
+            d = int(digit)
+            if (i + 1) % 2 == 0:
+                even_sum += d
+            else:
+                odd_sum += d
+
+        check_digit = (10 - ((even_sum * 3 + odd_sum) % 10)) % 10
+        return base_code + str(check_digit)
+    
+
     def action_confirm(self):
         self.ensure_one()
 
@@ -228,18 +253,23 @@ class ImportBarcodesWizard(models.TransientModel):
 
         created = 0
         for line in valid_lines:
+            
             # Vérifier s'il existe déjà un code-barres actif sur ce produit
-            has_active = self.env['product.multiple.barcodes'].search_count([
+            has_active = self.env['product.multiple.barcodes'].search([
                 ('product_template_id', '=', line.product_id.id),
                 ('is_active_barcode', '=', True),
             ])
+
+            if has_active:
+                for record in has_active:
+                    record.is_active_barcode = False
 
             self.env['product.multiple.barcodes'].create({
                 'product_multi_barcode': line.barcode,
                 'product_template_id': line.product_id.id,
                 'product_id': line.product_id.product_variant_id.id,
                 # Activer automatiquement si aucun code-barres actif n'existe encore
-                'is_active_barcode': not has_active,
+                'is_active_barcode': True,
             })
             created += 1
 

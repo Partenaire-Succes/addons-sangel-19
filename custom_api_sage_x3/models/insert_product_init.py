@@ -26,48 +26,6 @@ class ProductTemplateImport(models.Model):
     # POINTS D'ENTRÉE
     # =========================================================================
 
-    def clean_taxes_products(self):
-        _logger.info("🚀 Nettoyage des taxes démarré")
-
-        codes = ['7604', '4595', '7605', '4311', '7577', '2218', '4129', '2184']
-
-        Product = self.env['product.template'].with_context(active_test=False)
-
-        # ------------------------------------------------------------------
-        # 1. SUPPRIMER TAXES D'ACHAT POUR TOUS LES PRODUITS
-        # ------------------------------------------------------------------
-        all_products = Product.search([])
-        total = len(all_products)
-
-        batch_size = 500
-
-        for i in range(0, total, batch_size):
-            batch = all_products[i:i + batch_size]
-
-            batch.write({
-                'supplier_taxes_id': [(6, 0, [])]
-            })
-
-            self.env.cr.commit()
-            _logger.info("💾 Taxes achat supprimées batch %s/%s", i, total)
-
-        # ------------------------------------------------------------------
-        # 2. SUPPRIMER TAXES DE VENTE POUR CERTAINS PRODUITS
-        # ------------------------------------------------------------------
-        products_target = Product.search([
-            ('default_code', 'in', codes)
-        ])
-
-        _logger.info("🎯 Produits ciblés: %s", len(products_target))
-
-        products_target.write({
-            'taxes_id': [(6, 0, [])]
-        })
-
-        self.env.cr.commit()
-
-        _logger.info("✅ Nettoyage terminé")
-
     def normalize_taxes_all_companies(self):
         _logger.info("🚀 Début normalisation des taxes multi-sociétés")
 
@@ -534,6 +492,31 @@ class ProductTemplateImport(models.Model):
     # =========================================================================
     # GESTION DES FOURNISSEURS
     # =========================================================================
+
+    def _update_product_barcode(self, product, item):
+        """Met à jour le code-barres du produit en s'assurant de sa validité et unicité."""
+        barcode = self._safe_string(item.get("yG5BC_0"))
+        if not barcode or barcode in {"0", "00", "000", "0000", "00000"}:
+            return False
+        try:
+            multi_code = self.env['product.multiple.barcodes']
+            codes = multi_code.search([
+                '|', 
+                ('product_id', '=', product.product_variant_id.id), 
+                ('product_multi_barcode', '=', barcode)]).ids
+            if codes:
+                return 0
+
+            multi_code.create({
+                'product_multi_barcode': barcode,
+                'product_id': product.id,
+                'product_tmpl_id': product.product_variant_id.id
+            })
+            _logger.info("🏭  %s : %s",
+                         product.default_code, codes.name)
+            return 1
+        except UserError:
+            return False
 
     def _update_product_suppliers(self, product, item):
         """Crée ou met à jour la ligne fournisseur d'un produit. Retourne le nombre de lignes ajoutées."""
