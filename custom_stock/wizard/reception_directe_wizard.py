@@ -76,15 +76,16 @@ class ReceptionDirecteWizard(models.TransientModel):
         })
 
         # Création des mouvements
-        line_move_map = {}
+        # On construit aussi une map qty par produit pour retrouver les quantités
+        # après action_confirm() qui peut fusionner des moves (via _merge_moves)
+        qty_by_product = {}
         for line in self.line_ids:
-            # Si nouveau_prix renseigné, c'est ce coût qui est gravé sur le mouvement
             prix_mouvement = (
                 line.nouveau_prix
                 if line.nouveau_prix and line.nouveau_prix > 0
                 else line.price_unit
             )
-            move = self.env['stock.move'].create({
+            self.env['stock.move'].create({
                 'picking_id': picking.id,
                 'product_id': line.product_id.id,
                 'product_uom_qty': line.qty,
@@ -94,30 +95,44 @@ class ReceptionDirecteWizard(models.TransientModel):
                 'price_unit': prix_mouvement,
                 'description_picking': line.product_id.display_name,
             })
-            line_move_map[line.id] = move
+            pid = line.product_id.id
+            qty_by_product[pid] = qty_by_product.get(pid, 0.0) + line.qty
 
+        # action_confirm() peut appeler _merge_moves() et supprimer certains moves
+        # créés ci-dessus → ne JAMAIS garder de référence aux moves créés au-delà de ce point
         picking.action_confirm()
         picking.action_assign()
 
-        # Forcer qty reçue sur chaque move.line
-        for line in self.line_ids:
-            move = line_move_map[line.id]
+        # Forcer qty reçue en parcourant picking.move_ids (moves réels post-fusion)
+        for move in picking.move_ids.filtered(lambda m: m.state not in ('done', 'cancel')):
+            total_qty = qty_by_product.get(move.product_id.id, move.product_uom_qty)
             if move.move_line_ids:
                 for ml in move.move_line_ids:
-                    ml.quantity = line.qty
+                    ml.quantity = total_qty
             else:
                 self.env['stock.move.line'].create({
                     'move_id': move.id,
                     'picking_id': picking.id,
                     'product_id': move.product_id.id,
                     'product_uom_id': move.product_uom.id,
-                    'quantity': line.qty,
+                    'quantity': total_qty,
                     'location_id': move.location_id.id,
                     'location_dest_id': move.location_dest_id.id,
                 })
 
-        # Validation (déclenche explosion pack si applicable)
-        picking.with_context(skip_backorder=True).button_validate()
+        # Validation (skip_backorder + skip_immediate pour éviter les wizards intermédiaires)
+        result = picking.with_context(
+            skip_backorder=True,
+            skip_immediate=True,
+        ).button_validate()
+
+        # Si button_validate() retourne quand même une action (cas edge), on l'ignore
+        # car notre wizard gère lui-même le retour via display_notification
+        if isinstance(result, dict) and result.get('res_model'):
+            _logger.warning(
+                "[RECEPTION_DIRECTE] button_validate a retourné une action inattendue : %s",
+                result.get('res_model'),
+            )
 
         # Mise à jour du nouveau prix d'achat + traçabilité chatter
         prix_changes = []

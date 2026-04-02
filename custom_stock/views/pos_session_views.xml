@@ -9,39 +9,12 @@
             <!-- Onglet SAGE X3 -->
             <xpath expr="//group" position="after">
                 <group name="sage_x3" string="SAGE X3">
-                    <group>
-                        <field name="sage_x3_piece_number"/>
-                        <field name="sage_x3_sent"/>
-                    </group>
-                    <group>
-                        <field name="sage_x3_sent_date"/>
-                        <field name="message"/>
-                    </group>
+                    <field name="sage_x3_sent" readonly="1"/>
+                    <field name="sage_x3_piece_number" readonly="1"/>
+                    <field name="sage_x3_sent_date" readonly="1"/>
                 </group>
             </xpath>
             
         </field>
     </record>
-
-    <!-- <record id="view_pos_payment_form_sage_x3" model="ir.ui.view">
-        <field name="name">pos.payment.form.sage_x3</field>
-        <field name="model">pos.payment</field>
-        <field name="inherit_id" ref="point_of_sale.view_pos_payment_form"/>
-        <field name="arch" type="xml">
-            
-            <xpath expr="//group" position="after">
-                <group name="sage_x3" string="SAGE X3">
-                    <group>
-                        <field name="sage_x3_piece_number"/>
-                        <field name="sage_x3_sent"/>
-                    </group>
-                    <group>
-                        <field name="sage_x3_sent_date"/>
-                        <field name="message"/>
-                    </group>
-                </group>
-            </xpath>
-            
-        </field>
-    </record> -->
 </odoo>
