@@ -11,5 +11,5 @@ class ResUsers(models.Model):
         if read_records:
             # _is_caissiere / _is_dsi_it : préfixe _ requis par Odoo 18/19 pour créer le getter JS automatiquement
             read_records[0]['_is_caissiere'] = self.env.user.has_group('custom_pos.group_caissiere')
-            read_records[0]['_is_dsi_it'] = self.env.user.has_group('custom_pos.group_dsi_it')
+            # read_records[0]['_is_dsi_it'] = self.env.user.has_group('custom_pos.group_dsi_it')
         return read_records
