@@ -478,17 +478,19 @@ class AccountMoveSageX3(models.Model):
         #     total_decai += line['montant']
 
         # Lignes individuelles (is_food), triées (compte, tiers)
-        for line in sorted(decai_individual_food,
-                           key=lambda x: (x['compte'], x.get('tiers', ''))):
-            lignes_decai.append(self._build_ligne(
-                site    = site,
-                compte  = line['compte'],
-                sens    = 1,
-                montant = round(line['montant'], 2),
-                libelle = line['libelle'],
-                tiers   = line.get('tiers', ''),
-            ))
-            total_decai += line['montant']    
+
+        
+        # for line in sorted(decai_individual_food,
+        #                    key=lambda x: (x['compte'], x.get('tiers', ''))):
+        #     lignes_decai.append(self._build_ligne(
+        #         site    = site,
+        #         compte  = line['compte'],
+        #         sens    = 1,
+        #         montant = round(line['montant'], 2),
+        #         libelle = line['libelle'],
+        #         tiers   = line.get('tiers', ''),
+        #     ))
+        #     total_decai += line['montant']    
 
         # [3]+[4]+[5] Lignes groupées par compte (is_bank_card, is_cheque, is_titre_paiement)
         # → 1 seule ligne par code compte, triées par code compte
