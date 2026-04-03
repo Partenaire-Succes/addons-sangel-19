@@ -705,7 +705,7 @@ class PosSession(models.Model):
     
     def _check_invoices_are_posted(self):
         unposted_invoices = self._get_closed_orders()
-        if unposted_invoices:
-            raise UserError(_(
-                "Vous ne pouvez pas modifier le paiement d'une commande imprimée"
-            ))
+        # if unposted_invoices:
+        #     raise UserError(_(
+        #         "Vous ne pouvez pas modifier le paiement d'une commande imprimée"
+        #     ))
