@@ -1,6 +1,7 @@
 import logging
 
-from odoo import api, fields, models
+from odoo import api, fields, models, _
+from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
@@ -701,3 +702,10 @@ class PosSession(models.Model):
         """Action to print the cloture de caisse ticket"""
         self.ensure_one()
         return self.env.ref('custom_pos.action_report_cloture_caisse').report_action(self)
+    
+    def _check_invoices_are_posted(self):
+        unposted_invoices = self._get_closed_orders()
+        if unposted_invoices:
+            raise UserError(_(
+                "Vous ne pouvez pas modifier le paiement d'une commande imprimée"
+            ))

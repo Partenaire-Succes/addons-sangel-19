@@ -614,7 +614,10 @@ class ProductTemplateImport(models.Model):
             if not price_ttc or price_ttc <= 0:
                 continue
 
-            price_ht = round(self._get_ht_price(price_ttc, tax_code) * multiplier, 2)
+            if api_field == "ypV_SAN_0":
+                price_ht = round(self._get_ht_price(price_ttc, tax_code) * multiplier, 2)
+            else:
+                price_ht = round(price_ttc * multiplier, 2)
 
             try:
                 pricelist = self.env.ref(xml_id, raise_if_not_found=False)
