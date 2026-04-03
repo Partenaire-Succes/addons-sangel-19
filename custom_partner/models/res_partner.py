@@ -80,13 +80,13 @@ class ResPartnerInherit(models.Model):
         string="Cartes de fidélité"
     )
 
-    # @api.depends('name', 'customer_id')
-    # def _compute_display_name(self):
-    #     for partner in self:
-    #         if partner.customer_id:
-    #             partner.display_name = f"{partner.customer_id}"
-    #         else:
-    #             partner.display_name = partner.name
+    @api.depends('name', 'customer_id')
+    def _compute_display_name(self):
+        for partner in self:
+            if partner.customer_id:
+                partner.display_name = f"{partner.customer_id}"
+            else:
+                partner.display_name = partner.name
 
     def _assign_barcode_from_customer_id(self, cid):
         """Assigne barcode = customer_id si commence par '10' et barcode vide.
