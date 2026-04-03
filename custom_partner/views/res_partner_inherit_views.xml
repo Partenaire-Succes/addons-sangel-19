@@ -9,8 +9,13 @@
             <field name="inherit_id" ref="base.view_partner_form"/>
             <field name="arch" type="xml">
                 <xpath expr="//sheet" position="before">
-                    <button string="Suppression des doublons" 
+                    <button string="Suppression des doublons"
                         name="remove_duplicate_partners" type="object" class="oe_highlight"/>
+                    <button string="Sync. codes-barres (clients 10...)"
+                        name="action_sync_barcode_from_customer_id" type="object"
+                        class="btn-secondary"
+                        groups="base.group_system"
+                        confirm="Assigner barcode = ID client pour tous les partenaires dont l'ID commence par 10 et dont le code-barres est vide. Continuer ?"/>
                 </xpath>
                 <xpath expr="//field[@name='category_id']" position="attributes">
                     <attribute name="string">Catégorie client</attribute>

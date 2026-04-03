@@ -1,8 +1,9 @@
-from email.policy import default
-
 from odoo import fields, models, api, _
 from odoo.exceptions import ValidationError
 import re
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 class ResPartnerInherit(models.Model):
@@ -86,6 +87,97 @@ class ResPartnerInherit(models.Model):
     #             partner.display_name = f"{partner.customer_id}"
     #         else:
     #             partner.display_name = partner.name
+
+    def _assign_barcode_from_customer_id(self, cid):
+        """Assigne barcode = customer_id si commence par '10' et barcode vide.
+        Utilise un savepoint pour éviter de corrompre la transaction principale
+        en cas d'erreur JSONB sur le champ barcode."""
+        if not cid or not cid.startswith('10'):
+            return
+        for partner in self:
+            if not partner.barcode:
+                try:
+                    with self.env.cr.savepoint():
+                        partner.with_context(no_recompute=True).write({'barcode': cid})
+                except Exception as e:
+                    _logger.warning(
+                        "[BARCODE SYNC] Impossible d'assigner le barcode '%s' au partenaire %s : %s",
+                        cid, partner.id, str(e)
+                    )
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        partners = super(ResPartnerInherit, self).create(vals_list)
+        for partner in partners:
+            cid = partner.customer_id or ''
+            partner._assign_barcode_from_customer_id(cid)
+        return partners
+
+    def write(self, vals):
+        result = super(ResPartnerInherit, self).write(vals)
+        if 'customer_id' in vals:
+            cid = vals.get('customer_id') or ''
+            self._assign_barcode_from_customer_id(cid)
+        return result
+
+    def action_sync_barcode_from_customer_id(self):
+        """Migration : assigne barcode = customer_id pour les partenaires existants
+        dont customer_id commence par '10' et dont le barcode est vide.
+        Commit tous les 500 enregistrements pour éviter les transactions trop longues."""
+        BATCH_SIZE = 500
+
+        partner_ids = self.env['res.partner'].search([
+            ('customer_id', 'like', '10%'),
+            ('barcode', '=', False),
+        ]).ids
+
+        total = len(partner_ids)
+        updated = 0
+        skipped = 0
+        _logger.info("[BARCODE SYNC] Démarrage — %d partenaires à traiter.", total)
+
+        for idx, pid in enumerate(partner_ids):
+            partner = self.env['res.partner'].browse(pid)
+            cid = partner.customer_id or ''
+            if not cid.startswith('10'):
+                continue
+            try:
+                with self.env.cr.savepoint():
+                    partner.with_context(no_recompute=True).write({'barcode': cid})
+                    updated += 1
+            except Exception as e:
+                _logger.warning(
+                    "[BARCODE SYNC] Échec partenaire %s (customer_id=%s) : %s",
+                    pid, cid, str(e)
+                )
+                skipped += 1
+
+            # Commit intermédiaire + libération mémoire tous les BATCH_SIZE
+            if (idx + 1) % BATCH_SIZE == 0:
+                self.env.cr.commit()
+                self.env.invalidate_all()
+                _logger.info(
+                    "[BARCODE SYNC] Commit %d/%d — %d ok, %d ignorés.",
+                    idx + 1, total, updated, skipped
+                )
+
+        # Commit final
+        self.env.cr.commit()
+        _logger.info("[BARCODE SYNC] Terminé — %d mis à jour, %d ignorés sur %d.", updated, skipped, total)
+
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Synchronisation terminée'),
+                'message': _(
+                    '%(updated)d client(s) mis à jour. %(skipped)d ignoré(s) sur %(total)d.',
+                    updated=updated, skipped=skipped, total=total
+                ),
+                'type': 'success',
+                'sticky': True,
+            },
+        }
 
     @api.onchange('discount_eligible')
     def onchange_discount_start_date(self):
