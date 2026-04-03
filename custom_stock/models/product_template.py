@@ -439,13 +439,13 @@ class ProductProduct(models.Model):
         related='product_tmpl_id.code_article',
     )
 
-    # @api.depends('name', 'default_code')
-    # def _compute_display_name(self):
-    #     for product in self:
-    #         if product.default_code:
-    #             product.display_name = f"{product.default_code}"
-    #         else:
-    #             product.display_name = product.name
+    @api.depends('name', 'default_code')
+    def _compute_display_name(self):
+        for product in self:
+            if product.default_code:
+                product.display_name = f"{product.default_code}"
+            else:
+                product.display_name = product.name
 
     # Related fields for product catalog display
     max_qty_orderpoint = fields.Float(
