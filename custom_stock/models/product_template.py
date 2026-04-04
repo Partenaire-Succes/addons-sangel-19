@@ -439,6 +439,10 @@ class ProductProduct(models.Model):
         related='product_tmpl_id.code_article',
     )
 
+    _sql_constraints = [
+        ('default_code_unique', 'UNIQUE(default_code)', 'Le code article doit être unique !'),
+    ]
+
     @api.depends('name', 'default_code')
     def _compute_display_name(self):
         for product in self:

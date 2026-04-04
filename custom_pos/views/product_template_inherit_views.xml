@@ -17,6 +17,7 @@
                 <xpath expr="//page[@name='sales_price']/field[@name='pricelist_rule_ids']" position="before">
                     <button name="action_delete_pricelist_rules"
                             type="object"
+                            invisible="1"
                             string="Supprimer toutes les listes de prix"
                             class="btn-danger"
                             confirm="Êtes-vous sûr de vouloir supprimer toutes les listes de prix attachées à ce produit ?"
