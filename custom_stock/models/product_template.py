@@ -443,13 +443,13 @@ class ProductProduct(models.Model):
         ('default_code_unique', 'UNIQUE(default_code)', 'Le code article doit être unique !'),
     ]
 
-    @api.depends('name', 'default_code')
-    def _compute_display_name(self):
-        for product in self:
-            if product.default_code:
-                product.display_name = f"{product.default_code}"
-            else:
-                product.display_name = product.name
+    # @api.depends('name', 'default_code')
+    # def _compute_display_name(self):
+    #     for product in self:
+    #         if product.default_code:
+    #             product.display_name = f"{product.default_code}"
+    #         else:
+    #             product.display_name = product.name
 
     # Related fields for product catalog display
     max_qty_orderpoint = fields.Float(
