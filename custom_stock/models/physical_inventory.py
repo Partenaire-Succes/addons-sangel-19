@@ -262,7 +262,7 @@ class PhysicalInventoryLine(models.Model):
     physical_qty = fields.Float('Qte compté', default=0)
     qty_diff = fields.Float('Difference', compute="compute_qty_dif")
     valorisation = fields.Float('Valorisation', compute="compute_qty_dif")
-    standard_price = fields.Float('Prix standard', related='product_tmpl_id.standard_price', readonly=True)
+    standard_price = fields.Float('Prix standard', related='product_tmpl_id.standard_price')
 
     inventory_physical_id = fields.Many2one('physical.inventory', string='Inventaire Physique', copy=True)
     code_category_id = fields.Many2one('code.category.inventory', string='Categorie Code Inventaire', copy=True)

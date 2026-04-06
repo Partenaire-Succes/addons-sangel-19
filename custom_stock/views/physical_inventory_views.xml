@@ -133,7 +133,7 @@
                                         <field name="qty_diff" string="Difference"
                                                decoration-muted="qty_diff == 0" decoration-danger="qty_diff &lt; 0"
                                                decoration-success="qty_diff &gt; 0" decoration-bf="qty_diff != 0"/>
-                                        <field name="standard_price" string="Prix unitaire (PMP)"/>
+                                        <field name="standard_price" string="Prix unitaire (PMP)" readonly="1"/>
                                         <field name="valorisation" string="Valorisation"/>
                                         <button name="action_restore_line" type="object"
                                                 string="Restaurer" icon="fa-undo"

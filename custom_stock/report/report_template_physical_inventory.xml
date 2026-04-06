@@ -52,6 +52,7 @@
                                 <table class="table table-sm table-bordered">
                                     <thead style="background-color: #f8f9fa;">
                                         <tr>
+                                            <th style="width: 25%">Code</th>
                                             <th style="width: 25%">Article</th>
                                             <th style="width: 10%">Unité</th>
                                             <th style="width: 12%" class="text-right" t-if="doc.state != 'draft'">Qté Théorique</th>
@@ -79,6 +80,9 @@
                                             <t t-if="line.qty_diff != 0" t-set="lines_with_difference" t-value="lines_with_difference + 1"/>
 
                                             <tr>
+                                                <td>
+                                                    <strong t-field="line.product_tmpl_id.default_code"/>
+                                                </td>
                                                 <td>
                                                     <strong t-field="line.product_tmpl_id.name"/>
                                                 </td>
