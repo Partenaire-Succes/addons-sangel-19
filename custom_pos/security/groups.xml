@@ -29,7 +29,7 @@
         <field name="privilege_id" ref="privilege_magazin_access"/>
         <field name="comment">Accès POS uniquement en tant qu'utilisateur. Aucune action dashboard.</field>
         <field name="implied_ids" eval="[
-            (4, ref('point_of_sale.group_pos_manager'))
+            (4, ref('point_of_sale.group_pos_manager')),
             (4, ref('account.group_account_invoice')),
         ]"/>
     </record>
