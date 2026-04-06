@@ -251,7 +251,25 @@ class PurchaseOrderSageX3(models.Model):
                 errors.append(f"{purchase.name}: {str(e)}")
 
         self.env.cr.commit()
-        return {'success': success_count, 'errors': error_count, 'error_details': errors}
+        message = (
+            f"Traitement terminé sur {len(purchases)} commande(s)\n\n"
+            f"✅ Succès : {success_count}\n"
+            f"❌ Erreurs : {error_count}"
+        )
+
+        if errors:
+            message += "\n\nDétails :\n" + "\n".join(errors[:10])  # limite à 10
+
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Import livraisons SAGE X3',
+                'message': message,
+                'type': 'success' if error_count == 0 else 'warning',
+                'sticky': True,
+            }
+        }
 
     # =========================================================================
     # JOB PRINCIPAL D'IMPORT
