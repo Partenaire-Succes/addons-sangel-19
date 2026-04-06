@@ -39,6 +39,8 @@ class PurchaseOrderSageX3(models.Model):
             ('state',             'in', ['sent']),
             ('sage_x3_submitted', '=',  False),
             ('sage_x3_validated', '=',  False),
+            ('type_command',      '!=', 'urgent'),
+            ('type_supplier',     '!=', 'local'),
         ])
 
         if not pending_orders:
@@ -309,7 +311,7 @@ class PurchaseOrderSageX3(models.Model):
                 deliveries_filtered, order_cache, product_cache, current_company.id
             )
 
-            self._update_last_import_date(current_company.id)
+            # self._update_last_import_date(current_company.id)
 
             duration = (datetime.now() - start_time).total_seconds()
             self._notify_import_completion(stats, duration, current_company.name)
@@ -482,6 +484,7 @@ class PurchaseOrderSageX3(models.Model):
                     continue
 
                 ref = str(delivery.get("referenceCommandeClient", "")).strip()
+                ref_sage = str(delivery.get("numeroCommande", "")).strip()
                 if not ref:
                     stats['skipped'] += 1
                     continue
@@ -493,14 +496,14 @@ class PurchaseOrderSageX3(models.Model):
 
                 order        = self.browse(order_id)
                 lines_count  = self._update_order_lines_optimized(
-                    order, delivery.get("items", []), product_cache
+                    order, delivery.get("items", []), product_cache, ref_sage
                 )
                 stats['lines'] += lines_count
 
                 order.write({
                     'sage_x3_delivery_received': True,
                     'sage_x3_delivery_date':     fields.Datetime.now(),
-                    'partner_ref':               str(delivery.get("numeroCommande", "")).strip(),
+                    'partner_ref':               ref_sage,
                 })
                 stats['updated'] += 1
 
@@ -510,7 +513,7 @@ class PurchaseOrderSageX3(models.Model):
 
         return stats
 
-    def _update_order_lines_optimized(self, order, items, product_cache):
+    def _update_order_lines_optimized(self, order, items, product_cache, ref_sage):
         """Met à jour les lignes de commande (prix et quantités) depuis les items SAGE X3."""
         if not items:
             return 0
@@ -547,12 +550,12 @@ class PurchaseOrderSageX3(models.Model):
             if 'price_unit' in values:
                 line.write({'price_unit': values['price_unit']})
             if 'quantity' in values:
-                self._update_quantity_received_picking(line, values['quantity'])
+                self._update_quantity_received_picking(line, values['quantity'], ref_sage)
             lines_updated += 1
 
         return lines_updated
 
-    def _update_quantity_received_picking(self, order_line, quantity):
+    def _update_quantity_received_picking(self, order_line, quantity, ref_sage):
         """Met à jour la quantité dans le picking lié à la ligne de commande."""
         picking = order_line.order_id.picking_ids.filtered(
             lambda p: p.state not in ('done', 'cancel')
@@ -561,6 +564,10 @@ class PurchaseOrderSageX3(models.Model):
             return 0
 
         picking = picking[0]
+        picking.write({
+            'ref_sage': ref_sage,
+            'date_sage': fields.Datetime.now(),
+        })
         move    = picking.move_ids.filtered(
             lambda m: m.product_id.id == order_line.product_id.id
                       and m.state not in ('done', 'cancel')
@@ -591,11 +598,11 @@ class PurchaseOrderSageX3(models.Model):
     def _get_last_import_date(self, company_id):
         config = self.env['ir.config_parameter'].sudo()
         value  = config.get_param(f'sage_x3.last_import_date.company_{company_id}')
-        if value:
-            try:
-                return datetime.fromisoformat(value)
-            except (ValueError, TypeError):
-                pass
+        # if value:
+        #     try:
+        #         return datetime.fromisoformat(value)
+        #     except (ValueError, TypeError):
+        #         pass
         return datetime.now() - timedelta(days=7)
 
     def _update_last_import_date(self, company_id):

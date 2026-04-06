@@ -15,7 +15,7 @@
                                 type="object"
                                 string="Valider l'inventaire"
                                 class="btn-primary"
-                                groups="custom_pos.group_pos_shop"
+                                groups="custom_pos.group_superviseur"
                                 invisible="state != 'in_progress'"/>
 
                         <button name="action_draft" type="object" string="Annuler"

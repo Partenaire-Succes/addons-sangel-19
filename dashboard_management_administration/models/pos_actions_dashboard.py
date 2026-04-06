@@ -137,6 +137,8 @@ class PosActionsDashboard(models.Model):
                 ('state',             'in', ['sent']),
                 ('sage_x3_submitted', '=',  False),
                 ('sage_x3_validated', '=',  False),
+                ('type_command',      '!=', 'urgent'),
+                ('type_supplier',     '!=', 'local'),
             ]),
 
             # FIX : utilise sage_x3_sent (pas sage_x3_submitted qui n'existe pas sur account.move)

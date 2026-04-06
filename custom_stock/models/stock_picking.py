@@ -14,6 +14,9 @@ class StockQuant(models.Model):
 class StockPicking(models.Model):
     _inherit = 'stock.picking'
 
+    ref_sage = fields.Char(string="Ref SAGE", readonly=True)
+    date_sage = fields.Datetime(string="Date SAGE", readonly=True)
+
     def button_validate(self):
         """Override: synchronisation pack/unités selon les bonnes pratiques Odoo"""
         res = super().button_validate()
