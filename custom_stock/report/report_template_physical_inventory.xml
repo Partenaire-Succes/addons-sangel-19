@@ -112,7 +112,7 @@
                                     <!-- Ligne de totaux -->
                                     <tfoot style="background-color: #e9ecef;">
                                         <tr class="font-weight-bold">
-                                            <td colspan="2"><strong>TOTAUX GÉNÉRAUX</strong></td>
+                                            <td colspan="3"><strong>TOTAUX GÉNÉRAUX</strong></td>
                                             <td class="text-right" t-if="doc.state != 'draft'">
                                                 <span t-esc="'{:,.2f}'.format(total_theoretical)"/>
                                             </td>
