@@ -194,7 +194,6 @@ class ProductTemplateImport(models.Model):
                     )
 
                     if existing:
-                        update_product = tmpl_model.write(vals)
                         new_price = vals.get("list_price", 0)
                         if existing.list_price != new_price:
                             _logger.info("💰 Prix mis à jour %s : %.2f → %.2f",
@@ -475,6 +474,7 @@ class ProductTemplateImport(models.Model):
             "prod_family_x3_id": self._get_prod_family_id(item.get("tsicoD_0")),
             "prod_type_x3_id":   self._get_prod_type_id(item.get("yG5TYPE_0")),
             "prod_status_x3_id": self._get_prod_status_id(item.get("yG5STAT_0")),
+            "actif_x3":          self._safe_string(item.get("itmstA_0")),
             "type":              "consu",
             "active":            True,
             "sale_ok":           True,
@@ -606,6 +606,7 @@ class ProductTemplateImport(models.Model):
             "is_bassam":        self._verify_boolean(item.get("yafbsM_0")),
             "is_koumassi":      self._verify_boolean(item.get("yafkouM_0")),
             "allowed_company_ids": self._get_allowed_company_ids(item),
+            "actif_x3":          self._safe_string(item.get("itmstA_0")),
             "supplier_taxes_id": False,
         })
 

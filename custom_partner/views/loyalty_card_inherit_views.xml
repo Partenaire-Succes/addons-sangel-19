@@ -23,6 +23,7 @@
                                 type="object"
                                 string="Mettre les partenaire"
                                 icon="fa-sync"
+                                invisible="1"
                                 class="btn-primary"/>
                     </header>
                 </xpath>
