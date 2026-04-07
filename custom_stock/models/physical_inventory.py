@@ -22,6 +22,7 @@ class PhysicalInventory(models.Model):
     team_inventory_id = fields.Many2one('team.inventory', string='Equipe', copy=True)
     inventory_mode = fields.Selection([
             ('normal', 'Inventaire'),
+            ('libre', 'Libre'),
             ('verification_carryover', 'Produits à vérifier')
         ], string='Mode d\'inventaire', default='normal', required=True)
     state = fields.Selection([

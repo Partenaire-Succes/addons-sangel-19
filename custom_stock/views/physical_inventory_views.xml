@@ -51,7 +51,7 @@
                             <group>
                                 <field name="inventory_mode" readonly="state != 'draft'"/>
                                 <field name="code_category_id" 
-                                       invisible="inventory_mode == 'verification_carryover'" 
+                                       invisible="inventory_mode in ['verification_carryover', 'libre']" 
                                        required="inventory_mode == 'normal'"
                                        readonly="state == 'done'"/>
                                 <field name="code_inventory_id"
@@ -61,7 +61,7 @@
                                        domain="[('code_category_id', '=', code_category_id)]"
                                        readonly="state == 'done'"/>
                                 <field name="team_inventory_id" 
-                                       invisible="inventory_mode == 'verification_carryover'" 
+                                       invisible="inventory_mode in ['verification_carryover', 'libre']" 
                                        required="inventory_mode == 'normal'"
                                        readonly="state == 'done'"/>
                                 <field name="unverified_product_count"/>
@@ -89,14 +89,14 @@
                             <page string="Ligne Inventaire Physique">
                                 <field name="physical_line_ids" readonly="state == 'done'"
                                        domain="[('active', '=', True)]">
-                                    <list editable="bottom" create="0" edit="1" delete="0">
+                                    <list editable="bottom" create="inventory_mode == 'normal'" edit="inventory_mode == 'normal'" delete="inventory_mode == 'normal'">
                                         <field name="code_inventory_id" column_invisible="False"/>
                                         <field name="state" column_invisible="1"/>
                                         <field name="code_category_id" column_invisible="True"/>
                                         <field name="inventory_physical_id" column_invisible="True"/>
                                         <field name="quant_id" column_invisible="True"/>
                                         <field name="product_id" column_invisible="True"/>
-                                        <field name="location_id" column_invisible="False"/>
+                                        <field name="location_id" column_invisible="False" domain="[('usage', 'in', ['internal'])]" required="True"/>
                                         <field name="product_tmpl_id" column_invisible="False"/>
                                         <field name="quantity" invisible="state == 'draft'"/>
                                         <field name="product_uom_id" column_invisible="False"/>
