@@ -89,11 +89,10 @@ class ResPartnerInherit(models.Model):
     #             partner.display_name = partner.name
 
     def _assign_barcode_from_customer_id(self, cid):
-        """Assigne barcode = customer_id si commence par '10' et barcode vide.
+        """Assigne barcode = customer_id si commence par '20' et barcode vide.
         Utilise un savepoint pour éviter de corrompre la transaction principale
         en cas d'erreur JSONB sur le champ barcode."""
-        
-        if not cid or not cid.startswith(('10', '20')):
+        if not cid or not cid.startswith('20'):
             return
         for partner in self:
             if not partner.barcode:
@@ -123,18 +122,11 @@ class ResPartnerInherit(models.Model):
 
     def action_sync_barcode_from_customer_id(self):
         """Migration : assigne barcode = customer_id pour les partenaires existants
-        dont customer_id commence par '10' et dont le barcode est vide.
+        dont customer_id commence par '20' et dont le barcode est vide.
         Commit tous les 500 enregistrements pour éviter les transactions trop longues."""
         BATCH_SIZE = 500
 
-        # partner_ids = self.env['res.partner'].search([
-        #     ('customer_id', 'like', '10%'),
-        #     ('barcode', '=', False),
-        # ]).ids
-
         partner_ids = self.env['res.partner'].search([
-            '|',
-            ('customer_id', 'like', '10%'),
             ('customer_id', 'like', '20%'),
             ('barcode', '=', False),
         ]).ids
@@ -147,7 +139,7 @@ class ResPartnerInherit(models.Model):
         for idx, pid in enumerate(partner_ids):
             partner = self.env['res.partner'].browse(pid)
             cid = partner.customer_id or ''
-            if not cid.startswith('10'):
+            if not cid.startswith('20'):
                 continue
             try:
                 with self.env.cr.savepoint():
