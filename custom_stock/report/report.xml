@@ -39,7 +39,7 @@
 
         <!-- Bon de Réception personnalisé — stock.picking -->
         <record id="action_report_bon_reception" model="ir.actions.report">
-            <field name="name">Bon de Réception</field>
+            <field name="name">Imprimer</field>
             <field name="model">stock.picking</field>
             <field name="report_type">qweb-pdf</field>
             <field name="report_name">custom_stock.report_bon_reception</field>

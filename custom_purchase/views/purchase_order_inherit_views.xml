@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!--
+        Filtre produits dans purchase.order.line :
+          - actif_x3 = '1' (Actif X3 uniquement)
+          - Aucun statut magasin avec code 'D' pour la société courante
+            (opérateur "not any" sur company_status_ids — Odoo 17+)
+        Les produits sans statut défini pour ce magasin sont inclus.
+    -->
+
+    <record id="view_purchase_order_filter_products" model="ir.ui.view">
+        <field name="name">purchase.order.line.product.filter</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='order_line']//field[@name='product_id']"
+                   position="attributes">
+                <attribute name="domain">[
+                    ('actif_x3', '=', '1'),
+                    ('company_status_ids', 'not any', [
+                        ('company_id', '=', parent.company_id),
+                        ('status_id.code', '=', 'D')
+                    ])
+                ]</attribute>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

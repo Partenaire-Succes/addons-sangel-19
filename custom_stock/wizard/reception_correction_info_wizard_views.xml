@@ -172,7 +172,7 @@
             <!-- Insérer le bouton personnalisé à la place -->
             <xpath expr="//button[@name='do_print_picking']" position="after">
                 <button name="%(action_report_bon_reception)d"
-                        string="Bon de R&#233;ception"
+                        string="Imprimer"
                         type="action"
                         class="btn-secondary"
                         icon="fa-print"
