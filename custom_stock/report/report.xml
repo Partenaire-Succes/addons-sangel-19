@@ -36,5 +36,18 @@
             <field name="paperformat_id" ref="base.paperformat_euro"/>
             <field name="print_report_name">'Rapport_Retours_Receptions'</field>
         </record>
+
+        <!-- Bon de Réception personnalisé — stock.picking -->
+        <record id="action_report_bon_reception" model="ir.actions.report">
+            <field name="name">Bon de Réception</field>
+            <field name="model">stock.picking</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">custom_stock.report_bon_reception</field>
+            <field name="report_file">custom_stock.report_bon_reception</field>
+            <field name="binding_model_id" ref="stock.model_stock_picking"/>
+            <field name="binding_type">report</field>
+            <field name="paperformat_id" ref="base.paperformat_euro"/>
+            <field name="print_report_name">'Bon_Reception_%s' % object.name.replace('/', '_')</field>
+        </record>
     </data>
 </odoo>

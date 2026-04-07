@@ -143,7 +143,7 @@
          Accès restreint : pas de Caissières
          ══════════════════════════════════════════════════════════════════════ -->
 
-    <menuitem
+    <!-- <menuitem
         id="menu_retour_fournisseur_new"
         name="Nouveau retour fournisseur"
         parent="custom_stock.menu_retour_carton_root"
@@ -158,6 +158,6 @@
         action="action_retour_fournisseur_list"
         sequence="30"
         groups="custom_pos.group_superviseur,custom_pos.group_assistant_magasin,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
-    />
+    /> -->
 
 </odoo>

@@ -1,0 +1,385 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ══════════════════════════════════════════════════════════════════
+             BON DE RÉCEPTION — stock.picking (réceptions entrantes)
+             doc = enregistrement stock.picking
+             ══════════════════════════════════════════════════════════════════ -->
+
+        <template id="report_bon_reception_document">
+            <t t-call="web.external_layout">
+                <div class="page">
+
+                    <style>
+                        body, .page {
+                            font-family: Arial, sans-serif;
+                            font-size: 9.5pt;
+                            color: #1a1a1a;
+                        }
+
+                        /* ── Bandeau titre ── */
+                        .br-header {
+                            border-top: 4px solid #1a5276;
+                            padding-top: 8px;
+                            margin-bottom: 14px;
+                        }
+                        .br-title {
+                            font-size: 16pt;
+                            font-weight: bold;
+                            color: #1a5276;
+                            text-transform: uppercase;
+                            letter-spacing: 1px;
+                        }
+                        .br-ref-secondaire {
+                            font-size: 9pt;
+                            color: #666;
+                            margin-top: 3px;
+                        }
+                        .br-ref-secondaire strong { color: #333; }
+                        .br-ref {
+                            font-size: 12pt;
+                            font-weight: bold;
+                            color: #333;
+                            margin-top: 4px;
+                        }
+                        /* ── Bloc infos (2 colonnes) ── */
+                        .br-infos {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin-bottom: 14px;
+                        }
+                        .br-infos td {
+                            padding: 3px 6px;
+                            vertical-align: top;
+                            font-size: 9pt;
+                        }
+                        .br-infos .lbl {
+                            color: #555;
+                            white-space: nowrap;
+                            width: 110px;
+                        }
+                        .br-infos .val {
+                            color: #1a1a1a;
+                            font-weight: bold;
+                        }
+                        .br-infos .bloc {
+                            border: 1px solid #d0d0d0;
+                            border-radius: 4px;
+                            padding: 6px 10px;
+                            background: #fafafa;
+                        }
+
+                        /* ── Badge Réf. Cession ── */
+                        .badge-ref-sage {
+                            display: inline-block;
+                            background: #fdebd0;
+                            border: 1px solid #f0a500;
+                            color: #7d4000;
+                            border-radius: 3px;
+                            padding: 2px 8px;
+                            font-weight: bold;
+                            font-size: 9pt;
+                        }
+
+                        /* ── Tableau lignes ── */
+                        table.tbl {
+                            width: 100%;
+                            border-collapse: collapse;
+                            font-size: 8.5pt;
+                            margin-bottom: 6px;
+                        }
+                        table.tbl thead tr {
+                            background-color: #1a5276;
+                            color: #fff;
+                        }
+                        table.tbl th {
+                            border: 1px solid #1a5276;
+                            padding: 5px 7px;
+                            font-weight: bold;
+                            text-align: left;
+                            white-space: nowrap;
+                        }
+                        table.tbl th.num { text-align: right; }
+                        table.tbl td {
+                            border: 1px solid #d0d0d0;
+                            padding: 4px 7px;
+                            vertical-align: middle;
+                        }
+                        table.tbl tbody tr:nth-child(even) td {
+                            background-color: #f5f9fd;
+                        }
+                        .num { text-align: right; white-space: nowrap; }
+                        .ctr { text-align: center; }
+                        .col-num {
+                            width: 28px;
+                            text-align: center;
+                            color: #888;
+                            font-size: 7.5pt;
+                        }
+
+                        /* ── Ligne écart ── */
+                        .ecart-rouge { color: #c0392b; font-weight: bold; }
+                        .ecart-vert  { color: #1e8449; font-weight: bold; }
+
+                        /* ── Ligne de total ── */
+                        tr.tr-total td {
+                            background-color: #1a5276 !important;
+                            color: #fff;
+                            font-weight: bold;
+                            font-size: 10pt;
+                            border-color: #1a5276;
+                            padding: 6px 7px;
+                        }
+                        tr.tr-subtotal td {
+                            background-color: #d6eaf8 !important;
+                            font-weight: bold;
+                            border-top: 2px solid #1a5276;
+                        }
+
+                        /* ── Zone signature ── */
+                        .sig-zone {
+                            margin-top: 30px;
+                            width: 100%;
+                            border-collapse: collapse;
+                        }
+                        .sig-zone td {
+                            width: 33%;
+                            border-top: 1px solid #aaa;
+                            padding-top: 6px;
+                            font-size: 8pt;
+                            color: #555;
+                            vertical-align: top;
+                            text-align: center;
+                        }
+
+                        /* ── Pied de page interne ── */
+                        .br-footer {
+                            border-top: 1px solid #d0d0d0;
+                            margin-top: 14px;
+                            padding-top: 4px;
+                            font-size: 7.5pt;
+                            color: #888;
+                            text-align: center;
+                        }
+                    </style>
+
+                    <!-- ═══ EN-TÊTE ════════════════════════════════════════════ -->
+                    <div class="br-header">
+                        <div class="br-title">Bon de R&#233;ception</div>
+                        <div class="br-ref"><t t-esc="doc.name"/></div>
+                    </div>
+
+                    <!-- ═══ INFORMATIONS (2 colonnes) ═════════════════════════ -->
+                    <table class="br-infos">
+                        <tr>
+                            <!-- Colonne gauche : infos picking -->
+                            <td style="width:55%; padding-right:10px;">
+                                <div class="bloc">
+                                    <table style="width:100%; border-collapse:collapse;">
+                                        <tr>
+                                            <td class="lbl">R&#233;f&#233;rence :</td>
+                                            <td class="val"><t t-esc="doc.name"/></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="lbl">Date :</td>
+                                            <td class="val">
+                                                <t t-esc="doc.scheduled_date and doc.scheduled_date.strftime('%d/%m/%Y %H:%M') or ''"/>
+                                            </td>
+                                        </tr>
+                                        <t t-if="doc.origin">
+                                            <tr>
+                                                <td class="lbl">Origine :</td>
+                                                <td class="val"><t t-esc="doc.origin"/></td>
+                                            </tr>
+                                        </t>
+                                        <t t-if="doc.note">
+                                            <tr>
+                                                <td class="lbl">Notes :</td>
+                                                <td class="val"><t t-esc="doc.note"/></td>
+                                            </tr>
+                                        </t>
+                                        <tr>
+                                            <td class="lbl">&#201;tat :</td>
+                                            <td class="val">
+                                                <t t-if="doc.state == 'done'">Valid&#233;</t>
+                                                <t t-elif="doc.state == 'assigned'">Pr&#234;t</t>
+                                                <t t-elif="doc.state == 'confirmed'">Confirm&#233;</t>
+                                                <t t-elif="doc.state == 'draft'">Brouillon</t>
+                                                <t t-else=""><t t-esc="doc.state"/></t>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </td>
+
+                            <!-- Colonne droite : cession + fournisseur + destination -->
+                            <td style="width:45%;">
+                                <div class="bloc">
+                                    <table style="width:100%; border-collapse:collapse;">
+                                        <t t-if="doc.ref_sage">
+                                            <tr>
+                                                <td class="lbl" style="color:#7d4000; font-weight:bold;">Cession&#160;/&#160;R&#233;f&#160;:</td>
+                                                <td class="val" style="color:#7d4000;"><t t-esc="doc.ref_sage"/></td>
+                                            </tr>
+                                        </t>
+                                        <t t-if="doc.partner_id">
+                                            <tr>
+                                                <td class="lbl">Fournisseur :</td>
+                                                <td class="val"><t t-esc="doc.partner_id.name"/></td>
+                                            </tr>
+                                            <t t-if="doc.partner_id.street">
+                                                <tr>
+                                                    <td class="lbl"/>
+                                                    <td style="color:#555; font-size:8pt;">
+                                                        <t t-esc="doc.partner_id.street"/>
+                                                        <t t-if="doc.partner_id.city">
+                                                            , <t t-esc="doc.partner_id.city"/>
+                                                        </t>
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                        </t>
+                                        <tr>
+                                            <td class="lbl">Destination :</td>
+                                            <td class="val"><t t-esc="doc.location_dest_id.complete_name"/></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="lbl">Soci&#233;t&#233; :</td>
+                                            <td class="val"><t t-esc="doc.company_id.name"/></td>
+                                        </tr>
+                                        <t t-if="doc.date_done">
+                                            <tr>
+                                                <td class="lbl">Valid&#233; le :</td>
+                                                <td class="val">
+                                                    <t t-esc="doc.date_done.strftime('%d/%m/%Y %H:%M')"/>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </table>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <!-- ═══ TABLEAU DES ARTICLES ══════════════════════════════ -->
+                    <t t-set="total_qty"    t-value="0"/>
+                    <t t-set="total_montant" t-value="0"/>
+
+                    <table class="tbl">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Article</th>
+                                <th class="ctr">UdM</th>
+                                <th class="num">Qt&#233; pr&#233;vue</th>
+                                <th class="num">Qt&#233; re&#231;ue</th>
+                                <th class="num">Prix unit.</th>
+                                <th class="num">Montant</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-set="line_num" t-value="0"/>
+                            <t t-foreach="doc.move_ids.filtered(lambda m: m.state != 'cancel')" t-as="move">
+                                <t t-set="line_num"     t-value="line_num + 1"/>
+                                <t t-set="qty_prevue"   t-value="move.product_uom_qty or 0"/>
+                                <t t-set="qty_recue"    t-value="move.quantity or 0"/>
+                                <t t-set="prix"         t-value="move.price_unit or 0"/>
+                                <t t-set="qty_affichee" t-value="qty_recue if doc.state == 'done' else qty_prevue"/>
+                                <t t-set="montant"      t-value="qty_affichee * prix"/>
+                                <t t-set="total_qty"    t-value="total_qty + qty_affichee"/>
+                                <t t-set="total_montant" t-value="total_montant + montant"/>
+                                <tr>
+                                    <td><t t-esc="move.product_id.default_code"/></td>
+                                    <td>
+                                        <strong><t t-esc="move.product_id.name"/></strong>
+                                        <!-- <t t-if="move.product_id.default_code">
+                                            <br/>
+                                            <span style="color:#888; font-size:7.5pt;">
+                                                [<t t-esc="move.product_id.default_code"/>]
+                                            </span>
+                                        </t> -->
+                                    </td>
+                                    <td class="ctr"><t t-esc="move.product_uom.name"/></td>
+                                    <td class="num"><t t-esc="'%.2f' % qty_prevue"/></td>
+                                    <td class="num">
+                                        <t t-if="doc.state == 'done'">
+                                            <t t-if="abs(qty_recue - qty_prevue) > 0.001">
+                                                <t t-if="qty_recue &lt; qty_prevue">
+                                                    <span class="ecart-rouge"><t t-esc="'%.2f' % qty_recue"/></span>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="ecart-vert"><t t-esc="'%.2f' % qty_recue"/></span>
+                                                </t>
+                                            </t>
+                                            <t t-else="">
+                                                <t t-esc="'%.2f' % qty_recue"/>
+                                            </t>
+                                        </t>
+                                        <t t-else="">
+                                            <span style="color:#aaa;">&#8212;</span>
+                                        </t>
+                                    </td>
+                                    <td class="num"><t t-esc="'%.2f' % prix"/></td>
+                                    <td class="num"><strong><t t-esc="'%.2f' % montant"/></strong></td>
+                                </tr>
+                            </t>
+                        </tbody>
+                        <tbody>
+                            <tr class="tr-total">
+                                <td colspan="3"><strong>TOTAL</strong></td>
+                                <td class="num"><t t-esc="'%.2f' % total_qty"/></td>
+                                <td/>
+                                <td/>
+                                <td class="num"><t t-esc="'%.2f' % total_montant"/></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- ═══ ZONE SIGNATURES ═══════════════════════════════════ -->
+                    <table class="sig-zone">
+                        <tr>
+                            <td>
+                                R&#233;ceptionn&#233; par<br/>
+                                <br/><br/>
+                                Nom &amp; Signature :
+                            </td>
+                            <td>
+                                Contr&#244;l&#233; par<br/>
+                                <br/><br/>
+                                Nom &amp; Signature :
+                            </td>
+                            <td>
+                                Date de r&#233;ception<br/>
+                                <br/><br/>
+                                Date :
+                            </td>
+                        </tr>
+                    </table>
+
+                    <!-- ═══ PIED DE PAGE INTERNE ══════════════════════════════ -->
+                    <div class="br-footer">
+                        Document g&#233;n&#233;r&#233; par
+                        <t t-esc="doc.company_id.name"/>
+                        &#160;&#183;&#160;
+                        <t t-esc="doc.name"/>
+                        &#160;&#183;&#160;
+                        &#201;dit&#233; le
+                        <t t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y &#224; %H:%M')"/>
+                    </div>
+
+                </div>
+            </t>
+        </template>
+
+        <!-- Template principal (boucle sur plusieurs pickings) -->
+        <template id="report_bon_reception">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="doc">
+                    <t t-call="custom_stock.report_bon_reception_document"/>
+                </t>
+            </t>
+        </template>
+
+    </data>
+</odoo>

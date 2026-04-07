@@ -21,6 +21,8 @@
                         <group>
                             <field name="location_dest_id"
                                    options="{'no_create': True}"/>
+                            <field name="ref_sage"
+                                   placeholder="Ex: CESS-2026-001, BL-45678…"/>
                             <field name="notes" placeholder="Référence BL, remarque…"/>
                         </group>
                     </group>
@@ -40,8 +42,22 @@
                             <field name="nouveau_prix"
                                    string="Nouveau prix d'achat"
                                    optional="show"/>
+                            <!-- <field name="montant_ligne"
+                                   string="Montant"
+                                   readonly="1"
+                                   sum="Total"/> -->
                         </list>
                     </field>
+
+                    <!-- Total général — mis à jour en temps réel -->
+                    <group>
+                        <group/>
+                        <group>
+                            <field name="montant_total"
+                                   string="Montant total"
+                                   readonly="1"/>
+                        </group>
+                    </group>
 
                     <div class="alert alert-info mt-2" role="alert"
                          style="font-size: 85%;">
@@ -82,11 +98,13 @@
         <field name="arch" type="xml">
             <list string="Historique réceptions directes"
                   default_order="scheduled_date desc">
-                <field name="name" string="Référence"/>
+                <field name="ref_sage" string="Réf. Cession / Sage"
+                       decoration-bf="True"/>
+                <field name="name" string="Référence Odoo"/>
                 <field name="scheduled_date" string="Date"/>
                 <field name="partner_id" string="Fournisseur"/>
                 <field name="location_dest_id" string="Destination"/>
-                <field name="note" string="Référence / Notes"/>
+                <field name="note" string="Notes"/>
                 <field name="state" string="État"
                        decoration-success="state == 'done'"
                        decoration-warning="state == 'assigned'"
@@ -106,28 +124,28 @@
     </record>
 
     <!-- Menus -->
-    <menuitem
+    <!-- <menuitem
         id="menu_reception_directe_root"
         name="Réceptions"
         parent="custom_stock.menu_sortie_entrant_root"
         sequence="20"
         groups="custom_pos.group_superviseur,custom_pos.group_assistant_magasin,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
-    />
-    <menuitem
+    /> -->
+    <!-- <menuitem
         id="menu_reception_directe_new"
         name="Nouvelle réception directe"
         parent="menu_reception_directe_root"
         action="action_reception_directe_wizard"
         sequence="10"
         groups="custom_pos.group_superviseur,custom_pos.group_assistant_magasin,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
-    />
-    <menuitem
+    /> -->
+    <!-- <menuitem
         id="menu_reception_directe_list"
         name="Historique des réceptions"
         parent="menu_reception_directe_root"
         action="action_reception_directe_list"
         sequence="20"
         groups="custom_pos.group_superviseur,custom_pos.group_assistant_magasin,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
-    />
+    /> -->
 
 </odoo>
