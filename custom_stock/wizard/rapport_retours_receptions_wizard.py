@@ -34,10 +34,14 @@ class RapportRetoursReceptionsWizard(models.TransientModel):
         domain=[('supplier_rank', '>', 0)],
         help="Laisser vide pour inclure tous les fournisseurs.",
     )
+    ref_sage = fields.Char(
+        string='Réf. Cession / Sage',
+        help="Filtrer par référence Sage exacte. Laisser vide pour toutes les références.",
+    )
 
     # ── Helpers domaine ──────────────────────────────────────────────────────
     def _clauses_communes(self):
-        """Clauses de filtre partagées (dates + fournisseur)."""
+        """Clauses de filtre partagées (dates + fournisseur + ref_sage)."""
         clauses = []
         if self.date_debut:
             clauses.append(('scheduled_date', '>=',
@@ -47,6 +51,8 @@ class RapportRetoursReceptionsWizard(models.TransientModel):
                             datetime.combine(self.date_fin, time.max)))
         if self.partner_id:
             clauses.append(('partner_id', '=', self.partner_id.id))
+        if self.ref_sage:
+            clauses.append(('ref_sage', 'ilike', self.ref_sage.strip()))
         return clauses
 
     # ── Accesseurs données ───────────────────────────────────────────────────
@@ -91,6 +97,10 @@ class RapportRetoursReceptionsWizard(models.TransientModel):
             'tous':       'Retours + Réceptions',
         }
         return labels.get(self.type_rapport, '')
+
+    def get_ref_sage_label(self):
+        """Réf. Cession saisie dans le filtre (pour affichage en-tête rapport)."""
+        return self.ref_sage.strip() if self.ref_sage else ''
 
     def get_date_edition(self):
         """Date/heure d'édition formatée pour l'en-tête du rapport."""

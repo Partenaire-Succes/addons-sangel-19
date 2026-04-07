@@ -29,6 +29,8 @@
                             <field name="partner_id"
                                    options="{'no_create': True, 'no_create_edit': True}"
                                    placeholder="Tous les fournisseurs"/>
+                            <field name="ref_sage"
+                                   placeholder="Référence exacte (ex: CESS-2026-001)"/>
                         </group>
                     </group>
 
@@ -67,13 +69,13 @@
     </record>
 
     <!-- Menu enfant sous Rapports -->
-    <menuitem
+    <!-- <menuitem
         id="menu_rapport_retours_receptions"
         name="Rapport Retours &amp; Réceptions"
         parent="custom_stock.menu_sortie_entrant_rapports"
         action="action_rapport_retours_receptions_wizard"
         sequence="10"
         groups="custom_pos.group_superviseur,custom_pos.group_assistant_magasin,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
-    />
+    /> -->
 
 </odoo>

@@ -72,13 +72,13 @@
     </record>
 
     <!-- Menus -->
-    <menuitem
+    <!-- <menuitem
         id="menu_retour_carton_root"
         name="Retours"
         parent="custom_stock.menu_sortie_entrant_root"
         sequence="10"
         groups="custom_pos.group_superviseur,custom_pos.group_assistant_magasin,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
-    />
+    /> -->
     <!-- <menuitem
         id="menu_retour_carton_new"
         name="Ouvrir des cartons (carton → unités)"

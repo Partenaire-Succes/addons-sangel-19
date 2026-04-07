@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!--
+        Extension du template Orderline natif pour les remises loyalty.program
+        de type "discount sur produit spécifique".
+
+        Getters définis sur Orderline.prototype dans loyalty_single_line.js :
+          loyaltyNetPrice     → prix après remise (ex: $1.17), null si pas de reward
+          loyaltyDescription  → nom du programme de remise, null si pas de reward
+
+        Méthodes natives de Orderline utilisées :
+          formatCurrency(amount)  → formate un montant avec la devise de la ligne
+          line.getPriceString()   → prix original formaté (ex: "$1.38")
+    -->
+    <t t-name="custom_pos.LoyaltySingleLine"
+       t-inherit="point_of_sale.Orderline"
+       t-inherit-mode="extension">
+
+        <!--
+            1. Remplace l'affichage du prix par le prix NET quand une reward existe.
+               - Avec reward  : affiche $1.17 (prix après remise)
+               - Sans reward  : comportement natif inchangé (getPriceString())
+        -->
+        <xpath expr="//div[hasclass('product-price')]" position="replace">
+            <div t-if="!props.basic_receipt and !line.combo_parent_id"
+                 class="product-price price"
+                 t-attf-class="{{ props.mode == 'receipt' ? 'font-monospace' : 'fw-bolder' }}">
+                <t t-if="loyaltyNetPrice !== null and props.mode !== 'receipt'">
+                    <t t-esc="formatCurrency(loyaltyNetPrice)"/>
+                </t>
+                <t t-else="" t-out="line.getPriceString()"/>
+            </div>
+        </xpath>
+
+        <!--
+            2. Ajoute le sous-texte remise dans info-list (même zone que le discount natif).
+               - Affiche : 🏷 [description remise] sur [prix original]
+               - Caché en mode receipt (ticket imprimé).
+        -->
+        <xpath expr="//ul[hasclass('info-list')]" position="inside">
+            <li t-if="loyaltyDescription and props.mode !== 'receipt'"
+                class="reward-promo-info d-flex align-items-center gap-1"
+                style="font-size: 0.8em; color: #28a745;">
+                <i class="fa fa-tag pe-1"/>
+                <em><t t-esc="loyaltyDescription"/></em>
+                <span class="text-muted ms-1">
+                    sur <t t-esc="line.getPriceString()"/>
+                </span>
+            </li>
+        </xpath>
+
+    </t>
+
+</templates>

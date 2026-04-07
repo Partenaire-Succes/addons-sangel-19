@@ -27,6 +27,11 @@ class ReceptionDirecteWizard(models.TransientModel):
         required=True,
         default=lambda self: self._default_location_dest(),
     )
+    ref_sage = fields.Char(
+        string='Réf. Cession / Sage',
+        help="Référence unique de cette réception dans Sage X3 (cession, BL…). "
+             "Utilisée pour retrouver et filtrer cette réception dans les rapports.",
+    )
     notes = fields.Char(string='Référence / Notes')
 
     line_ids = fields.One2many(
@@ -34,6 +39,17 @@ class ReceptionDirecteWizard(models.TransientModel):
         'wizard_id',
         string='Produits',
     )
+    montant_total = fields.Float(
+        string='Montant total',
+        digits='Product Price',
+        compute='_compute_montant_total',
+        store=False,
+    )
+
+    @api.depends('line_ids.montant_ligne')
+    def _compute_montant_total(self):
+        for wizard in self:
+            wizard.montant_total = sum(wizard.line_ids.mapped('montant_ligne'))
 
     def _default_location_dest(self):
         wh = self.env['stock.warehouse'].search(
@@ -73,6 +89,7 @@ class ReceptionDirecteWizard(models.TransientModel):
             'scheduled_date': self.scheduled_date,
             'origin': 'Réception Directe',
             'note': self.notes or '',
+            'ref_sage': self.ref_sage or '',
         })
 
         # Création des mouvements
@@ -216,6 +233,18 @@ class ReceptionDirecteWizardLine(models.TransientModel):
         help="Laisser à 0 pour conserver le coût actuel. "
              "Si renseigné, devient le nouveau coût de référence du produit.",
     )
+    montant_ligne = fields.Float(
+        string='Montant',
+        digits='Product Price',
+        compute='_compute_montant_ligne',
+        store=False,
+    )
+
+    @api.depends('qty', 'price_unit', 'nouveau_prix')
+    def _compute_montant_ligne(self):
+        for line in self:
+            prix = line.nouveau_prix if line.nouveau_prix and line.nouveau_prix > 0 else line.price_unit
+            line.montant_ligne = line.qty * prix
 
     @api.depends('product_id')
     def _compute_uom(self):
