@@ -115,6 +115,7 @@
                             </group>
                             <group>
                                 <field name="prod_cond" readonly="1"/>
+                                <field name="actif_x3" readonly="1"/>
                                 <field name="marque" readonly="1"/>
                                 <field name="prod_status_x3_id" readonly="1"/>
                             </group>

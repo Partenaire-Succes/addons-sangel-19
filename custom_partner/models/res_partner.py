@@ -92,7 +92,8 @@ class ResPartnerInherit(models.Model):
         """Assigne barcode = customer_id si commence par '10' et barcode vide.
         Utilise un savepoint pour éviter de corrompre la transaction principale
         en cas d'erreur JSONB sur le champ barcode."""
-        if not cid or not cid.startswith('10'):
+        
+        if not cid or not cid.startswith(('10', '20')):
             return
         for partner in self:
             if not partner.barcode:
@@ -126,8 +127,15 @@ class ResPartnerInherit(models.Model):
         Commit tous les 500 enregistrements pour éviter les transactions trop longues."""
         BATCH_SIZE = 500
 
+        # partner_ids = self.env['res.partner'].search([
+        #     ('customer_id', 'like', '10%'),
+        #     ('barcode', '=', False),
+        # ]).ids
+
         partner_ids = self.env['res.partner'].search([
+            '|',
             ('customer_id', 'like', '10%'),
+            ('customer_id', 'like', '20%'),
             ('barcode', '=', False),
         ]).ids
 
