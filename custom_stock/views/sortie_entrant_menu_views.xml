@@ -7,21 +7,21 @@
          Doit être chargé AVANT les fichiers wizard qui y rattachent des sous-menus
          ══════════════════════════════════════════════════════════════════════ -->
 
-    <!-- <menuitem
+    <menuitem
         id="menu_sortie_entrant_root"
         name="Sortie/Entrant"
         parent="stock.menu_stock_root"
         sequence="25"
         groups="custom_pos.group_superviseur,custom_pos.group_assistant_magasin,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
-    /> -->
+    />
 
     <!-- Menu parent Rapports — même niveau que Retours et Réceptions -->
-    <!-- <menuitem
+    <menuitem
         id="menu_sortie_entrant_rapports"
         name="Rapports"
         parent="menu_sortie_entrant_root"
         sequence="30"
         groups="custom_pos.group_superviseur,custom_pos.group_assistant_magasin,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
-    /> -->
+    />
 
 </odoo>

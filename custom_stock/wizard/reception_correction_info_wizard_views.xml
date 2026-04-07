@@ -196,7 +196,7 @@
                         type="action"
                         class="oe_stat_button"
                         icon="fa-pencil"
-                        invisible="1"
+                        invisible="state != 'done'"
                         groups="custom_pos.group_superviseur,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
                         help="Modifier r&#233;f. Sage, fournisseur, date ou notes sans toucher au stock."/>
 
@@ -205,7 +205,7 @@
                         type="action"
                         class="oe_stat_button"
                         icon="fa-wrench"
-                        invisible="1"
+                        invisible="state != 'done'"
                         groups="custom_pos.group_superviseur,custom_pos.group_dsi_it"
                         help="Corriger les quantit&#233;s re&#231;ues par pickings diff&#233;rentiels."/>
 

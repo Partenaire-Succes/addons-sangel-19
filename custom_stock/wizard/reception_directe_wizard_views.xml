@@ -124,28 +124,28 @@
     </record>
 
     <!-- Menus -->
-    <!-- <menuitem
+    <menuitem
         id="menu_reception_directe_root"
         name="Réceptions"
         parent="custom_stock.menu_sortie_entrant_root"
         sequence="20"
         groups="custom_pos.group_superviseur,custom_pos.group_assistant_magasin,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
-    /> -->
-    <!-- <menuitem
+    />
+    <menuitem
         id="menu_reception_directe_new"
         name="Nouvelle réception directe"
         parent="menu_reception_directe_root"
         action="action_reception_directe_wizard"
         sequence="10"
         groups="custom_pos.group_superviseur,custom_pos.group_assistant_magasin,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
-    /> -->
-    <!-- <menuitem
+    />
+    <menuitem
         id="menu_reception_directe_list"
         name="Historique des réceptions"
         parent="menu_reception_directe_root"
         action="action_reception_directe_list"
         sequence="20"
         groups="custom_pos.group_superviseur,custom_pos.group_assistant_magasin,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
-    /> -->
+    />
 
 </odoo>
