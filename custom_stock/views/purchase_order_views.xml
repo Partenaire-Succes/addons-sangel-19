@@ -38,7 +38,7 @@
                         class="oe_highlight"
                         invisible="state not in ['draft'] or sage_x3_validated == True or type_command != 'normal' or type_supplier != 'vridi'"/>
 
-                <button name="button_confirm"
+                <button name="button_confirm_local"
                         string="Confirmer"
                         type="object"
                         class="oe_highlight"

@@ -51,12 +51,27 @@ class ReportDailySalesWizard(models.TransientModel):
         while current_date <= self.date_to:
             jour = current_date.strftime('%a').capitalize()  # ex: 'Lun', 'Mar', 'Mer'
             next_day = current_date + delta
+            refund_ht = refund_ttc = 0.0
+
+            refunds = self.env['account.move'].search([
+                    ('invoice_date', '>=', fields.Date.to_date(current_date)),
+                    ('invoice_date', '<', fields.Date.to_date(next_day)),
+                    ('move_type', '=', 'out_refund'),
+                    ('state', '=', 'posted'),
+                    ('company_id', '=', self.company_id.id),
+                ])
+            if refunds:
+                # Si des remboursements existent, on les exclut du calcul du CA
+                refund_ht = sum(refunds.mapped('amount_untaxed'))
+                refund_ttc = sum(refunds.mapped('amount_total'))
 
             if self.report_type == 'sale':
                 orders = self.env['sale.order'].search([
                     ('date_order', '>=', fields.Datetime.to_datetime(current_date)),
                     ('date_order', '<', fields.Datetime.to_datetime(next_day)),
                     ('state', 'in', ['sale', 'done']),
+                    ('invoice_ids.move_type', '=', 'out_invoice'),
+                    ('invoice_ids.state', '=', 'posted'),
                     ('company_id', '=', self.company_id.id),
                 ])
                 order_lines = self.env['sale.order.line'].search([
@@ -64,8 +79,8 @@ class ReportDailySalesWizard(models.TransientModel):
                     ('state', '!=', 'cancel')
                 ])
 
-                ca_ht = sum(order.amount_untaxed for order in orders)
-                ca_ttc = sum(order.amount_total for order in orders)
+                ca_ht = sum(order.amount_untaxed for order in orders) - refund_ht
+                ca_ttc = sum(order.amount_total for order in orders) - refund_ttc
                 cout_total = sum(
                     line.product_uom_qty * line.product_id.standard_price
                     for line in order_lines
@@ -106,8 +121,8 @@ class ReportDailySalesWizard(models.TransientModel):
                     order.amount_total if order.amount_tax == 0
                     else (order.amount_total - order.amount_tax)
                     for order in orders
-                )
-                ca_ttc = sum(order.amount_total for order in orders)
+                ) - refund_ht
+                ca_ttc = sum(order.amount_total for order in orders) - refund_ttc
                 cout_total = sum(
                     line.qty * line.product_id.standard_price
                     for line in order_lines
@@ -207,8 +222,8 @@ class ReportDailySalesWizard(models.TransientModel):
                 )
 
                 # FIX 1 : ca_ht défini dans le bloc else
-                ca_ht = sale_ca_ht + pos_ca_ht
-                ca_ttc = sale_ca_ttc + pos_ca_ttc
+                ca_ht = sale_ca_ht + pos_ca_ht - refund_ht
+                ca_ttc = sale_ca_ttc + pos_ca_ttc - refund_ttc
                 marge = sale_marge + pos_marge
                 remises = sale_remises + pos_remises
                 nb_clients = len(sale_orders) + len(pos_orders)

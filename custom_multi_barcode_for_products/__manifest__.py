@@ -13,6 +13,7 @@
         'views/product_template_views.xml',
         'views/purchase_order_views.xml',
         'views/sale_order_views.xml',
+        'views/report_product_label_custom.xml',
         'views/stock_picking_views.xml',
         'wizard/import_barcodes_wizard_views.xml',
     ],

@@ -10,6 +10,11 @@
                 <field name="ref_sage"/>
                 <field name="date_sage"/>
             </xpath>
+
+            <xpath expr="//notebook/page[@name='operations']/field[@name='move_ids']//field[@name='quantity']" position="after">
+                <field name="standard_price" readonly="1" string="Cout"/>
+                <field name="price_unit" readonly="1" string="Prix unitaire"/>
+            </xpath>
         </field>
     </record>
 

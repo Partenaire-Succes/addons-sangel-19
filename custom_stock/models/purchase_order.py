@@ -22,3 +22,6 @@ class PurchaseOrderSageX3Optimized(models.Model):
 
     def action_pending_to_sage_x3(self):
         self.write({'state': 'sent'})
+
+    def button_confirm_local(self):
+        self.button_confirm()

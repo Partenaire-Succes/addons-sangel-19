@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+
+        <!--
+        ============================================================
+        SOUS-TEMPLATE : Étiquette 2x7 personnalisée (Prix TTC + Logo)
+        ============================================================
+        Hérite de product.report_simple_label2x7 et redéfinit
+        entièrement le contenu de la cellule pour :
+          - Afficher le prix TTC (taxes incluses)
+          - Ajouter "FCFA / KG" en annotation
+          - Afficher le code interne + la date du jour
+          - Afficher le logo flocon en bas à droite
+        -->
+        <template id="report_simple_label2x7_ttc"
+                  inherit_id="product.report_simple_label2x7"
+                  name="Étiquette 2×7 – Prix TTC + Logo">
+
+            <!-- Remplacement du bloc principal o_label_full -->
+            <xpath expr="//div[hasclass('o_label_full')]" position="replace">
+
+                <!-- Calcul du prix TTC -->
+                <t t-set="price_ht"
+                   t-value="pricelist._get_product_price(
+                                product, 1,
+                                currency=pricelist.currency_id or product.currency_id
+                            )"/>
+                <t t-set="applicable_taxes"
+                   t-value="product.taxes_id.filtered(
+                                lambda t: t.company_id == product.env.user.company_id
+                            )"/>
+                <t t-set="tax_result"
+                   t-value="applicable_taxes.compute_all(
+                                price_ht,
+                                pricelist.currency_id or product.currency_id,
+                                1,
+                                product=product
+                            )"/>
+                <t t-set="price_ttc" t-value="tax_result['total_included']"/>
+
+                <div class="o_label_full" t-att-style="table_style"
+                     style="position:relative; padding:3mm 4mm; box-sizing:border-box; overflow:hidden;">
+
+                    <!-- ① Nom du produit -->
+                    <div style="font-size:13pt; font-weight:900; line-height:1.1;
+                                margin-bottom:2mm; letter-spacing:0.02em;">
+                        <strong t-field="product.display_name"/>
+                    </div>
+
+                    <!-- ② Ligne prix + logo -->
+                    <div style="display:flex; align-items:flex-end;
+                                justify-content:space-between; margin-bottom:1mm;">
+
+                        <!-- Prix TTC en très grand + "FCFA / KG" -->
+                        <div style="display:flex; align-items:baseline; gap:3px;">
+                            <strong style="font-size:32pt; font-weight:900; line-height:1;"
+                                    t-out="int(price_ttc)"/>
+                            <span style="font-size:8pt; font-weight:700;
+                                         line-height:1; margin-left:3px;">
+                                FCFA / KG
+                            </span>
+                        </div>
+
+                        <!-- Logo flocon (frozen) -->
+                        <img src="/custom_multi_barcode_for_products/static/img/logo_etiq.png"
+                             style="height:22mm; width:auto; object-fit:contain;
+                                    margin-right:2mm; margin-bottom:1mm;"
+                             alt="Surgelé"/>
+                    </div>
+
+                    <!-- ③ Code interne + Date du jour -->
+                    <div style="display:flex; align-items:baseline; gap:5px;
+                                font-weight:700; font-size:9pt;">
+                        <span t-field="product.default_code"/>
+                        <span style="font-weight:400; font-size:8pt;"
+                              t-out="datetime.date.today().strftime('%d/%m/%Y')"/>
+                    </div>
+
+                </div>
+            </xpath>
+        </template>
+
+
+        <!--
+        ============================================================
+        SOUS-TEMPLATE : Étiquette 4x7 personnalisée (Prix TTC + Logo)
+        ============================================================
+        Même logique pour le format 4 colonnes × 7 lignes.
+        -->
+        <template id="report_simple_label4x7_ttc"
+                  inherit_id="product.report_simple_label4x7"
+                  name="Étiquette 4×7 – Prix TTC + Logo">
+
+            <xpath expr="//div[hasclass('o_label_full')]" position="replace">
+
+                <t t-set="price_ht"
+                   t-value="pricelist._get_product_price(
+                                product, 1,
+                                currency=pricelist.currency_id or product.currency_id
+                            )"/>
+                <t t-set="applicable_taxes"
+                   t-value="product.taxes_id.filtered(
+                                lambda t: t.company_id == product.env.user.company_id
+                            )"/>
+                <t t-set="tax_result"
+                   t-value="applicable_taxes.compute_all(
+                                price_ht,
+                                pricelist.currency_id or product.currency_id,
+                                1,
+                                product=product
+                            )"/>
+                <t t-set="price_ttc" t-value="tax_result['total_included']"/>
+
+                <div class="o_label_full" t-att-style="table_style"
+                     style="position:relative; padding:2mm 3mm; box-sizing:border-box; overflow:hidden;">
+
+                    <!-- Nom produit -->
+                    <div style="font-size:8pt; font-weight:900; line-height:1.1; margin-bottom:1mm;">
+                        <strong t-field="product.display_name"/>
+                    </div>
+
+                    <!-- Prix TTC + FCFA/KG -->
+                    <div style="display:flex; align-items:baseline; gap:2px; margin-bottom:1mm;">
+                        <strong style="font-size:16pt; font-weight:900; line-height:1;"
+                                t-out="int(price_ttc)"/>
+                        <span style="font-size:6pt; font-weight:700;">FCFA / KG</span>
+                    </div>
+
+                    <!-- Logo flocon -->
+                    <img src="/custom_multi_barcode_for_products/static/img/logo_etiq.png"
+                         style="position:absolute; bottom:1mm; right:1mm;
+                                height:12mm; width:auto; object-fit:contain;"
+                         alt="Surgelé"/>
+
+                    <!-- Code + date -->
+                    <div style="font-size:6pt; font-weight:700; margin-top:1mm;">
+                        <span t-field="product.default_code"/>
+                        <span style="font-weight:400; margin-left:3px;"
+                              t-out="datetime.date.today().strftime('%d/%m/%Y')"/>
+                    </div>
+
+                </div>
+            </xpath>
+        </template>
+
+    </data>
+</odoo>
