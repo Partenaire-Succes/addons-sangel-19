@@ -80,6 +80,9 @@
             "/custom_pos/static/src/xml/pos_product_info_hide_inventory.xml",
             # Navbar + TicketScreen restrictions caissière/DSI
             "/custom_pos/static/src/xml/pos_navbar_caissiere_patch.xml",
+            # Bouton ouverture manuelle caisse + raccourci Alt+C
+            "/custom_pos/static/src/js/cashbox_button.js",
+            "/custom_pos/static/src/xml/cashbox_button.xml",
         ],
     },
 }

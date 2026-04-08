@@ -203,10 +203,7 @@
                                             <td class="lbl">&#201;tat :</td>
                                             <td class="val">
                                                 <t t-if="doc.state == 'done'">Valid&#233;</t>
-                                                <t t-elif="doc.state == 'assigned'">Pr&#234;t</t>
-                                                <t t-elif="doc.state == 'confirmed'">Confirm&#233;</t>
-                                                <t t-elif="doc.state == 'draft'">Brouillon</t>
-                                                <t t-else=""><t t-esc="doc.state"/></t>
+                                                <t t-else="">Non Valid&#233;</t>
                                             </td>
                                         </tr>
                                     </table>
@@ -271,7 +268,7 @@
                             <tr>
                                 <th>Code</th>
                                 <th>Article</th>
-                                <th class="ctr">UdM</th>
+                                <th class="ctr">U</th>
                                 <th class="num">Qt&#233; pr&#233;vue</th>
                                 <th class="num">Qt&#233; re&#231;ue</th>
                                 <th class="num">Prix unit.</th>
@@ -320,18 +317,17 @@
                                             <span style="color:#aaa;">&#8212;</span>
                                         </t>
                                     </td>
-                                    <td class="num"><t t-esc="'%.2f' % prix"/></td>
-                                    <td class="num"><strong><t t-esc="'%.2f' % montant"/></strong></td>
+                                    <td class="num"><t t-esc="'{:,.0f}'.format(prix).replace(',', ' ')"/></td>
+                                    <td class="num"><strong><t t-esc="'{:,.0f}'.format(montant).replace(',', ' ')"/></strong></td>
                                 </tr>
                             </t>
                         </tbody>
                         <tbody>
                             <tr class="tr-total">
-                                <td colspan="3"><strong>TOTAL</strong></td>
-                                <td class="num"><t t-esc="'%.2f' % total_qty"/></td>
+                                <td colspan="4"><strong>TOTAL</strong></td>
                                 <td/>
                                 <td/>
-                                <td class="num"><t t-esc="'%.2f' % total_montant"/></td>
+                                <td class="num"><t t-esc="'{:,.0f}'.format(total_montant).replace(',', ' ')"/></td>
                             </tr>
                         </tbody>
                     </table>

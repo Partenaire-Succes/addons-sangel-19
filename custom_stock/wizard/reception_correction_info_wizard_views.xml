@@ -113,14 +113,14 @@
                               decoration-danger="delta &lt; 0"
                               decoration-success="delta &gt; 0"
                               decoration-muted="delta == 0">
-                            <field name="product_id" readonly="1" string="Article"/>
-                            <field name="product_uom_id" readonly="1" string="Unité"/>
-                            <field name="qty_originale" readonly="1" string="Qté reçue"/>
+                            <field name="product_id" readonly="1" force_save="1" string="Article"/>
+                            <field name="product_uom_id" readonly="1" force_save="1" string="Unité"/>
+                            <field name="qty_originale" readonly="1" force_save="1" string="Qté reçue"/>
                             <field name="qty_correcte" required="1" string="Qté correcte"/>
                             <field name="delta" readonly="1" string="Écart"
                                    decoration-danger="delta &lt; 0"
                                    decoration-success="delta &gt; 0"/>
-                            <field name="price_unit" readonly="1" string="Prix"/>
+                            <field name="price_unit" readonly="1" force_save="1" string="Prix"/>
                         </list>
                     </field>
 
@@ -176,7 +176,7 @@
                         type="action"
                         class="btn-secondary"
                         icon="fa-print"
-                        invisible="picking_type_code != 'incoming'"
+                        invisible="picking_type_code not in ('incoming', 'outgoing')"
                         help="Imprimer le bon de r&#233;ception personnalis&#233;."/>
             </xpath>
         </field>

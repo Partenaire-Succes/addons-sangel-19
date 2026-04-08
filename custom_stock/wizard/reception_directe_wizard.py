@@ -63,6 +63,16 @@ class ReceptionDirecteWizard(models.TransientModel):
         if not self.line_ids:
             raise UserError(_("Ajoutez au moins un produit à réceptionner."))
 
+        # Bloquer les doublons produit (risque de valorisation incorrecte après _merge_moves)
+        seen = set()
+        for line in self.line_ids:
+            if line.product_id.id in seen:
+                raise UserError(_(
+                    "Le produit « %s » apparaît plusieurs fois.\n"
+                    "Regroupez les quantités sur une seule ligne."
+                ) % line.product_id.display_name)
+            seen.add(line.product_id.id)
+
         # Type de réception incoming
         picking_type = self.env['stock.picking.type'].search([
             ('code', '=', 'incoming'),
@@ -164,7 +174,7 @@ class ReceptionDirecteWizard(models.TransientModel):
 
         # Note chatter : toujours poster le résumé de la réception
         lignes_html = ''.join(
-            '<li>%s &times; %s</li>' % (int(l.qty), l.product_id.display_name)
+            '<li>%g &times; %s</li>' % (l.qty, l.product_id.display_name)
             for l in self.line_ids
         )
         body = _(
@@ -224,7 +234,6 @@ class ReceptionDirecteWizardLine(models.TransientModel):
     price_unit = fields.Float(
         string='Coût actuel',
         digits='Product Price',
-        readonly=True,
         help="Coût effectif actuel du produit (nouveau prix si défini, sinon prix standard).",
     )
     nouveau_prix = fields.Float(

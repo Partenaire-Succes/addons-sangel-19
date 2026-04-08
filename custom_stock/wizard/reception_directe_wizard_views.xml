@@ -38,7 +38,8 @@
                                    options="{'no_create': True}"/>
                             <field name="price_unit"
                                    string="Coût actuel"
-                                   readonly="1"/>
+                                   readonly="1"
+                                   force_save="1"/>
                             <field name="nouveau_prix"
                                    string="Nouveau prix d'achat"
                                    optional="show"/>
@@ -120,7 +121,7 @@
         <field name="view_mode">list,form</field>
         <field name="view_id" ref="view_reception_directe_picking_list"/>
         <field name="domain">[('origin', '=', 'Réception Directe'), ('picking_type_code', '=', 'incoming')]</field>
-        <field name="context">{'search_default_done': 1}</field>
+        <field name="context">{}</field>
     </record>
 
     <!-- Menus -->

@@ -5,11 +5,11 @@
         <field name="name">avoir.journee.wizard.form</field>
         <field name="model">avoir.journee.wizard</field>
         <field name="arch" type="xml">
-            <form string="Rapport Avoir Journée — Mode paiement">
+            <form string="Rapport de mode paiement">
                 <sheet>
                     <div class="oe_title">
-                        <h1>Avoir Journée</h1>
-                        <h3 class="text-muted">Mode paiement — groupé par catégorie client</h3>
+                        <h1>Rapport de mode paiement</h1>
+                        <h3 class="text-muted">Groupé par catégorie client</h3>
                     </div>
 
                     <group>
@@ -55,7 +55,7 @@
     </record>
 
     <record id="action_avoir_journee_wizard" model="ir.actions.act_window">
-        <field name="name">Avoir Journée — Mode paiement</field>
+        <field name="name">Rapport de mode paiement</field>
         <field name="res_model">avoir.journee.wizard</field>
         <field name="view_mode">form</field>
         <field name="target">new</field>
@@ -63,7 +63,7 @@
 
     <menuitem
         id="menu_avoir_journee"
-        name="Avoir Journée (Mode paiement)"
+        name="Rapport de mode paiement"
         parent="point_of_sale.menu_point_of_sale"
         action="action_avoir_journee_wizard"
         sequence="50"
