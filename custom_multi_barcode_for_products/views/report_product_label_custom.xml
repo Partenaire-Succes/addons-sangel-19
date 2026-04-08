@@ -58,12 +58,12 @@
                                     t-out="int(price_ttc)"/>
                             <span style="font-size:8pt; font-weight:700;
                                          line-height:1; margin-left:3px;">
-                                FCFA / KG
+                                FCFA / <span t-field="product.uom_id.name"/>
                             </span>
                         </div>
 
                         <!-- Logo flocon (frozen) -->
-                        <img src="/custom_multi_barcode_for_products/static/img/logo_etiq.png"
+                        <img src="/custom_multi_barcode_for_products/static/img/etiquette.png"
                              style="height:22mm; width:auto; object-fit:contain;
                                     margin-right:2mm; margin-bottom:1mm;"
                              alt="Surgelé"/>
@@ -128,7 +128,7 @@
                     </div>
 
                     <!-- Logo flocon -->
-                    <img src="/custom_multi_barcode_for_products/static/img/logo_etiq.png"
+                    <img src="/custom_multi_barcode_for_products/static/img/etiquette.png"
                          style="position:absolute; bottom:1mm; right:1mm;
                                 height:12mm; width:auto; object-fit:contain;"
                          alt="Surgelé"/>
