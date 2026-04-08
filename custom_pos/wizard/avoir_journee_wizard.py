@@ -179,8 +179,8 @@ class AvoirJourneeWizard(models.TransientModel):
 
     def get_titre_label(self):
         if self.mode_payment:
-            return 'Avoir Journée — %s' % self.mode_payment.name
-        return 'Avoir Journée — Tous modes de paiement'
+            return 'Rapport de mode paiement — %s' % self.mode_payment.name
+        return 'Rapport de mode paiement — Tous modes de paiement'
 
     def get_periode_label(self):
         if self.date_debut == self.date_fin:

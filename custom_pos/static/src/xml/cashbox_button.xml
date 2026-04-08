@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <!--
+        Patch ControlButtons :
+        1. Bouton icône visible sur le screen principal (avant le bouton "...")
+        2. Bouton texte dans le popup "Actions" (mobile / plus de boutons)
+        Visible uniquement si iface_cashdrawer est activé dans la config POS.
+    -->
+    <t t-name="point_of_sale.ControlButtons"
+       t-inherit="point_of_sale.ControlButtons"
+       t-inherit-mode="extension">
+
+        <!-- Bouton icône dans la barre principale (à côté des produits) -->
+        <xpath expr="//button[hasclass('more-btn')]" position="before">
+            <button t-if="!props.showRemainingButtons"
+                    class="btn btn-secondary btn-lg flex-shrink-0"
+                    t-on-click="openCashboxManual"
+                    title="Ouvrir la caisse (Alt+C)">
+                <i class="fa fa-archive" role="img" aria-label="Ouvrir la caisse"/>
+            </button>
+        </xpath>
+
+        <!-- Bouton dans le popup "Actions" (showRemainingButtons = true) -->
+        <xpath expr="//div[hasclass('control-buttons-modal')]" position="inside">
+            <button t-att-class="buttonClass"
+                    t-on-click="openCashboxManual">
+                <i class="fa fa-archive me-1"/>
+                <t t-esc="'Ouvrir la caisse'"/>
+            </button>
+        </xpath>
+
+    </t>
+
+</templates>

@@ -261,23 +261,18 @@ class ReceptionCorrectionStockWizardLine(models.TransientModel):
     product_id = fields.Many2one(
         'product.product',
         string='Article',
-        required=True,
-        readonly=True,
     )
     product_uom_id = fields.Many2one(
         'uom.uom',
         string='Unité',
-        readonly=True,
     )
     price_unit = fields.Float(
         string='Prix unitaire',
         digits='Product Price',
-        readonly=True,
     )
     qty_originale = fields.Float(
         string='Qté reçue (originale)',
         digits='Product Unit of Measure',
-        readonly=True,
     )
     qty_correcte = fields.Float(
         string='Qté correcte',

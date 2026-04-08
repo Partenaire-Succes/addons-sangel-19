@@ -222,7 +222,7 @@
                                                 <t t-esc="line['order_name']"/>
                                             </td>
                                             <td class="num">
-                                                <t t-esc="'{:,.0f}'.format(line['amount'])"/>
+                                                <t t-esc="'{:,.0f}'.format(line['amount']).replace(',', ' ')"/>
                                             </td>
                                         </tr>
                                     </t>
@@ -237,7 +237,7 @@
                                                 &#160;(<t t-esc="len(client['lines'])"/> passage(s))
                                             </td>
                                             <td class="num">
-                                                <t t-esc="'{:,.0f}'.format(client['subtotal'])"/>
+                                                <t t-esc="'{:,.0f}'.format(client['subtotal']).replace(',', ' ')"/>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -253,7 +253,7 @@
                                         &#8212; <t t-esc="len(cat['clients'])"/> client(s))
                                     </td>
                                     <td class="num">
-                                        <t t-esc="'{:,.0f}'.format(cat['total'])"/>
+                                        <t t-esc="'{:,.0f}'.format(cat['total']).replace(',', ' ')"/>
                                     </td>
                                 </tr>
                             </tbody>
@@ -275,7 +275,7 @@
                                     </span>
                                 </td>
                                 <td class="num" style="width:20%;">
-                                    <t t-esc="'{:,.0f}'.format(grand_total)"/>
+                                    <t t-esc="'{:,.0f}'.format(grand_total).replace(',', ' ')"/>
                                 </td>
                             </tr>
                         </tbody>

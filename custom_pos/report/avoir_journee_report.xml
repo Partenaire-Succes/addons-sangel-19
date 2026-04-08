@@ -2,7 +2,7 @@
 <odoo>
     <data>
         <record id="action_report_avoir_journee" model="ir.actions.report">
-            <field name="name">Avoir Journée — Crédit Alimentaire</field>
+            <field name="name">Rapport de mode paiement</field>
             <field name="model">avoir.journee.wizard</field>
             <field name="report_type">qweb-pdf</field>
             <field name="report_name">custom_pos.report_avoir_journee</field>
