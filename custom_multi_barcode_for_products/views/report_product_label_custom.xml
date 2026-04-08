@@ -45,7 +45,7 @@
                     <!-- ① Nom du produit -->
                     <div style="font-size:13pt; font-weight:900; line-height:1.1;
                                 margin-bottom:2mm; letter-spacing:0.02em;">
-                        <strong t-field="product.display_name"/>
+                        <strong t-field="product.name"/>
                     </div>
 
                     <!-- ② Ligne prix + logo -->
@@ -117,7 +117,7 @@
 
                     <!-- Nom produit -->
                     <div style="font-size:8pt; font-weight:900; line-height:1.1; margin-bottom:1mm;">
-                        <strong t-field="product.display_name"/>
+                        <strong t-field="product.name"/>
                     </div>
 
                     <!-- Prix TTC + FCFA/KG -->
