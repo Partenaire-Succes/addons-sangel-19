@@ -40,6 +40,25 @@ class CadencierWizard(models.TransientModel):
         company = self.env['res.company'].browse(company_id)
         date_from = date(int(year), 1, 1)
         date_to = date(int(year), 12, 31)
+        product_data = defaultdict(lambda: defaultdict(float))
+
+        products = self.env['product.template'].search([
+            ('allowed_company_ids', 'in', company_id),
+        ])
+
+        final_products = self.env['product.template']
+
+        for p in products:
+            if p.current_company_status_id and p.current_company_status_id.code == 'C':
+                final_products |= p
+            else:
+                if any(v.qty_available > 0 for v in p.product_variant_ids):
+                    final_products |= p
+
+        # ✅ Initialiser avec les IDs de variantes, pas du template
+        for p in final_products:
+            for variant in p.product_variant_ids:
+                product_data[variant.id]  # clé cohérente avec les lignes de vente
 
         sale_domain = [
             ('order_id.state', 'in', ['sale', 'done']),
@@ -57,7 +76,6 @@ class CadencierWizard(models.TransientModel):
         ]
         pos_lines = self.env['pos.order.line'].search(pos_domain)
 
-        product_data = defaultdict(lambda: defaultdict(float))
 
         for line in sale_lines:
             month_idx = line.order_id.date_order.month - 1
