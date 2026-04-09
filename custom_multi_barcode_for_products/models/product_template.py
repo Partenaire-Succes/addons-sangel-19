@@ -12,6 +12,12 @@ class ProductTemplate(models.Model):
         string='Code-barres multiples',
     )
 
+    label_logo = fields.Binary(
+        string='Logo étiquette produit',
+        attachment=True,
+        help="Logo affiché sur les étiquettes produits (format recommandé : PNG carré, fond blanc)."
+    )
+
     def write(self, vals):
         """Updating the multi barcodes"""
         res = super(ProductTemplate, self).write(vals)

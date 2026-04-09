@@ -53,7 +53,7 @@
                     <!-- ① NOM DU PRODUIT -->
                     <div style="padding:1.2mm 2.5mm 1mm 2.5mm;
                                 border-bottom:0.5pt solid #bbb; flex-shrink:0;">
-                        <strong t-field="product.name"
+                        <strong t-field="product.display_name"
                                 style="font-size:9.5pt; font-weight:900; line-height:1.1;"/>
                     </div>
 
@@ -140,7 +140,7 @@
                 <t t-set="price_ttc" t-value="tax_result['total_included']"/>
 
                 <!-- Logo depuis la base -->
-                <t t-set="company"     t-value="product.env.user.company_id"/>
+                <t t-set="company"     t-value="env.user.company_id"/>
                 <t t-set="logo_binary" t-value="company.label_logo"/>
 
                 <div class="o_label_full" t-att-style="table_style"
