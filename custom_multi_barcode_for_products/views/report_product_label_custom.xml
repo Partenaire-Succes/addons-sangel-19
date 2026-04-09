@@ -3,99 +3,210 @@
     <data>
 
         <!--
-        ============================================================
-        SOUS-TEMPLATE : Étiquette 2x7 personnalisée (Prix TTC + Logo)
-        ============================================================
-        Hérite de product.report_simple_label2x7 et redéfinit
-        entièrement le contenu de la cellule pour :
-          - Afficher le prix TTC (taxes incluses)
-          - Ajouter "FCFA / KG" en annotation
-          - Afficher le code interne + la date du jour
-          - Afficher le logo flocon en bas à droite
+        ====================================================================
+        Étiquette 2×7  (97 mm × 37.1 mm)  —  Sangel
+        ====================================================================
+        Logo : stocké dans res.company.label_logo (gérable sans code).
+        Fallback : image statique si aucun logo n'est défini en base.
+
+        Layout :
+          ┌───────────────────────────────────────────────┐
+          │  NOM DU PRODUIT  (gras)                       │
+          ├───────────────────────────────────────────────┤
+          │  FCFA / KG  (petit)     │                     │
+          │  1 390  (énorme)        │   [  LOGO  ]        │
+          ├───────────────────────────────────────────────┤
+          │  [BARCODE]   ref   date                       │
+          └───────────────────────────────────────────────┘
+        ====================================================================
         -->
         <template id="report_simple_label2x7_ttc"
                   inherit_id="product.report_simple_label2x7"
-                  name="Étiquette 2×7 – Prix TTC + Logo">
+                  name="Étiquette 2×7 – Prix TTC Sangel">
 
-            <!-- Remplacement du bloc principal o_label_full -->
-            <xpath expr="//div[hasclass('text-end')]" position="replace">
+            <xpath expr="//div[hasclass('o_label_full')]" position="replace">
 
-                <!-- Calcul du prix TTC -->
+                <!-- Calcul prix TTC -->
                 <t t-set="price_ht"
                    t-value="pricelist._get_product_price(
                                 product, 1,
-                                currency=pricelist.currency_id or product.currency_id
-                            )"/>
+                                currency=pricelist.currency_id or product.currency_id)"/>
                 <t t-set="applicable_taxes"
                    t-value="product.taxes_id.filtered(
-                                lambda t: t.company_id == product.env.user.company_id
-                            )"/>
+                                lambda t: t.company_id == product.env.user.company_id)"/>
                 <t t-set="tax_result"
                    t-value="applicable_taxes.compute_all(
                                 price_ht,
                                 pricelist.currency_id or product.currency_id,
-                                1,
-                                product=product
-                            )"/>
+                                1, product=product)"/>
                 <t t-set="price_ttc" t-value="tax_result['total_included']"/>
 
-                        <!-- Prix TTC en très grand + "FCFA / KG" -->
-                <div class="text-end" style="line-height:normal">
-                    <div class="o_label_extra_data">
-                        <t t-out="extra_html"/>
+                <!-- Logo depuis la base (res.company.label_logo) -->
+                <t t-set="company"      t-value="env.user.company_id"/>
+                <t t-set="logo_binary"  t-value="company.label_logo"/>
+
+                <div class="o_label_full" t-att-style="table_style"
+                     style="font-family:Arial,Helvetica,sans-serif;
+                            box-sizing:border-box; overflow:hidden;
+                            display:flex; flex-direction:column;">
+
+                    <!-- ① NOM DU PRODUIT -->
+                    <div style="padding:1.2mm 2.5mm 1mm 2.5mm;
+                                border-bottom:0.5pt solid #bbb; flex-shrink:0;">
+                        <strong t-field="product.display_name"
+                                style="font-size:9.5pt; font-weight:900; line-height:1.1;"/>
                     </div>
 
-                    <strong style="font-size:32pt; font-weight:900; line-height:1;"
-                            t-out="int(price_ttc)"/>
-                    <span style="font-size:8pt; font-weight:700;
-                                    line-height:1; margin-left:3px;">
-                        FCFA / <span t-field="product.uom_id.name"/>
-                    </span>
-                </div>
+                    <!-- ② CORPS : PRIX (gauche) + LOGO (droite) -->
+                    <div style="flex:1; display:flex; align-items:center;
+                                padding:1.5mm 2mm 1mm 2.5mm; overflow:hidden;">
 
+                        <!-- PRIX -->
+                        <div style="flex:1; display:flex; flex-direction:column;
+                                    justify-content:center;">
+                            <div class="o_label_extra_data"><t t-out="extra_html"/></div>
+                            <span style="font-size:7.5pt; font-weight:700;
+                                         line-height:1; display:block; margin-bottom:1mm;">
+                                FCFA&#160;/&#160;<span t-field="product.uom_id.name"/>
+                            </span>
+                            <strong style="font-size:31pt; font-weight:900;
+                                           line-height:0.9; letter-spacing:-0.5px; display:block;">
+                                <t t-out="'{:,.0f}'.format(price_ttc).replace(',', '\u00a0')"/>
+                            </strong>
+                        </div>
+
+                        <!-- LOGO : base64 depuis DB, sinon fichier statique -->
+                        <img t-if="logo_binary"
+                             t-att-src="image_data_uri(logo_binary)"
+                             style="height:21mm; width:auto; flex-shrink:0; margin-left:2mm;"/>
+                        <img t-else=""
+                             src="/custom_multi_barcode_for_products/static/img/etiquette.png"
+                             style="height:21mm; width:auto; flex-shrink:0; margin-left:2mm;"/>
+                    </div>
+
+                    <!-- ③ BARCODE + RÉF + DATE -->
+                    <div style="border-top:0.5pt solid #bbb; padding:0.8mm 2.5mm;
+                                display:flex; align-items:center; flex-shrink:0;">
+                        <t t-if="barcode">
+                            <div t-out="barcode"
+                                 t-options="{'widget': 'barcode', 'symbology': 'auto',
+                                             'img_style': 'width:36mm;height:7mm'}"/>
+                        </t>
+                        <div style="margin-left:2mm; font-size:5pt;
+                                    line-height:1.5; flex:1;">
+                            <span style="display:block; font-weight:700; color:#222;">
+                                <t t-out="barcode"/>
+                            </span>
+                            <span style="display:block; color:#555;">
+                                <t t-if="product.default_code">
+                                    <span t-field="product.default_code"/>&#160;&#160;
+                                </t>
+                                <t t-out="datetime.date.today().strftime('%d/%m/%Y')"/>
+                            </span>
+                        </div>
+                    </div>
+
+                </div>
             </xpath>
         </template>
 
 
         <!--
-        ============================================================
-        SOUS-TEMPLATE : Étiquette 4x7 personnalisée (Prix TTC + Logo)
-        ============================================================
-        Même logique pour le format 4 colonnes × 7 lignes.
+        ====================================================================
+        Étiquette 4×7  (47 mm × 37.1 mm)  —  Sangel
+        ====================================================================
+        Même charte, format compact.
+        ====================================================================
         -->
         <template id="report_simple_label4x7_ttc"
                   inherit_id="product.report_simple_label4x7"
-                  name="Étiquette 4×7 – Prix TTC + Logo">
+                  name="Étiquette 4×7 – Prix TTC Sangel">
 
-            <xpath expr="//div[hasclass('text-end')]" position="replace">
+            <xpath expr="//div[hasclass('o_label_full')]" position="replace">
 
+                <!-- Calcul prix TTC -->
                 <t t-set="price_ht"
                    t-value="pricelist._get_product_price(
                                 product, 1,
-                                currency=pricelist.currency_id or product.currency_id
-                            )"/>
+                                currency=pricelist.currency_id or product.currency_id)"/>
                 <t t-set="applicable_taxes"
                    t-value="product.taxes_id.filtered(
-                                lambda t: t.company_id == product.env.user.company_id
-                            )"/>
+                                lambda t: t.company_id == product.env.user.company_id)"/>
                 <t t-set="tax_result"
                    t-value="applicable_taxes.compute_all(
                                 price_ht,
                                 pricelist.currency_id or product.currency_id,
-                                1,
-                                product=product
-                            )"/>
+                                1, product=product)"/>
                 <t t-set="price_ttc" t-value="tax_result['total_included']"/>
 
-                <!-- Prix TTC + FCFA/KG -->
-                <div class="text-end" style="padding-top:0;padding-bottom:0">
-                    <strong style="font-size:16pt; font-weight:900; line-height:1;"
-                            t-out="int(price_ttc)"/>
-                    <span style="font-size:6pt; font-weight:700;">
-                        FCFA / <span t-field="product.uom_id.name"/>
-                    </span>
-                </div>
+                <!-- Logo depuis la base -->
+                <t t-set="company"     t-value="product.env.user.company_id"/>
+                <t t-set="logo_binary" t-value="company.label_logo"/>
 
+                <div class="o_label_full" t-att-style="table_style"
+                     style="font-family:Arial,Helvetica,sans-serif;
+                            box-sizing:border-box; overflow:hidden;
+                            display:flex; flex-direction:column;">
+
+                    <!-- ① NOM DU PRODUIT -->
+                    <div style="padding:0.8mm 1.5mm;
+                                border-bottom:0.5pt solid #bbb; flex-shrink:0;">
+                        <strong t-field="product.display_name"
+                                style="font-size:6.5pt; font-weight:900; line-height:1.2;"/>
+                    </div>
+
+                    <!-- ② CORPS : PRIX (gauche) + LOGO (droite) -->
+                    <div style="flex:1; display:flex; align-items:center;
+                                padding:1mm 1.5mm; overflow:hidden;">
+
+                        <!-- PRIX -->
+                        <div style="flex:1; display:flex; flex-direction:column;
+                                    justify-content:center;">
+                            <div class="o_label_extra_data" style="font-size:5pt;">
+                                <t t-out="extra_html"/>
+                            </div>
+                            <span style="font-size:5.5pt; font-weight:700;
+                                         line-height:1; display:block; margin-bottom:0.8mm;">
+                                FCFA&#160;/&#160;<span t-field="product.uom_id.name"/>
+                            </span>
+                            <strong style="font-size:19pt; font-weight:900;
+                                           line-height:0.9; display:block;">
+                                <t t-out="'{:,.0f}'.format(price_ttc).replace(',', '\u00a0')"/>
+                            </strong>
+                        </div>
+
+                        <!-- LOGO -->
+                        <img t-if="logo_binary"
+                             t-att-src="image_data_uri(logo_binary)"
+                             style="height:13mm; width:auto; flex-shrink:0; margin-left:1mm;"/>
+                        <img t-else=""
+                             src="/custom_multi_barcode_for_products/static/img/etiquette.png"
+                             style="height:13mm; width:auto; flex-shrink:0; margin-left:1mm;"/>
+                    </div>
+
+                    <!-- ③ BARCODE + RÉF + DATE -->
+                    <div style="border-top:0.5pt solid #bbb; padding:0.5mm 1.5mm;
+                                display:flex; align-items:center; flex-shrink:0;">
+                        <t t-if="barcode">
+                            <div t-out="barcode"
+                                 t-options="{'widget': 'barcode', 'symbology': 'auto',
+                                             'img_style': 'width:22mm;height:6mm'}"/>
+                        </t>
+                        <div style="margin-left:1.5mm; font-size:4.5pt;
+                                    line-height:1.4; flex:1;">
+                            <span style="display:block; font-weight:700; color:#222;">
+                                <t t-out="barcode"/>
+                            </span>
+                            <span style="display:block; color:#555;">
+                                <t t-if="product.default_code">
+                                    <span t-field="product.default_code"/>&#160;
+                                </t>
+                                <t t-out="datetime.date.today().strftime('%d/%m/%Y')"/>
+                            </span>
+                        </div>
+                    </div>
+
+                </div>
             </xpath>
         </template>
 
