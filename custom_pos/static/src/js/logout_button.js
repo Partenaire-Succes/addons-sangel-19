@@ -24,9 +24,25 @@ patch(LoginScreen.prototype, {
             confirmLabel: _t("Déconnexion"),
             cancelLabel: _t("Annuler"),
         });
-        if (confirmed) {
-            window.location.href = "/web/session/logout?redirect=/web/login";
+        if (!confirmed) {
+            return;
         }
+        // Si une nouvelle session a été créée en état "opening_control" suite au
+        // rechargement du POS (router.close), on la supprime côté backend avant
+        // de quitter, pour éviter qu'elle réapparaisse au prochain chargement.
+        try {
+            if (this.pos.session && this.pos.session.state === "opening_control") {
+                await this.pos.data.call(
+                    "pos.session",
+                    "delete_opening_control_session",
+                    [this.pos.session.id]
+                );
+            }
+        } catch (e) {
+            // Ne bloque pas la déconnexion si l'appel échoue
+            console.warn("delete_opening_control_session:", e);
+        }
+        window.location.href = "/web/session/logout?redirect=/web/login";
     },
 
 });
