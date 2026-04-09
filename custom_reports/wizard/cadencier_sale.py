@@ -44,6 +44,7 @@ class CadencierWizard(models.TransientModel):
 
         products = self.env['product.template'].search([
             ('allowed_company_ids', 'in', company_id),
+            ('type', '=', 'consu'),
         ])
 
         final_products = self.env['product.template']
@@ -63,6 +64,7 @@ class CadencierWizard(models.TransientModel):
         sale_domain = [
             ('order_id.state', 'in', ['sale', 'done']),
             ('order_id.company_id', '=', company_id),
+            ('product_id.type', '=', 'consu'),
             ('order_id.date_order', '>=', str(date_from)),
             ('order_id.date_order', '<=', str(date_to)),
         ]
@@ -71,6 +73,7 @@ class CadencierWizard(models.TransientModel):
         pos_domain = [
             ('order_id.state', 'in', ['done', 'paid', 'invoiced']),
             ('order_id.company_id', '=', company_id),
+            ('product_id.type', '=', 'consu'),
             ('order_id.date_order', '>=', str(date_from)),
             ('order_id.date_order', '<=', str(date_to)),
         ]
