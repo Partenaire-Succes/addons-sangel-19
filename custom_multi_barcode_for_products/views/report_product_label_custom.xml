@@ -53,7 +53,7 @@
                     <!-- ① NOM DU PRODUIT -->
                     <div style="padding:1.2mm 2.5mm 1mm 2.5mm;
                                 border-bottom:0.5pt solid #bbb; flex-shrink:0;">
-                        <strong t-field="product.display_name"
+                        <strong t-field="product.name"
                                 style="font-size:9.5pt; font-weight:900; line-height:1.1;"/>
                     </div>
 
