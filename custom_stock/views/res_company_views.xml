@@ -19,6 +19,20 @@
                                 <field name="code_company" required="1"/>
                             </group>
                         </group>
+
+                        <group>
+                            <div class="alert alert-info">
+                                <h4>📝 Instructions de configuration</h4>
+                                <ul>
+                                    <li><strong>YOP DEMI GROS </strong> Libelle: YOP01 Code: 01</li>
+                                    <li><strong>YOP DETAIL </strong> Libelle: YOP02 Code: 02</li>
+                                    <li><strong>YOP SYNACASSCI </strong> Libelle: SYNACASSCI Code: 03</li>
+                                    <li><strong>YOP SQUARE </strong> Libelle: SQUARE Code: 04</li>
+                                    <li><strong>YOP BASSAM </strong> Libelle: BASSAM Code: 05</li>
+                                    <li><strong>YOP KOUMASSI </strong> Libelle: KOUMASSI Code: 06</li>
+                                </ul>
+                            </div>
+                        </group>
                     </page>
                 </xpath>
 
@@ -32,11 +46,43 @@
                                 <field name="sage_x3_type_encai" required="1"/>
                                 <field name="sage_x3_type_decai" required="1"/>
                             </group>
+                            <group>
+                                <div class="alert alert-info">
+                                    <h4>📝 Instructions de configuration des pieces</h4>
+                                    <ul>
+                                        <li><strong>Facture client SAGE X3 </strong> FACLI</li>
+                                        <li><strong>Avoir client SAGE X3 </strong> AVCLI</li>
+                                        <li><strong>Encaissement client SAGE X3 </strong> ENCAI</li>
+                                        <li><strong>Decaissement client SAGE X3 </strong> DECAI</li>
+                                    </ul>
+                                </div>
+                            </group>
+
                             <group string="Journaux">
                                 <field name="sage_x3_site" required="1"/>
                                 <field name="sage_x3_journal_sale" required="1"/>
                                 <field name="sage_x3_journal_caisse" required="1"/>
+                                <field name="partner_devers_id" required="1"/>
                             </group>
+                            <group>
+                                <div class="alert alert-info">
+                                    <h4>📝 Instructions de configuration des journaux</h4>
+                                    <ul>
+                                        <li><strong>Site SAGE X3 </strong> SIEGE</li>
+                                        <li><strong>Journal ventes SAGE X3 </strong> VTE</li>
+                                    </ul>
+                                    <p><strong>Journal caisse SAGE Magasin :</strong></p>
+                                    <ul>
+                                        <li><strong>YOP DEMI GROS </strong> CYG</li>
+                                        <li><strong>YOP DETAIL </strong> CYL</li>
+                                        <li><strong>YOP SYNACASSCI </strong> CSYN</li>
+                                        <li><strong>YOP SQUARE </strong> CSQR</li>
+                                        <li><strong>YOP BASSAM </strong> CBSM</li>
+                                        <li><strong>YOP KOUMASSI </strong> CKMS</li>
+                                    </ul>
+                                </div>
+                            </group>
+                            
                             <group string="Comptes">
                                 <field name="sage_x3_account_sale_id" 
                                     options="{'no_create': True}"
@@ -70,8 +116,9 @@
                                     </ul>
                                     <p><strong>Exemples pour SANgel Yop demi-gros :</strong></p>
                                     <ul>
-                                        <li>Vente : 70116000</li>
-                                        <li>Client : 41110000 </li>
+                                        <li>Compte de vente : 70116000</li>
+                                        <li>Compte client par défaut : 41110000 </li>
+                                        <li>Compte caisse : 57120000 </li>
                                     </ul>
                                 </div>
                             </group>

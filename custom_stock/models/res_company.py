@@ -104,3 +104,9 @@ class ResCompany(models.Model):
           default=False,
           help="Envoyer automatiquement les factures validées à SAGE X3"
      )
+
+     partner_devers_id = fields.Many2one(
+          'res.partner',
+          string="Partenaire devers",
+          help="Compte tiers devers pour les paiements (ex: 41110000 DIVERS)"
+     )

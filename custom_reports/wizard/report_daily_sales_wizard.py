@@ -30,6 +30,13 @@ class ReportDailySalesWizard(models.TransientModel):
         default=lambda self: self.env.company
     )
 
+    company_ids = fields.Many2many(
+        'res.company',
+        string='Magasins',
+        required=True,
+        default=lambda self: self.env.company
+    )
+
     def action_print_report(self):
         return self.env.ref('custom_reports.action_report_daily_sales').report_action(self)
 
@@ -59,7 +66,7 @@ class ReportDailySalesWizard(models.TransientModel):
                     ('move_type', '=', 'out_refund'),
                     ('pos_order_ids', '=', False),  # Exclure les remboursements liés à des commandes POS
                     ('state', '=', 'posted'),
-                    ('company_id', '=', self.company_id.id),
+                    ('company_id', 'in', self.company_ids.ids),
                 ])
             if refunds:
                 # Si des remboursements existent, on les exclut du calcul du CA
@@ -81,7 +88,7 @@ class ReportDailySalesWizard(models.TransientModel):
                     ('move_type', '=', 'out_invoice'),
                     ('state', '=', 'posted'),
                     ('pos_order_ids', '=', False),  # Exclure les factures liées à des commandes POS
-                    ('company_id', '=', self.company_id.id),
+                    ('company_id', 'in', self.company_ids.ids),
                 ])
 
                 # order_lines = self.env['sale.order.line'].search([
@@ -123,7 +130,7 @@ class ReportDailySalesWizard(models.TransientModel):
                     ('date_order', '>=', fields.Datetime.to_datetime(current_date)),
                     ('date_order', '<', fields.Datetime.to_datetime(next_day)),
                     ('state', 'in', ['paid', 'invoiced', 'done']),
-                    ('company_id', '=', self.company_id.id),
+                    ('company_id', 'in', self.company_ids.ids),
                 ])
                 order_lines = self.env['pos.order.line'].search([
                     ('order_id', 'in', orders.ids)
@@ -178,7 +185,7 @@ class ReportDailySalesWizard(models.TransientModel):
                     ('move_type', '=', 'out_invoice'),
                     ('state', '=', 'posted'),
                     ('pos_order_ids', '=', False),  # Exclure les factures liées à des commandes POS
-                    ('company_id', '=', self.company_id.id),
+                    ('company_id', 'in', self.company_ids.ids),
                 ])
 
                 sale_order_lines = self.env['account.move.line'].search([
@@ -215,7 +222,7 @@ class ReportDailySalesWizard(models.TransientModel):
                     ('date_order', '>=', fields.Datetime.to_datetime(current_date)),
                     ('date_order', '<', fields.Datetime.to_datetime(next_day)),
                     ('state', 'in', ['paid', 'invoiced', 'done']),
-                    ('company_id', '=', self.company_id.id),
+                    ('company_id', 'in', self.company_ids.ids),
                 ])
                 pos_order_lines = self.env['pos.order.line'].search([
                     ('order_id', 'in', pos_orders.ids)
@@ -266,7 +273,7 @@ class ReportDailySalesWizard(models.TransientModel):
             # Budget journalier : lignes dont le parent est en cours ou terminé
             budget_lines = self.env['daily.budget.analytic.line'].search([
                 ('daily_budget_id.state', 'in', ['in_progress', 'done']),
-                ('daily_budget_id.company_id', '=', self.company_id.id),
+                ('daily_budget_id.company_id', 'in', self.company_ids.ids),
                 ('date_from', '>=', fields.Datetime.to_datetime(current_date)),
                 ('date_from', '<', fields.Datetime.to_datetime(next_day)),
             ])
