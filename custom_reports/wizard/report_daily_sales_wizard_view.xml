@@ -11,7 +11,8 @@
                     </group>
                     <group string="Filtres">
                         <field name="report_type"/>
-                        <field name="company_id" readonly="1"/>
+                        <field name="company_id" invisible="1"/>
+                        <field name="company_ids" widget="many2many_tags" options="{'no_create': True}" readonly="0"/>
                     </group>
 
                 </group>
