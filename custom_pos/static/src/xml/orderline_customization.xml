@@ -45,16 +45,16 @@
                 <div class="line-details d-flex align-items-baseline w-100" style="padding-top:2px; padding-bottom:2px;">
                     <div style="flex:1; min-width:0; padding-right:3px; word-break:break-word;">
                         <t t-out="line.full_product_name"/>
-                    </div>
-                    <div style="width:2.2em; text-align:center; flex-shrink:0; font-weight:bold;">
-                        <t t-esc="line.getQuantityStr().unitPart"/>
-                        <t t-if="line.getQuantityStr().decimalPart">
-                            <t t-esc="line.getQuantityStr().decimalPoint"/>
-                            <t t-esc="line.getQuantityStr().decimalPart"/>
-                        </t>
-                    </div>
-                    <div style="width:6.5em; text-align:right; flex-shrink:0;" class="font-monospace">
-                        <t t-esc="formatCurrency(line.unitDisplayPrice)"/>
+                        <br/>
+                        <span>
+                            <t t-esc="line.getQuantityStr().unitPart"/>
+                            <t t-if="line.getQuantityStr().decimalPart">
+                                <t t-esc="line.getQuantityStr().decimalPoint"/>
+                                <t t-esc="line.getQuantityStr().decimalPart"/>
+                            </t>
+                            <span t-if="line.getQuantityStr().unitPart" style="font-size:85%;">x</span>
+                            <t t-esc="line.unitDisplayPrice.toFixed(0)"/>
+                        </span>
                     </div>
                     <div style="width:6.5em; text-align:right; flex-shrink:0; font-weight:bold;" class="font-monospace">
                         <t t-out="line.getPriceString()"/>
