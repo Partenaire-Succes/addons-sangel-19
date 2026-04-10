@@ -431,6 +431,9 @@ class AccountMoveSageX3(models.Model):
             libelle_pmt  = (
                 f"REGLT {journal_name} N°{ref_pmt}/{pmt.partner_id.name}"
             )[:50]
+            tiers_code   = pmt.partner_id.customer_id.strip()
+            if tiers_code.startswith(('10', '20')):
+                tiers_code = (company.partner_devers_id.customer_id or "").strip()
 
             lignes_encai.append(self._build_ligne(
                 site    = site,
@@ -438,7 +441,7 @@ class AccountMoveSageX3(models.Model):
                 sens    = -1,
                 montant = round(pmt.amount, 2),
                 libelle = libelle_pmt,
-                tiers   = pmt.partner_id.customer_id.strip(),
+                tiers   = tiers_code,
             ))
             total_encai += pmt.amount
 
@@ -580,6 +583,8 @@ class AccountMoveSageX3(models.Model):
                 partner = payment.partner_id
 
                 tiers_code = (partner.customer_id or "").strip() if partner else ""
+                if tiers_code.startswith(('10', '20')):
+                    tiers_code = (company.partner_devers_id.customer_id or "").strip()
                 partner_name = partner.name if partner else "CLIENT"
 
                 pay_date = payment.payment_date.strftime("%d%m%y") if payment.payment_date else ""
@@ -929,6 +934,9 @@ class AccountMoveSageX3(models.Model):
         date_fr     = invoice.invoice_date.strftime("%d/%m/%Y")
         magasin     = self._get_company_code(company)
         lignes      = []
+
+        if third_party.startswith(('10', '20')):
+            third_party = (invoice.company_id.partner_devers_id.customer_id or "").strip()
 
         # =========================
         # Ligne client
