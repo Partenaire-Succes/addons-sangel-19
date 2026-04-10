@@ -29,7 +29,7 @@
             </xpath>
 
             <xpath expr="//field[@name='ref']" position="after">
-                <field name="sage_sent" invisible="1"/>
+                <field name="sage_sent" invisible="0"/>
             </xpath>
 
             <xpath expr="//notebook" position="inside">

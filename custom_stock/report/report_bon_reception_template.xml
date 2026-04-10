@@ -166,12 +166,7 @@
 
                     <!-- ═══ EN-TÊTE ════════════════════════════════════════════ -->
                     <div class="br-header">
-                        <t t-if="doc.picking_type_id.code == 'outgoing'">
-                            <div class="br-title">Bon de Livraison</div>
-                        </t>
-                        <t t-elif="doc.picking_type_id.code == 'incoming'">
-                            <div class="br-title">Bon de R&#233;ception</div>
-                        </t>
+                        <div class="br-title">Bon de R&#233;ception</div>
                         <div class="br-ref"><t t-esc="doc.name"/></div>
                     </div>
 
