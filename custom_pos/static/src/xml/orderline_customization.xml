@@ -42,7 +42,7 @@
 
             <!-- TICKET - ligne normale (4 colonnes) -->
             <t t-if="props.mode == 'receipt' and !line.combo_parent_id">
-                <div class="line-details d-flex align-items-baseline w-100">
+                <div class="line-details d-flex align-items-baseline w-100" style="padding-top:2px; padding-bottom:2px;">
                     <div style="flex:1; min-width:0; padding-right:3px; word-break:break-word;">
                         <t t-out="line.full_product_name"/>
                     </div>
