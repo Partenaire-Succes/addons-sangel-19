@@ -57,6 +57,7 @@ class ReportDailySalesWizard(models.TransientModel):
                     ('invoice_date', '>=', fields.Date.to_date(current_date)),
                     ('invoice_date', '<', fields.Date.to_date(next_day)),
                     ('move_type', '=', 'out_refund'),
+                    ('pos_order_ids', '=', False),  # Exclure les remboursements liés à des commandes POS
                     ('state', '=', 'posted'),
                     ('company_id', '=', self.company_id.id),
                 ])

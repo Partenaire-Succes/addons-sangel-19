@@ -42,7 +42,7 @@
                 <t t-set="price_ttc" t-value="tax_result['total_included']"/>
 
                 <!-- Logo depuis la base (res.company.label_logo) -->
-                <t t-set="company"      t-value="env.user.company_id"/>
+                <t t-set="company"      t-value="product.env.user.company_id"/>
                 <t t-set="logo_binary"  t-value="company.label_logo"/>
 
                 <div class="o_label_full" t-att-style="table_style"
@@ -140,7 +140,7 @@
                 <t t-set="price_ttc" t-value="tax_result['total_included']"/>
 
                 <!-- Logo depuis la base -->
-                <t t-set="company"     t-value="env.user.company_id"/>
+                <t t-set="company"     t-value="product.env.user.company_id"/>
                 <t t-set="logo_binary" t-value="company.label_logo"/>
 
                 <div class="o_label_full" t-att-style="table_style"

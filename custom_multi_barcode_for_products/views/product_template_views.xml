@@ -33,13 +33,6 @@
                 <attribute name="string">Code article</attribute>
                 <attribute name="required">1</attribute>
             </xpath>
-            <xpath expr="//field[@name='name']" position="after">
-                <field name="label_logo"
-                        widget="image"
-                        string="Logo étiquette produit"
-                        options="{'size': [128, 128]}"
-                        help="Logo affiché sur les étiquettes produits. Remplacez cette image sans modifier le code."/>
-            </xpath>
             <xpath expr="//page[@name='general_information']" position="after">
                 <page string="Code-barres"
                       invisible="product_variant_count > 1">
