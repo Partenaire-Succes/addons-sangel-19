@@ -43,7 +43,14 @@ class PosOrder(models.Model):
         if not self.partner_id:
             _logger.warning(f"POS Order {self.pos_reference}: No partner, skipping rendu monnaie")
             return
-        
+
+        if self.partner_id.no_loyalty_points:
+            _logger.info(
+                f"POS Order {self.pos_reference}: Customer {self.partner_id.name} "
+                f"is excluded from loyalty points, skipping rendu monnaie."
+            )
+            return
+
         if self.rendu_monnaie <= 0:
             return
         
