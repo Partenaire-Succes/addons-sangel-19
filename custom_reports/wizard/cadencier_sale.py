@@ -125,7 +125,17 @@ class CadencierWizard(models.TransientModel):
 
             # ✅ Taux de marge cumulé = (CA - Coût) / CA * 100
             taux_marge = round((total_ca - total_cost) / total_ca * 100, 2) if total_ca > 0 else 0.0
-            price_ttc = product.list_price * (1 + (product.taxes_id.amount / 100) if product.taxes_id else 1)
+
+            # ✅ Prix TTC calculé à partir du prix de vente et des taxes du produit
+            taxes = product.taxes_id.compute_all(
+                product.list_price,
+                currency=product.currency_id,
+                quantity=1,
+                product=product,
+                partner=None,
+            )
+
+            price_ttc = taxes['total_included']
 
             result.append({
                 'code': product.default_code or '',
