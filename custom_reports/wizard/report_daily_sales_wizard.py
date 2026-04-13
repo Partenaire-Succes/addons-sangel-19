@@ -37,6 +37,12 @@ class ReportDailySalesWizard(models.TransientModel):
         default=lambda self: self.env.company
     )
 
+    pricelist_id = fields.Many2one(
+        'product.pricelist',
+        string='Liste de prix',
+        help="Liste de prix utilisée pour calculer les remises"
+    )
+
     def action_print_report(self):
         return self.env.ref('custom_reports.action_report_daily_sales').report_action(self)
 

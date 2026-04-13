@@ -95,11 +95,11 @@
 
                                 <!-- ══════════ LIGNE SOUS-TOTAL FAMILLE ══════════ -->
                                 <t t-if="line['is_subtotal']">
-                                    <tr style="background: #747474;">
+                                    <tr style="background: #c1b7b7;">
                                         <td colspan="4" style="padding: 4px 6px; text-align: left; font-size: 7pt; letter-spacing: 1px;">
                                             ▶ TOTAL  <t t-esc="line['code_famille']"/> — <t t-esc="line['famille']"/>
                                         </td>
-                                        <td colspan="5" style="padding: 4px 3px; text-align: center; font-size: 6pt; color: #aaa;">
+                                        <td colspan="5" style="padding: 4px 3px; text-align: center; font-size: 6pt;">
                                             <!-- colonnes vides (ST, MAXI, CMD, MARG, PVTC) -->
                                         </td>
                                         <t t-foreach="line['ventes']" t-as="qty">
