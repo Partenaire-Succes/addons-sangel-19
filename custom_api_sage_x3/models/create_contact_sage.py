@@ -104,6 +104,7 @@ class ResPartnerImport(models.Model):
                     if existing:
                         existing.write(vals)
                         _logger.info("🔄 Mis à jour : %s (%s)", existing.name, existing.customer_id)
+                        existing.write({'customer_account': vals.get("customer_account", existing.customer_account)})
                         updated += 1
                     else:
                         contact = partner_model.create(vals)
