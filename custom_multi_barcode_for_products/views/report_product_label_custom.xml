@@ -6,10 +6,6 @@
         ====================================================================
         Étiquette 2×7  (97 mm × 37.1 mm)  —  Sangel
         ====================================================================
-        NOTE wkhtmltopdf : max-height est ignoré sur <img>.
-        On utilise height explicite + overflow:hidden sur la cellule
-        + height fixe sur la <tr> centrale pour verrouiller la hauteur.
-        ====================================================================
         -->
         <template id="report_simple_label2x7_ttc"
                   inherit_id="product.report_simple_label2x7"
@@ -38,10 +34,9 @@
                             box-sizing:border-box; overflow:hidden;
                             padding:0; margin:0;">
 
-                    <table style="width:100%; height:100%; border-collapse:collapse;
-                                  table-layout:fixed;">
+                    <table style="width:100%; border-collapse:collapse;">
 
-                        <!-- ① NOM DU PRODUIT -->
+                        <!-- ① NOM -->
                         <tr>
                             <td colspan="2"
                                 style="padding:1.2mm 2.5mm 1mm 2.5mm;
@@ -52,11 +47,10 @@
                             </td>
                         </tr>
 
-                        <!-- ② CORPS : hauteur verrouillée à 18 mm -->
+                        <!-- ② CORPS -->
                         <tr style="height:18mm;">
                             <!-- PRIX -->
-                            <td style="padding:1.5mm 2mm 1mm 2.5mm;
-                                       vertical-align:middle; overflow:hidden;">
+                            <td style="padding:1.5mm 2mm 1mm 2.5mm; vertical-align:middle;">
                                 <div class="o_label_extra_data"><t t-out="extra_html"/></div>
                                 <span style="font-size:7.5pt; font-weight:700;
                                              line-height:1; display:block; margin-bottom:1mm;">
@@ -67,15 +61,19 @@
                                     <t t-out="'{:,.0f}'.format(price_ttc).replace(',', '\u00a0')"/>
                                 </strong>
                             </td>
-                            <!-- LOGO : cellule largeur fixe + overflow:hidden + height explicite sur img -->
-                            <td style="width:28mm; text-align:center; vertical-align:middle;
-                                       padding:1mm 2mm 1mm 1mm; overflow:hidden;">
-                                <img t-if="logo_binary"
-                                     t-att-src="image_data_uri(logo_binary)"
-                                     style="height:16mm; width:auto; display:block; margin:0 auto;"/>
-                                <img t-else=""
-                                     src="/custom_multi_barcode_for_products/static/img/etiquette.png"
-                                     style="height:16mm; width:auto; display:block; margin:0 auto;"/>
+                            <!-- LOGO : div wrapper hauteur fixe + overflow:hidden
+                                 → img height:100% garantit le rendu quelle que
+                                   soit la version de wkhtmltopdf -->
+                            <td style="width:28mm; vertical-align:middle;
+                                       text-align:center; padding:1mm 2mm 1mm 1mm;">
+                                <div style="height:15mm; overflow:hidden;">
+                                    <img t-if="logo_binary"
+                                         t-att-src="image_data_uri(logo_binary)"
+                                         style="height:100%; width:auto;"/>
+                                    <img t-else=""
+                                         src="/custom_multi_barcode_for_products/static/img/etiquette.png"
+                                         style="height:100%; width:auto;"/>
+                                </div>
                             </td>
                         </tr>
 
@@ -83,8 +81,7 @@
                         <tr>
                             <td colspan="2"
                                 style="border-top:0.5pt solid #bbb;
-                                       padding:0.8mm 2.5mm;
-                                       vertical-align:middle;">
+                                       padding:0.8mm 2.5mm; vertical-align:middle;">
                                 <table style="width:100%; border-collapse:collapse;">
                                     <tr>
                                         <td style="vertical-align:middle; width:38mm;">
@@ -150,10 +147,9 @@
                             box-sizing:border-box; overflow:hidden;
                             padding:0; margin:0;">
 
-                    <table style="width:100%; height:100%; border-collapse:collapse;
-                                  table-layout:fixed;">
+                    <table style="width:100%; border-collapse:collapse;">
 
-                        <!-- ① NOM DU PRODUIT -->
+                        <!-- ① NOM -->
                         <tr>
                             <td colspan="2"
                                 style="padding:0.8mm 1.5mm;
@@ -164,11 +160,9 @@
                             </td>
                         </tr>
 
-                        <!-- ② CORPS : hauteur verrouillée à 19 mm -->
-                        <tr style="height:19mm;">
-                            <!-- PRIX -->
-                            <td style="padding:1mm 1mm 1mm 1.5mm;
-                                       vertical-align:middle; overflow:hidden;">
+                        <!-- ② CORPS -->
+                        <tr style="height:18mm;">
+                            <td style="padding:1mm 1mm 1mm 1.5mm; vertical-align:middle;">
                                 <div class="o_label_extra_data" style="font-size:5pt;">
                                     <t t-out="extra_html"/>
                                 </div>
@@ -181,15 +175,16 @@
                                     <t t-out="'{:,.0f}'.format(price_ttc).replace(',', '\u00a0')"/>
                                 </strong>
                             </td>
-                            <!-- LOGO -->
-                            <td style="width:15mm; text-align:center; vertical-align:middle;
-                                       padding:1mm 1mm 1mm 0.5mm; overflow:hidden;">
-                                <img t-if="logo_binary"
-                                     t-att-src="image_data_uri(logo_binary)"
-                                     style="height:10mm; width:auto; display:block; margin:0 auto;"/>
-                                <img t-else=""
-                                     src="/custom_multi_barcode_for_products/static/img/etiquette.png"
-                                     style="height:10mm; width:auto; display:block; margin:0 auto;"/>
+                            <td style="width:15mm; vertical-align:middle;
+                                       text-align:center; padding:1mm 1mm 1mm 0.5mm;">
+                                <div style="height:12mm; overflow:hidden;">
+                                    <img t-if="logo_binary"
+                                         t-att-src="image_data_uri(logo_binary)"
+                                         style="height:100%; width:auto;"/>
+                                    <img t-else=""
+                                         src="/custom_multi_barcode_for_products/static/img/etiquette.png"
+                                         style="height:100%; width:auto;"/>
+                                </div>
                             </td>
                         </tr>
 
@@ -197,8 +192,7 @@
                         <tr>
                             <td colspan="2"
                                 style="border-top:0.5pt solid #bbb;
-                                       padding:0.5mm 1.5mm;
-                                       vertical-align:middle;">
+                                       padding:0.5mm 1.5mm; vertical-align:middle;">
                                 <table style="width:100%; border-collapse:collapse;">
                                     <tr>
                                         <td style="vertical-align:middle; width:23mm;">
