@@ -80,13 +80,27 @@ class ResPartnerInherit(models.Model):
         string="Cartes de fidélité"
     )
 
-    # @api.depends('name', 'customer_id')
-    # def _compute_display_name(self):
-    #     for partner in self:
-    #         if partner.customer_id:
-    #             partner.display_name = f"{partner.customer_id}"
-    #         else:
-    #             partner.display_name = partner.name
+    no_loyalty_points = fields.Boolean(
+        string='Exclure des points de fidélité',
+        default=False,
+        tracking=True,
+        help="Si coché, ce client ne cumule aucun point de fidélité (ni en caisse ni sur commande).",
+    )
+
+    @api.model
+    def _load_pos_data_fields(self, config):
+        """Expose no_loyalty_points au POS pour fonctionnement hors-ligne."""
+        result = super()._load_pos_data_fields(config)
+        result.append('no_loyalty_points')
+        return result
+
+    @api.depends('name', 'customer_id')
+    def _compute_display_name(self):
+        for partner in self:
+            if partner.customer_id:
+                partner.display_name = f"{partner.customer_id}"
+            else:
+                partner.display_name = partner.name
 
     def _assign_barcode_from_customer_id(self, cid):
         """Assigne barcode = customer_id si commence par '20' et barcode vide.

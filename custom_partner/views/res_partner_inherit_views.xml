@@ -60,6 +60,11 @@
 
                 <xpath expr="//notebook" position="inside">
                     <page string="Cartes de fidélité">
+                        <group>
+                            <field name="no_loyalty_points"
+                                   widget="boolean_toggle"
+                                   string="Exclure des points de fidélité"/>
+                        </group>
                         <field name="loyalty_card_ids" readonly="1">
                             <list>
                                 <field name="code"/>
