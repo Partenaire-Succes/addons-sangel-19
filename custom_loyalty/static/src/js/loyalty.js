@@ -6,13 +6,25 @@ patch(PosOrder.prototype, {
     
     pointsForPrograms(programs) {
         const result = super.pointsForPrograms(programs);
-        
+
+        // Si le client est exclu des points de fidélité, retourner 0 partout
+        const partner = this.get_partner ? this.get_partner() : this.partner_id;
+        if (partner && partner.no_loyalty_points) {
+            for (const programId in result) {
+                const program = this.models["loyalty.program"].get(parseInt(programId));
+                if (program && program.program_type === 'loyalty') {
+                    result[programId] = [];
+                }
+            }
+            return result;
+        }
+
         for (const programId in result) {
             const program = this.models["loyalty.program"].get(parseInt(programId));
-            
+
             if (program && program.program_type === 'loyalty') {
                 const customPoints = this._calculateCustomLoyaltyPoints(program);
-                
+
                 if (customPoints > 0) {
                     result[programId] = [{ points: customPoints }];
                 } else {
@@ -20,7 +32,7 @@ patch(PosOrder.prototype, {
                 }
             }
         }
-        
+
         return result;
     },
     

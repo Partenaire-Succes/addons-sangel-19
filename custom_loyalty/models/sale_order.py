@@ -28,14 +28,21 @@ class SaleOrderInherit(models.Model):
         Override pour calculer les points selon family_loyalty
         """
         result = super()._program_check_compute_points(programs)
-        
+
+        # Client exclu des points de fidélité
+        if self.partner_id and self.partner_id.no_loyalty_points:
+            for program in programs.filtered(lambda p: p.program_type == 'loyalty'):
+                if program in result:
+                    result[program]['points'] = [0]
+            return result
+
         for program in programs.filtered(lambda p: p.program_type == 'loyalty'):
             if program in result and 'error' not in result[program]:
                 custom_points = self._calculate_custom_loyalty_points_sale(program)
-                
+
                 if custom_points is not None and custom_points >= 0:
                     result[program]['points'] = [custom_points]
-        
+
         return result
     
     def _calculate_custom_loyalty_points_sale(self, program):
