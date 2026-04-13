@@ -11,11 +11,15 @@
 
         <!-- En-tête colonnes avant la liste produits -->
         <xpath expr="//OrderDisplay" position="before">
-            <div style="display:flex; align-items:center; border-top:1.5px solid #000; border-bottom:1.5px solid #000; padding:5px 0; font-weight:bold; margin-bottom:8px; letter-spacing:0.2px;">
-                <span style="flex:1; padding-right:3px;">Désignation</span>
-                <span style="width:2.2em; text-align:center; flex-shrink:0;">Qté</span>
-                <span style="width:6.5em; text-align:right; flex-shrink:0; padding-right:2px;">P.U.</span>
-                <span style="width:6.5em; text-align:right; flex-shrink:0;">Montant</span>
+            <div style="display:flex; align-items:flex-start;
+                        border-top:1.5px solid #000; border-bottom:1.5px solid #000;
+                        padding:5px 0; margin-bottom:6px;">
+                <div style="flex:1; padding-right:4px;">
+                    <div style="font-weight:bold; font-size:108%;">Désignation</div>
+                    <div style="font-size:83%; margin-top:2px; color:#444;">Qté &amp; P.U.</div>
+                </div>
+                <div style="width:5.5em; text-align:right; flex-shrink:0;
+                            font-weight:bold; font-size:108%;">Montant</div>
             </div>
         </xpath>
 
