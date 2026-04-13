@@ -45,6 +45,7 @@ class CadencierWizard(models.TransientModel):
         products = self.env['product.template'].search([
             ('allowed_company_ids', 'in', company_id),
             ('type', '=', 'consu'),
+            ('active', '=', True),
         ])
 
         final_products = self.env['product.template']
@@ -67,6 +68,7 @@ class CadencierWizard(models.TransientModel):
             ('product_id.type', '=', 'consu'),
             ('order_id.date_order', '>=', str(date_from)),
             ('order_id.date_order', '<=', str(date_to)),
+            ('product_id.active', '=', True),  # S'assurer que le produit est actif
         ]
         sale_lines = self.env['sale.order.line'].search(sale_domain)
 
@@ -76,6 +78,7 @@ class CadencierWizard(models.TransientModel):
             ('product_id.type', '=', 'consu'),
             ('order_id.date_order', '>=', str(date_from)),
             ('order_id.date_order', '<=', str(date_to)),
+            ('product_id.active', '=', True),  # S'assurer que le produit est actif
         ]
         pos_lines = self.env['pos.order.line'].search(pos_domain)
 
@@ -122,6 +125,7 @@ class CadencierWizard(models.TransientModel):
 
             # ✅ Taux de marge cumulé = (CA - Coût) / CA * 100
             taux_marge = round((total_ca - total_cost) / total_ca * 100, 2) if total_ca > 0 else 0.0
+            price_ttc = product.list_price * (1 + (product.taxes_id.amount / 100) if product.taxes_id else 1)
 
             result.append({
                 'code': product.default_code or '',
@@ -133,7 +137,7 @@ class CadencierWizard(models.TransientModel):
                 'famille': product.categ_id.name,
                 'code_famille': product.categ_id.code,
                 'st_disp': round(stock, 2),
-                'pvtc': product.list_price,
+                'pvtc': price_ttc,
                 'ventes': ventes,
                 'total': total,
             })

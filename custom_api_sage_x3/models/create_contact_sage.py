@@ -213,6 +213,7 @@ class ResPartnerImport(models.Model):
         vals = {
             "name":               name,
             "customer_id":        customer_code,
+            "customer_account":   self._safe_string(customer.get("bprnuM_SALARIE")),
             "is_company":         is_company,
             "customer_rank":      1,
             "street":             self._safe_string(customer.get("bpaadD_0")),

@@ -15,6 +15,10 @@ class ResPartnerInherit(models.Model):
         copy=False,
         tracking=True
     )
+    customer_account = fields.Char(
+        string="Compte personnel",
+        help="Compte des personnel SANgel (ex: 42110001 pour le personnel de SANGEL).",
+    )
 
     discount_eligible = fields.Boolean(
         string="Éligible à la remise",

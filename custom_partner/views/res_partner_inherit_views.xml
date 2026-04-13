@@ -23,6 +23,7 @@
 
                 <xpath expr="//field[@name='vat']" position="after">
                     <field name="customer_id" readonly="customer_id"/>
+                    <field name="customer_account" readonly="1"/>
                     <field name="code_family" readonly="0"/>
                 </xpath>
 

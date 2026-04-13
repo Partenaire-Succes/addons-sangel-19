@@ -546,6 +546,7 @@ class ProductTemplateImport(models.Model):
             existing = SupplierInfo.search([
                 ('product_tmpl_id', '=', product.id),
                 ('partner_id',      '=', supplier.id),
+                ('primary',         '=', True),
             ], limit=1)
 
             if existing:

@@ -255,7 +255,8 @@ class PhysicalInventoryLine(models.Model):
     )
     location_id = fields.Many2one(
         'stock.location',
-        'Emplacement'
+        'Emplacement',
+        default=lambda self: self.env['stock.location'].search([('usage', '=', 'internal')], limit=1)
     )
     quantity = fields.Float('Stock')
     product_uom_id = fields.Many2one('uom.uom', "Unite", related="product_id.uom_id", readonly=True)
@@ -276,7 +277,7 @@ class PhysicalInventoryLine(models.Model):
     lot_id = fields.Many2one('stock.lot', string='Numéro de Lot', domain="[('product_id', '=', product_id)]")
     company_id = fields.Many2one('res.company', string='Société', related='inventory_physical_id.company_id')
     code_article = fields.Char(string='Code Article', related='product_tmpl_id.code_article')
-
+                
     @api.onchange('physical_qty')
     def compute_qty_dif(self):
         for qt in self:
