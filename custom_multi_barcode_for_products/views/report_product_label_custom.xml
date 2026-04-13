@@ -6,16 +6,9 @@
         ====================================================================
         Étiquette 2×7  (97 mm × 37.1 mm)  —  Sangel
         ====================================================================
-        Layout :
-          ┌─────────────────────────────────────────────────────────────┐
-          │  NOM DU PRODUIT  (gras)                          colspan=2  │
-          ├──────────────────────────────────────┬──────────────────────┤
-          │  FCFA / KG                           │                      │
-          │  1 390  (énorme)                     │   [  LOGO  ]         │
-          ├──────────────────────────────────────┴──────────────────────┤
-          │  [BARCODE]   ref   date                          colspan=2  │
-          └─────────────────────────────────────────────────────────────┘
-        Utilise <table> HTML (pas flexbox) pour compatibilité wkhtmltopdf.
+        NOTE wkhtmltopdf : max-height est ignoré sur <img>.
+        On utilise height explicite + overflow:hidden sur la cellule
+        + height fixe sur la <tr> centrale pour verrouiller la hauteur.
         ====================================================================
         -->
         <template id="report_simple_label2x7_ttc"
@@ -24,7 +17,6 @@
 
             <xpath expr="//div[hasclass('o_label_full')]" position="replace">
 
-                <!-- Calcul prix TTC -->
                 <t t-set="price_ht"
                    t-value="pricelist._get_product_price(
                                 product, 1,
@@ -38,8 +30,6 @@
                                 pricelist.currency_id or product.currency_id,
                                 1, product=product)"/>
                 <t t-set="price_ttc" t-value="tax_result['total_included']"/>
-
-                <!-- Logo depuis la base (res.company.label_logo) -->
                 <t t-set="company"     t-value="env.user.company_id"/>
                 <t t-set="logo_binary" t-value="company.label_logo"/>
 
@@ -62,31 +52,30 @@
                             </td>
                         </tr>
 
-                        <!-- ② CORPS : PRIX (gauche) + LOGO (droite) -->
-                        <tr style="height:100%;">
+                        <!-- ② CORPS : hauteur verrouillée à 18 mm -->
+                        <tr style="height:18mm;">
+                            <!-- PRIX -->
                             <td style="padding:1.5mm 2mm 1mm 2.5mm;
-                                       vertical-align:middle;">
+                                       vertical-align:middle; overflow:hidden;">
                                 <div class="o_label_extra_data"><t t-out="extra_html"/></div>
                                 <span style="font-size:7.5pt; font-weight:700;
                                              line-height:1; display:block; margin-bottom:1mm;">
                                     FCFA&#160;/&#160;<span t-field="product.uom_id.name"/>
                                 </span>
-                                <strong style="font-size:31pt; font-weight:900;
-                                               line-height:0.9; letter-spacing:-0.5px;
-                                               display:block;">
+                                <strong style="font-size:30pt; font-weight:900;
+                                               line-height:0.9; letter-spacing:-0.5px; display:block;">
                                     <t t-out="'{:,.0f}'.format(price_ttc).replace(',', '\u00a0')"/>
                                 </strong>
                             </td>
-                            <td style="width:28mm; text-align:center;
-                                       vertical-align:middle; padding-right:2mm;">
+                            <!-- LOGO : cellule largeur fixe + overflow:hidden + height explicite sur img -->
+                            <td style="width:28mm; text-align:center; vertical-align:middle;
+                                       padding:1mm 2mm 1mm 1mm; overflow:hidden;">
                                 <img t-if="logo_binary"
                                      t-att-src="image_data_uri(logo_binary)"
-                                     style="max-height:19mm; max-width:26mm;
-                                            width:auto; height:auto; display:block; margin:0 auto;"/>
+                                     style="height:16mm; width:auto; display:block; margin:0 auto;"/>
                                 <img t-else=""
                                      src="/custom_multi_barcode_for_products/static/img/etiquette.png"
-                                     style="max-height:19mm; max-width:26mm;
-                                            width:auto; height:auto; display:block; margin:0 auto;"/>
+                                     style="height:16mm; width:auto; display:block; margin:0 auto;"/>
                             </td>
                         </tr>
 
@@ -133,8 +122,6 @@
         ====================================================================
         Étiquette 4×7  (47 mm × 37.1 mm)  —  Sangel
         ====================================================================
-        Même charte que 2×7, format compact.
-        ====================================================================
         -->
         <template id="report_simple_label4x7_ttc"
                   inherit_id="product.report_simple_label4x7"
@@ -142,7 +129,6 @@
 
             <xpath expr="//div[hasclass('o_label_full')]" position="replace">
 
-                <!-- Calcul prix TTC -->
                 <t t-set="price_ht"
                    t-value="pricelist._get_product_price(
                                 product, 1,
@@ -156,8 +142,6 @@
                                 pricelist.currency_id or product.currency_id,
                                 1, product=product)"/>
                 <t t-set="price_ttc" t-value="tax_result['total_included']"/>
-
-                <!-- Logo depuis la base -->
                 <t t-set="company"     t-value="product.env.user.company_id"/>
                 <t t-set="logo_binary" t-value="company.label_logo"/>
 
@@ -180,10 +164,11 @@
                             </td>
                         </tr>
 
-                        <!-- ② CORPS : PRIX (gauche) + LOGO (droite) -->
-                        <tr style="height:100%;">
+                        <!-- ② CORPS : hauteur verrouillée à 19 mm -->
+                        <tr style="height:19mm;">
+                            <!-- PRIX -->
                             <td style="padding:1mm 1mm 1mm 1.5mm;
-                                       vertical-align:middle;">
+                                       vertical-align:middle; overflow:hidden;">
                                 <div class="o_label_extra_data" style="font-size:5pt;">
                                     <t t-out="extra_html"/>
                                 </div>
@@ -196,16 +181,15 @@
                                     <t t-out="'{:,.0f}'.format(price_ttc).replace(',', '\u00a0')"/>
                                 </strong>
                             </td>
-                            <td style="width:15mm; text-align:center;
-                                       vertical-align:middle; padding-right:1mm;">
+                            <!-- LOGO -->
+                            <td style="width:15mm; text-align:center; vertical-align:middle;
+                                       padding:1mm 1mm 1mm 0.5mm; overflow:hidden;">
                                 <img t-if="logo_binary"
                                      t-att-src="image_data_uri(logo_binary)"
-                                     style="max-height:12mm; max-width:13mm;
-                                            width:auto; height:auto; display:block; margin:0 auto;"/>
+                                     style="height:10mm; width:auto; display:block; margin:0 auto;"/>
                                 <img t-else=""
                                      src="/custom_multi_barcode_for_products/static/img/etiquette.png"
-                                     style="max-height:12mm; max-width:13mm;
-                                            width:auto; height:auto; display:block; margin:0 auto;"/>
+                                     style="height:10mm; width:auto; display:block; margin:0 auto;"/>
                             </td>
                         </tr>
 
