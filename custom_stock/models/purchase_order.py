@@ -1,4 +1,5 @@
 from odoo import fields, models, api, _
+from odoo.exceptions import UserError
 
 class PurchaseOrderSageX3Optimized(models.Model):
     _inherit = "purchase.order"
@@ -21,7 +22,35 @@ class PurchaseOrderSageX3Optimized(models.Model):
     ], string="Type de fournisseur", default='vridi', copy=False)
 
     def action_pending_to_sage_x3(self):
-        self.write({'state': 'sent'})
+        for order in self:
+            inactive_products = []
+            dormant_products = []
+
+            for line in order.order_line:
+                product = line.product_id
+
+                if product.actif_x3 != '1':
+                    inactive_products.append(product.name)
+
+                if not product.current_company_status_id or product.current_company_status_id.code != 'C':
+                    dormant_products.append(product.name)
+
+            messages = []
+
+            if inactive_products:
+                messages.append(_(
+                    "Produits non actifs pour SAGE X3 :\n- %s"
+                ) % "\n- ".join(inactive_products))
+
+            if dormant_products:
+                messages.append(_(
+                    "Produits Dormants :\n- %s"
+                ) % "\n- ".join(dormant_products))
+
+            if messages:
+                raise UserError("\n\n".join(messages))
+
+            order.write({'state': 'sent'})
 
     def button_confirm_local(self):
         self.button_confirm()

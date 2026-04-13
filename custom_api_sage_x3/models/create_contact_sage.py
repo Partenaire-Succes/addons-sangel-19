@@ -204,6 +204,9 @@ class ResPartnerImport(models.Model):
             raise ValueError("Code client manquant")
 
         name        = self._safe_string(customer.get("bprnaM_0"), "Contact sans nom")
+        if not name:
+            raise ValueError(f"Nom manquant pour client {customer_code}")
+        
         is_company  = bool(self._safe_string(customer.get("crN_0")))
         vat_regime  = self._safe_string(customer.get("vacbpR_0"))
         is_airsi    = (vat_regime == "AIRSI")
