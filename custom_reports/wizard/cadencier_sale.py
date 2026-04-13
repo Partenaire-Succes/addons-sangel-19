@@ -103,7 +103,7 @@ class CadencierWizard(models.TransientModel):
             )
 
         result = []
-        for product in products.sorted(key=lambda p: ((p.categ_id.name or '').lower(), (p.default_code or '').lower())):
+        for product in products.sorted(key=lambda p: ((p.categ_id.code or '').lower(), (p.default_code or '').lower())):
             monthly_qtys = product_data[product.id]
             ventes = [round(monthly_qtys.get(i, 0), 2) for i in range(12)]
             total = sum(ventes)
@@ -142,7 +142,45 @@ class CadencierWizard(models.TransientModel):
                 'total': total,
             })
 
-        return result
+        # return result
+        final_result = []
+        current_famille_code = None
+        famille_ventes = [0.0] * 12
+        famille_total = 0.0
+        famille_label = ''
+
+        for item in result:
+            item['is_subtotal'] = False
+            if current_famille_code is not None and item['code_famille'] != current_famille_code:
+                # Ligne sous-total de la famille précédente
+                final_result.append({
+                    'is_subtotal': True,
+                    'famille': famille_label,
+                    'code_famille': current_famille_code,
+                    'ventes': [round(v, 2) for v in famille_ventes],
+                    'total': round(famille_total, 2),
+                })
+                famille_ventes = [0.0] * 12
+                famille_total = 0.0
+
+            current_famille_code = item['code_famille']
+            famille_label = item['famille']
+            final_result.append(item)
+            for i in range(12):
+                famille_ventes[i] += item['ventes'][i]
+            famille_total += item['total']
+
+        # Sous-total de la dernière famille
+        if current_famille_code is not None:
+            final_result.append({
+                'is_subtotal': True,
+                'famille': famille_label,
+                'code_famille': current_famille_code,
+                'ventes': [round(v, 2) for v in famille_ventes],
+                'total': round(famille_total, 2),
+            })
+
+        return final_result
 
 
 class ReportCadencierVentes(models.AbstractModel):
