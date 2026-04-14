@@ -78,17 +78,17 @@
                                 </div>
 
                                 <!-- REF VISIBLE -->
-                                <t t-if="product.default_code">
-                                    <div style="font-size:8pt;
-                                                color:#111;
-                                                margin-top:2mm;
-                                                font-weight:900;
-                                                text-align:center;
-                                                letter-spacing:0.5px;
-                                                line-height:1;">
-                                        Ref&#160;:&#160;<t t-out="product.default_code"/><br/>Imprimé le&#160;:&#160;<t t-out="datetime.date.today().strftime('%d/%m/%Y')"/>
-                                    </div>
-                                </t>
+                                <!-- <t t-if="product.default_code"> -->
+                                <div style="font-size:8pt;
+                                            color:#111;
+                                            margin-top:2mm;
+                                            font-weight:900;
+                                            text-align:center;
+                                            letter-spacing:0.5px;
+                                            line-height:1;">
+                                    Ref&#160;:&#160;<t t-out="product.default_code"/><br/>Imprimé le&#160;:&#160;<t t-out="datetime.date.today().strftime('%d/%m/%Y')"/>
+                                </div>
+                                <!-- </t> -->
 
                             </td>
 
