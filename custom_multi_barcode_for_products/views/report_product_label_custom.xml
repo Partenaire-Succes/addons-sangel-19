@@ -2,14 +2,10 @@
 <odoo>
     <data>
 
-        <!--
-        ====================================================================
-        Étiquette 2×7  (97 mm × 37.1 mm)  —  Sangel
-        ====================================================================
-        -->
+        <!-- ======================= ETIQUETTE 2x7 ======================= -->
         <template id="report_simple_label2x7_ttc"
                   inherit_id="product.report_simple_label2x7"
-                  name="Étiquette 2×7 – Prix TTC Sangel">
+                  name="Etiquette 2x7 - Prix TTC Sangel">
 
             <xpath expr="//div[hasclass('o_label_full')]" position="replace">
 
@@ -26,87 +22,98 @@
                                 pricelist.currency_id or product.currency_id,
                                 1, product=product)"/>
                 <t t-set="price_ttc" t-value="tax_result['total_included']"/>
-                <t t-set="company"     t-value="env.user.company_id"/>
-                <t t-set="logo_binary" t-value="company.label_logo"/>
+                <t t-set="company"   t-value="product.env.user.company_id"/>
+                <t t-set="logo_bin"  t-value="company.label_logo"/>
+                <t t-set="hcol"      t-value="company.primary_color or '#1a3a5c'"/>
 
-                <div class="o_label_full" t-att-style="table_style"
-                     style="font-family:Arial,Helvetica,sans-serif;
-                            box-sizing:border-box; overflow:hidden;
-                            padding:0; margin:0;">
+                <div class="o_label_full"
+                     t-att-style="table_style + ';font-family:Arial,Helvetica,sans-serif;box-sizing:border-box;overflow:hidden;padding:0;margin:0;'">
 
-                    <table style="width:100%; border-collapse:collapse;">
+                    <table style="width:100%;
+                                  height:100%;
+                                  border-collapse:collapse;
+                                  table-layout:fixed;">
 
-                        <!-- ① NOM -->
+                        <!-- NOM -->
                         <tr>
                             <td colspan="2"
-                                style="padding:1.2mm 2.5mm 1mm 2.5mm;
-                                       border-bottom:0.5pt solid #bbb;
-                                       vertical-align:middle;">
-                                <strong t-field="product.display_name"
-                                        style="font-size:9.5pt; font-weight:900; line-height:1.1;"/>
-                            </td>
-                        </tr>
-
-                        <!-- ② CORPS -->
-                        <tr style="height:18mm;">
-                            <!-- PRIX -->
-                            <td style="padding:1.5mm 2mm 1mm 2.5mm; vertical-align:middle;">
-                                <div class="o_label_extra_data"><t t-out="extra_html"/></div>
-                                <span style="font-size:7.5pt; font-weight:700;
-                                             line-height:1; display:block; margin-bottom:1mm;">
-                                    FCFA&#160;/&#160;<span t-field="product.uom_id.name"/>
-                                </span>
-                                <strong style="font-size:30pt; font-weight:900;
-                                               line-height:0.9; letter-spacing:-0.5px; display:block;">
-                                    <t t-out="'{:,.0f}'.format(price_ttc).replace(',', '\u00a0')"/>
-                                </strong>
-                            </td>
-                            <!-- LOGO : div wrapper hauteur fixe + overflow:hidden
-                                 → img height:100% garantit le rendu quelle que
-                                   soit la version de wkhtmltopdf -->
-                            <td style="width:28mm; vertical-align:middle;
-                                       text-align:center; padding:1mm 2mm 1mm 1mm;">
-                                <div style="height:15mm; overflow:hidden;">
-                                    <img t-if="logo_binary"
-                                         t-att-src="image_data_uri(logo_binary)"
-                                         style="height:100%; width:auto;"/>
-                                    <img t-else=""
-                                         src="/custom_multi_barcode_for_products/static/img/etiquette.png"
-                                         style="height:100%; width:auto;"/>
+                                t-att-style="'padding:1.5mm 3mm 1mm 3mm;text-align:center;border-bottom:1.5pt solid ' + hcol + ';'">
+                                <div t-att-style="'font-size:9.5pt;font-weight:900;line-height:1.2;text-align:center;overflow:hidden;max-height:10mm;color:' + hcol + ';'">
+                                    <t t-out="product.name"/>
                                 </div>
                             </td>
                         </tr>
 
-                        <!-- ③ BARCODE + RÉF + DATE -->
-                        <tr>
-                            <td colspan="2"
-                                style="border-top:0.5pt solid #bbb;
-                                       padding:0.8mm 2.5mm; vertical-align:middle;">
-                                <table style="width:100%; border-collapse:collapse;">
-                                    <tr>
-                                        <td style="vertical-align:middle; width:38mm;">
-                                            <t t-if="barcode">
-                                                <div t-out="barcode"
-                                                     t-options="{'widget': 'barcode',
-                                                                 'symbology': 'auto',
-                                                                 'img_style': 'width:36mm;height:7mm'}"/>
-                                            </t>
-                                        </td>
-                                        <td style="vertical-align:middle; padding-left:2mm;
-                                                   font-size:5pt; line-height:1.5;">
-                                            <span style="display:block; font-weight:700; color:#222;">
-                                                <t t-out="barcode"/>
-                                            </span>
-                                            <span style="display:block; color:#555;">
-                                                <t t-if="product.default_code">
-                                                    <span t-field="product.default_code"/>&#160;&#160;
-                                                </t>
-                                                <t t-out="datetime.date.today().strftime('%d/%m/%Y')"/>
-                                            </span>
-                                        </td>
-                                    </tr>
-                                </table>
+                        <!-- CORPS -->
+                        <tr style="height:29mm;">
+
+                            <!-- GAUCHE : prix + unite + ref -->
+                            <td style="vertical-align:middle;
+                                       padding:2mm 1mm 2mm 3mm;
+                                       text-align:center;">
+
+                                <div class="o_label_extra_data"
+                                     style="font-size:4pt; line-height:1;">
+                                    <t t-out="extra_html"/>
+                                </div>
+
+                                <!-- PRIX GRAND ET CENTRE -->
+                                <div style="font-size:46pt;
+                                            font-weight:900;
+                                            line-height:0.9;
+                                            color:#111;
+                                            letter-spacing:-2px;
+                                            text-align:center;">
+                                    <t t-out="'{:,.0f}'.format(price_ttc).replace(',', '\u00a0')"/>
+                                </div>
+
+                                <!-- UNITE -->
+                                <div style="font-size:9pt;
+                                            font-weight:700;
+                                            color:#444;
+                                            margin-top:1.5mm;
+                                            text-align:center;
+                                            line-height:1;">
+                                    FCFA&#160;/&#160;<t t-out="product.uom_id.name"/>
+                                </div>
+
+                                <!-- REF VISIBLE -->
+                                <t t-if="product.default_code">
+                                    <div style="font-size:8pt;
+                                                color:#111;
+                                                margin-top:2mm;
+                                                font-weight:900;
+                                                text-align:center;
+                                                letter-spacing:0.5px;
+                                                line-height:1;">
+                                        Ref&#160;:&#160;<t t-out="product.default_code"/><br/>Imprimé le&#160;:&#160;<t t-out="datetime.date.today().strftime('%d/%m/%Y')"/>
+                                    </div>
+                                </t>
+
                             </td>
+
+                            <!-- DROITE : logo collé à droite, pleine hauteur -->
+                            <td style="width:30mm;
+                                       padding:0;
+                                       vertical-align:top;">
+                                <img t-if="logo_bin"
+                                     t-att-src="image_data_uri(logo_bin)"
+                                     style="display:block;
+                                            width:30mm;
+                                            height:29mm;
+                                            object-fit:cover;
+                                            object-position:right center;
+                                            margin-left:auto;"/>
+                                <img t-else=""
+                                     src="/custom_multi_barcode_for_products/static/img/etiquette.png"
+                                     style="display:block;
+                                            width:30mm;
+                                            height:29mm;
+                                            object-fit:cover;
+                                            object-position:right center;
+                                            margin-left:auto;"/>
+                            </td>
+
                         </tr>
 
                     </table>
@@ -115,14 +122,10 @@
         </template>
 
 
-        <!--
-        ====================================================================
-        Étiquette 4×7  (47 mm × 37.1 mm)  —  Sangel
-        ====================================================================
-        -->
+        <!-- ======================= ETIQUETTE 4x7 ======================= -->
         <template id="report_simple_label4x7_ttc"
                   inherit_id="product.report_simple_label4x7"
-                  name="Étiquette 4×7 – Prix TTC Sangel">
+                  name="Etiquette 4x7 - Prix TTC Sangel">
 
             <xpath expr="//div[hasclass('o_label_full')]" position="replace">
 
@@ -139,85 +142,98 @@
                                 pricelist.currency_id or product.currency_id,
                                 1, product=product)"/>
                 <t t-set="price_ttc" t-value="tax_result['total_included']"/>
-                <t t-set="company"     t-value="product.env.user.company_id"/>
-                <t t-set="logo_binary" t-value="company.label_logo"/>
+                <t t-set="company"   t-value="product.env.user.company_id"/>
+                <t t-set="logo_bin"  t-value="company.label_logo"/>
+                <t t-set="hcol"      t-value="company.primary_color or '#1a3a5c'"/>
 
-                <div class="o_label_full" t-att-style="table_style"
-                     style="font-family:Arial,Helvetica,sans-serif;
-                            box-sizing:border-box; overflow:hidden;
-                            padding:0; margin:0;">
+                <div class="o_label_full"
+                     t-att-style="table_style + ';font-family:Arial,Helvetica,sans-serif;box-sizing:border-box;overflow:hidden;padding:0;margin:0;'">
 
-                    <table style="width:100%; border-collapse:collapse;">
+                    <table style="width:100%;
+                                  height:100%;
+                                  border-collapse:collapse;
+                                  table-layout:fixed;">
 
-                        <!-- ① NOM -->
+                        <!-- NOM -->
                         <tr>
                             <td colspan="2"
-                                style="padding:0.8mm 1.5mm;
-                                       border-bottom:0.5pt solid #bbb;
-                                       vertical-align:middle;">
-                                <strong t-field="product.display_name"
-                                        style="font-size:6.5pt; font-weight:900; line-height:1.2;"/>
+                                t-att-style="'padding:1.5mm 2mm 1mm 2mm;text-align:center;border-bottom:1.5pt solid ' + hcol + ';'">
+                                <div t-att-style="'font-size:7.5pt;font-weight:900;line-height:1.2;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:' + hcol + ';'">
+                                    <t t-out="product.name"/>
+                                </div>
                             </td>
                         </tr>
 
-                        <!-- ② CORPS -->
-                        <tr style="height:18mm;">
-                            <td style="padding:1mm 1mm 1mm 1.5mm; vertical-align:middle;">
-                                <div class="o_label_extra_data" style="font-size:5pt;">
+                        <!-- PRIX + LOGO -->
+                        <tr style="height:28mm;">
+
+                            <!-- GAUCHE : prix + unite + ref -->
+                            <td style="vertical-align:middle;
+                                       padding:1.5mm 0.5mm 1.5mm 2mm;
+                                       text-align:center;">
+
+                                <div class="o_label_extra_data"
+                                     style="font-size:4pt; line-height:1;">
                                     <t t-out="extra_html"/>
                                 </div>
-                                <span style="font-size:5.5pt; font-weight:700;
-                                             line-height:1; display:block; margin-bottom:0.8mm;">
-                                    FCFA&#160;/&#160;<span t-field="product.uom_id.name"/>
-                                </span>
-                                <strong style="font-size:19pt; font-weight:900;
-                                               line-height:0.9; display:block;">
-                                    <t t-out="'{:,.0f}'.format(price_ttc).replace(',', '\u00a0')"/>
-                                </strong>
-                            </td>
-                            <td style="width:15mm; vertical-align:middle;
-                                       text-align:center; padding:1mm 1mm 1mm 0.5mm;">
-                                <div style="height:12mm; overflow:hidden;">
-                                    <img t-if="logo_binary"
-                                         t-att-src="image_data_uri(logo_binary)"
-                                         style="height:100%; width:auto;"/>
-                                    <img t-else=""
-                                         src="/custom_multi_barcode_for_products/static/img/etiquette.png"
-                                         style="height:100%; width:auto;"/>
-                                </div>
-                            </td>
-                        </tr>
 
-                        <!-- ③ BARCODE + RÉF + DATE -->
-                        <tr>
-                            <td colspan="2"
-                                style="border-top:0.5pt solid #bbb;
-                                       padding:0.5mm 1.5mm; vertical-align:middle;">
-                                <table style="width:100%; border-collapse:collapse;">
-                                    <tr>
-                                        <td style="vertical-align:middle; width:23mm;">
-                                            <t t-if="barcode">
-                                                <div t-out="barcode"
-                                                     t-options="{'widget': 'barcode',
-                                                                 'symbology': 'auto',
-                                                                 'img_style': 'width:22mm;height:6mm'}"/>
-                                            </t>
-                                        </td>
-                                        <td style="vertical-align:middle; padding-left:1.5mm;
-                                                   font-size:4.5pt; line-height:1.4;">
-                                            <span style="display:block; font-weight:700; color:#222;">
-                                                <t t-out="barcode"/>
-                                            </span>
-                                            <span style="display:block; color:#555;">
-                                                <t t-if="product.default_code">
-                                                    <span t-field="product.default_code"/>&#160;
-                                                </t>
-                                                <t t-out="datetime.date.today().strftime('%d/%m/%Y')"/>
-                                            </span>
-                                        </td>
-                                    </tr>
-                                </table>
+                                <!-- PRIX GRAND ET CENTRE -->
+                                <div style="font-size:30pt;
+                                            font-weight:900;
+                                            line-height:0.88;
+                                            color:#111;
+                                            letter-spacing:-1px;
+                                            text-align:center;">
+                                    <t t-out="'{:,.0f}'.format(price_ttc).replace(',', '\u00a0')"/>
+                                </div>
+
+                                <!-- UNITE -->
+                                <div style="font-size:7pt;
+                                            font-weight:700;
+                                            color:#444;
+                                            margin-top:1.2mm;
+                                            text-align:center;
+                                            line-height:1;">
+                                    FCFA&#160;/&#160;<t t-out="product.uom_id.name"/>
+                                </div>
+
+                                <!-- REF VISIBLE -->
+                                <t t-if="product.default_code">
+                                    <div style="font-size:7pt;
+                                                color:#111;
+                                                margin-top:1.5mm;
+                                                font-weight:900;
+                                                text-align:center;
+                                                letter-spacing:0.5px;
+                                                line-height:1;">
+                                        Ref&#160;:&#160;<t t-out="product.default_code"/><br/>Imprimé le&#160;:&#160;<t t-out="datetime.date.today().strftime('%d/%m/%Y')"/>
+                                    </div>
+                                </t>
+
                             </td>
+
+                            <!-- DROITE : logo collé à droite, pleine hauteur -->
+                            <td style="width:16mm;
+                                       padding:0;
+                                       vertical-align:top;">
+                                <img t-if="logo_bin"
+                                     t-att-src="image_data_uri(logo_bin)"
+                                     style="display:block;
+                                            width:16mm;
+                                            height:28mm;
+                                            object-fit:cover;
+                                            object-position:right center;
+                                            margin-left:auto;"/>
+                                <img t-else=""
+                                     src="/custom_multi_barcode_for_products/static/img/etiquette.png"
+                                     style="display:block;
+                                            width:16mm;
+                                            height:28mm;
+                                            object-fit:cover;
+                                            object-position:right center;
+                                            margin-left:auto;"/>
+                            </td>
+
                         </tr>
 
                     </table>
