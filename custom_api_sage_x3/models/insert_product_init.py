@@ -546,11 +546,17 @@ class ProductTemplateImport(models.Model):
             existing = SupplierInfo.search([
                 ('product_tmpl_id', '=', product.id),
                 ('partner_id',      '=', supplier.id),
-                ('primary',         '=', True),
             ], limit=1)
 
             if existing:
-                return 0
+                existing.write({
+                    'min_qty':         1.0,
+                    'primary':         True,
+                })
+                
+                _logger.info("🏭 Fournisseur mis à jour au produit %s : %s",
+                             product.default_code, supplier.name)
+                return 1
 
             SupplierInfo.create({
                 'partner_id':      supplier.id,
