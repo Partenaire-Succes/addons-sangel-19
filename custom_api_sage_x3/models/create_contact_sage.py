@@ -205,7 +205,7 @@ class ResPartnerImport(models.Model):
         if not customer_code:
             raise ValueError("Code client manquant")
 
-        name        = self._safe_string(customer.get("bprnaM_0"))
+        name        = self._safe_string(customer.get("bpcnaM_0"))
         # if not name:
         #     raise ValueError(f"Nom manquant pour client {customer_code}")
         
