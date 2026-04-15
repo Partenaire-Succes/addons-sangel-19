@@ -165,13 +165,13 @@
                     </style>
 
                     <!-- ═══ EN-TÊTE ════════════════════════════════════════════ -->
-                    <div class="br-header">
-                        <t t-set="doc_title">
-                            <t t-if="doc.picking_type_id.code == 'incoming'">Bon de réception</t>
-                            <t t-elif="doc.picking_type_id.code == 'outgoing'">Bon de livraison</t>
-                            <t t-else="">Transfert interne</t>
-                        </t>
-                        <div class="br-ref"><t t-esc="doc.name"/></div>
+                    <div class="br-title">
+                        <t t-if="doc.picking_type_id.code == 'incoming'">Bon de réception</t>
+                        <t t-elif="doc.picking_type_id.code == 'outgoing'">Bon de livraison</t>
+                        <t t-else="">Transfert interne</t>
+                    </div>
+                    <div class="br-ref">
+                        <t t-esc="doc.name"/>
                     </div>
 
                     <!-- ═══ INFORMATIONS (2 colonnes) ═════════════════════════ -->
