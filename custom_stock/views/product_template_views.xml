@@ -174,7 +174,7 @@
         </record>
 
         <!-- Extend product catalog kanban view to include max qty and pending reception fields -->
-        <record id="product_view_kanban_catalog_custom_stock" model="ir.ui.view">
+        <!-- <record id="product_view_kanban_catalog_custom_stock" model="ir.ui.view">
             <field name="name">product.product.kanban.catalog.custom_stock</field>
             <field name="model">product.product</field>
             <field name="inherit_id" ref="product.product_view_kanban_catalog"/>
@@ -195,7 +195,7 @@
                     </div>
                 </xpath>
             </field>
-        </record>
+        </record> -->
 
     </data>
 </odoo>
