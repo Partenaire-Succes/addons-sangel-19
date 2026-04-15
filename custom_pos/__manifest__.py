@@ -29,17 +29,21 @@
         'report/prelevement_ticket_template.xml',
         'report/cloture_caisse_report.xml',
         'report/cloture_caisse_template.xml',
+        'report/avoir_journee_report.xml',
+        'report/avoir_journee_template.xml',
         'views/pos_config_inherit_views.xml',
         'views/pos_payment_method_inherit_views.xml',
         'views/pos_session_inherit_views.xml',
         'views/pos_order_promo_report_views.xml',
-        
+        'views/product_template_inherit_views.xml',
+        'wizard/import_loyalty_points_wizard_views.xml',
+        'wizard/avoir_journee_wizard_views.xml',
     ],
     'images': ['static/description/banner.png'],
     'license': 'AGPL-3',
     'installable': True,
     'auto_install': False,
-    'application': True,
+    'application': False,
     
     "assets": {
         "point_of_sale._assets_pos": [
@@ -61,6 +65,7 @@
             "/custom_pos/static/src/js/ProductScreen.js",
             "/custom_pos/static/src/js/ticket_screen_refund_patch.js",
             "/custom_pos/static/src/js/pos_navbar_patch.js",
+            "/custom_pos/static/src/js/price_ttc_patch.js",
             # Other XML files
             "/custom_pos/static/src/xml/cash_move_hide_cash_in.xml",
             "/custom_pos/static/src/xml/cash_move_list_popup_patch.xml",
@@ -75,6 +80,9 @@
             "/custom_pos/static/src/xml/pos_product_info_hide_inventory.xml",
             # Navbar + TicketScreen restrictions caissière/DSI
             "/custom_pos/static/src/xml/pos_navbar_caissiere_patch.xml",
+            # Bouton ouverture manuelle caisse + raccourci Alt+C
+            "/custom_pos/static/src/js/cashbox_button.js",
+            "/custom_pos/static/src/xml/cashbox_button.xml",
         ],
     },
 }

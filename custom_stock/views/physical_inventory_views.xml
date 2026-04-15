@@ -15,7 +15,7 @@
                                 type="object"
                                 string="Valider l'inventaire"
                                 class="btn-primary"
-                                groups="custom_pos.group_pos_shop"
+                                groups="custom_pos.group_superviseur"
                                 invisible="state != 'in_progress'"/>
 
                         <button name="action_draft" type="object" string="Annuler"
@@ -51,17 +51,17 @@
                             <group>
                                 <field name="inventory_mode" readonly="state != 'draft'"/>
                                 <field name="code_category_id" 
-                                       invisible="inventory_mode == 'verification_carryover'" 
+                                       invisible="inventory_mode in ['verification_carryover', 'libre']" 
                                        required="inventory_mode == 'normal'"
                                        readonly="state == 'done'"/>
                                 <field name="code_inventory_id"
                                        widget="many2many_tags"
-                                       invisible="inventory_mode == 'verification_carryover'"
+                                       invisible="inventory_mode in ['verification_carryover', 'libre']" 
                                        required="inventory_mode == 'normal'"
                                        domain="[('code_category_id', '=', code_category_id)]"
                                        readonly="state == 'done'"/>
                                 <field name="team_inventory_id" 
-                                       invisible="inventory_mode == 'verification_carryover'" 
+                                       invisible="inventory_mode in ['verification_carryover', 'libre']" 
                                        required="inventory_mode == 'normal'"
                                        readonly="state == 'done'"/>
                                 <field name="unverified_product_count"/>
@@ -89,15 +89,15 @@
                             <page string="Ligne Inventaire Physique">
                                 <field name="physical_line_ids" readonly="state == 'done'"
                                        domain="[('active', '=', True)]">
-                                    <list editable="bottom" create="0" edit="1" delete="0">
+                                    <list editable="bottom" create="inventory_mode == 'normal'" edit="inventory_mode == 'normal'" delete="inventory_mode == 'normal'">
+                                        <field name="product_tmpl_id" column_invisible="False"/>
                                         <field name="code_inventory_id" column_invisible="False"/>
                                         <field name="state" column_invisible="1"/>
                                         <field name="code_category_id" column_invisible="True"/>
                                         <field name="inventory_physical_id" column_invisible="True"/>
                                         <field name="quant_id" column_invisible="True"/>
                                         <field name="product_id" column_invisible="True"/>
-                                        <field name="location_id" column_invisible="False"/>
-                                        <field name="product_tmpl_id" column_invisible="False"/>
+                                        <field name="location_id" column_invisible="True" domain="[('usage', 'in', ['internal'])]" required="True"/>       
                                         <field name="quantity" invisible="state == 'draft'"/>
                                         <field name="product_uom_id" column_invisible="False"/>
                                         <field name="physical_qty" column_invisible="False"/>
@@ -133,7 +133,7 @@
                                         <field name="qty_diff" string="Difference"
                                                decoration-muted="qty_diff == 0" decoration-danger="qty_diff &lt; 0"
                                                decoration-success="qty_diff &gt; 0" decoration-bf="qty_diff != 0"/>
-                                        <field name="standard_price" string="Prix unitaire (PMP)"/>
+                                        <field name="standard_price" string="Prix unitaire (PMP)" readonly="1"/>
                                         <field name="valorisation" string="Valorisation"/>
                                         <button name="action_restore_line" type="object"
                                                 string="Restaurer" icon="fa-undo"

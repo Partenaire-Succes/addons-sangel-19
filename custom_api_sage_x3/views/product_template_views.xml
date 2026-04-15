@@ -16,6 +16,12 @@
                             icon="fa-upload" 
                             invisible="1"
                             class="btn btn-secondary"/>
+
+                    <button name="normalize_taxes_all_companies" 
+                            string="Normaliser les taxes" 
+                            type="object" 
+                            invisible="1"
+                            class="btn btn-secondary"/>
                 </xpath>
 
             </field>

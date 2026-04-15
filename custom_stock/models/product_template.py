@@ -173,6 +173,17 @@ class ProductTemplateInherit(models.Model):
         string='Statut article X3',
     )
 
+    actif_x3 = fields.Selection([
+        ('1', 'Actif'), 
+        ('2', 'Elaboration'),
+        ('3', 'En rupture'),
+        ('4', 'Non renouvelé'),
+        ('5', 'Perime'),
+        ('6', 'Non utilisable'),],
+        string='Statut article',
+        default='1',
+    )
+
     price_unit_ttc = fields.Float(
         string="Prix de base TTC",
         help="Prix de vente unitaire toutes taxes comprises.",
@@ -438,6 +449,10 @@ class ProductProduct(models.Model):
         copy=False,
         related='product_tmpl_id.code_article',
     )
+
+    _sql_constraints = [
+        ('default_code_unique', 'UNIQUE(default_code)', 'Le code article doit être unique !'),
+    ]
 
     # @api.depends('name', 'default_code')
     # def _compute_display_name(self):

@@ -323,7 +323,7 @@ class BudgetAnalyticDailyLine(models.Model):
     def _compute_variance(self):
         """Calcule l'écart entre le budget et le réel"""
         for line in self:
-            line.variance = line.budget_amount - line.actual_amount
+            line.variance =  line.actual_amount - line.budget_amount
             
             # Calculer le pourcentage d'écart
             if line.budget_amount != 0:

@@ -8,12 +8,22 @@
             <field name="model">res.partner</field>
             <field name="inherit_id" ref="base.view_partner_form"/>
             <field name="arch" type="xml">
+                <xpath expr="//sheet" position="before">
+                    <button string="Suppression des doublons" invisible="1"
+                        name="remove_duplicate_partners" type="object" class="oe_highlight"/>
+                    <button string="Sync. codes-barres (clients 10...)"
+                        name="action_sync_barcode_from_customer_id" type="object"
+                        class="btn-secondary"
+                        invisible="1"
+                        confirm="Assigner barcode = ID client pour tous les partenaires dont l'ID commence par 10 et dont le code-barres est vide. Continuer ?"/>
+                </xpath>
                 <xpath expr="//field[@name='category_id']" position="attributes">
                     <attribute name="string">Catégorie client</attribute>
                 </xpath>
 
                 <xpath expr="//field[@name='vat']" position="after">
                     <field name="customer_id" readonly="customer_id"/>
+                    <field name="customer_account" readonly="1"/>
                     <field name="code_family" readonly="0"/>
                 </xpath>
 
@@ -51,6 +61,11 @@
 
                 <xpath expr="//notebook" position="inside">
                     <page string="Cartes de fidélité">
+                        <group>
+                            <field name="no_loyalty_points"
+                                   widget="boolean_toggle"
+                                   string="Exclure des points de fidélité"/>
+                        </group>
                         <field name="loyalty_card_ids" readonly="1">
                             <list>
                                 <field name="code"/>

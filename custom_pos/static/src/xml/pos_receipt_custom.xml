@@ -1,13 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <templates id="template" xml:space="preserve">
-    <!-- Héritage du template OrderReceipt pour personnaliser le footer -->
+
     <t t-name="point_of_sale.OrderReceipt" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
-        <!-- Remplacer "Powered by Odoo" par vide (Odoo 19: span instead of p) -->
+
+        <!-- Supprimer "Powered by Odoo" -->
         <xpath expr="//div[@class='pos-receipt-order-data text-center pt-3']" position="replace">
-            <div class="pos-receipt-order-data text-center pt-3">
+            <div class="pos-receipt-order-data text-center pt-3"/>
+        </xpath>
+
+        <!-- En-tête colonnes avant la liste produits -->
+        <xpath expr="//OrderDisplay" position="before">
+            <div style="display:flex; align-items:flex-start;
+                        border-top:1.5px solid #000; border-bottom:1.5px solid #000;
+                        padding:5px 0; margin-bottom:6px;">
+                <div style="flex:1; padding-right:4px;">
+                    <div style="font-weight:bold; font-size:108%;">Désignation</div>
+                    <div style="font-size:83%; margin-top:2px; color:#444;">Qté &amp; P.U.</div>
+                </div>
+                <div style="width:5.5em; text-align:right; flex-shrink:0;
+                            font-weight:bold; font-size:108%;">Montant</div>
             </div>
         </xpath>
-    </t>
-</templates>
 
+        <!-- Séparateur après la liste produits -->
+        <xpath expr="//OrderDisplay" position="after">
+            <div style="border-bottom:1px solid #000; margin:2px 0 4px 0;"/>
+        </xpath>
+
+        <!-- Remplacer "Total" par "Net à Payer" avec double bordure -->
+        <xpath expr="//div[hasclass('receipt-total')]" position="replace">
+            <div class="pos-receipt-amount receipt-total fw-bolder"
+                 style="border-top:2px solid #000; border-bottom:2px solid #000; padding:5px 0; margin:4px 0; font-size:110%;">
+                <span class="label-total">Net à Payer</span>
+                <span t-out="formatCurrency(taxTotals.order_sign * taxTotals.order_total)"
+                      class="pos-receipt-right-align font-monospace"/>
+            </div>
+        </xpath>
+
+    </t>
+
+</templates>

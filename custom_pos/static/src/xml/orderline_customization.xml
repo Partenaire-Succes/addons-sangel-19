@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
 
-    <!-- Extend OrderDisplay to add line count header and line numbers -->
+    <!-- Compteur d'articles au-dessus de la liste (mode affichage caisse uniquement) -->
     <t t-name="custom_pos.OrderDisplayLineCount"
        t-inherit="point_of_sale.OrderDisplay"
        t-inherit-mode="extension">
-
-        <!-- Add total line count header above the order list -->
         <xpath expr="//div[hasclass('order-container')]" position="before">
-            <div t-if="lines.length > 0 and props.mode !== 'receipt'" 
+            <div t-if="lines.length > 0 and props.mode !== 'receipt'"
                  class="order-line-count d-flex justify-content-between align-items-center px-2 py-1 bg-200 border-bottom text-muted"
                  style="font-size: 0.85em;">
                 <span>
@@ -17,27 +15,14 @@
                 </span>
             </div>
         </xpath>
-
-        <!-- Replace the Orderline call to include line index -->
-        <!-- <xpath expr="//Orderline" position="replace">
-            <Orderline line="line" mode="this.props.mode" lineNumber="line_index + 1"/>
-        </xpath> -->
     </t>
 
-    <!-- Extend Orderline to show line number badge and always display unit price -->
+    <!-- Personnalisation des lignes de commande -->
     <t t-name="custom_pos.OrderlineCustomDisplay"
        t-inherit="point_of_sale.Orderline"
        t-inherit-mode="extension">
 
-        <!-- Add negative margin red background to orderline li -->
-        <!-- <xpath expr="//li[hasclass('orderline')]" position="attributes">
-            <attribute name="t-att-style">hasNegativeMargin ? 'background-color: rgba(220, 53, 69, 0.35) !important;' : ''</attribute>
-        </xpath>
-
-        <xpath expr="//li[hasclass('orderline')]" position="attributes">
-            <attribute name="t-att-style">hasItemsOnSale ? 'background-color: rgba(45, 45, 209, 0.2) !important;' : ''</attribute>
-        </xpath> -->
-
+        <!-- Couleur de fond selon marge négative ou anomalie (mode affichage) -->
         <xpath expr="//li[hasclass('orderline')]" position="attributes">
             <attribute name="t-att-style">
                 hasNegativeMargin
@@ -48,14 +33,96 @@
             </attribute>
         </xpath>
 
-        <!-- Add unit price note under product name (always visible, not just when qty != 1) -->
-        <xpath expr="//div[hasclass('product-name')]" position="after">
-            <div t-if="!line.combo_parent_id and props.mode !== 'receipt'" 
-                 class="unit-price-note text-muted ps-2"
-                 style="font-size: 0.75em; margin-top: -2px;">
-                <t t-esc="formatCurrency(line.unitDisplayPrice)"/> / unité
-            </div>
+        <!--
+            Remplacement de line-details :
+            - MODE TICKET (receipt) : affichage 4 colonnes (Désignation | Qté | P.U. | Montant)
+            - MODE AFFICHAGE CAISSE : affichage original + note prix unitaire
+        -->
+        <xpath expr="//div[hasclass('line-details')]" position="replace">
+
+            <!-- TICKET - ligne normale -->
+            <t t-if="props.mode == 'receipt' and !line.combo_parent_id">
+                <div class="line-details d-flex w-100" style="padding:3px 0; align-items:flex-start;">
+                    <!-- Désignation : nom (gras) + Qté × P.U. (plus petit) -->
+                    <div style="flex:1; min-width:0; padding-right:4px; word-break:break-word;">
+                        <div style="font-weight:bold; font-size:100%; line-height:1.3;">
+                            <t t-out="line.full_product_name"/>
+                        </div>
+                        <div style="font-size:84%; color:#444; margin-top:1px;">
+                            <t t-esc="line.getQuantityStr().unitPart"/>
+                            <t t-if="line.getQuantityStr().decimalPart">
+                                <t t-esc="line.getQuantityStr().decimalPoint"/>
+                                <t t-esc="line.getQuantityStr().decimalPart"/>
+                            </t>
+                            <span style="margin:0 1px;">×</span>
+                            <t t-esc="line.unitDisplayPrice.toFixed(0)"/>
+                        </div>
+                    </div>
+                    <!-- Montant : même width que l'en-tête → alignement garanti -->
+                    <div style="width:5.5em; text-align:right; flex-shrink:0;
+                                font-weight:bold; font-size:100%;" class="font-monospace">
+                        <t t-out="line.getPriceString()"/>
+                    </div>
+                </div>
+            </t>
+
+            <!-- TICKET - ligne combo enfant (indenté, simplifié) -->
+            <t t-elif="props.mode == 'receipt' and line.combo_parent_id">
+                <div class="line-details d-flex justify-content-between align-items-center px-2" style="font-size:85%;">
+                    <div class="d-flex align-items-center">
+                        <span class="pe-1 fw-bold"><t t-esc="line.getQuantityStr().unitPart"/></span>
+                        <span><t t-out="line.full_product_name"/></span>
+                    </div>
+                    <div t-if="!props.basic_receipt" t-out="line.getPriceString()" class="font-monospace"/>
+                </div>
+            </t>
+
+            <!-- MODE AFFICHAGE CAISSE : structure originale + note prix unitaire -->
+            <t t-else="">
+                <div class="line-details d-flex justify-content-between">
+                    <div class="product-name d-flex flex-grow-1 pe-2 text-truncate">
+                        <span class="qty d-inline-block fw-bolder px-1">
+                            <t t-esc="line.getQuantityStr().unitPart"/>
+                            <small t-if="line.getQuantityStr().decimalPart" class="fw-normal" style="font-size:85%;">
+                                <t t-esc="line.getQuantityStr().decimalPoint"/>
+                                <t t-esc="line.getQuantityStr().decimalPart"/>
+                            </small>
+                        </span>
+                        <span class="text-wrap d-inline">
+                            <t t-esc="line.orderDisplayProductName.name"/>
+                            <br/>
+                            <small class="attribute-line fst-italic" t-if="line.orderDisplayProductName.attributeString">
+                                - <t t-esc="line.orderDisplayProductName.attributeString"/>
+                            </small>
+                        </span>
+                    </div>
+                    <!-- Prix unitaire en mode affichage caisse -->
+                    <div t-if="!line.combo_parent_id"
+                         class="unit-price-note text-muted ps-2"
+                         style="font-size:0.75em; margin-top:-2px;">
+                        <t t-esc="formatCurrency(line.unitDisplayPrice)"/> / unité
+                    </div>
+                    <div t-if="!props.basic_receipt and !line.combo_parent_id"
+                         t-out="line.getPriceString()"
+                         class="product-price price fw-bolder"/>
+                    <div t-if="props.showTaxGroup"
+                         t-esc="this.taxGroup"
+                         class="text-end"
+                         style="width:2rem"/>
+                </div>
+            </t>
+
         </xpath>
+
+        <!-- Masquer le prix unitaire natif en mode ticket (il est dans la colonne P.U.) -->
+        <xpath expr="//li[hasclass('price-per-unit')][1]" position="attributes">
+            <attribute name="t-if">
+                !props.basic_receipt and this.props.line.getQuantity() != 1
+                and props.mode != 'receipt'
+                and (line.price_type !== 'original' and !line.combo_parent_id)
+            </attribute>
+        </xpath>
+
     </t>
 
 </templates>

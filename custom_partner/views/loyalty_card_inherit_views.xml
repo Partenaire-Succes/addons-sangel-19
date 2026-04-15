@@ -9,13 +9,21 @@
                 <xpath expr="//field[@name='code']" position="attributes">
                     <attribute name="readonly">0</attribute>
                 </xpath>
+                <xpath expr="//label[@for='points_display']" position="after">
+                    <field name="points_display" nolabel="1"/>
+                </xpath>
 
-                <xpath expr="//form" position="inside">
+                <xpath expr="//button[@name='action_loyalty_update_balance']" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </xpath>
+
+                <xpath expr="//sheet" position="before">
                     <header>
                         <button name="update_code_from_partner"
                                 type="object"
                                 string="Mettre les partenaire"
                                 icon="fa-sync"
+                                invisible="1"
                                 class="btn-primary"/>
                     </header>
                 </xpath>

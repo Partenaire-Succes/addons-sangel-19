@@ -18,29 +18,5 @@
         </field>
     </record>
     
-    <!-- Action serveur pour importer les livraisons -->
-    <record id="action_import_sage_x3_deliveries" model="ir.actions.server">
-        <field name="name">Importer livraisons SAGE X3</field>
-        <field name="model_id" ref="purchase.model_purchase_order"/>
-        <field name="binding_model_id" ref="purchase.model_purchase_order"/>
-        <field name="state">code</field>
-        <field name="code">
-action = model.action_import_deliveries()
-        </field>
-    </record>
-    
-    <!-- Menu pour les actions SAGE X3 -->
-    <!-- <menuitem 
-        id="menu_purchase_sage_x3"
-        name="SAGE X3"
-        parent="purchase.menu_purchase_root"
-        sequence="100"/>
-    
-    <menuitem 
-        id="menu_import_deliveries_sage_x3"
-        name="Importer livraisons"
-        parent="menu_purchase_sage_x3"
-        action="action_import_sage_x3_deliveries"
-        sequence="10"/> -->
         
 </odoo>

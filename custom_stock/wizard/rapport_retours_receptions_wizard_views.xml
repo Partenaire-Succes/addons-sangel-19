@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         WIZARD — Rapport Retours et Réceptions consolidé
+         L'utilisateur filtre avant de télécharger : bonne pratique
+         ══════════════════════════════════════════════════════════════════════ -->
+
+    <record id="view_rapport_retours_receptions_wizard_form" model="ir.ui.view">
+        <field name="name">rapport.retours.receptions.wizard.form</field>
+        <field name="model">rapport.retours.receptions.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Rapport Retours et Réceptions consolidé">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>Rapport Retours &amp; Réceptions</h1>
+                        <h3 class="text-muted">
+                            Choisissez le contenu et les filtres, puis téléchargez le PDF
+                        </h3>
+                    </div>
+
+                    <group>
+                        <group string="Contenu du rapport">
+                            <field name="type_rapport" widget="radio"/>
+                        </group>
+                        <group string="Filtres">
+                            <field name="date_debut"/>
+                            <field name="date_fin"/>
+                            <field name="partner_id"
+                                   options="{'no_create': True, 'no_create_edit': True}"
+                                   placeholder="Tous les fournisseurs"/>
+                            <field name="ref_sage"
+                                   placeholder="Référence exacte (ex: CESS-2026-001)"/>
+                        </group>
+                    </group>
+
+                    <div class="alert alert-info mt-2" role="alert">
+                        <i class="fa fa-info-circle"/>
+                        Laissez les dates vides pour inclure <strong>toutes les périodes</strong>.
+                        Laissez le fournisseur vide pour inclure <strong>tous les fournisseurs</strong>.
+                    </div>
+                </sheet>
+
+                <footer>
+                    <button
+                        name="action_imprimer"
+                        string="Télécharger le rapport PDF"
+                        type="object"
+                        class="btn-primary"
+                        data-hotkey="q"
+                    />
+                    <button
+                        string="Fermer"
+                        class="btn-secondary"
+                        special="cancel"
+                        data-hotkey="x"
+                    />
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action popup -->
+    <record id="action_rapport_retours_receptions_wizard" model="ir.actions.act_window">
+        <field name="name">Rapport Retours &amp; Réceptions</field>
+        <field name="res_model">rapport.retours.receptions.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Menu enfant sous Rapports -->
+    <menuitem
+        id="menu_rapport_retours_receptions"
+        name="Rapport Retours &amp; Réceptions"
+        parent="custom_stock.menu_sortie_entrant_rapports"
+        action="action_rapport_retours_receptions_wizard"
+        sequence="10"
+        groups="custom_pos.group_superviseur,custom_pos.group_assistant_magasin,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
+    />
+
+</odoo>

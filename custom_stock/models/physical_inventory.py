@@ -22,6 +22,7 @@ class PhysicalInventory(models.Model):
     team_inventory_id = fields.Many2one('team.inventory', string='Equipe', copy=True)
     inventory_mode = fields.Selection([
             ('normal', 'Inventaire'),
+            ('libre', 'Libre'),
             ('verification_carryover', 'Produits à vérifier')
         ], string='Mode d\'inventaire', default='normal', required=True)
     state = fields.Selection([
@@ -254,7 +255,8 @@ class PhysicalInventoryLine(models.Model):
     )
     location_id = fields.Many2one(
         'stock.location',
-        'Emplacement'
+        'Emplacement',
+        default=lambda self: self.env['stock.location'].search([('usage', '=', 'internal')], limit=1)
     )
     quantity = fields.Float('Stock')
     product_uom_id = fields.Many2one('uom.uom', "Unite", related="product_id.uom_id", readonly=True)
@@ -262,7 +264,7 @@ class PhysicalInventoryLine(models.Model):
     physical_qty = fields.Float('Qte compté', default=0)
     qty_diff = fields.Float('Difference', compute="compute_qty_dif")
     valorisation = fields.Float('Valorisation', compute="compute_qty_dif")
-    standard_price = fields.Float('Prix standard', related='product_tmpl_id.standard_price', readonly=True)
+    standard_price = fields.Float('Prix standard', related='product_tmpl_id.standard_price')
 
     inventory_physical_id = fields.Many2one('physical.inventory', string='Inventaire Physique', copy=True)
     code_category_id = fields.Many2one('code.category.inventory', string='Categorie Code Inventaire', copy=True)
@@ -275,7 +277,7 @@ class PhysicalInventoryLine(models.Model):
     lot_id = fields.Many2one('stock.lot', string='Numéro de Lot', domain="[('product_id', '=', product_id)]")
     company_id = fields.Many2one('res.company', string='Société', related='inventory_physical_id.company_id')
     code_article = fields.Char(string='Code Article', related='product_tmpl_id.code_article')
-
+                
     @api.onchange('physical_qty')
     def compute_qty_dif(self):
         for qt in self:

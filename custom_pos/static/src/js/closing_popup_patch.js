@@ -52,7 +52,12 @@ patch(ClosePosPopup.prototype, {
      */
     async openDetailsPopup() {
         const action = _t("Cash control - closing");
-        this.hardwareProxy.openCashbox(action);
+        // Appel direct sur printer pour contourner la garde iface_cashdrawer
+        if (this.hardwareProxy.printer) {
+            this.hardwareProxy.printer.openCashbox().catch((e) =>
+                console.warn("[CAISSE] openDetailsPopup openCashbox failed:", e)
+            );
+        }
         this.dialog.add(MoneyDetailsPopup, {
             moneyDetails: this.moneyDetails,
             action: action,

@@ -4,5 +4,6 @@ from . import (
     product_product,
     product_template,
     res_partner,
+    sale_order,
     sale_order_line,
 )

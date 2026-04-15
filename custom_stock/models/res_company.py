@@ -76,6 +76,7 @@ class ResCompany(models.Model):
           # domain="[('account_type', '=', 'asset_receivable'), ('company_id', '=', id)]",
           help="Compte 41110000 pour les clients DIVERS"
      )
+
      sage_x3_account_caisse_id = fields.Many2one(
           'account.account',
           string="Compte caisse",
@@ -86,10 +87,26 @@ class ResCompany(models.Model):
           string="Compte de l'ecart de caisse",
           help="Compte 77820000 pour les ecarts de caisses des magasins"
      )
+     sage_x3_account_sale_tva_18_id = fields.Many2one(
+          'account.account',
+          string="Compte TVA 18%",
+          help="Compte 44310000 pour les ventes TVA 18%"
+     )
+     sage_x3_account_sale_tva_9_id = fields.Many2one(
+          'account.account',
+          string="Compte TVA 9%",
+          help="Compte 44310000 pour les ventes TVA 9%"
+     )
      
      # Envoi automatique
      sage_x3_auto_send = fields.Boolean(
           string="Envoi auto à SAGE X3",
           default=False,
           help="Envoyer automatiquement les factures validées à SAGE X3"
+     )
+
+     partner_devers_id = fields.Many2one(
+          'res.partner',
+          string="Partenaire devers",
+          help="Compte tiers devers pour les paiements (ex: 41110000 DIVERS)"
      )

@@ -36,7 +36,13 @@
                         string="Mettre en attente SAGE X3" 
                         type="object"
                         class="oe_highlight"
-                        invisible="state not in ['draft', 'sent'] or sage_x3_validated == True or type_command != 'normal' or type_supplier != 'vridi'"/>
+                        invisible="state not in ['draft'] or sage_x3_validated == True or type_command != 'normal' or type_supplier != 'vridi'"/>
+
+                <button name="button_confirm_local"
+                        string="Confirmer"
+                        type="object"
+                        class="oe_highlight"
+                        invisible="not (state in ('draft', 'sent') and type_supplier == 'local')"/>
             </xpath>
 
             <xpath expr="//field[@name='partner_id']" position="after">
@@ -91,10 +97,10 @@
                 <attribute name="invisible">1</attribute>
             </xpath>
             <xpath expr="//button[@name='button_confirm'][1]" position="attributes">
-                <attribute name="invisible">type_supplier == 'vridi' or state not in ['draft', 'sent']</attribute>
+                <attribute name="invisible">1</attribute>
             </xpath>
             <xpath expr="//button[@name='button_confirm'][2]" position="attributes">
-                <attribute name="invisible">0</attribute>
+                <attribute name="invisible">1</attribute>
             </xpath>
             
         </field>

@@ -26,6 +26,71 @@ class ProductTemplateImport(models.Model):
     # POINTS D'ENTRÉE
     # =========================================================================
 
+    def normalize_taxes_all_companies(self):
+        _logger.info("🚀 Début normalisation des taxes multi-sociétés")
+
+        Tax = self.env['account.tax'].sudo()
+        Company = self.env['res.company'].sudo()
+        products = self.env['product.template'].with_context(active_test=False).search([])
+
+        total = len(products)
+        batch_size = 200
+
+        for i in range(0, total, batch_size):
+            batch = products[i:i + batch_size]
+
+            for product in batch:
+                try:
+                    taxes = product.taxes_id
+
+                    # 🚫 Aucun taxe → skip
+                    if not taxes:
+                        continue
+
+                    # 🎯 On prend la première taxe (hypothèse : une seule taxe principale)
+                    base_tax = taxes[0]
+                    amount = base_tax.amount
+
+                    if not amount:
+                        product.write({'taxes_id': [(6, 0, [])]})
+                        continue
+
+                    new_tax_ids = []
+
+                    # 🔁 Boucle sur toutes les sociétés
+                    for company in Company.search([]):
+                        tax = Tax.with_company(company).search([
+                            ('amount', '=', amount),
+                            ('amount_type', '=', 'percent'),
+                            ('type_tax_use', '=', 'sale'),
+                            ('company_id', '=', company.id),
+                        ], limit=1)
+
+                        # ➕ Création si n'existe pas
+                        if not tax:
+                            tax = Tax.with_company(company).create({
+                                'name': f"TVA {amount}%",
+                                'amount': amount,
+                                'amount_type': 'percent',
+                                'type_tax_use': 'sale',
+                                'company_id': company.id,
+                            })
+
+                        new_tax_ids.append(tax.id)
+
+                    # 🔥 Appliquer toutes les taxes (multi société clean)
+                    product.write({
+                        'taxes_id': [(6, 0, new_tax_ids)]
+                    })
+
+                except Exception as e:
+                    _logger.error("❌ Erreur produit %s : %s", product.default_code, str(e))
+
+            self.env.cr.commit()
+            _logger.info("💾 Batch %s / %s traité", i, total)
+
+        _logger.info("✅ Normalisation terminée")
+
     def import_products_job(self):
         self.action_import_products_external_source()
 
@@ -235,14 +300,25 @@ class ProductTemplateImport(models.Model):
     # =========================================================================
 
     def _extract_tax_amount(self, tax_code):
-        """Extrait le montant numérique depuis un code taxe SAGE X3."""
         if not tax_code:
             return 0.0
+
+        tax_code = str(tax_code).strip().upper()
+
         try:
+            if tax_code == "T18":
+                return 18.0
+            elif tax_code == "T09":
+                return 9.0
+            elif tax_code == "T00":
+                return 0.0
+
             return float(tax_code)
+
         except ValueError:
             pass
-        numbers = re.findall(r"\d+\.?\d*", str(tax_code))
+
+        numbers = re.findall(r"\d+\.?\d*", tax_code)
         return float(numbers[0]) if numbers else 0.0
 
     def _get_ht_price(self, price, tax):
@@ -298,13 +374,15 @@ class ProductTemplateImport(models.Model):
 
     def _get_taxes_id(self, tax_code):
         """
-        Crée la taxe dans TOUTES les sociétés (pour qu'elle existe partout),
-        mais n'assigne au produit QUE la taxe de la société courante.
-        Odoo 19 interdit d'assigner des taxes d'autres sociétés via Many2many.
+        Retourne les taxes à appliquer au produit.
+        - Si taxe = 0% => supprime toutes les taxes
+        - Sinon => applique la taxe correcte
         """
         amount = self._extract_tax_amount(tax_code)
-        if not amount:
-            return []
+
+        # ✅ CAS CRITIQUE : PAS DE TAXE
+        if not amount or amount == 0.0:
+            return [(6, 0, [])]  # 🔥 supprime toutes les taxes
 
         current_company = self.env.company
 
@@ -312,24 +390,25 @@ class ProductTemplateImport(models.Model):
         for company in self.env['res.company'].sudo().search([]):
             self._get_or_create_tax(f"TVA {amount}%", amount, company)
 
-        # N'assigner que la taxe de la société courante au produit
+        # Appliquer uniquement la taxe de la société courante
         current_tax = self._get_or_create_tax(f"TVA {amount}%", amount, current_company)
+
         return [(6, 0, [current_tax.id])]
 
     def _get_airsi_taxes_id(self, tax_code):
-        """TVA vente — Many2many société courante uniquement."""
         amount = self._extract_tax_amount(tax_code)
-        if not amount:
-            return []
+
+        # ✅ PAS DE TAXE
+        if not amount or amount == 0.0:
+            return [(6, 0, [])]
 
         current_company = self.env.company
 
-        # S'assurer que la taxe AIRSI existe dans toutes les sociétés
         for company in self.env['res.company'].sudo().search([]):
             self._get_or_create_tax(f"TVA AIRSI {amount}%", amount, company)
 
-        # N'assigner que la taxe de la société courante
         current_tax = self._get_or_create_tax(f"TVA AIRSI {amount}%", amount, current_company)
+
         return [(6, 0, [current_tax.id])]
     
 
@@ -395,6 +474,7 @@ class ProductTemplateImport(models.Model):
             "prod_family_x3_id": self._get_prod_family_id(item.get("tsicoD_0")),
             "prod_type_x3_id":   self._get_prod_type_id(item.get("yG5TYPE_0")),
             "prod_status_x3_id": self._get_prod_status_id(item.get("yG5STAT_0")),
+            "actif_x3":          self._safe_string(item.get("itmstA_0")),
             "type":              "consu",
             "active":            True,
             "sale_ok":           True,
@@ -412,6 +492,31 @@ class ProductTemplateImport(models.Model):
     # =========================================================================
     # GESTION DES FOURNISSEURS
     # =========================================================================
+
+    def _update_product_barcode(self, product, item):
+        """Met à jour le code-barres du produit en s'assurant de sa validité et unicité."""
+        barcode = self._safe_string(item.get("yG5BC_0"))
+        if not barcode or barcode in {"0", "00", "000", "0000", "00000"}:
+            return False
+        try:
+            multi_code = self.env['product.multiple.barcodes']
+            codes = multi_code.search([
+                '|', 
+                ('product_id', '=', product.product_variant_id.id), 
+                ('product_multi_barcode', '=', barcode)]).ids
+            if codes:
+                return 0
+
+            multi_code.create({
+                'product_multi_barcode': barcode,
+                'product_id': product.id,
+                'product_tmpl_id': product.product_variant_id.id
+            })
+            _logger.info("🏭  %s : %s",
+                         product.default_code, codes.name)
+            return 1
+        except UserError:
+            return False
 
     def _update_product_suppliers(self, product, item):
         """Crée ou met à jour la ligne fournisseur d'un produit. Retourne le nombre de lignes ajoutées."""
@@ -444,7 +549,14 @@ class ProductTemplateImport(models.Model):
             ], limit=1)
 
             if existing:
-                return 0
+                existing.write({
+                    'min_qty':         1.0,
+                    'primary':         True,
+                })
+                
+                _logger.info("🏭 Fournisseur mis à jour au produit %s : %s",
+                             product.default_code, supplier.name)
+                return 1
 
             SupplierInfo.create({
                 'partner_id':      supplier.id,
@@ -485,6 +597,7 @@ class ProductTemplateImport(models.Model):
 
         product.write({
             "list_price":       self._get_ht_price(item.get("ypV_SAN_0"), tax_code),
+            "taxes_id":         self._get_taxes_id(tax_code),
             "price_unit_ttc":   self._safe_float(item.get("ypV_SAN_0")),
             "price_catalog":    self._safe_float(item.get("basprI_0")),
             "price_carton":     self._safe_float(item.get("ypxcA_0")),
@@ -500,6 +613,7 @@ class ProductTemplateImport(models.Model):
             "is_bassam":        self._verify_boolean(item.get("yafbsM_0")),
             "is_koumassi":      self._verify_boolean(item.get("yafkouM_0")),
             "allowed_company_ids": self._get_allowed_company_ids(item),
+            "actif_x3":          self._safe_string(item.get("itmstA_0")),
             "supplier_taxes_id": False,
         })
 
@@ -508,7 +622,10 @@ class ProductTemplateImport(models.Model):
             if not price_ttc or price_ttc <= 0:
                 continue
 
-            price_ht = round(self._get_ht_price(price_ttc, tax_code) * multiplier, 2)
+            if api_field == "basprI_0":
+                price_ht = round(price_ttc * multiplier, 2)
+            else:
+                price_ht = round(self._get_ht_price(price_ttc, tax_code) * multiplier, 2)
 
             try:
                 pricelist = self.env.ref(xml_id, raise_if_not_found=False)

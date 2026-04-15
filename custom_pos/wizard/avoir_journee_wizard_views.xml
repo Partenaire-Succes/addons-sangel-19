@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <record id="view_avoir_journee_wizard_form" model="ir.ui.view">
+        <field name="name">avoir.journee.wizard.form</field>
+        <field name="model">avoir.journee.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Rapport de mode paiement">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>Rapport de mode paiement</h1>
+                        <h3 class="text-muted">Groupé par catégorie client</h3>
+                    </div>
+
+                    <group>
+                        <group string="Période">
+                            <field name="date_debut" required="1"/>
+                            <field name="date_fin"   required="1"/>
+                        </group>
+                        <group string="Filtre catégories (optionnel)">
+                            <field name="category_ids"
+                                   widget="many2many_tags"
+                                   options="{'no_create': True}"
+                                   placeholder="Toutes les catégories"/>
+                        </group>
+                        <group string="Filtre mode de paiement (optionnel)">
+                            <field name="mode_payment"
+                                   widget="many2one"
+                                   options="{'no_create': True}"
+                                   placeholder="Tous les modes de paiement"/>
+                        </group>
+                    </group>
+
+                    <div class="alert alert-info mt-2" role="alert" style="font-size:85%;">
+                        <i class="fa fa-info-circle"/>
+                        Seules les commandes POS avec au moins un paiement en
+                        <strong>Mode paiement</strong> sont incluses.
+                        Laissez les catégories vides pour inclure <strong>toutes les familles client</strong>.
+                    </div>
+                </sheet>
+
+                <footer>
+                    <button name="action_imprimer"
+                            string="Télécharger le rapport PDF"
+                            type="object"
+                            class="btn-primary"
+                            data-hotkey="q"/>
+                    <button string="Fermer"
+                            class="btn-secondary"
+                            special="cancel"
+                            data-hotkey="x"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_avoir_journee_wizard" model="ir.actions.act_window">
+        <field name="name">Rapport de mode paiement</field>
+        <field name="res_model">avoir.journee.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem
+        id="menu_avoir_journee"
+        name="Rapport de mode paiement"
+        parent="point_of_sale.menu_point_of_sale"
+        action="action_avoir_journee_wizard"
+        sequence="50"
+        groups="custom_pos.group_superviseur,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
+    />
+
+</odoo>

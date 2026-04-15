@@ -12,7 +12,22 @@
         <field name="arch" type="xml">
             
             <!-- Onglet SAGE X3 -->
-            
+            <xpath expr="//sheet" position="before">
+                <div class="alert alert-success" 
+                        invisible="not sage_x3_sent"
+                        style="margin: 10px;">
+                    <strong>✅ Facture envoyée à SAGE X3</strong>
+                    <p>N° Pièce: <field name="sage_x3_piece_number" readonly="1" nolabel="1"/></p>
+                </div>
+                
+                <div class="alert alert-danger" 
+                        invisible="not sage_x3_error"
+                        style="margin: 10px;">
+                    <strong>❌ Erreur SAGE X3</strong>
+                    <p><field name="sage_x3_error" readonly="1" nolabel="1"/></p>
+                </div>
+            </xpath>
+
             <xpath expr="//field[@name='ref']" position="after">
                 <field name="sage_sent" invisible="0"/>
             </xpath>
@@ -36,24 +51,7 @@
                                    widget="text"/>
                         </group>
                     </group>
-                    
                 </page>
-            </xpath>
-
-            <xpath expr="//sheet" position="before">
-                <div class="alert alert-success" 
-                        invisible="not sage_x3_sent"
-                        style="margin: 10px;">
-                    <strong>✅ Facture envoyée à SAGE X3</strong>
-                    <p>N° Pièce: <field name="sage_x3_piece_number" readonly="1" nolabel="1"/></p>
-                </div>
-                
-                <div class="alert alert-danger" 
-                        invisible="not sage_x3_error"
-                        style="margin: 10px;">
-                    <strong>❌ Erreur SAGE X3</strong>
-                    <p><field name="sage_x3_error" readonly="1" nolabel="1"/></p>
-                </div>
             </xpath>
             
         </field>

@@ -40,24 +40,48 @@ class CadencierWizard(models.TransientModel):
         company = self.env['res.company'].browse(company_id)
         date_from = date(int(year), 1, 1)
         date_to = date(int(year), 12, 31)
+        product_data = defaultdict(lambda: defaultdict(float))
+
+        products = self.env['product.template'].search([
+            ('allowed_company_ids', 'in', company_id),
+            ('type', '=', 'consu'),
+            ('active', '=', True),
+        ])
+
+        final_products = self.env['product.template']
+
+        for p in products:
+            if p.current_company_status_id and p.current_company_status_id.code == 'C':
+                final_products |= p
+            else:
+                if any(v.qty_available > 0 for v in p.product_variant_ids):
+                    final_products |= p
+
+        # ✅ Initialiser avec les IDs de variantes, pas du template
+        for p in final_products:
+            for variant in p.product_variant_ids:
+                product_data[variant.id]  # clé cohérente avec les lignes de vente
 
         sale_domain = [
             ('order_id.state', 'in', ['sale', 'done']),
             ('order_id.company_id', '=', company_id),
+            ('product_id.type', '=', 'consu'),
             ('order_id.date_order', '>=', str(date_from)),
             ('order_id.date_order', '<=', str(date_to)),
+            ('product_id.active', '=', True),  # S'assurer que le produit est actif
         ]
         sale_lines = self.env['sale.order.line'].search(sale_domain)
 
         pos_domain = [
             ('order_id.state', 'in', ['done', 'paid', 'invoiced']),
             ('order_id.company_id', '=', company_id),
+            ('product_id.type', '=', 'consu'),
             ('order_id.date_order', '>=', str(date_from)),
             ('order_id.date_order', '<=', str(date_to)),
+            ('product_id.active', '=', True),  # S'assurer que le produit est actif
         ]
         pos_lines = self.env['pos.order.line'].search(pos_domain)
 
-        product_data = defaultdict(lambda: defaultdict(float))
 
         for line in sale_lines:
             month_idx = line.order_id.date_order.month - 1
@@ -79,7 +103,7 @@ class CadencierWizard(models.TransientModel):
             )
 
         result = []
-        for product in products.sorted(key=lambda p: ((p.categ_id.name or '').lower(), (p.default_code or '').lower())):
+        for product in products.sorted(key=lambda p: ((p.categ_id.code or '').lower(), (p.default_code or '').lower())):
             monthly_qtys = product_data[product.id]
             ventes = [round(monthly_qtys.get(i, 0), 2) for i in range(12)]
             total = sum(ventes)
@@ -102,6 +126,17 @@ class CadencierWizard(models.TransientModel):
             # ✅ Taux de marge cumulé = (CA - Coût) / CA * 100
             taux_marge = round((total_ca - total_cost) / total_ca * 100, 2) if total_ca > 0 else 0.0
 
+            # ✅ Prix TTC calculé à partir du prix de vente et des taxes du produit
+            taxes = product.taxes_id.compute_all(
+                product.list_price,
+                currency=product.currency_id,
+                quantity=1,
+                product=product,
+                partner=None,
+            )
+
+            price_ttc = taxes['total_included']
+
             result.append({
                 'code': product.default_code or '',
                 'designation': product.name,
@@ -112,12 +147,50 @@ class CadencierWizard(models.TransientModel):
                 'famille': product.categ_id.name,
                 'code_famille': product.categ_id.code,
                 'st_disp': round(stock, 2),
-                'pvtc': product.list_price,
+                'pvtc': price_ttc,
                 'ventes': ventes,
                 'total': total,
             })
 
-        return result
+        # return result
+        final_result = []
+        current_famille_code = None
+        famille_ventes = [0.0] * 12
+        famille_total = 0.0
+        famille_label = ''
+
+        for item in result:
+            item['is_subtotal'] = False
+            if current_famille_code is not None and item['code_famille'] != current_famille_code:
+                # Ligne sous-total de la famille précédente
+                final_result.append({
+                    'is_subtotal': True,
+                    'famille': famille_label,
+                    'code_famille': current_famille_code,
+                    'ventes': [round(v, 2) for v in famille_ventes],
+                    'total': round(famille_total, 2),
+                })
+                famille_ventes = [0.0] * 12
+                famille_total = 0.0
+
+            current_famille_code = item['code_famille']
+            famille_label = item['famille']
+            final_result.append(item)
+            for i in range(12):
+                famille_ventes[i] += item['ventes'][i]
+            famille_total += item['total']
+
+        # Sous-total de la dernière famille
+        if current_famille_code is not None:
+            final_result.append({
+                'is_subtotal': True,
+                'famille': famille_label,
+                'code_famille': current_famille_code,
+                'ventes': [round(v, 2) for v in famille_ventes],
+                'total': round(famille_total, 2),
+            })
+
+        return final_result
 
 
 class ReportCadencierVentes(models.AbstractModel):

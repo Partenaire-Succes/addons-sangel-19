@@ -30,6 +30,19 @@ class ReportDailySalesWizard(models.TransientModel):
         default=lambda self: self.env.company
     )
 
+    company_ids = fields.Many2many(
+        'res.company',
+        string='Magasins',
+        required=True,
+        default=lambda self: self.env.company
+    )
+
+    pricelist_id = fields.Many2one(
+        'product.pricelist',
+        string='Liste de prix',
+        help="Liste de prix utilisée pour calculer les remises"
+    )
+
     def action_print_report(self):
         return self.env.ref('custom_reports.action_report_daily_sales').report_action(self)
 
@@ -51,33 +64,61 @@ class ReportDailySalesWizard(models.TransientModel):
         while current_date <= self.date_to:
             jour = current_date.strftime('%a').capitalize()  # ex: 'Lun', 'Mar', 'Mer'
             next_day = current_date + delta
+            refund_ht = refund_ttc = 0.0
+
+            refunds = self.env['account.move'].search([
+                    ('invoice_date', '>=', fields.Date.to_date(current_date)),
+                    ('invoice_date', '<', fields.Date.to_date(next_day)),
+                    ('move_type', '=', 'out_refund'),
+                    ('pos_order_ids', '=', False),  # Exclure les remboursements liés à des commandes POS
+                    ('state', '=', 'posted'),
+                    ('company_id', 'in', self.company_ids.ids),
+                ])
+            if refunds:
+                # Si des remboursements existent, on les exclut du calcul du CA
+                refund_ht = sum(refunds.mapped('amount_untaxed'))
+                refund_ttc = sum(refunds.mapped('amount_total'))
 
             if self.report_type == 'sale':
-                orders = self.env['sale.order'].search([
-                    ('date_order', '>=', fields.Datetime.to_datetime(current_date)),
-                    ('date_order', '<', fields.Datetime.to_datetime(next_day)),
-                    ('state', 'in', ['sale', 'done']),
-                    ('company_id', '=', self.company_id.id),
-                ])
-                order_lines = self.env['sale.order.line'].search([
-                    ('order_id', 'in', orders.ids),
-                    ('state', '!=', 'cancel')
+                # orders = self.env['sale.order'].search([
+                #     ('date_order', '>=', fields.Datetime.to_datetime(current_date)),
+                #     ('date_order', '<', fields.Datetime.to_datetime(next_day)),
+                #     ('state', 'in', ['sale', 'done']),
+                #     ('invoice_ids.move_type', '=', 'out_invoice'),
+                #     ('invoice_ids.state', '=', 'posted'),
+                #     ('company_id', '=', self.company_id.id),
+                # ])
+                moves = self.env['account.move'].search([
+                    ('invoice_date', '>=', fields.Date.to_date(current_date)),
+                    ('invoice_date', '<', fields.Date.to_date(next_day)),
+                    ('move_type', '=', 'out_invoice'),
+                    ('state', '=', 'posted'),
+                    ('pos_order_ids', '=', False),  # Exclure les factures liées à des commandes POS
+                    ('company_id', 'in', self.company_ids.ids),
                 ])
 
-                ca_ht = sum(order.amount_untaxed for order in orders)
-                ca_ttc = sum(order.amount_total for order in orders)
+                # order_lines = self.env['sale.order.line'].search([
+                #     ('order_id', 'in', orders.ids),
+                #     ('state', '!=', 'cancel')
+                # ])
+                order_lines = self.env['account.move.line'].search([
+                    ('move_id', 'in', moves.ids)
+                ])
+
+                ca_ht = sum(order.amount_untaxed for order in orders) - refund_ht
+                ca_ttc = sum(order.amount_total for order in orders) - refund_ttc
                 cout_total = sum(
-                    line.product_uom_qty * line.product_id.standard_price
+                    line.quantity * line.product_id.standard_price
                     for line in order_lines
                 )
                 marge = ca_ht - cout_total
                 remises = 0.0
                 remise_line = sum(
-                    l.price_unit * l.product_uom_qty * (l.discount or 0.0) / 100.0
+                    l.price_unit * l.quantity * (l.discount or 0.0) / 100.0
                     for l in order_lines
                 )
                 remise_global = sum(
-                    l.price_unit * l.product_uom_qty
+                    l.price_unit * l.quantity
                     for l in order_lines
                     if l.price_unit < 0
                 )
@@ -85,7 +126,7 @@ class ReportDailySalesWizard(models.TransientModel):
                 nb_clients = len(orders)
                 # FIX 4 : champ correct pour panier_qte
                 total_qte = sum(
-                    line.product_uom_qty
+                    line.quantity
                     for line in order_lines
                     if line.price_unit >= 0
                 )
@@ -95,7 +136,7 @@ class ReportDailySalesWizard(models.TransientModel):
                     ('date_order', '>=', fields.Datetime.to_datetime(current_date)),
                     ('date_order', '<', fields.Datetime.to_datetime(next_day)),
                     ('state', 'in', ['paid', 'invoiced', 'done']),
-                    ('company_id', '=', self.company_id.id),
+                    ('company_id', 'in', self.company_ids.ids),
                 ])
                 order_lines = self.env['pos.order.line'].search([
                     ('order_id', 'in', orders.ids)
@@ -106,8 +147,8 @@ class ReportDailySalesWizard(models.TransientModel):
                     order.amount_total if order.amount_tax == 0
                     else (order.amount_total - order.amount_tax)
                     for order in orders
-                )
-                ca_ttc = sum(order.amount_total for order in orders)
+                ) - refund_ht
+                ca_ttc = sum(order.amount_total for order in orders) - refund_ttc
                 cout_total = sum(
                     line.qty * line.product_id.standard_price
                     for line in order_lines
@@ -133,36 +174,51 @@ class ReportDailySalesWizard(models.TransientModel):
 
             else:  # 'all' : ventes + POS combinés
                 # --- Ventes ---
-                sale_orders = self.env['sale.order'].search([
-                    ('date_order', '>=', fields.Datetime.to_datetime(current_date)),
-                    ('date_order', '<', fields.Datetime.to_datetime(next_day)),
-                    ('state', 'in', ['sale', 'done']),
-                    ('company_id', '=', self.company_id.id),
+                # sale_orders = self.env['sale.order'].search([
+                #     ('date_order', '>=', fields.Datetime.to_datetime(current_date)),
+                #     ('date_order', '<', fields.Datetime.to_datetime(next_day)),
+                #     ('state', 'in', ['sale', 'done']),
+                #     ('company_id', '=', self.company_id.id),
+                # ])
+                # sale_order_lines = self.env['sale.order.line'].search([
+                #     ('order_id', 'in', sale_orders.ids),
+                #     ('state', '!=', 'cancel')
+                # ])
+
+                sale_moves = self.env['account.move'].search([
+                    ('invoice_date', '>=', fields.Date.to_date(current_date)),
+                    ('invoice_date', '<', fields.Date.to_date(next_day)),
+                    ('move_type', '=', 'out_invoice'),
+                    ('state', '=', 'posted'),
+                    ('pos_order_ids', '=', False),  # Exclure les factures liées à des commandes POS
+                    ('company_id', 'in', self.company_ids.ids),
                 ])
-                sale_order_lines = self.env['sale.order.line'].search([
-                    ('order_id', 'in', sale_orders.ids),
-                    ('state', '!=', 'cancel')
+
+                sale_order_lines = self.env['account.move.line'].search([
+                    ('move_id', 'in', sale_moves.ids),
                 ])
-                sale_ca_ht = sum(order.amount_untaxed for order in sale_orders)
-                sale_ca_ttc = sum(order.amount_total for order in sale_orders)
+
+
+                sale_ca_ht = sum(order.amount_untaxed for order in sale_moves)
+                sale_ca_ttc = sum(order.amount_total for order in sale_moves)
                 sale_cout_total = sum(
-                    line.product_uom_qty * line.product_id.standard_price
+                    line.quantity * line.product_id.standard_price
                     for line in sale_order_lines
                 )
                 sale_marge = sale_ca_ht - sale_cout_total
                 sale_remises = 0.0
                 sale_remise_line = sum(
-                    l.price_unit * l.product_uom_qty * (l.discount or 0.0) / 100.0
+                    l.price_unit * l.quantity * (l.discount or 0.0) / 100.0
                     for l in sale_order_lines
                 )
                 sale_remise_global = sum(
-                    l.price_unit * l.product_uom_qty
+                    l.price_unit * l.quantity
                     for l in sale_order_lines
                     if l.price_unit < 0
                 )
                 sale_remises = sale_remise_line - sale_remise_global
                 sale_qte = sum(
-                    line.product_uom_qty
+                    line.quantity
                     for line in sale_order_lines
                     if line.price_unit >= 0
                 )
@@ -172,7 +228,7 @@ class ReportDailySalesWizard(models.TransientModel):
                     ('date_order', '>=', fields.Datetime.to_datetime(current_date)),
                     ('date_order', '<', fields.Datetime.to_datetime(next_day)),
                     ('state', 'in', ['paid', 'invoiced', 'done']),
-                    ('company_id', '=', self.company_id.id),
+                    ('company_id', 'in', self.company_ids.ids),
                 ])
                 pos_order_lines = self.env['pos.order.line'].search([
                     ('order_id', 'in', pos_orders.ids)
@@ -207,11 +263,11 @@ class ReportDailySalesWizard(models.TransientModel):
                 )
 
                 # FIX 1 : ca_ht défini dans le bloc else
-                ca_ht = sale_ca_ht + pos_ca_ht
-                ca_ttc = sale_ca_ttc + pos_ca_ttc
+                ca_ht = sale_ca_ht + pos_ca_ht - refund_ht
+                ca_ttc = sale_ca_ttc + pos_ca_ttc - refund_ttc
                 marge = sale_marge + pos_marge
                 remises = sale_remises + pos_remises
-                nb_clients = len(sale_orders) + len(pos_orders)
+                nb_clients = len(sale_moves) + len(pos_orders)
                 # FIX 2 : total_qte calculé sans .mapped() sur une liste
                 total_qte = sale_qte + pos_qte
 
@@ -223,7 +279,7 @@ class ReportDailySalesWizard(models.TransientModel):
             # Budget journalier : lignes dont le parent est en cours ou terminé
             budget_lines = self.env['daily.budget.analytic.line'].search([
                 ('daily_budget_id.state', 'in', ['in_progress', 'done']),
-                ('daily_budget_id.company_id', '=', self.company_id.id),
+                ('daily_budget_id.company_id', 'in', self.company_ids.ids),
                 ('date_from', '>=', fields.Datetime.to_datetime(current_date)),
                 ('date_from', '<', fields.Datetime.to_datetime(next_day)),
             ])

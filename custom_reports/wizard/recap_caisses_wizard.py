@@ -33,10 +33,10 @@ class RecapCaissesWizard(models.TransientModel):
         help="Laisser vide pour inclure tous les postes de la société",
     )
     caissier_ids = fields.Many2many(
-        'hr.employee',
-        'recap_caisses_wizard_employee_rel',
+        'res.users',
+        'recap_caisses_wizard_user_rel',
         'wizard_id',
-        'employee_id',
+        'user_id',
         string='Caissiers',
         help="Auto-rempli selon la période et les postes sélectionnés",
     )
@@ -55,12 +55,12 @@ class RecapCaissesWizard(models.TransientModel):
             ('date_order', '<=', self._dt_to()),
             ('state', 'in', ['paid', 'invoiced', 'done']),
             ('company_id', '=', self.company_id.id),
-            ('employee_id', '!=', False),
+            ('user_id', '!=', False),
         ]
         if self.config_ids:
             domain.append(('config_id', 'in', self.config_ids.ids))
         orders = self.env['pos.order'].search(domain)
-        employees = orders.mapped('employee_id')
+        employees = orders.mapped('user_id')
         self.caissier_ids = [(6, 0, employees.ids)]
 
     def action_print_report(self):

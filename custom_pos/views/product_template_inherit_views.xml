@@ -8,10 +8,21 @@
             <field name="inherit_id" ref="product.product_template_only_form_view"/>
             <field name="arch" type="xml">
 
-                <field name="categ_id" position="after">
+                <!-- <field name="categ_id" position="after">
                     <field name="is_promo_3x4"/>
                     <field name="is_promo" string="Animation 3+1"/>
-                </field>
+                </field> -->
+
+                <!-- Bouton de suppression des listes de prix dans l'onglet Prices -->
+                <xpath expr="//page[@name='sales_price']/field[@name='pricelist_rule_ids']" position="before">
+                    <button name="action_delete_pricelist_rules"
+                            type="object"
+                            invisible="1"
+                            string="Supprimer toutes les listes de prix"
+                            class="btn-danger"
+                            confirm="Êtes-vous sûr de vouloir supprimer toutes les listes de prix attachées à ce produit ?"
+                            />
+                </xpath>
             </field>
         </record>
 

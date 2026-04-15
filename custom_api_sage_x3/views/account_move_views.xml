@@ -17,9 +17,10 @@
                         type="object"
                         string="Envoyer à SAGE X3"
                         class="btn-primary"
-                        invisible="move_type != 'out_invoice' or state != 'posted' or sage_x3_sent"
+                        invisible="1"
                         groups="account.group_account_manager"
                         help="Envoie la facture à SAGE X3"/>
+                <!-- invisible="move_type != 'out_invoice' or state != 'posted' or sage_x3_sent" -->
             </xpath>
             
         </field>

@@ -39,6 +39,8 @@ class PurchaseOrderSageX3(models.Model):
             ('state',             'in', ['sent']),
             ('sage_x3_submitted', '=',  False),
             ('sage_x3_validated', '=',  False),
+            ('type_command',      '!=', 'urgent'),
+            ('type_supplier',     '!=', 'local'),
         ])
 
         if not pending_orders:
@@ -200,7 +202,7 @@ class PurchaseOrderSageX3(models.Model):
             "commandes": [{
                 "siteVente":               "VRIDI",
                 "DateCommande":            (self.date_order or datetime.now()).isoformat(),
-                "Client":                  self.company_id.code_company or "01",
+                "Client":                  self.company_id.lib_company or "YOP01",
                 "Devise":                  self.currency_id.name or "XOF",
                 "Magasin":                 self.company_id.name or "PRINCIPAL",
                 "ReferenceCommandeClient": self.name,
@@ -212,83 +214,6 @@ class PurchaseOrderSageX3(models.Model):
     # IMPORT DES LIVRAISONS DEPUIS SAGE X3
     # =========================================================================
 
-    def action_import_deliveries(self):
-        """
-        Lance l'import des livraisons.
-        Utilise queue_job si disponible, sinon threading en fallback.
-        """
-        model        = self.env['purchase.order']
-        has_queue_job = 'queue.job' in self.env
-
-        if has_queue_job:
-            try:
-                existing_jobs = self.env['queue.job'].search([
-                    ('name',  'ilike', 'Import livraisons SAGE X3'),
-                    ('state', 'in',    ['pending', 'enqueued', 'started']),
-                ])
-                if existing_jobs:
-                    return {
-                        'type': 'ir.actions.client',
-                        'tag': 'display_notification',
-                        'params': {
-                            'title': '⚠️ Import en cours',
-                            'message': "Un import est déjà en cours d'exécution",
-                            'type': 'warning',
-                        },
-                    }
-
-                model.with_delay(
-                    description="Import livraisons SAGE X3",
-                    priority=10,
-                    max_retries=2,
-                    eta=datetime.now() + timedelta(seconds=5),
-                )._job_import_deliveries()
-
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'title':   '🚀 Import planifié',
-                        'message': "L'import démarrera dans 5 secondes. Consultez Paramètres > Queue Jobs.",
-                        'type':    'info',
-                    },
-                }
-            except Exception as e:
-                _logger.error("❌ Erreur queue_job: %s — fallback threading", str(e))
-                has_queue_job = False
-
-        if not has_queue_job:
-            _logger.info("📌 queue_job non disponible, utilisation du threading")
-            thread = threading.Thread(
-                target=self._threaded_import_deliveries,
-                args=(self.env.cr.dbname, self.env.uid, self.env.context),
-                daemon=True,
-            )
-            thread.start()
-
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title':   '🚀 Import lancé',
-                    'message': "L'import des livraisons est en cours en arrière-plan.",
-                    'type':    'info',
-                },
-            }
-
-    @classmethod
-    def _threaded_import_deliveries(cls, dbname, uid, context):
-        """Exécuté dans un thread séparé (fallback sans queue_job)."""
-        try:
-            import odoo
-            with odoo.api.Environment.manage():
-                registry = odoo.registry(dbname)
-                with registry.cursor() as cr:
-                    env = odoo.api.Environment(cr, uid, context or {})
-                    env['purchase.order']._job_import_deliveries()
-                    cr.commit()
-        except Exception as e:
-            _logger.exception("❌ [THREAD] Erreur import : %s", str(e))
 
     def action_import_all_receive_external_source(self):
         """Mise à jour en masse des commandes avec leurs livraisons SAGE X3."""
@@ -326,7 +251,25 @@ class PurchaseOrderSageX3(models.Model):
                 errors.append(f"{purchase.name}: {str(e)}")
 
         self.env.cr.commit()
-        return {'success': success_count, 'errors': error_count, 'error_details': errors}
+        message = (
+            f"Traitement terminé sur {len(purchases)} commande(s)\n\n"
+            f"✅ Succès : {success_count}\n"
+            f"❌ Erreurs : {error_count}"
+        )
+
+        if errors:
+            message += "\n\nDétails :\n" + "\n".join(errors[:10])  # limite à 10
+
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Import livraisons SAGE X3',
+                'message': message,
+                'type': 'success' if error_count == 0 else 'warning',
+                'sticky': True,
+            }
+        }
 
     # =========================================================================
     # JOB PRINCIPAL D'IMPORT
@@ -386,7 +329,7 @@ class PurchaseOrderSageX3(models.Model):
                 deliveries_filtered, order_cache, product_cache, current_company.id
             )
 
-            self._update_last_import_date(current_company.id)
+            # self._update_last_import_date(current_company.id)
 
             duration = (datetime.now() - start_time).total_seconds()
             self._notify_import_completion(stats, duration, current_company.name)
@@ -559,6 +502,7 @@ class PurchaseOrderSageX3(models.Model):
                     continue
 
                 ref = str(delivery.get("referenceCommandeClient", "")).strip()
+                ref_sage = str(delivery.get("numeroCommande", "")).strip()
                 if not ref:
                     stats['skipped'] += 1
                     continue
@@ -570,14 +514,14 @@ class PurchaseOrderSageX3(models.Model):
 
                 order        = self.browse(order_id)
                 lines_count  = self._update_order_lines_optimized(
-                    order, delivery.get("items", []), product_cache
+                    order, delivery.get("items", []), product_cache, ref_sage
                 )
                 stats['lines'] += lines_count
 
                 order.write({
                     'sage_x3_delivery_received': True,
                     'sage_x3_delivery_date':     fields.Datetime.now(),
-                    'partner_ref':               str(delivery.get("numeroCommande", "")).strip(),
+                    'partner_ref':               ref_sage,
                 })
                 stats['updated'] += 1
 
@@ -587,7 +531,7 @@ class PurchaseOrderSageX3(models.Model):
 
         return stats
 
-    def _update_order_lines_optimized(self, order, items, product_cache):
+    def _update_order_lines_optimized(self, order, items, product_cache, ref_sage):
         """Met à jour les lignes de commande (prix et quantités) depuis les items SAGE X3."""
         if not items:
             return 0
@@ -624,12 +568,12 @@ class PurchaseOrderSageX3(models.Model):
             if 'price_unit' in values:
                 line.write({'price_unit': values['price_unit']})
             if 'quantity' in values:
-                self._update_quantity_received_picking(line, values['quantity'])
+                self._update_quantity_received_picking(line, values['quantity'], ref_sage)
             lines_updated += 1
 
         return lines_updated
 
-    def _update_quantity_received_picking(self, order_line, quantity):
+    def _update_quantity_received_picking(self, order_line, quantity, ref_sage):
         """Met à jour la quantité dans le picking lié à la ligne de commande."""
         picking = order_line.order_id.picking_ids.filtered(
             lambda p: p.state not in ('done', 'cancel')
@@ -638,6 +582,10 @@ class PurchaseOrderSageX3(models.Model):
             return 0
 
         picking = picking[0]
+        picking.write({
+            'ref_sage': ref_sage,
+            'date_sage': fields.Datetime.now(),
+        })
         move    = picking.move_ids.filtered(
             lambda m: m.product_id.id == order_line.product_id.id
                       and m.state not in ('done', 'cancel')
@@ -668,11 +616,11 @@ class PurchaseOrderSageX3(models.Model):
     def _get_last_import_date(self, company_id):
         config = self.env['ir.config_parameter'].sudo()
         value  = config.get_param(f'sage_x3.last_import_date.company_{company_id}')
-        if value:
-            try:
-                return datetime.fromisoformat(value)
-            except (ValueError, TypeError):
-                pass
+        # if value:
+        #     try:
+        #         return datetime.fromisoformat(value)
+        #     except (ValueError, TypeError):
+        #         pass
         return datetime.now() - timedelta(days=7)
 
     def _update_last_import_date(self, company_id):

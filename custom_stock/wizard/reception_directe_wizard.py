@@ -27,6 +27,11 @@ class ReceptionDirecteWizard(models.TransientModel):
         required=True,
         default=lambda self: self._default_location_dest(),
     )
+    ref_sage = fields.Char(
+        string='Réf. Cession / Sage',
+        help="Référence unique de cette réception dans Sage X3 (cession, BL…). "
+             "Utilisée pour retrouver et filtrer cette réception dans les rapports.",
+    )
     notes = fields.Char(string='Référence / Notes')
 
     line_ids = fields.One2many(
@@ -34,6 +39,17 @@ class ReceptionDirecteWizard(models.TransientModel):
         'wizard_id',
         string='Produits',
     )
+    montant_total = fields.Float(
+        string='Montant total',
+        digits='Product Price',
+        compute='_compute_montant_total',
+        store=False,
+    )
+
+    @api.depends('line_ids.montant_ligne')
+    def _compute_montant_total(self):
+        for wizard in self:
+            wizard.montant_total = sum(wizard.line_ids.mapped('montant_ligne'))
 
     def _default_location_dest(self):
         wh = self.env['stock.warehouse'].search(
@@ -46,6 +62,16 @@ class ReceptionDirecteWizard(models.TransientModel):
 
         if not self.line_ids:
             raise UserError(_("Ajoutez au moins un produit à réceptionner."))
+
+        # Bloquer les doublons produit (risque de valorisation incorrecte après _merge_moves)
+        seen = set()
+        for line in self.line_ids:
+            if line.product_id.id in seen:
+                raise UserError(_(
+                    "Le produit « %s » apparaît plusieurs fois.\n"
+                    "Regroupez les quantités sur une seule ligne."
+                ) % line.product_id.display_name)
+            seen.add(line.product_id.id)
 
         # Type de réception incoming
         picking_type = self.env['stock.picking.type'].search([
@@ -73,18 +99,20 @@ class ReceptionDirecteWizard(models.TransientModel):
             'scheduled_date': self.scheduled_date,
             'origin': 'Réception Directe',
             'note': self.notes or '',
+            'ref_sage': self.ref_sage or '',
         })
 
         # Création des mouvements
-        line_move_map = {}
+        # On construit aussi une map qty par produit pour retrouver les quantités
+        # après action_confirm() qui peut fusionner des moves (via _merge_moves)
+        qty_by_product = {}
         for line in self.line_ids:
-            # Si nouveau_prix renseigné, c'est ce coût qui est gravé sur le mouvement
             prix_mouvement = (
                 line.nouveau_prix
                 if line.nouveau_prix and line.nouveau_prix > 0
                 else line.price_unit
             )
-            move = self.env['stock.move'].create({
+            self.env['stock.move'].create({
                 'picking_id': picking.id,
                 'product_id': line.product_id.id,
                 'product_uom_qty': line.qty,
@@ -94,30 +122,44 @@ class ReceptionDirecteWizard(models.TransientModel):
                 'price_unit': prix_mouvement,
                 'description_picking': line.product_id.display_name,
             })
-            line_move_map[line.id] = move
+            pid = line.product_id.id
+            qty_by_product[pid] = qty_by_product.get(pid, 0.0) + line.qty
 
+        # action_confirm() peut appeler _merge_moves() et supprimer certains moves
+        # créés ci-dessus → ne JAMAIS garder de référence aux moves créés au-delà de ce point
         picking.action_confirm()
         picking.action_assign()
 
-        # Forcer qty reçue sur chaque move.line
-        for line in self.line_ids:
-            move = line_move_map[line.id]
+        # Forcer qty reçue en parcourant picking.move_ids (moves réels post-fusion)
+        for move in picking.move_ids.filtered(lambda m: m.state not in ('done', 'cancel')):
+            total_qty = qty_by_product.get(move.product_id.id, move.product_uom_qty)
             if move.move_line_ids:
                 for ml in move.move_line_ids:
-                    ml.quantity = line.qty
+                    ml.quantity = total_qty
             else:
                 self.env['stock.move.line'].create({
                     'move_id': move.id,
                     'picking_id': picking.id,
                     'product_id': move.product_id.id,
                     'product_uom_id': move.product_uom.id,
-                    'quantity': line.qty,
+                    'quantity': total_qty,
                     'location_id': move.location_id.id,
                     'location_dest_id': move.location_dest_id.id,
                 })
 
-        # Validation (déclenche explosion pack si applicable)
-        picking.with_context(skip_backorder=True).button_validate()
+        # Validation (skip_backorder + skip_immediate pour éviter les wizards intermédiaires)
+        result = picking.with_context(
+            skip_backorder=True,
+            skip_immediate=True,
+        ).button_validate()
+
+        # Si button_validate() retourne quand même une action (cas edge), on l'ignore
+        # car notre wizard gère lui-même le retour via display_notification
+        if isinstance(result, dict) and result.get('res_model'):
+            _logger.warning(
+                "[RECEPTION_DIRECTE] button_validate a retourné une action inattendue : %s",
+                result.get('res_model'),
+            )
 
         # Mise à jour du nouveau prix d'achat + traçabilité chatter
         prix_changes = []
@@ -132,7 +174,7 @@ class ReceptionDirecteWizard(models.TransientModel):
 
         # Note chatter : toujours poster le résumé de la réception
         lignes_html = ''.join(
-            '<li>%s &times; %s</li>' % (int(l.qty), l.product_id.display_name)
+            '<li>%g &times; %s</li>' % (l.qty, l.product_id.display_name)
             for l in self.line_ids
         )
         body = _(
@@ -192,7 +234,6 @@ class ReceptionDirecteWizardLine(models.TransientModel):
     price_unit = fields.Float(
         string='Coût actuel',
         digits='Product Price',
-        readonly=True,
         help="Coût effectif actuel du produit (nouveau prix si défini, sinon prix standard).",
     )
     nouveau_prix = fields.Float(
@@ -201,6 +242,18 @@ class ReceptionDirecteWizardLine(models.TransientModel):
         help="Laisser à 0 pour conserver le coût actuel. "
              "Si renseigné, devient le nouveau coût de référence du produit.",
     )
+    montant_ligne = fields.Float(
+        string='Montant',
+        digits='Product Price',
+        compute='_compute_montant_ligne',
+        store=False,
+    )
+
+    @api.depends('qty', 'price_unit', 'nouveau_prix')
+    def _compute_montant_ligne(self):
+        for line in self:
+            prix = line.nouveau_prix if line.nouveau_prix and line.nouveau_prix > 0 else line.price_unit
+            line.montant_ligne = line.qty * prix
 
     @api.depends('product_id')
     def _compute_uom(self):

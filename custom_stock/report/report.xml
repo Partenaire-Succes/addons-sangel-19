@@ -26,5 +26,40 @@
             <field name="paperformat_id" ref="base.paperformat_euro"/>
             <field name="print_report_name">'Décompte_%s_%s' % (object.name, object.date)</field>
         </record>
+        <!-- Rapport consolidé Retours & Réceptions (déclenché par le wizard) -->
+        <record id="action_report_retours_receptions" model="ir.actions.report">
+            <field name="name">Rapport Retours et Réceptions consolidé</field>
+            <field name="model">rapport.retours.receptions.wizard</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">custom_stock.report_retours_receptions</field>
+            <field name="report_file">custom_stock.report_retours_receptions</field>
+            <field name="paperformat_id" ref="base.paperformat_euro"/>
+            <field name="print_report_name">'Rapport_Retours_Receptions'</field>
+        </record>
+
+        <!-- Bon de Réception personnalisé — stock.picking (sans binding : bouton standalone dans la vue) -->
+        <record id="action_report_bon_reception" model="ir.actions.report">
+            <field name="name">Bon de Réception</field>
+            <field name="model">stock.picking</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">custom_stock.report_bon_reception</field>
+            <field name="report_file">custom_stock.report_bon_reception</field>
+            <field name="paperformat_id" ref="base.paperformat_euro"/>
+            <field name="print_report_name">'Rapport_Bon_%s' % object.name.replace('/', '_')</field>
+        </record>
+
+        <!-- ── Désactiver les rapports natifs Odoo du menu Print sur stock.picking ── -->
+        <record id="stock.action_report_picking" model="ir.actions.report">
+            <field name="binding_model_id" eval="False"/>
+        </record>
+        <record id="stock.action_report_delivery" model="ir.actions.report">
+            <field name="binding_model_id" eval="False"/>
+        </record>
+        <record id="stock.action_report_picking_packages" model="ir.actions.report">
+            <field name="binding_model_id" eval="False"/>
+        </record>
+        <record id="stock.return_label_report" model="ir.actions.report">
+            <field name="binding_model_id" eval="False"/>
+        </record>
     </data>
 </odoo>

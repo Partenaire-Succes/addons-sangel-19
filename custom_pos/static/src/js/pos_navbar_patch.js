@@ -20,23 +20,23 @@ patch(Navbar.prototype, {
     /**
      * Getter : retourne true si l'utilisateur est DSI/IT
      */
-    get isDsiIt() {
-        return this.pos.user?._is_dsi_it || false;
-    },
+    // get isDsiIt() {
+    //     return this.pos.user?._is_dsi_it || false;
+    // },
 
     /**
      * Patch : reloadProducts — bloque si non-DSI (sécurité JS en plus du t-if XML)
      */
-    async reloadProducts() {
-        if (!this.pos.user._is_dsi_it) {
-            this.dialog.add(AlertDialog, {
-                title: _t("Accès refusé"),
-                body: _t("L'action 'Recharger les données' est réservée au groupe DSI / IT."),
-            });
-            return;
-        }
-        return super.reloadProducts(...arguments);
-    },
+    // async reloadProducts() {
+    //     if (!this.pos.user._is_dsi_it) {
+    //         this.dialog.add(AlertDialog, {
+    //             title: _t("Accès refusé"),
+    //             body: _t("L'action 'Recharger les données' est réservée au groupe DSI / IT."),
+    //         });
+    //         return;
+    //     }
+    //     return super.reloadProducts(...arguments);
+    // },
 });
 
 console.warn("✅ pos_navbar_patch.js - Navbar patched (isCaissiere + isDsiIt getters)");

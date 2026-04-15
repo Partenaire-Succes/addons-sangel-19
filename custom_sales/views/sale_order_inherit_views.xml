@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_order_form_inherit_import_date" model="ir.ui.view">
+        <field name="name">sale.order.form.inherit.import.date</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <!-- Ajouter après le champ validity_date -->
+            <xpath expr="//button[@name='action_confirm']" position="after">
+                <button
+                        name="action_apply_import_date"
+                        type="object"
+                        string="→ Appliquer comme Date du devis"
+                        class="btn-sm btn-secondary"
+                />
+            </xpath>
+            <xpath expr="//group[@name='order_details']/field[@name='validity_date']" position="after">
+                <label for="date_importation" string="Date d'importation"/>
+                <div class="o_row">
+                    <field name="date_importation" nolabel="1"/>
+                </div>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,306 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ══════════════════════════════════════════════════════════════════
+             AVOIR JOURNÉE — Crédit Alimentaire
+             doc = avoir.journee.wizard
+             ══════════════════════════════════════════════════════════════════ -->
+
+        <template id="report_avoir_journee_document">
+            <t t-call="web.external_layout">
+                <div class="page">
+
+                    <style>
+                        body, .page { font-family: Arial, sans-serif; font-size: 9pt; color: #1a1a1a; }
+                        @page { margin-top: 5mm; }
+
+                        /* ── En-tête ── */
+                        .aj-header {
+                            border-top: 4px solid #1a5276;
+                            border-bottom: 2px solid #1a5276;
+                            padding: 8px 0 6px 0;
+                            margin-bottom: 14px;
+                        }
+                        .aj-title {
+                            font-size: 14pt;
+                            font-weight: bold;
+                            color: #1a5276;
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                        }
+                        .aj-periode {
+                            font-size: 11pt;
+                            font-weight: bold;
+                            color: #1a5276;
+                            margin-top: 2px;
+                        }
+                        .aj-meta {
+                            font-size: 8pt;
+                            color: #666;
+                            margin-top: 4px;
+                        }
+                        .aj-meta strong { color: #333; }
+
+                        /* ── Section catégorie ── */
+                        .cat-header {
+                            background-color: #1a5276;
+                            color: #fff;
+                            font-size: 10pt;
+                            font-weight: bold;
+                            padding: 5px 10px;
+                            margin-top: 14px;
+                            margin-bottom: 0;
+                            border-radius: 2px 2px 0 0;
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                        }
+
+                        /* ── Sous-section client ── */
+                        .client-header {
+                            background-color: #eaf2f8;
+                            color: #1a5276;
+                            font-size: 9pt;
+                            font-weight: bold;
+                            padding: 3px 10px;
+                            border-left: 4px solid #1a5276;
+                            border-bottom: 1px solid #85c1e9;
+                        }
+                        .client-num {
+                            color: #555;
+                            font-size: 8.5pt;
+                            font-weight: normal;
+                        }
+
+                        /* ── Tableau ── */
+                        table.tbl {
+                            width: 100%;
+                            border-collapse: collapse;
+                            font-size: 8.5pt;
+                            margin-bottom: 2px;
+                        }
+                        table.tbl thead tr {
+                            background-color: #d6eaf8;
+                        }
+                        table.tbl th {
+                            border: 1px solid #85c1e9;
+                            padding: 4px 7px;
+                            font-weight: bold;
+                            color: #1a5276;
+                            white-space: nowrap;
+                        }
+                        table.tbl td {
+                            border: 1px solid #d0d0d0;
+                            padding: 3px 7px;
+                            vertical-align: middle;
+                        }
+                        table.tbl tbody tr:nth-child(even) td {
+                            background-color: #f5f9fd;
+                        }
+                        .num  { text-align: right; white-space: nowrap; }
+                        .ctr  { text-align: center; }
+                        .bold { font-weight: bold; }
+
+                        /* ── Ligne sous-total client ── */
+                        tr.tr-client-total td {
+                            background-color: #f0f7fd !important;
+                            font-weight: bold;
+                            font-style: italic;
+                            border-top: 1px solid #85c1e9;
+                            font-size: 8.5pt;
+                            color: #1a5276;
+                        }
+
+                        /* ── Ligne total catégorie ── */
+                        tr.tr-cat-total td {
+                            background-color: #d6eaf8 !important;
+                            font-weight: bold;
+                            border-top: 2px solid #1a5276;
+                            font-size: 9pt;
+                        }
+
+                        /* ── Ligne grand total ── */
+                        tr.tr-grand-total td {
+                            background-color: #1a5276 !important;
+                            color: #fff;
+                            font-weight: bold;
+                            font-size: 11pt;
+                            border-color: #1a5276;
+                            padding: 7px 7px;
+                        }
+
+                        /* ── Message vide ── */
+                        .empty-msg {
+                            color: #888;
+                            font-style: italic;
+                            padding: 6px 10px;
+                            background: #fafafa;
+                            border: 1px dashed #ccc;
+                            font-size: 8pt;
+                        }
+
+                        /* ── Pied de page ── */
+                        .aj-footer {
+                            border-top: 1px solid #d0d0d0;
+                            margin-top: 16px;
+                            padding-top: 4px;
+                            font-size: 7.5pt;
+                            color: #999;
+                            text-align: center;
+                        }
+                    </style>
+
+                    <!-- Pré-calcul des données (un seul appel) -->
+                    <t t-set="categories_data" t-value="doc.get_data_by_category()"/>
+                    <t t-set="grand_total"     t-value="sum(c['total'] for c in categories_data)"/>
+
+                    <!-- ══ EN-TÊTE ════════════════════════════════════════════ -->
+                    <div class="aj-header">
+                        <div class="aj-title"><t t-esc="doc.get_titre_label()"/></div>
+                        <div class="aj-periode"><t t-esc="doc.get_periode_label()"/></div>
+                        <div class="aj-meta">
+                            <strong>&#201;dit&#233; le :</strong> <t t-esc="doc.get_date_edition()"/>
+                            &#160;&#183;&#160;
+                            <strong>Par :</strong> <t t-esc="user.name"/>
+                            <t t-if="doc.category_ids">
+                                &#160;&#183;&#160;
+                                <strong>Cat&#233;gories :</strong>
+                                <t t-foreach="doc.category_ids" t-as="cat">
+                                    <t t-esc="cat.name"/><t t-if="not cat_last">, </t>
+                                </t>
+                            </t>
+                        </div>
+                    </div>
+
+                    <!-- ══ SECTIONS PAR CATÉGORIE ══════════════════════════ -->
+                    <t t-foreach="categories_data" t-as="cat">
+
+                        <!-- En-tête de section -->
+                        <div class="cat-header">
+                            <t t-esc="cat['name']"/>
+                        </div>
+
+                        <table class="tbl">
+                            <thead>
+                                <tr>
+                                    <th class="ctr">Date</th>
+                                    <th>N&#176; Client</th>
+                                    <th>Nom</th>
+                                    <th>N&#176; Facture</th>
+                                    <th class="num">Montant</th>
+                                </tr>
+                            </thead>
+
+                            <!-- Groupement par client -->
+                            <t t-foreach="cat['clients']" t-as="client">
+                                <!-- En-tête client -->
+                                <tbody>
+                                    <tr>
+                                        <td colspan="5" style="padding:0; border:none;">
+                                            <div class="client-header">
+                                                <t t-esc="client['partner_name']"/>
+                                                &#160;&#160;
+                                                <span class="client-num">
+                                                    N&#176; <t t-esc="client['customer_id']"/>
+                                                </span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                                <!-- Lignes passages du client -->
+                                <tbody>
+                                    <t t-foreach="client['lines']" t-as="line">
+                                        <tr>
+                                            <td class="ctr">
+                                                <t t-esc="line['date'].strftime('%d/%m/%Y')"/>
+                                            </td>
+                                            <td class="bold">
+                                                <t t-esc="client['customer_id']"/>
+                                            </td>
+                                            <td><t t-esc="client['partner_name']"/></td>
+                                            <td class="ctr">
+                                                <t t-esc="line['order_name']"/>
+                                            </td>
+                                            <td class="num">
+                                                <t t-esc="'{:,.0f}'.format(line['amount']).replace(',', ' ')"/>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                                <!-- Sous-total client (uniquement si plusieurs passages) -->
+                                <t t-if="len(client['lines']) &gt; 1">
+                                    <tbody>
+                                        <tr class="tr-client-total">
+                                            <td colspan="4" class="num">
+                                                Sous-total
+                                                <t t-esc="client['partner_name']"/>
+                                                &#160;(<t t-esc="len(client['lines'])"/> passage(s))
+                                            </td>
+                                            <td class="num">
+                                                <t t-esc="'{:,.0f}'.format(client['subtotal']).replace(',', ' ')"/>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </t>
+                            </t>
+
+                            <!-- Total catégorie -->
+                            <tbody>
+                                <tr class="tr-cat-total">
+                                    <td colspan="4" class="num">
+                                        TOTAL <t t-esc="cat['name']"/>
+                                        &#160;(<t t-esc="sum(len(c['lines']) for c in cat['clients'])"/> passage(s)
+                                        &#8212; <t t-esc="len(cat['clients'])"/> client(s))
+                                    </td>
+                                    <td class="num">
+                                        <t t-esc="'{:,.0f}'.format(cat['total']).replace(',', ' ')"/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                    </t>
+
+                    <!-- ══ GRAND TOTAL ════════════════════════════════════════ -->
+                    <table class="tbl" style="margin-top:16px;">
+                        <tbody>
+                            <tr class="tr-grand-total">
+                                <td style="width:80%;">
+                                    <strong>TOTAL G&#201;N&#201;RAL</strong>
+                                    &#160;&#160;
+                                    <span style="font-size:9pt; font-weight:normal;">
+                                        (<t t-esc="sum(len(c['lines']) for cat in categories_data for c in cat['clients'])"/> passage(s)
+                                        &#8212;
+                                        <t t-esc="len(categories_data)"/> cat&#233;gorie(s))
+                                    </span>
+                                </td>
+                                <td class="num" style="width:20%;">
+                                    <t t-esc="'{:,.0f}'.format(grand_total).replace(',', ' ')"/>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- ══ PIED DE PAGE ════════════════════════════════════ -->
+                    <div class="aj-footer">
+                        Rapport <t t-esc="doc.get_titre_label()"/>
+                        &#160;&#183;&#160;
+                        <t t-esc="doc.get_periode_label()"/>
+                        &#160;&#183;&#160;
+                        &#201;dit&#233; le <t t-esc="doc.get_date_edition()"/>
+                    </div>
+
+                </div>
+            </t>
+        </template>
+
+        <template id="report_avoir_journee">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="doc">
+                    <t t-call="custom_pos.report_avoir_journee_document"/>
+                </t>
+            </t>
+        </template>
+
+    </data>
+</odoo>

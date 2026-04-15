@@ -91,153 +91,84 @@
                         </thead>
 
                         <tbody>
-                            <t t-set="current_famille" t-value="''"/>
                             <t t-foreach="lines" t-as="line">
 
-                                <!-- Ligne produit -->
-                                <tr style="border-bottom: 0.5px solid #e0e0e0;">
+                                <!-- ══════════ LIGNE SOUS-TOTAL FAMILLE ══════════ -->
+                                <t t-if="line['is_subtotal']">
+                                    <tr style="background: #c1b7b7;">
+                                        <td colspan="4" style="padding: 4px 6px; text-align: left; font-size: 7pt; letter-spacing: 1px;">
+                                            ▶ TOTAL  <t t-esc="line['code_famille']"/> — <t t-esc="line['famille']"/>
+                                        </td>
+                                        <td colspan="5" style="padding: 4px 3px; text-align: center; font-size: 6pt;">
+                                            <!-- colonnes vides (ST, MAXI, CMD, MARG, PVTC) -->
+                                        </td>
+                                        <t t-foreach="line['ventes']" t-as="qty">
+                                            <t t-if="qty > 0">
+                                                <td style="padding: 3px 2px; text-align: center; font-size: 6.5pt; font-weight: 900; background: #0a3d4d; color: #00c8e0;">
+                                                    <t t-esc="'%.0f' % qty"/>
+                                                </td>
+                                            </t>
+                                            <t t-else="">
+                                                <td style="padding: 3px 2px; text-align: center; font-size: 6pt; color: #555;">—</td>
+                                            </t>
+                                        </t>
+                                        <td style="padding: 3px; text-align: center; font-size: 7pt; font-weight: 900; background: #ff6b35; color: white;">
+                                            <t t-esc="'%.0f' % line['total']"/>
+                                        </td>
+                                    </tr>
+                                </t>
 
-                                    <td style="padding: 3px; text-align: center; font-size: 6pt;">
-                                        <t t-esc="line['code']"/>
-                                    </td>
-
-                                    <td style="padding: 3px 4px; text-align: left; font-size: 6.5pt; word-wrap: break-word;">
-                                        <t t-esc="line['designation']"/>
-                                    </td>
-
-                                    <td style="padding: 3px; text-align: center; font-size: 6pt;">
-                                        <t t-esc="line['sta']"/>
-                                    </td>
-
-                                    <td style="padding: 3px; text-align: center; font-size: 5.5pt; color: #666;">
-                                        <t t-esc="line['famille']"/>
-                                    </td>
-
-                                    <td style="padding: 3px; text-align: center; font-size: 6pt;">
-                                        <t t-esc="'%.0f' % line['st_disp']"/>
-                                    </td>
-
-                                    <td style="padding: 3px; text-align: center; font-size: 6pt;">
-                                        <t t-esc="'%.0f' % line['maxi']"/>
-                                    </td>
-
-                                    <td style="padding: 3px; text-align: center; font-size: 6pt;">
-                                        <t t-esc="'%.0f' % line['cmd']"/>
-                                    </td>
-
-                                    <td style="padding: 3px; text-align: center; font-size: 6pt;">
-                                        <t t-esc="'%.0f' % line['marg']"/>
-                                    </td>
-
-                                    <td style="padding: 3px; text-align: center; font-size: 6pt;">
-                                        <t t-esc="'{:,.0f}'.format(line['pvtc']).replace(',', ' ')"/>
-                                    </td>
-
-                                    <!-- MOIS avec couleur si > 0 -->
-                                    <t t-foreach="line['ventes']" t-as="qty">
-                                        <t t-if="qty > 0">
-                                            <td style="padding: 3px 2px;
-                                                       text-align: center;
-                                                       font-size: 6pt;
-                                                       background: #d9f5f8;
-                                                       font-weight: 700;">
-                                                <t t-esc="'%.0f' % qty"/>
+                                <!-- ══════════ LIGNE PRODUIT NORMALE ══════════ -->
+                                <t t-else="">
+                                    <tr style="border-bottom: 0.5px solid #e0e0e0;">
+                                        <td style="padding: 3px; text-align: center; font-size: 6pt;">
+                                            <t t-esc="line['code']"/>
+                                        </td>
+                                        <td style="padding: 3px 4px; text-align: left; font-size: 6.5pt; word-wrap: break-word;">
+                                            <t t-esc="line['designation']"/>
+                                        </td>
+                                        <td style="padding: 3px; text-align: center; font-size: 6pt;">
+                                            <t t-esc="line['sta']"/>
+                                        </td>
+                                        <td style="padding: 3px; text-align: center; font-size: 5.5pt; color: #666;">
+                                            <t t-esc="line['famille']"/>
+                                        </td>
+                                        <td style="padding: 3px; text-align: center; font-size: 6pt;">
+                                            <t t-esc="'%.0f' % line['st_disp']"/>
+                                        </td>
+                                        <td style="padding: 3px; text-align: center; font-size: 6pt;">
+                                            <t t-esc="'%.0f' % line['maxi']"/>
+                                        </td>
+                                        <td style="padding: 3px; text-align: center; font-size: 6pt;">
+                                            <t t-esc="'%.0f' % line['cmd']"/>
+                                        </td>
+                                        <td style="padding: 3px; text-align: center; font-size: 6pt;">
+                                            <t t-esc="'%.0f' % line['marg']"/>
+                                        </td>
+                                        <td style="padding: 3px; text-align: center; font-size: 6pt;">
+                                            <t t-esc="'{:,.0f}'.format(line['pvtc']).replace(',', ' ')"/>
+                                        </td>
+                                        <t t-foreach="line['ventes']" t-as="qty">
+                                            <t t-if="qty > 0">
+                                                <td style="padding: 3px 2px; text-align: center; font-size: 6pt; background: #d9f5f8; font-weight: 700;">
+                                                    <t t-esc="'%.0f' % qty"/>
+                                                </td>
+                                            </t>
+                                            <t t-else="">
+                                                <td style="padding: 3px 2px; text-align: center; font-size: 6pt; color: #bbb;">0</td>
+                                            </t>
+                                        </t>
+                                        <t t-if="line['total'] &gt; 0">
+                                            <td style="padding: 3px; text-align: center; font-size: 6.5pt; font-weight: 700; background: #fff3ee; color: #ff6b35;">
+                                                <t t-esc="'%.0f' % line['total']"/>
                                             </td>
                                         </t>
                                         <t t-else="">
-                                            <td style="padding: 3px 2px;
-                                                       text-align: center;
-                                                       font-size: 6pt;
-                                                       color: #bbb;">
-                                                0
-                                            </td>
+                                            <td style="padding: 3px; text-align: center; font-size: 6.5pt; color: #999;">0</td>
                                         </t>
-                                    </t>
-
-                                    <t t-if="line['total'] &gt; 0">
-                                        <td style="padding: 3px; text-align: center; font-size: 6.5pt; font-weight: 700; background: #fff3ee; color: #ff6b35;">
-                                            <t t-esc="'%.0f' % line['total']"/>
-                                        </td>
-                                    </t>
-                                    <t t-else="">
-                                        <td style="padding: 3px; text-align: center; font-size: 6.5pt; color: #999;">0</td>
-                                    </t>
-
-                                </tr>
-                            </t>
-
-                            <tr style="border-bottom: 0.5px solid #e0e0e0;">
-                                <td colspan="22" style="padding: 0; border: none; text-align: center; font-size: 6.5pt; font-weight: 700; color: #00708a;">
-                                    RECAPITULATIF PAR FAMILLE
-                                </td>
-                            </tr>
-
-                            <t t-set="current_famille" t-value="''"/>
-                            <t t-foreach="lines" t-as="l">
-                                <t t-if="l['famille'] != current_famille">
-
-                                    <!-- Calcul lignes de la famille -->
-                                    <t t-set="current_famille" t-value="l['famille']"/>
-                                    <t t-set="code" t-value="l['code_famille']"/>
-                                    <t t-set="fam_lines"
-                                    t-value="[l for l in lines if l['famille'] == current_famille]"/>
-
-                                    <tr style="background: #e8f8fb; border-bottom: 0.5px solid #e0e0e0;">
-
-                                        <td colspan="1"
-                                            style="padding: 3px 6px;
-                                                font-weight: 700;
-                                                text-align: center;
-                                                font-size: 6.5pt;">
-                                            <t t-esc="code"/>
-                                        </td>
-                                        <td colspan="3"
-                                            style="padding: 3px 6px;
-                                                font-weight: 700;
-                                                text-align: left;
-                                                font-size: 6.5pt;">
-                                            <t t-esc="current_famille"/>
-                                        </td>
-
-                                        <td colspan="1" style="padding: 3px 6px; text-align: center;">
-                                            <t t-esc="'%.0f' % sum(l['st_disp'] for l in fam_lines)"/>
-                                        </td>
-                                        <td colspan="1" style="padding: 3px 6px; text-align: center;">
-                                            <t t-esc="'%.0f' % sum(l['maxi'] for l in fam_lines)"/>
-                                        </td>
-                                        <td colspan="1" style="padding: 3px 6px; text-align: center;">
-                                            <t t-esc="'%.0f' % sum(l['cmd'] for l in fam_lines)"/>
-                                        </td>
-                                        <td colspan="1" style="padding: 3px 6px; text-align: center;">
-                                            <t t-esc="'%.2f' % (sum(l['marg'] for l in fam_lines) / len(fam_lines) if fam_lines else 0)"/>
-                                        </td>
-                                        <td colspan="1" style="padding: 3px 6px; text-align: center;">
-                                            <span t-esc="'{:,.0f}'.format(sum(l['pvtc'] for l in fam_lines)).replace(',', ' ')"/>
-                                        </td>
-
-                                        <!-- Total 12 mois -->
-                                        <t t-foreach="range(12)" t-as="mi">
-                                            <t t-set="month_total"
-                                            t-value="sum(l['ventes'][mi] for l in fam_lines)"/>
-
-                                            <td style="padding: 3px 6px;
-                                                    text-align: center;
-                                                    font-weight: 700;">
-                                                <t t-esc="'%.0f' % month_total"/>
-                                            </td>
-                                        </t>
-
-                                        <!-- Total général famille -->
-                                        <td style="padding: 3px;
-                                                text-align: center;
-                                                font-size: 6.5pt;
-                                                font-weight: 700;">
-                                            <t t-esc="'%.0f' % sum(l['total'] for l in fam_lines)"/>
-                                        </td>
-
                                     </tr>
-
                                 </t>
+
                             </t>
                         </tbody>
 

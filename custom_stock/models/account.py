@@ -18,22 +18,21 @@ class AccountMoveSageX3(models.Model):
         copy=False,
         help="Indique si la facture a été envoyée à SAGE X3"
     )
-    sage_sent = fields.Boolean(
-        string="Doit etre envoyé",
-        default=False,
-        copy=False
-    )
     sage_x3_sent_date = fields.Datetime(
         string="Date envoi SAGE X3",
         readonly=True,
         copy=False
     )
+    sage_sent = fields.Boolean(
+        string="Doit etre envoyé",
+        default=False,
+        copy=False
+    )
+    sage_x3_piece = fields.Char(string="Type pièce SAGE X3", readonly=True, copy=False)
     sage_x3_piece_type = fields.Selection([
         ('FACLI', 'Facture client'),
         ('REGCLI', 'Règlement client'),
     ], string="Type pièce SAGE X3", readonly=True, copy=False)
-
-    sage_x3_piece = fields.Char(string="Type pièce SAGE X3", readonly=True, copy=False)
     sage_x3_piece_number = fields.Char(
         string="N° Pièce SAGE X3",
         readonly=True,
@@ -49,6 +48,10 @@ class AccountMoveSageX3(models.Model):
         readonly=True,
         copy=False
     )
+    message = fields.Text(
+        string="Message",
+        copy=False
+    )
 
 
 class AccountPaymentSageX3(models.Model):
@@ -60,7 +63,6 @@ class AccountPaymentSageX3(models.Model):
         readonly=True,
         copy=False
     )
-    
     sage_x3_sent_date = fields.Datetime(
         string="Date envoi SAGE X3",
         readonly=True,
