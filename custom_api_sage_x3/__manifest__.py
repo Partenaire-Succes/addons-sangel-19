@@ -18,7 +18,7 @@
         'custom_partner',
         'custom_sales',
         'custom_food_credit',
-        'queue_job',
+        # 'queue_job',
     ],
     'data': [
         'security/ir.model.access.csv',
