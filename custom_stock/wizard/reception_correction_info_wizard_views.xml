@@ -191,14 +191,14 @@
         <field name="arch" type="xml">
             <xpath expr="//div[hasclass('oe_button_box')]" position="inside">
 
-                <!-- <button name="%(action_reception_correction_info_wizard)d"
+                <button name="%(action_reception_correction_info_wizard)d"
                         string="Modifier les infos"
                         type="action"
                         class="oe_stat_button"
                         icon="fa-pencil"
                         invisible="state != 'done'"
                         groups="custom_pos.group_superviseur,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
-                        help="Modifier r&#233;f. Sage, fournisseur, date ou notes sans toucher au stock."/> -->
+                        help="Modifier r&#233;f. Sage, fournisseur, date ou notes sans toucher au stock."/>
 
                 <!-- <button name="%(action_reception_correction_stock_wizard)d"
                         string="Corriger le stock"
