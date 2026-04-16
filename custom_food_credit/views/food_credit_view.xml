@@ -12,6 +12,7 @@
                         <button display="always" class="btn btn-primary" 
                                 string="Générer Crédits Alimentaires" type="action" invisible="1"
                                 name="%(custom_food_credit.action_food_credit_generation_wizard)d" />
+
                         <button name="action_in_progress" type="object" string="Mettre en cours"
                                 class="btn-info" invisible="state not in ('draft', 'close')" />
                         <button name="action_close" type="object" string="Bloquer"
@@ -102,6 +103,9 @@
                                 class="btn-primary"
                                 icon="fa-magic"
                                 confirm="Générer tous les crédits du mois avec leurs lignes ?"/>
+                        <button display="always" class="btn btn-primary" 
+                                string="Générer Crédits Alimentaires" type="action" invisible="0"
+                                name="%(custom_food_credit.action_food_credit_generation_wizard)d" />
                                 
                         <button name="action_regenerate_selected_credits" 
                                 type="object" 

@@ -120,13 +120,8 @@ class PosActionsDashboard(models.Model):
             # Produits accessibles à cette société
             'product_count': self.env['product.template'].search_count([
                 '|',
-<<<<<<< HEAD
-                ('allowed_company_ids', 'in', company_id),
-                ('company_id', '=', False),
-=======
                 ('allowed_company_ids', 'in', [company_id]),
                 ('allowed_company_ids', '=', False),
->>>>>>> 5db0df10d3a18703d402d82270e30b8d4631fff0
             ]),
 
             # Contacts accessibles à cette société

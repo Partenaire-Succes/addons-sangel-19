@@ -14,6 +14,7 @@ class FoodCreditGenerationWizard(models.TransientModel):
     company_ids = fields.Many2many('res.partner', 
                                    string='Sociétés', 
                                    domain=[('is_company', '=', True), ('amount_food', '>', 0)])
+    day = fields.Integer('Debut', default=lambda self: datetime.now().day)
     month = fields.Selection([
         ('1', 'Janvier'), ('2', 'Février'), ('3', 'Mars'), ('4', 'Avril'),
         ('5', 'Mai'), ('6', 'Juin'), ('7', 'Juillet'), ('8', 'Août'),
@@ -39,9 +40,10 @@ class FoodCreditGenerationWizard(models.TransientModel):
         # Convertir month en entier
         month_int = int(self.month)
         year_int = self.year
+        day_int = self.day
         
         # Calculer les dates
-        start_date = datetime(year_int, month_int, 1)
+        start_date = datetime(year_int, month_int, day_int)
         end_date = (start_date + relativedelta(months=1)) - relativedelta(days=1)
         
         months_fr = {
@@ -56,7 +58,7 @@ class FoodCreditGenerationWizard(models.TransientModel):
         total_lines = 0
         
         for company in self.company_ids:
-            name = f"CREDIT/{month_name}/{year_int}/{company.name.upper()}"
+            name = f"CREDIT/{day_int}/{month_name}/{year_int}/{company.name.upper()}"
             
             existing_credit = food_credit_obj.search([('name', '=', name)], limit=1)
             
