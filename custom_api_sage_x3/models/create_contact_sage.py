@@ -103,7 +103,9 @@ class ResPartnerImport(models.Model):
 
                     if existing:
                         existing.write(vals)
+                        # existing.name = vals["name"]  # Forcer la mise à jour du nom dans le cache d'Odoo
                         _logger.info("🔄 Mis à jour : %s (%s)", existing.name, existing.customer_id)
+                        existing.write({'customer_account': vals.get("customer_account", existing.customer_account)})
                         updated += 1
                     else:
                         contact = partner_model.create(vals)
@@ -203,7 +205,10 @@ class ResPartnerImport(models.Model):
         if not customer_code:
             raise ValueError("Code client manquant")
 
-        name        = self._safe_string(customer.get("bprnaM_0"), "Contact sans nom")
+        name        = self._safe_string(customer.get("bpcnaM_0"))
+        if not name:
+            raise ValueError(f"Nom manquant pour client {customer_code}")
+        
         is_company  = bool(self._safe_string(customer.get("crN_0")))
         vat_regime  = self._safe_string(customer.get("vacbpR_0"))
         is_airsi    = (vat_regime == "AIRSI")

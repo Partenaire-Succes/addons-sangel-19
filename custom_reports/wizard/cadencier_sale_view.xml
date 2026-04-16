@@ -24,6 +24,12 @@
                             type="object"
                             class="btn-primary"
                             icon="fa-print"/>
+                            
+                    <button name="action_export_excel"
+                            string="Exporter Excel"
+                            type="object"
+                            class="btn-success"
+                            icon="fa-file-excel-o"/>
                     <button string="Annuler" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>

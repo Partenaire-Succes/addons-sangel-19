@@ -5,10 +5,10 @@
         <t t-call="web.html_container">
             <t t-call="web.basic_layout">
 
-                <div class="page" style="font-family: DejaVu Sans, Arial, sans-serif; font-size: 7pt; color: #1a1a2e;">
+                <div class="page" style="font-family: DejaVu Sans, Arial, sans-serif; font-size: 9pt; color: #1a1a2e;">
 
                     <!-- EN-TÊTE SOCIÉTÉ -->
-                    <div style="margin-bottom: 6px; font-size: 7pt; color: #555;">
+                    <div style="margin-bottom: 6px; font-size: 9pt; color: #555;">
                         <strong><t t-esc="company.name"/></strong>
                         <t t-if="company.street"> - <t t-esc="company.street"/></t>
                         <t t-if="company.city">, <t t-esc="company.city"/></t>
@@ -17,32 +17,32 @@
                     <!-- HEADER -->
                     <table style="width: 100%; border-collapse: collapse; margin-bottom: 6px;">
                         <tr>
-                            <td style="width: 140px; border: 2px solid #1a1a2e; padding: 6px 10px; text-align: center;">
+                            <td style="width: 150px; border: 2px solid #1a1a2e; padding: 6px 10px; text-align: center;">
                                 <t t-if="company.logo">
-                                    <img t-att-src="image_data_uri(company.logo)" style="max-height: 45px; max-width: 120px;"/>
+                                    <img t-att-src="image_data_uri(company.logo)" style="max-height: 50px; max-width: 130px;"/>
                                 </t>
                                 <t t-else="">
-                                    <span style="font-size: 16pt; font-weight: 900;">
+                                    <span style="font-size: 18pt; font-weight: 900;">
                                         <t t-esc="(company.name or '')[:6].upper()"/>
                                     </span>
                                 </t>
                             </td>
 
                             <td style="background: #00c8e0; border: 2px solid #1a1a2e; border-left: none; text-align: center;">
-                                <span style="font-size: 15pt; font-weight: 900; letter-spacing: 2px;">
+                                <span style="font-size: 17pt; font-weight: 900; letter-spacing: 2px;">
                                     CADENCIER STAT VENTES ARTICLES
                                 </span><br/>
-                                <span style="font-size: 7pt;">
+                                <span style="font-size: 9pt;">
                                     ANNEE <t t-esc="year"/> - SOURCE : POS + MODULE VENTE
                                 </span><br/>
-                                <span>
+                                <span style="font-size: 9pt;">
                                     Date d'impression :
                                     <t t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y %H:%M')"/>
                                 </span>
                             </td>
 
-                            <td style="width: 80px; border: 2px solid #1a1a2e; border-left: none; text-align: right; padding: 6px 8px; vertical-align: middle;">
-                                <div style="font-size: 18pt; font-weight: 900; color: #1a1a2e;">
+                            <td style="width: 90px; border: 2px solid #1a1a2e; border-left: none; text-align: right; padding: 6px 8px; vertical-align: middle;">
+                                <div style="font-size: 20pt; font-weight: 900; color: #1a1a2e;">
                                     <t t-esc="(company.code_company or '')"/>
                                 </div>
                             </td>
@@ -56,35 +56,35 @@
                                   table-layout: fixed;">
 
                         <colgroup>
-                            <col style="width:34px;"/>
-                            <col style="width:120px;"/>
-                            <col style="width:22px;"/>
-                            <col style="width:40px;"/>
-                            <col style="width:28px;" span="4"/>
-                            <col style="width:30px;"/>
-                            <col style="width:28px;" span="12"/>
+                            <col style="width:38px;"/>
+                            <col style="width:130px;"/>
+                            <col style="width:26px;"/>
+                            <col style="width:46px;"/>
+                            <col style="width:32px;" span="4"/>
                             <col style="width:36px;"/>
+                            <col style="width:32px;" span="12"/>
+                            <col style="width:40px;"/>
                         </colgroup>
 
                         <thead>
                             <tr style="background: #1a1a2e; color: white;">
-                                <th style="padding: 4px 3px; text-align: center; font-size: 6pt;">CODE</th>
-                                <th style="padding: 4px 3px; text-align: left; font-size: 6pt;">DESIGNATION</th>
-                                <th style="padding: 4px 3px; text-align: center; font-size: 6pt;">STA.</th>
-                                <th style="padding: 4px 3px; text-align: center; font-size: 6pt;">FAMILLE</th>
-                                <th style="padding: 4px 3px; text-align: center; font-size: 6pt;">ST.DISP.</th>
-                                <th style="padding: 4px 3px; text-align: center; font-size: 6pt;">MAXI</th>
-                                <th style="padding: 4px 3px; text-align: center; font-size: 6pt;">CMD</th>
-                                <th style="padding: 4px 3px; text-align: center; font-size: 6pt;">MARG</th>
-                                <th style="padding: 4px 3px; text-align: center; font-size: 6pt;">PVTC</th>
+                                <th style="padding: 5px 3px; text-align: center; font-size: 8pt;">CODE</th>
+                                <th style="padding: 5px 3px; text-align: left; font-size: 8pt;">DESIGNATION</th>
+                                <th style="padding: 5px 3px; text-align: center; font-size: 8pt;">STA.</th>
+                                <th style="padding: 5px 3px; text-align: center; font-size: 8pt;">FAMILLE</th>
+                                <th style="padding: 5px 3px; text-align: center; font-size: 8pt;">ST.DISP.</th>
+                                <th style="padding: 5px 3px; text-align: center; font-size: 8pt;">MAXI</th>
+                                <th style="padding: 5px 3px; text-align: center; font-size: 8pt;">CMD</th>
+                                <th style="padding: 5px 3px; text-align: center; font-size: 8pt;">MARG</th>
+                                <th style="padding: 5px 3px; text-align: center; font-size: 8pt;">PVTC</th>
 
                                 <t t-foreach="['JAN','FEV','MAR','AVR','MAI','JUIN','JLT','AOT','SPT','OCT','NOV','DEC']" t-as="m">
-                                    <th style="padding: 4px 2px; text-align: center; font-size: 6pt; background: #00c8e0; color: #1a1a2e;">
+                                    <th style="padding: 5px 2px; text-align: center; font-size: 8pt; background: #00c8e0; color: #1a1a2e;">
                                         <t t-esc="m"/>
                                     </th>
                                 </t>
 
-                                <th style="padding: 4px 3px; text-align: center; font-size: 6pt; background: #ff6b35; color: white;">
+                                <th style="padding: 5px 3px; text-align: center; font-size: 8pt; background: #ff6b35; color: white;">
                                     TOTAL
                                 </th>
                             </tr>
@@ -95,24 +95,24 @@
 
                                 <!-- ══════════ LIGNE SOUS-TOTAL FAMILLE ══════════ -->
                                 <t t-if="line['is_subtotal']">
-                                    <tr style="background: #747474;">
-                                        <td colspan="4" style="padding: 4px 6px; text-align: left; font-size: 7pt; letter-spacing: 1px;">
+                                    <tr style="background: #c1b7b7;">
+                                        <td colspan="4" style="padding: 5px 6px; text-align: left; font-size: 9pt; letter-spacing: 1px;">
                                             ▶ TOTAL  <t t-esc="line['code_famille']"/> — <t t-esc="line['famille']"/>
                                         </td>
-                                        <td colspan="5" style="padding: 4px 3px; text-align: center; font-size: 6pt; color: #aaa;">
+                                        <td colspan="5" style="padding: 5px 3px; text-align: center; font-size: 8pt;">
                                             <!-- colonnes vides (ST, MAXI, CMD, MARG, PVTC) -->
                                         </td>
                                         <t t-foreach="line['ventes']" t-as="qty">
                                             <t t-if="qty > 0">
-                                                <td style="padding: 3px 2px; text-align: center; font-size: 6.5pt; font-weight: 900; background: #0a3d4d; color: #00c8e0;">
+                                                <td style="padding: 4px 2px; text-align: center; font-size: 8pt; font-weight: 900; background: #0a3d4d; color: #00c8e0;">
                                                     <t t-esc="'%.0f' % qty"/>
                                                 </td>
                                             </t>
                                             <t t-else="">
-                                                <td style="padding: 3px 2px; text-align: center; font-size: 6pt; color: #555;">—</td>
+                                                <td style="padding: 4px 2px; text-align: center; font-size: 8pt; color: #555;">—</td>
                                             </t>
                                         </t>
-                                        <td style="padding: 3px; text-align: center; font-size: 7pt; font-weight: 900; background: #ff6b35; color: white;">
+                                        <td style="padding: 4px; text-align: center; font-size: 9pt; font-weight: 900; background: #ff6b35; color: white;">
                                             <t t-esc="'%.0f' % line['total']"/>
                                         </td>
                                     </tr>
@@ -121,50 +121,50 @@
                                 <!-- ══════════ LIGNE PRODUIT NORMALE ══════════ -->
                                 <t t-else="">
                                     <tr style="border-bottom: 0.5px solid #e0e0e0;">
-                                        <td style="padding: 3px; text-align: center; font-size: 6pt;">
+                                        <td style="padding: 4px; text-align: center; font-size: 8pt;">
                                             <t t-esc="line['code']"/>
                                         </td>
-                                        <td style="padding: 3px 4px; text-align: left; font-size: 6.5pt; word-wrap: break-word;">
+                                        <td style="padding: 4px 5px; text-align: left; font-size: 8pt; word-wrap: break-word;">
                                             <t t-esc="line['designation']"/>
                                         </td>
-                                        <td style="padding: 3px; text-align: center; font-size: 6pt;">
+                                        <td style="padding: 4px; text-align: center; font-size: 8pt;">
                                             <t t-esc="line['sta']"/>
                                         </td>
-                                        <td style="padding: 3px; text-align: center; font-size: 5.5pt; color: #666;">
+                                        <td style="padding: 4px; text-align: center; font-size: 7pt; color: #666;">
                                             <t t-esc="line['famille']"/>
                                         </td>
-                                        <td style="padding: 3px; text-align: center; font-size: 6pt;">
+                                        <td style="padding: 4px; text-align: center; font-size: 8pt;">
                                             <t t-esc="'%.0f' % line['st_disp']"/>
                                         </td>
-                                        <td style="padding: 3px; text-align: center; font-size: 6pt;">
+                                        <td style="padding: 4px; text-align: center; font-size: 8pt;">
                                             <t t-esc="'%.0f' % line['maxi']"/>
                                         </td>
-                                        <td style="padding: 3px; text-align: center; font-size: 6pt;">
+                                        <td style="padding: 4px; text-align: center; font-size: 8pt;">
                                             <t t-esc="'%.0f' % line['cmd']"/>
                                         </td>
-                                        <td style="padding: 3px; text-align: center; font-size: 6pt;">
+                                        <td style="padding: 4px; text-align: center; font-size: 8pt;">
                                             <t t-esc="'%.0f' % line['marg']"/>
                                         </td>
-                                        <td style="padding: 3px; text-align: center; font-size: 6pt;">
+                                        <td style="padding: 4px; text-align: center; font-size: 8pt;">
                                             <t t-esc="'{:,.0f}'.format(line['pvtc']).replace(',', ' ')"/>
                                         </td>
                                         <t t-foreach="line['ventes']" t-as="qty">
                                             <t t-if="qty > 0">
-                                                <td style="padding: 3px 2px; text-align: center; font-size: 6pt; background: #d9f5f8; font-weight: 700;">
+                                                <td style="padding: 4px 2px; text-align: center; font-size: 8pt; background: #d9f5f8; font-weight: 700;">
                                                     <t t-esc="'%.0f' % qty"/>
                                                 </td>
                                             </t>
                                             <t t-else="">
-                                                <td style="padding: 3px 2px; text-align: center; font-size: 6pt; color: #bbb;">0</td>
+                                                <td style="padding: 4px 2px; text-align: center; font-size: 8pt; color: #bbb;">0</td>
                                             </t>
                                         </t>
                                         <t t-if="line['total'] &gt; 0">
-                                            <td style="padding: 3px; text-align: center; font-size: 6.5pt; font-weight: 700; background: #fff3ee; color: #ff6b35;">
+                                            <td style="padding: 4px; text-align: center; font-size: 8pt; font-weight: 700; background: #fff3ee; color: #ff6b35;">
                                                 <t t-esc="'%.0f' % line['total']"/>
                                             </td>
                                         </t>
                                         <t t-else="">
-                                            <td style="padding: 3px; text-align: center; font-size: 6.5pt; color: #999;">0</td>
+                                            <td style="padding: 4px; text-align: center; font-size: 8pt; color: #999;">0</td>
                                         </t>
                                     </tr>
                                 </t>

@@ -14,7 +14,8 @@ class DashboardManagementAdmin(models.Model):
     @api.model
     def get_dashboard_data(self, date_from=None, date_to=None):
         if not date_from:
-            date_from = fields.Date.today() - timedelta(days=30)
+            today = fields.Date.today()
+            date_from = today.replace(day=1)  # Premier jour du mois en cours
         if not date_to:
             date_to = fields.Date.today()
 

@@ -90,5 +90,16 @@
             </field>
         </record>
 
+        <record id="view_partner_filter_inherit" model="ir.ui.view">
+            <field name="name">res.partner.search.customer_id</field>
+            <field name="model">res.partner</field>
+            <field name="inherit_id" ref="base.view_res_partner_filter"/>
+            <field name="arch" type="xml">
+                <xpath expr="//search" position="inside">
+                    <field name="customer_id" string="ID Client"/>
+                </xpath>
+            </field>
+        </record>
+
     </data>
 </odoo>

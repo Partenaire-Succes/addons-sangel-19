@@ -10,6 +10,7 @@
                 <form string="Génération des Crédits Alimentaires">
                     <group>
                         <group>
+                            <field name="day"/>
                             <field name="month"/>
                             <field name="year"/>
                         </group>

@@ -36,9 +36,15 @@ export class DashboardManagementAdmin extends Component {
 
     /* ===================== DATES ===================== */
 
+    // _defaultDateFrom() {
+    //     const d = new Date();
+    //     d.setDate(d.getDate() - 30);
+    //     return d.toISOString().split("T")[0];
+    // }
+
     _defaultDateFrom() {
         const d = new Date();
-        d.setDate(d.getDate() - 30);
+        d.setDate(1);  // premier jour du mois
         return d.toISOString().split("T")[0];
     }
 

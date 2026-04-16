@@ -98,13 +98,13 @@ class ResPartnerInherit(models.Model):
         result.append('no_loyalty_points')
         return result
 
-    @api.depends('name', 'customer_id')
-    def _compute_display_name(self):
-        for partner in self:
-            if partner.customer_id:
-                partner.display_name = f"{partner.customer_id}"
-            else:
-                partner.display_name = partner.name
+    # @api.depends('name', 'customer_id')
+    # def _compute_display_name(self):
+    #     for partner in self:
+    #         if partner.customer_id:
+    #             partner.display_name = f"{partner.customer_id}"
+    #         else:
+    #             partner.display_name = partner.name
 
     def _assign_barcode_from_customer_id(self, cid):
         """Assigne barcode = customer_id si commence par '20' et barcode vide.
