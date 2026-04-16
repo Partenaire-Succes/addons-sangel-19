@@ -176,10 +176,8 @@ class RecapCaissesWizard(models.TransientModel):
         cheques_p = all_payments.filtered(lambda p: p.payment_method_id.is_cheque)
         cartes_p = all_payments.filtered(lambda p: p.payment_method_id.is_bank_card)
         titres_p = all_payments.filtered(lambda p: p.payment_method_id.is_titre_paiement)
-        avoir_p = all_payments.filtered(
-            lambda p: getattr(p.payment_method_id, 'is_food', False)
-            or getattr(p.payment_method_id, 'is_loyalty', False)
-        )
+        food_p = all_payments.filtered(lambda p: getattr(p.payment_method_id, 'is_food', False))
+        loyalty_p = all_payments.filtered(lambda p: getattr(p.payment_method_id, 'is_loyalty', False))
         en_compte_p = all_payments.filtered(lambda p: p.payment_method_id.is_limit)
 
         fdc_init_especes = sum(sessions.mapped('cash_register_balance_start')) if sessions else 0.0
@@ -192,7 +190,8 @@ class RecapCaissesWizard(models.TransientModel):
         chq_amt = self._pmt_total(cheques_p)
         crt_amt = self._pmt_total(cartes_p)
         tit_amt = self._pmt_total(titres_p)
-        avr_amt = self._pmt_total(avoir_p)
+        food_amt = self._pmt_total(food_p)
+        loyalty_amt = self._pmt_total(loyalty_p)
         enc_amt = self._pmt_total(en_compte_p)
 
         def _row(fdc_init, comptants, prelev):
@@ -211,7 +210,8 @@ class RecapCaissesWizard(models.TransientModel):
             'cheques': _row(0.0, chq_amt, chq_amt),
             'cartes': _row(0.0, crt_amt, crt_amt),
             'titres': _row(0.0, tit_amt, tit_amt),
-            'avoir': _row(0.0, avr_amt, avr_amt),
+            'avoir': _row(0.0, food_amt, food_amt),
+            'porte_monnaie': _row(0.0, loyalty_amt, loyalty_amt),
             'virements': _row(0.0, 0.0, 0.0),
             'ecart_regl': {
                 'fdc_init': 0.0, 'comptants': 0.0, 'total_enc': 0.0,
@@ -233,7 +233,7 @@ class RecapCaissesWizard(models.TransientModel):
             'ecart': _sum_col('ecart'),
         }
 
-        avoir_deduits = avr_amt
+        avoir_deduits = food_amt + loyalty_amt
         total2_enc = total1['total_enc'] - avoir_deduits
         total2_dec = total1['total_dec'] - avoir_deduits
         total2 = {
@@ -316,16 +316,22 @@ class RecapCaissesWizard(models.TransientModel):
         # ================================================================
         # Section 5 – Remises fidélités
         # ================================================================
-        avoir_reduction_p = avoir_p.filtered(lambda p: p.amount > 0)
-        avoir_ajout_p = avoir_p.filtered(lambda p: p.amount < 0)
+        # Réductions : paiements effectués avec les points de fidélité (amount > 0)
+        loyalty_reduction_p = loyalty_p.filtered(lambda p: p.amount > 0)
+        montant_deduit = sum(loyalty_reduction_p.mapped('amount'))
+
+        # Ajouts : rendu monnaie crédité sur la carte (stocké sur pos.order.rendu_monnaie)
+        rendu_monnaie_orders = all_orders.filtered(lambda o: (o.rendu_monnaie or 0.0) > 0)
+        nb_ajout = len(rendu_monnaie_orders)
+        montant_ajout = sum(rendu_monnaie_orders.mapped('rendu_monnaie'))
 
         remises_fidelites = {
-            'porte_monnaie_count': len(avoir_p),
-            'porte_monnaie_total': avr_amt,
-            'nb_reduction': len(avoir_reduction_p),
-            'montant_deduit': sum(avoir_reduction_p.mapped('amount')),
-            'nb_ajout': len(avoir_ajout_p),
-            'montant_ajout': abs(sum(avoir_ajout_p.mapped('amount'))),
+            'porte_monnaie_count': len(loyalty_reduction_p) + nb_ajout,
+            'porte_monnaie_total': montant_deduit + montant_ajout,
+            'nb_reduction': len(loyalty_reduction_p),
+            'montant_deduit': montant_deduit,
+            'nb_ajout': nb_ajout,
+            'montant_ajout': montant_ajout,
         }
 
         # ================================================================
