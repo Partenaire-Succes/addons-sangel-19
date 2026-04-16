@@ -54,3 +54,9 @@ class PurchaseOrderSageX3Optimized(models.Model):
 
     def button_confirm_local(self):
         self.button_confirm()
+
+
+    def button_confirm(self):
+        res = super().button_confirm()
+        moves = self.action_create_invoice()
+        return res
