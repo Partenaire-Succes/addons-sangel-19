@@ -246,23 +246,21 @@ class StockExcelImportWizard(models.TransientModel):
                 ("warehouse_id", "=", self.warehouse_id.id),
             ], limit=1)
 
-            if line.quantity and line.quantity > 0:
+            values = {
+                "product_min_qty": line.quantity,
+                "product_max_qty": line.quantity,
+            }
 
-                values = {
-                    "product_min_qty": line.quantity,
-                    "product_max_qty": line.quantity,
-                }
-
-                if orderpoint:
-                    orderpoint.write(values)
-                else:
-                    values.update({
-                        "product_id": product.id,
-                        "location_id": self.location_id.id,
-                        "company_id": self.company_id.id,
-                        "warehouse_id": self.warehouse_id.id,
-                    })
-                    env["stock.warehouse.orderpoint"].create(values)
+            if orderpoint:
+                orderpoint.write(values)
+            else:
+                values.update({
+                    "product_id": product.id,
+                    "location_id": self.location_id.id,
+                    "company_id": self.company_id.id,
+                    "warehouse_id": self.warehouse_id.id,
+                })
+                env["stock.warehouse.orderpoint"].create(values)
 
         self.state = "done"
         return {
