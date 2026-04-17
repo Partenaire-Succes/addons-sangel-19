@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ===================== LIST VIEW ===================== -->
+    <record id="sale_promotion_view_list" model="ir.ui.view">
+        <field name="name">sale.promotion.view.list</field>
+        <field name="model">sale.promotion</field>
+        <field name="arch" type="xml">
+            <list string="Promotions" decoration-muted="not active">
+                <field name="name"/>
+                <field name="company_ids" widget="many2many_tags"/>
+                <field name="date_start"/>
+                <field name="date_end"/>
+                <field name="apply_in_pos"/>
+                <field name="active" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ===================== FORM VIEW ===================== -->
+    <record id="sale_promotion_view_form" model="ir.ui.view">
+        <field name="name">sale.promotion.view.form</field>
+        <field name="model">sale.promotion</field>
+        <field name="arch" type="xml">
+            <form string="Promotion commerciale">
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name" string="Code promo"/>
+                        <h1>
+                            <field name="name" placeholder="Ex: PROMO-2024-01"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Paramètres généraux">
+                            <field name="company_ids" widget="many2many_tags"
+                                   options="{'no_create': True}"/>
+                            <field name="apply_in_pos"/>
+                            <field name="active"/>
+                        </group>
+                        <group string="Période de validité">
+                            <field name="date_start"/>
+                            <field name="date_end"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Produits en promotion">
+                            <field name="line_ids" mode="list">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="product_id"/>
+                                    <field name="discount" string="Remise (%)"/>
+                                    <field name="date_start"/>
+                                    <field name="date_end"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ===================== SEARCH VIEW ===================== -->
+    <record id="sale_promotion_view_search" model="ir.ui.view">
+        <field name="name">sale.promotion.view.search</field>
+        <field name="model">sale.promotion</field>
+        <field name="arch" type="xml">
+            <search string="Rechercher une promotion">
+                <field name="name" string="Code promo"/>
+                <filter name="active_promos" string="Actives" domain="[('active', '=', True)]"/>
+                <filter name="apply_in_pos" string="Actives en caisse" domain="[('apply_in_pos', '=', True)]"/>
+                <filter name="archived" string="Archivées" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter name="group_by_date_start" string="Date début"
+                            context="{'group_by': 'date_start'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ===================== ACTION ===================== -->
+    <record id="action_sale_promotion" model="ir.actions.act_window">
+        <field name="name">Promotions</field>
+        <field name="res_model">sale.promotion</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="sale_promotion_view_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Créer votre première promotion
+            </p>
+            <p>
+                Définissez un code promo, les sociétés concernées, la période de validité
+                et les produits avec leur pourcentage de remise.
+            </p>
+        </field>
+    </record>
+
+    <!-- ===================== MENU ===================== -->
+    <menuitem
+        id="menu_sale_promotion"
+        name="Promotions Sangel"
+        parent="sale.sale_order_menu"
+        action="action_sale_promotion"
+        sequence="25"/>
+
+</odoo>

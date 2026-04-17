@@ -1,2 +1,6 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_product_pricelist_item_wizard,product.pricelist.item.wizard,model_product_pricelist_item_wizard,,1,1,1,1
+access_sale_promotion_user,sale.promotion.user,model_sale_promotion,sales_team.group_sale_salesman,1,0,0,0
+access_sale_promotion_manager,sale.promotion.manager,model_sale_promotion,sales_team.group_sale_salesman_all_leads,1,1,1,1
+access_sale_promotion_line_user,sale.promotion.line.user,model_sale_promotion_line,sales_team.group_sale_salesman,1,0,0,0
+access_sale_promotion_line_manager,sale.promotion.line.manager,model_sale_promotion_line,sales_team.group_sale_salesman_all_leads,1,1,1,1
