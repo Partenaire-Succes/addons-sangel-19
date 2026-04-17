@@ -249,13 +249,13 @@ class StockExcelImportWizard(models.TransientModel):
             if line.quantity > 0:
 
                 if orderpoint:
-                    orderpoint.product_max_qty = line.quantity
                     orderpoint.product_min_qty = line.quantity
+                    orderpoint.product_max_qty = line.quantity
                 else:
                     env["stock.warehouse.orderpoint"].create({
                         "product_id": product.id,
-                        "product_max_qty": line.quantity,
                         "product_min_qty": line.quantity,
+                        "product_max_qty": line.quantity,
                         "location_id": self.location_id.id,
                         "company_id": self.company_id.id,
                         "warehouse_id": self.warehouse_id.id,
