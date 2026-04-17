@@ -26,13 +26,12 @@
         'views/product_product_inherit_views.xml',
         'views/sale_customer_invoice_views.xml',
         'views/sale_order_inherit_views.xml',
-
-
-
+        'views/sale_promotion_views.xml',
     ],
     "assets": {
         "point_of_sale._assets_pos": [
-            "/custom_sales/static/src/js/*.js",
+            "/custom_sales/static/src/js/global_discount_patch.js",
+            "/custom_sales/static/src/js/promotion_pos_patch.js",
             # "/custom_sales/static/src/xml/*.xml",
         ],
     },

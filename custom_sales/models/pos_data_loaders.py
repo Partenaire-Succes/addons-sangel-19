@@ -7,6 +7,7 @@ for the global discount (remise globale) feature:
 - Partner: discount_eligible, discount_percentage, discount_start_date, discount_end_date
 - Product: discount_ligne (from product.template)
 - Pricelist: allowed_company_ids (from custom_sales)
+- Promotion: sale.promotion + sale.promotion.line (apply_in_pos)
 """
 from odoo import api, models
 
@@ -50,3 +51,14 @@ class ProductPricelistPOS(models.Model):
         fields = super()._load_pos_data_fields(config_id)
         fields.append('allowed_company_ids')
         return fields
+
+
+class PosSessionPromotion(models.Model):
+    """Register sale.promotion and sale.promotion.line in POS data loading."""
+    _inherit = 'pos.session'
+
+    def _load_pos_data_models(self, config):
+        models = super()._load_pos_data_models(config)
+        models.append('sale.promotion')
+        models.append('sale.promotion.line')
+        return models
