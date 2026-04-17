@@ -60,3 +60,9 @@ class PurchaseOrderSageX3Optimized(models.Model):
         res = super().button_confirm()
         moves = self.action_create_invoice()
         return res
+
+    def button_draft(self):
+        res = super().button_draft()
+        if self.type_supplier == 'vridi' and self.type_command == 'normal' and self.sage_x3_submitted:
+            self.sage_x3_submitted = False
+        return res
