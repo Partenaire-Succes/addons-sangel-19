@@ -130,6 +130,7 @@ Si un produit est un **Article pack (carton)** :
 - **Vente/livraison de cartons** : peut décrémenter les unités correspondantes (cohérence pack/unité).
 
 > Si vous constatez un écart, notez le produit, la date et l’opération (réception/livraison) puis remontez au responsable stock : ce mécanisme automatise la cohérence pack/unité.
+>
 
 ### 4.4 Onglet “Sage X3”
 
