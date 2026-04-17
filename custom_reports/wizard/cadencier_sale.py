@@ -269,6 +269,7 @@ class CadencierWizard(models.TransientModel):
             ('allowed_company_ids', 'in', company_id),
             ('type', '=', 'consu'),
             ('active', '=', True),
+            ('cat_gestion_id.name', 'in', ['01', '02', '04', '05', '06', 'DI'])
         ])
 
         final_products = self.env['product.template']

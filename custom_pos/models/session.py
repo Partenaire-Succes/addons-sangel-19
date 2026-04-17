@@ -72,7 +72,7 @@ class PosOrder(models.Model):
         # Vérification du stock
         for product in products:
             if product.qty_available <= 0:
-                produits_rupture.append(product.display_name)
+                produits_rupture.append(product.default_code)
 
         pos_config = self.env['pos.config'].search([], limit=1)
         code_acces = pos_config.code_acces if pos_config else False
@@ -84,8 +84,8 @@ class PosOrder(models.Model):
                 'access_required': True,
                 'code_acces': code_acces,
                 'message': "⚠️ Autorisation requise :\n\n" +
-                        "Produits en rupture de stock :\n" +
-                        "\n".join(f"   • {p}" for p in produits_rupture),
+                            "Produits en rupture de stock : " +
+                            ", ".join(produits_rupture),
             }
 
         # Si seulement rupture de stock
@@ -95,7 +95,7 @@ class PosOrder(models.Model):
                 'access_required': True,
                 'code_acces': code_acces,
                 'message': "Les produits suivants sont en rupture de stock :\n" +
-                        "\n".join(produits_rupture),
+                        ",".join(produits_rupture),
             }
 
         # Si seulement remise
@@ -172,7 +172,7 @@ class PosOrder(models.Model):
                 'error': True,
                 'access_required': True,
                 'code_acces': code_acces,
-                'message': f"⚠️ Modification de prix détectée :\n\n{product_list}\n\nUn code d'accès est requis pour valider cette réduction de prix.",
+                'message': f"⚠️ Modification de prix détectée .\n\nUn code d'accès est requis pour valider cette réduction de prix.",
             }
         
         return {
