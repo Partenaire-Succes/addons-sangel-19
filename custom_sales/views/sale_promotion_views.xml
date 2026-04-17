@@ -48,9 +48,32 @@
                                 <list editable="bottom">
                                     <field name="sequence" widget="handle"/>
                                     <field name="product_id"/>
+
+                                    <!-- ── Remise + Promo HT (saisie bidirectionnelle) ── -->
                                     <field name="discount" string="Remise (%)"/>
-                                    <field name="date_start"/>
-                                    <field name="date_end"/>
+                                    <field name="promo_ht"/>
+
+                                    <!-- ── Prix de vente courants (lecture seule) ── -->
+                                    <field name="price_ht" readonly="1" optional="show"/>
+                                    <field name="price_ttc" readonly="1" optional="show"/>
+
+                                    <!-- ── Prix d'achat promo (saisie) ── -->
+                                    <field name="promo_pa" optional="show"/>
+
+                                    <!-- ── Prix promo TTC + taxes (lecture seule) ── -->
+                                    <field name="promo_ttc" readonly="1" optional="show"/>
+                                    <field name="ht_tx" readonly="1" optional="show"/>
+                                    <field name="ttc_tx" readonly="1" optional="show"/>
+
+                                    <!-- ── Ratios commerciaux (lecture seule) ── -->
+                                    <field name="coeff" readonly="1" optional="show"/>
+                                    <field name="promo_coeff" readonly="1" optional="show"/>
+                                    <field name="promo_tx_marque" readonly="1" optional="show"/>
+
+                                    <!-- ── Stock (lecture seule) ── -->
+                                    <field name="qty_available" readonly="1" optional="show"/>
+                                    <field name="virtual_available" readonly="1" optional="show"/>
+
                                 </list>
                             </field>
                         </page>

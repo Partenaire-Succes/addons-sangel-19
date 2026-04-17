@@ -165,8 +165,13 @@
                     </style>
 
                     <!-- ═══ EN-TÊTE ════════════════════════════════════════════ -->
+                    <!-- Détection retour : au moins un mouvement a une origine retournée -->
+                    <t t-set="is_return" t-value="bool(doc.move_ids.filtered(lambda m: m.origin_returned_move_id))"/>
+
                     <div class="br-title">
-                        <t t-if="doc.picking_type_id.code == 'incoming'">Bon de réception</t>
+                        <t t-if="is_return and doc.picking_type_id.code == 'outgoing'">Retour fournisseur</t>
+                        <t t-elif="is_return and doc.picking_type_id.code == 'incoming'">Retour client</t>
+                        <t t-elif="doc.picking_type_id.code == 'incoming'">Bon de réception</t>
                         <t t-elif="doc.picking_type_id.code == 'outgoing'">Bon de livraison</t>
                         <t t-else="">Transfert interne</t>
                     </div>
@@ -226,7 +231,11 @@
                                         </t>
                                         <t t-if="doc.partner_id">
                                             <tr>
-                                                <td class="lbl">Fournisseur :</td>
+                                                <td class="lbl">
+                                                    <t t-if="is_return and doc.picking_type_id.code == 'incoming'">Client :</t>
+                                                    <t t-elif="doc.picking_type_id.code == 'outgoing'">Client :</t>
+                                                    <t t-else="">Fournisseur :</t>
+                                                </td>
                                                 <td class="val"><t t-esc="doc.partner_id.name"/></td>
                                             </tr>
                                             <t t-if="doc.partner_id.street">
@@ -340,18 +349,21 @@
                     <table class="sig-zone">
                         <tr>
                             <td>
-                                R&#233;ceptionn&#233; par<br/>
-                                <br/><br/>
+                                <t t-if="is_return">Retourné par</t>
+                                <t t-elif="doc.picking_type_id.code == 'incoming'">Réceptionné par</t>
+                                <t t-else="">Livré par</t>
+                                <br/><br/><br/>
                                 Nom &amp; Signature :
                             </td>
                             <td>
-                                Contr&#244;l&#233; par<br/>
-                                <br/><br/>
+                                Contrôlé par<br/><br/><br/>
                                 Nom &amp; Signature :
                             </td>
                             <td>
-                                Date de r&#233;ception<br/>
-                                <br/><br/>
+                                <t t-if="is_return">Date de retour</t>
+                                <t t-elif="doc.picking_type_id.code == 'incoming'">Date de réception</t>
+                                <t t-else="">Date de livraison</t>
+                                <br/><br/><br/>
                                 Date :
                             </td>
                         </tr>
