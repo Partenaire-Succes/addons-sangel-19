@@ -33,6 +33,7 @@
             "/custom_sales/static/src/js/global_discount_patch.js",
             "/custom_sales/static/src/js/promotion_pos_patch.js",
             # "/custom_sales/static/src/xml/*.xml",
+            # 
         ],
     },
 
