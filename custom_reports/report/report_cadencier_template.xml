@@ -99,8 +99,14 @@
                                         <td colspan="4" style="padding: 5px 6px; text-align: left; font-size: 10pt; letter-spacing: 1px;">
                                             ▶ TOTAL  <t t-esc="line['code_famille']"/> — <t t-esc="line['famille']"/>
                                         </td>
-                                        <td colspan="5" style="padding: 5px 3px; text-align: center; font-size: 10pt;">
-                                            <!-- colonnes vides (ST, MAXI, CMD, MARG, PVTC) -->
+                                        <td colspan="3" style="padding: 5px 3px; text-align: center; font-size: 10pt;">
+                                            <!-- colonnes vides (ST, MAXI, CMD) -->
+                                        </td>
+                                        <td style="padding: 4px; text-align: center; font-size: 10pt; font-weight: 900; background: #0a3d4d; color: #00c8e0;">
+                                            <t t-esc="'%.0f' % line['marg']"/>
+                                        </td>
+                                        <td colspan="1" style="padding: 5px 3px; text-align: center; font-size: 10pt;">
+                                            <!-- colonnes vides (PVTC) -->
                                         </td>
                                         <t t-foreach="line['ventes']" t-as="qty">
                                             <t t-if="qty > 0">

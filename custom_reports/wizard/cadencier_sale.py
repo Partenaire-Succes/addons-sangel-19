@@ -373,6 +373,7 @@ class CadencierWizard(models.TransientModel):
         famille_ventes = [0.0] * 12
         famille_total = 0.0
         famille_label = ''
+        total_marge = 0.0
 
         for item in result:
             item['is_subtotal'] = False
@@ -381,11 +382,13 @@ class CadencierWizard(models.TransientModel):
                     'is_subtotal': True,
                     'famille': famille_label,
                     'code_famille': current_famille_code,
+                    'marg': total_marge,
                     'ventes': [round(v, 2) for v in famille_ventes],
                     'total': round(famille_total, 2),
                 })
                 famille_ventes = [0.0] * 12
                 famille_total = 0.0
+                total_marge = 0.0
 
             current_famille_code = item['code_famille']
             famille_label = item['famille']
@@ -393,12 +396,14 @@ class CadencierWizard(models.TransientModel):
             for i in range(12):
                 famille_ventes[i] += item['ventes'][i]
             famille_total += item['total']
+            total_marge += item['marg']
 
         if current_famille_code is not None:
             final_result.append({
                 'is_subtotal': True,
                 'famille': famille_label,
                 'code_famille': current_famille_code,
+                'marg': round(total_marge, 2),
                 'ventes': [round(v, 2) for v in famille_ventes],
                 'total': round(famille_total, 2),
             })
