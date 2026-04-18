@@ -29,6 +29,13 @@ class CadencierWizard(models.TransientModel):
         help="Laisser vide pour toutes les familles",
     )
 
+    nbre_product = fields.Integer(
+        string='Nombres articles',
+        compute='_compute_nbre_product',
+        store=False
+    )
+    
+
     @api.model
     def _get_years(self):
         current_year = date.today().year
@@ -259,10 +266,175 @@ class CadencierWizard(models.TransientModel):
     # ─────────────────────────────────────────────────────────────
     # DONNÉES RAPPORT
     # ─────────────────────────────────────────────────────────────
+    def _compute_nbre_product(self):
+        for record in self:
+            data = record._get_report_data(
+                year=record.year,
+                company_id=record.company_id.id
+            )
+            record.nbre_product = len([
+                x for x in data if not x.get('is_subtotal')
+            ])
+
+
+    # def _get_report_data(self, year, company_id, famille_ids=None):
+    #     company = self.env['res.company'].browse(company_id)
+    #     date_from = date(int(year), 1, 1)
+    #     date_to = date(int(year), 12, 31)
+    #     product_data = defaultdict(lambda: defaultdict(float))
+
+    #     products = self.env['product.template'].search([
+    #         ('allowed_company_ids', 'in', company_id),
+    #         ('type', '=', 'consu'),
+    #         ('active', '=', True),
+    #         ('cat_gestion_id.name', 'in', ['01', '02', '04', '05', '06', 'DI'])
+    #     ])
+
+    #     final_products = self.env['product.template']
+
+    #     for p in products:
+    #         if p.current_company_status_id and p.current_company_status_id.code == 'C':
+    #             final_products |= p
+    #         else:
+    #             if any(v.qty_available > 0 for v in p.product_variant_ids):
+    #                 final_products |= p
+
+    #     for p in final_products:
+    #         for variant in p.product_variant_ids:
+    #             product_data[variant.id]
+
+    #     sale_domain = [
+    #         ('order_id.state', 'in', ['sale', 'done']),
+    #         ('order_id.company_id', '=', company_id),
+    #         ('product_id.type', '=', 'consu'),
+    #         ('order_id.date_order', '>=', str(date_from)),
+    #         ('order_id.date_order', '<=', str(date_to)),
+    #         ('product_id.cat_gestion_id.name', 'in', ['01', '02', '04', '05', '06', 'DI']),
+    #         ('product_id.active', '=', True),
+    #     ]
+    #     sale_lines = self.env['sale.order.line'].search(sale_domain)
+
+    #     pos_domain = [
+    #         ('order_id.state', 'in', ['done', 'paid', 'invoiced']),
+    #         ('order_id.company_id', '=', company_id),
+    #         ('product_id.type', '=', 'consu'),
+    #         ('order_id.date_order', '>=', str(date_from)),
+    #         ('order_id.date_order', '<=', str(date_to)),
+    #         ('product_id.cat_gestion_id.name', 'in', ['01', '02', '04', '05', '06', 'DI']),
+    #         ('product_id.active', '=', True),
+    #     ]
+    #     pos_lines = self.env['pos.order.line'].search(pos_domain)
+
+    #     for line in sale_lines:
+    #         month_idx = line.order_id.date_order.month - 1
+    #         product_data[line.product_id.id][month_idx] += line.product_uom_qty
+
+    #     for line in pos_lines:
+    #         month_idx = line.order_id.date_order.month - 1
+    #         product_data[line.product_id.id][month_idx] += line.qty
+
+    #     if not product_data:
+    #         return []
+
+    #     product_ids = list(product_data.keys())
+    #     products = self.env['product.product'].browse(product_ids)
+    #     self.nbre_product = len(products)
+
+    #     if famille_ids:
+    #         products = products.filtered(
+    #             lambda p: p.categ_id.id in famille_ids
+    #         )
+
+    #     result = []
+    #     for product in products.sorted(key=lambda p: ((p.categ_id.code or '').lower(), (p.default_code or '').lower())):
+    #         monthly_qtys = product_data[product.id]
+    #         ventes = [round(monthly_qtys.get(i, 0), 2) for i in range(12)]
+    #         total = sum(ventes)
+    #         stock = product.with_company(company).qty_available
+    #         pmp = product.avg_cost if product.avg_cost else product.standard_price
+
+    #         total_ca = 0.0
+    #         for line in sale_lines:
+    #             if line.product_id.id == product.id:
+    #                 total_ca += line.price_subtotal
+
+    #         for line in pos_lines:
+    #             if line.product_id.id == product.id:
+    #                 total_ca += line.price_subtotal
+
+    #         total_cost = total * pmp
+    #         taux_marge = round((total_ca - total_cost) / total_ca * 100, 2) if total_ca > 0 else 0.0
+
+    #         taxes = product.taxes_id.compute_all(
+    #             product.list_price,
+    #             currency=product.currency_id,
+    #             quantity=1,
+    #             product=product,
+    #             partner=None,
+    #         )
+    #         price_ttc = taxes['total_included']
+
+    #         result.append({
+    #             'code': product.default_code or '',
+    #             'designation': product.name,
+    #             'sta': product.current_company_status_id.code if product.current_company_status_id else '',
+    #             'maxi': product.max_qty_orderpoint,
+    #             'cmd': product.pending_reception_qty,
+    #             'marg': taux_marge,
+    #             'famille': product.categ_id.name,
+    #             'code_famille': product.categ_id.code,
+    #             'st_disp': round(stock, 2),
+    #             'pvtc': price_ttc,
+    #             'ventes': ventes,
+    #             'total': total,
+    #         })
+
+    #     final_result = []
+    #     current_famille_code = None
+    #     famille_ventes = [0.0] * 12
+    #     famille_total = 0.0
+    #     famille_label = ''
+    #     total_marge = 0.0
+
+    #     for item in result:
+    #         item['is_subtotal'] = False
+    #         if current_famille_code is not None and item['code_famille'] != current_famille_code:
+    #             final_result.append({
+    #                 'is_subtotal': True,
+    #                 'famille': famille_label,
+    #                 'code_famille': current_famille_code,
+    #                 'marg': total_marge,
+    #                 'ventes': [round(v, 2) for v in famille_ventes],
+    #                 'total': round(famille_total, 2),
+    #             })
+    #             famille_ventes = [0.0] * 12
+    #             famille_total = 0.0
+    #             total_marge = 0.0
+
+    #         current_famille_code = item['code_famille']
+    #         famille_label = item['famille']
+    #         final_result.append(item)
+    #         for i in range(12):
+    #             famille_ventes[i] += item['ventes'][i]
+    #         famille_total += item['total']
+    #         total_marge += item['marg']
+
+    #     if current_famille_code is not None:
+    #         final_result.append({
+    #             'is_subtotal': True,
+    #             'famille': famille_label,
+    #             'code_famille': current_famille_code,
+    #             'marg': round(total_marge, 2),
+    #             'ventes': [round(v, 2) for v in famille_ventes],
+    #             'total': round(famille_total, 2),
+    #         })
+
+    #     return final_result
+
     def _get_report_data(self, year, company_id, famille_ids=None):
         company = self.env['res.company'].browse(company_id)
         date_from = date(int(year), 1, 1)
-        date_to = date(int(year), 12, 31)
+        date_to   = date(int(year), 12, 31)
         product_data = defaultdict(lambda: defaultdict(float))
 
         products = self.env['product.template'].search([
@@ -273,7 +445,6 @@ class CadencierWizard(models.TransientModel):
         ])
 
         final_products = self.env['product.template']
-
         for p in products:
             if p.current_company_status_id and p.current_company_status_id.code == 'C':
                 final_products |= p
@@ -285,65 +456,64 @@ class CadencierWizard(models.TransientModel):
             for variant in p.product_variant_ids:
                 product_data[variant.id]
 
+        # ── Domaines communs ──────────────────────────────────────
+        date_from_str = str(date_from)
+        date_to_str   = str(date_to)
+        cat_filter    = ['01', '02', '04', '05', '06', 'DI']
+
         sale_domain = [
             ('order_id.state', 'in', ['sale', 'done']),
             ('order_id.company_id', '=', company_id),
             ('product_id.type', '=', 'consu'),
-            ('order_id.date_order', '>=', str(date_from)),
-            ('order_id.date_order', '<=', str(date_to)),
+            ('order_id.date_order', '>=', date_from_str),
+            ('order_id.date_order', '<=', date_to_str),
+            ('product_id.cat_gestion_id.name', 'in', cat_filter),
             ('product_id.active', '=', True),
         ]
-        sale_lines = self.env['sale.order.line'].search(sale_domain)
-
         pos_domain = [
             ('order_id.state', 'in', ['done', 'paid', 'invoiced']),
             ('order_id.company_id', '=', company_id),
             ('product_id.type', '=', 'consu'),
-            ('order_id.date_order', '>=', str(date_from)),
-            ('order_id.date_order', '<=', str(date_to)),
+            ('order_id.date_order', '>=', date_from_str),
+            ('order_id.date_order', '<=', date_to_str),
+            ('product_id.cat_gestion_id.name', 'in', cat_filter),
             ('product_id.active', '=', True),
         ]
-        pos_lines = self.env['pos.order.line'].search(pos_domain)
+
+        sale_lines = self.env['sale.order.line'].search(sale_domain)
+        pos_lines  = self.env['pos.order.line'].search(pos_domain)
+
+        # ✅ Pré-agréger les ventes mensuelles ET le CA par produit en une seule passe
+        ca_by_product = defaultdict(float)   # product_id → total CA
 
         for line in sale_lines:
             month_idx = line.order_id.date_order.month - 1
             product_data[line.product_id.id][month_idx] += line.product_uom_qty
+            ca_by_product[line.product_id.id] += line.price_subtotal  # ✅
 
         for line in pos_lines:
             month_idx = line.order_id.date_order.month - 1
             product_data[line.product_id.id][month_idx] += line.qty
+            ca_by_product[line.product_id.id] += line.price_subtotal  # ✅
 
         if not product_data:
             return []
 
         product_ids = list(product_data.keys())
-        products = self.env['product.product'].browse(product_ids)
+        products    = self.env['product.product'].browse(product_ids)
 
         if famille_ids:
-            products = products.filtered(
-                lambda p: p.categ_id.id in famille_ids
-            )
+            products = products.filtered(lambda p: p.categ_id.id in famille_ids)
 
-        result = []
-        for product in products.sorted(key=lambda p: ((p.categ_id.code or '').lower(), (p.default_code or '').lower())):
-            monthly_qtys = product_data[product.id]
-            ventes = [round(monthly_qtys.get(i, 0), 2) for i in range(12)]
-            total = sum(ventes)
-            stock = product.with_company(company).qty_available
-            pmp = product.avg_cost if product.avg_cost else product.standard_price
+        # ✅ Pré-charger qty_available en une seule passe (évite N requêtes SQL)
+        stock_by_product = {
+            p.id: p.with_company(company).qty_available
+            for p in products
+        }
 
-            total_ca = 0.0
-            for line in sale_lines:
-                if line.product_id.id == product.id:
-                    total_ca += line.price_subtotal
-
-            for line in pos_lines:
-                if line.product_id.id == product.id:
-                    total_ca += line.price_subtotal
-
-            total_cost = total * pmp
-            taux_marge = round((total_ca - total_cost) / total_ca * 100, 2) if total_ca > 0 else 0.0
-
+        # ✅ Pré-calculer les prix TTC en une seule passe
+        ttc_by_product = {}
+        for product in products:
             taxes = product.taxes_id.compute_all(
                 product.list_price,
                 currency=product.currency_id,
@@ -351,61 +521,82 @@ class CadencierWizard(models.TransientModel):
                 product=product,
                 partner=None,
             )
-            price_ttc = taxes['total_included']
+            ttc_by_product[product.id] = taxes['total_included']
+
+        result = []
+        for product in products.sorted(
+            key=lambda p: ((p.categ_id.code or '').lower(), (p.default_code or '').lower())
+        ):
+            monthly_qtys = product_data[product.id]
+            ventes = [round(monthly_qtys.get(i, 0), 2) for i in range(12)]
+            total  = sum(ventes)
+
+            stock = stock_by_product.get(product.id, 0.0)           # ✅ déjà calculé
+            pmp   = product.avg_cost or product.standard_price
+
+            total_ca   = ca_by_product.get(product.id, 0.0)          # ✅ déjà calculé
+            total_cost = total * pmp
+            taux_marge = (
+                round((total_ca - total_cost) / total_ca * 100, 2)
+                if total_ca > 0 else 0.0
+            )
+
+            price_ttc = ttc_by_product.get(product.id, 0.0)          # ✅ déjà calculé
 
             result.append({
-                'code': product.default_code or '',
-                'designation': product.name,
-                'sta': product.current_company_status_id.code if product.current_company_status_id else '',
-                'maxi': product.max_qty_orderpoint,
-                'cmd': product.pending_reception_qty,
-                'marg': taux_marge,
-                'famille': product.categ_id.name,
+                'code':         product.default_code or '',
+                'designation':  product.name,
+                'sta':          product.current_company_status_id.code if product.current_company_status_id else '',
+                'maxi':         product.max_qty_orderpoint,
+                'cmd':          product.pending_reception_qty,
+                'marg':         taux_marge,
+                'famille':      product.categ_id.name,
                 'code_famille': product.categ_id.code,
-                'st_disp': round(stock, 2),
-                'pvtc': price_ttc,
-                'ventes': ventes,
-                'total': total,
+                'st_disp':      round(stock, 2),
+                'pvtc':         price_ttc,
+                'ventes':       ventes,
+                'total':        total,
             })
 
+        # ── Sous-totaux (inchangé) ────────────────────────────────
         final_result = []
         current_famille_code = None
         famille_ventes = [0.0] * 12
-        famille_total = 0.0
-        famille_label = ''
-        total_marge = 0.0
+        famille_total  = 0.0
+        famille_label  = ''
+        total_marge    = 0.0
 
         for item in result:
             item['is_subtotal'] = False
             if current_famille_code is not None and item['code_famille'] != current_famille_code:
                 final_result.append({
-                    'is_subtotal': True,
-                    'famille': famille_label,
+                    'is_subtotal':  True,
+                    'famille':      famille_label,
                     'code_famille': current_famille_code,
-                    'marg': total_marge,
-                    'ventes': [round(v, 2) for v in famille_ventes],
-                    'total': round(famille_total, 2),
+                    'marg':         round(total_marge, 2),
+                    'ventes':       [round(v, 2) for v in famille_ventes],
+                    'total':        round(famille_total, 2),
                 })
                 famille_ventes = [0.0] * 12
-                famille_total = 0.0
-                total_marge = 0.0
+                famille_total  = 0.0
+                total_marge    = 0.0
 
             current_famille_code = item['code_famille']
-            famille_label = item['famille']
+            famille_label        = item['famille']
             final_result.append(item)
             for i in range(12):
                 famille_ventes[i] += item['ventes'][i]
             famille_total += item['total']
-            total_marge += item['marg']
+            total_marge   += item['marg']
 
         if current_famille_code is not None:
             final_result.append({
-                'is_subtotal': True,
-                'famille': famille_label,
+                'is_subtotal':  True,
+                'famille':      famille_label,
                 'code_famille': current_famille_code,
-                'marg': round(total_marge, 2),
-                'ventes': [round(v, 2) for v in famille_ventes],
-                'total': round(famille_total, 2),
+                'marg':         round(total_marge, 2),
+                'ventes':       [round(v, 2) for v in famille_ventes],
+                'total':        round(famille_total, 2),
             })
 
         return final_result
