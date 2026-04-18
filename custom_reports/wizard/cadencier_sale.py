@@ -54,7 +54,7 @@ class CadencierWizard(models.TransientModel):
         try:
             from openpyxl import Workbook
             from openpyxl.styles import (
-                Font, PatternFill, Alignment, Border, Side, numbers
+                Font, PatternFill, Alignment, Border, Side
             )
             from openpyxl.utils import get_column_letter
         except ImportError:
@@ -79,6 +79,8 @@ class CadencierWizard(models.TransientModel):
         COLOR_TOTAL  = "FFF3EE"
         COLOR_SUB_BG = "0A3D4D"
         COLOR_WHITE  = "FFFFFF"
+        COLOR_GREEN  = "2ECC71"
+        COLOR_RED    = "E74C3C"
 
         thin = Side(style='thin', color=COLOR_DARK)
         border_all = Border(left=thin, right=thin, top=thin, bottom=thin)
@@ -93,7 +95,7 @@ class CadencierWizard(models.TransientModel):
             return Alignment(horizontal=h, vertical=v, wrap_text=wrap)
 
         # ── Ligne 1 : titre société ────────────────────────────────
-        ws.merge_cells("A1:U1")
+        ws.merge_cells("A1:V1")
         company = self.company_id
         ws["A1"] = (
             f"{company.name}"
@@ -104,14 +106,14 @@ class CadencierWizard(models.TransientModel):
         ws["A1"].alignment = align(h="left")
 
         # ── Ligne 2 : titre rapport ────────────────────────────────
-        ws.merge_cells("A2:U2")
+        ws.merge_cells("A2:V2")
         ws["A2"] = (
-            f"CADENCIER STAT VENTES ARTICLES  –  ANNEE {self.year}  –  SOURCE : POS + MODULE VENTE"
+            f"CADENCIER STAT VENTES ARTICLES  –  ANNEE {self.year}"
+            f"  –  SOURCE : POS + MODULE VENTE"
         )
         ws["A2"].font = font(bold=True, color=COLOR_WHITE, size=12)
         ws["A2"].fill = fill(COLOR_DARK)
         ws["A2"].alignment = align()
-
         ws.row_dimensions[2].height = 20
 
         # ── Ligne 3 vide ───────────────────────────────────────────
@@ -119,24 +121,26 @@ class CadencierWizard(models.TransientModel):
 
         # ── En-têtes colonnes (ligne 4) ────────────────────────────
         MONTHS = ['JAN', 'FEV', 'MAR', 'AVR', 'MAI', 'JUIN',
-                  'JLT', 'AOT', 'SPT', 'OCT', 'NOV', 'DEC']
-        headers = ['CODE', 'DESIGNATION', 'STA.', 'FAMILLE',
-                   'ST.DISP.', 'MAXI', 'CMD', 'MARG%', 'PVTC'] + MONTHS + ['TOTAL']
+                'JLT', 'AOT', 'SPT', 'OCT', 'NOV', 'DEC']
+        headers = [
+            'CODE', 'DESIGNATION', 'STA.', 'FAMILLE',
+            'ST.DISP.', 'MAXI', 'CMD', 'MARG%', 'PVTC'
+        ] + MONTHS + ['TOTAL']
 
         header_row = 4
         for col_idx, header in enumerate(headers, start=1):
             cell = ws.cell(row=header_row, column=col_idx, value=header)
-            cell.font = font(bold=True, color=COLOR_WHITE, size=9)
             cell.alignment = align()
             cell.border = border_all
-            # Mois en cyan, TOTAL en orange, reste en dark
             if header in MONTHS:
                 cell.fill = fill(COLOR_CYAN)
                 cell.font = font(bold=True, color=COLOR_DARK, size=9)
             elif header == 'TOTAL':
                 cell.fill = fill(COLOR_ORANGE)
+                cell.font = font(bold=True, color=COLOR_WHITE, size=9)
             else:
                 cell.fill = fill(COLOR_DARK)
+                cell.font = font(bold=True, color=COLOR_WHITE, size=9)
 
         ws.row_dimensions[header_row].height = 18
 
@@ -147,39 +151,66 @@ class CadencierWizard(models.TransientModel):
 
             if line.get('is_subtotal'):
                 # ── Sous-total famille ─────────────────────────────
+
+                # Colonnes A:D — label fusionné
                 label = f"▶ TOTAL  {line['code_famille']} — {line['famille']}"
                 ws.merge_cells(f"A{r}:D{r}")
                 ws[f"A{r}"] = label
-                ws[f"A{r}"].font = font(bold=True, size=9)
-                ws[f"A{r}"].fill = fill(COLOR_GREY)
+                ws[f"A{r}"].font      = font(bold=True, color=COLOR_DARK, size=9)
+                ws[f"A{r}"].fill      = fill(COLOR_GREY)
                 ws[f"A{r}"].alignment = align(h="left")
-                ws[f"A{r}"].border = border_all
+                ws[f"A{r}"].border    = border_all
 
-                # Colonnes ST.DISP … PVTC vides
-                for c in range(5, 10):
-                    cell = ws.cell(row=r, column=c)
-                    cell.fill = fill(COLOR_GREY)
-                    cell.border = border_all
+                # Colonnes 5 à 9 : ST.DISP, MAXI, CMD, MARG%, PVTC
+                subtotal_cols = {
+                    5: ('st_disp', '#,##0.00', False),  # ST.DISP
+                    6: (None,      None,       False),  # MAXI  — vide
+                    7: ('cmd',     '#,##0.00', False),  # CMD
+                    8: ('marg',    '0.00"%"',  True),   # MARG% — formule agrégée
+                    9: (None,      None,       False),  # PVTC  — vide
+                }
 
-                # Ventes mensuelles
-                for m_idx, qty in enumerate(line['ventes']):
-                    c = 10 + m_idx
+                for c, (key, fmt, is_marg) in subtotal_cols.items():
                     cell = ws.cell(row=r, column=c)
-                    cell.value = qty if qty > 0 else None
-                    cell.font = font(bold=True, color=COLOR_CYAN if qty > 0 else COLOR_DARK, size=9)
-                    cell.fill = fill(COLOR_SUB_BG if qty > 0 else COLOR_GREY)
+                    cell.border    = border_all
                     cell.alignment = align()
-                    cell.border = border_all
+                    cell.fill      = fill(COLOR_GREY)
+                    if key and key in line and line[key] is not None:
+                        val = line[key]
+                        cell.value         = val
+                        cell.number_format = fmt
+                        if is_marg:
+                            cell.font = font(
+                                bold=True,
+                                color=COLOR_GREEN if val >= 0 else COLOR_RED,
+                                size=9
+                            )
+                        else:
+                            cell.font = font(bold=True, color=COLOR_DARK, size=9)
+
+                # Ventes mensuelles — colonnes 10 à 21
+                for m_idx, qty in enumerate(line['ventes']):
+                    c    = 10 + m_idx
+                    cell = ws.cell(row=r, column=c)
+                    cell.value         = qty if qty > 0 else None
+                    cell.fill          = fill(COLOR_SUB_BG if qty > 0 else COLOR_GREY)
+                    cell.font          = font(
+                        bold=True,
+                        color=COLOR_CYAN if qty > 0 else COLOR_DARK,
+                        size=9
+                    )
+                    cell.alignment     = align()
+                    cell.border        = border_all
                     cell.number_format = '#,##0'
 
-                # Total
-                cell_total = ws.cell(row=r, column=22)
-                cell_total.value = line['total']
-                cell_total.font = font(bold=True, color=COLOR_WHITE, size=9)
-                cell_total.fill = fill(COLOR_ORANGE)
-                cell_total.alignment = align()
-                cell_total.border = border_all
-                cell_total.number_format = '#,##0'
+                # TOTAL — colonne 22
+                cell_total                = ws.cell(row=r, column=22)
+                cell_total.value          = line['total']
+                cell_total.font           = font(bold=True, color=COLOR_WHITE, size=9)
+                cell_total.fill           = fill(COLOR_ORANGE)
+                cell_total.alignment      = align()
+                cell_total.border         = border_all
+                cell_total.number_format  = '#,##0'
 
                 ws.row_dimensions[r].height = 16
 
@@ -198,22 +229,32 @@ class CadencierWizard(models.TransientModel):
                 ] + [v if v > 0 else 0 for v in line['ventes']] + [line['total']]
 
                 for col_idx, value in enumerate(row_values, start=1):
-                    cell = ws.cell(row=r, column=col_idx, value=value)
+                    cell           = ws.cell(row=r, column=col_idx, value=value)
+                    cell.border    = border_all
+                    cell.alignment = align(
+                        h="left" if col_idx == 2 else "center",
+                        wrap=(col_idx == 2)
+                    )
                     cell.font = font(size=9)
-                    cell.border = border_all
-                    cell.alignment = align(h="left" if col_idx == 2 else "center", wrap=(col_idx == 2))
 
-                    # Formatage spécifique par colonne
-                    if col_idx == 9:                         # PVTC
+                    if col_idx == 9:                        # PVTC
                         cell.number_format = '#,##0'
-                    elif col_idx == 8:                       # MARG%
+
+                    elif col_idx == 8:                      # MARG%
                         cell.number_format = '0.00"%"'
-                    elif col_idx in range(10, 22):           # Mois
+                        cell.font = font(
+                            bold=False,
+                            color=COLOR_GREEN if (value or 0) >= 0 else COLOR_RED,
+                            size=9
+                        )
+
+                    elif col_idx in range(10, 22):          # Mois
                         cell.number_format = '#,##0'
                         if value and value > 0:
                             cell.fill = fill(COLOR_LIGHT)
                             cell.font = font(bold=True, size=9)
-                    elif col_idx == 22:                      # TOTAL
+
+                    elif col_idx == 22:                     # TOTAL
                         cell.number_format = '#,##0'
                         if line['total'] > 0:
                             cell.fill = fill(COLOR_TOTAL)
@@ -230,9 +271,9 @@ class CadencierWizard(models.TransientModel):
             8,   # ST.DISP
             7,   # MAXI
             7,   # CMD
-            7,   # MARG
+            7,   # MARG%
             12,  # PVTC
-        ] + [7] * 12 + [9]   # Mois + TOTAL
+        ] + [7] * 12 + [9]  # 12 mois + TOTAL
 
         for i, width in enumerate(col_widths, start=1):
             ws.column_dimensions[get_column_letter(i)].width = width
@@ -246,20 +287,19 @@ class CadencierWizard(models.TransientModel):
         buffer.seek(0)
         xlsx_data = base64.b64encode(buffer.read()).decode()
 
-        filename = f"Cadencier_Ventes_{self.year}.xlsx"
-
+        filename   = f"Cadencier_Ventes_{self.year}.xlsx"
         attachment = self.env['ir.attachment'].create({
-            'name': filename,
-            'type': 'binary',
-            'datas': xlsx_data,
-            'mimetype': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'name':      filename,
+            'type':      'binary',
+            'datas':     xlsx_data,
+            'mimetype':  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'res_model': self._name,
-            'res_id': self.id,
+            'res_id':    self.id,
         })
 
         return {
-            'type': 'ir.actions.act_url',
-            'url': f'/web/content/{attachment.id}?download=true',
+            'type':   'ir.actions.act_url',
+            'url':    f'/web/content/{attachment.id}?download=true',
             'target': 'new',
         }
 

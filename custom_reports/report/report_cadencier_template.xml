@@ -75,7 +75,7 @@
                                 <th style="padding: 5px 3px; text-align: center; font-size: 8pt;">ST.DISP.</th>
                                 <th style="padding: 5px 3px; text-align: center; font-size: 8pt;">MAXI</th>
                                 <th style="padding: 5px 3px; text-align: center; font-size: 8pt;">CMD</th>
-                                <th style="padding: 5px 3px; text-align: center; font-size: 8pt;">MARG</th>
+                                <th style="padding: 5px 3px; text-align: center; font-size: 8pt;">MARG %</th>
                                 <th style="padding: 5px 3px; text-align: center; font-size: 8pt;">PVTC</th>
 
                                 <t t-foreach="['JAN','FEV','MAR','AVR','MAI','JUIN','JLT','AOT','SPT','OCT','NOV','DEC']" t-as="m">
