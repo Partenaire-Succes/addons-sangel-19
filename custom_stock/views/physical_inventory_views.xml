@@ -237,6 +237,18 @@
             </field>
         </record>
 
+        <record id="physical_inventory_company_rule" model="ir.rule">
+            <field name="name">Physical Inventory: multi-company</field>
+            <field name="model_id" ref="model_physical_inventory"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|',
+                    ('company_id', '=', False),
+                    ('company_id', 'in', company_ids)
+                ]
+            </field>
+        </record>
+
 
         <!-- Menu principal -->
 
