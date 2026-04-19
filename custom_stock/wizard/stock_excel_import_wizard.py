@@ -85,14 +85,15 @@ class StockExcelImportWizard(models.TransientModel):
 
         headers = [str(h).strip() for h in rows[0]]
 
-        required_columns = ["product_code", "product_state", "quantity"]
+        # required_columns = ["product_code", "product_state", "quantity"]
+        required_columns = ["product_code", "product_state"]
         for col in required_columns:
             if col not in headers:
                 raise UserError(_("Missing column: %s") % col)
 
         product_index = headers.index("product_code")
         status_index = headers.index("product_state")
-        qty_index = headers.index("quantity")
+        # qty_index = headers.index("quantity")
 
         env = self.env(context=dict(
             self.env.context,
@@ -107,7 +108,7 @@ class StockExcelImportWizard(models.TransientModel):
 
             product_code = self._clean_code(row[product_index])
             product_state = self._clean_code(row[status_index])
-            quantity = float(row[qty_index] or 0.0)
+            # quantity = float(row[qty_index] or 0.0)
 
             if not product_code:
                 continue
@@ -120,7 +121,7 @@ class StockExcelImportWizard(models.TransientModel):
                 "product_code": product_code,
                 "product_id": product.id if product else False,
                 "p_state": product_state,
-                "quantity": quantity,
+                # "quantity": quantity,
                 "found": bool(product),
             }))
 
@@ -230,37 +231,41 @@ class StockExcelImportWizard(models.TransientModel):
         for line in self.line_ids.filtered(lambda l: l.found):
             product = line.product_id.with_company(self.company_id)
 
-            status = self.env["product.status"].search([
-                ("code", "=", line.p_state),
-                ("active", "=", True)
+            # status = self.env["product.status"].search([
+            #     ("code", "=", line.p_state),
+            #     ("active", "=", True)
+            # ], limit=1)
+
+            status = self.env["code.inventory"].search([
+                ("name", "=", line.p_state),
             ], limit=1)
 
             if status:
                 tmpl = product.product_tmpl_id.with_context(
                     allowed_company_ids=[self.company_id.id]
                 ).with_company(self.company_id)
-                tmpl.current_company_status_id = status.id
+                tmpl.code_inventory_id = status.id
 
-            orderpoint = env["stock.warehouse.orderpoint"].search([
-                ("product_id", "=", product.id),
-                ("warehouse_id", "=", self.warehouse_id.id),
-            ], limit=1)
+            # orderpoint = env["stock.warehouse.orderpoint"].search([
+            #     ("product_id", "=", product.id),
+            #     ("warehouse_id", "=", self.warehouse_id.id),
+            # ], limit=1)
 
-            values = {
-                "product_min_qty": line.quantity,
-                "product_max_qty": line.quantity,
-            }
+            # values = {
+            #     "product_min_qty": line.quantity,
+            #     "product_max_qty": line.quantity,
+            # }
 
-            if orderpoint:
-                orderpoint.write(values)
-            else:
-                values.update({
-                    "product_id": product.id,
-                    "location_id": self.location_id.id,
-                    "company_id": self.company_id.id,
-                    "warehouse_id": self.warehouse_id.id,
-                })
-                env["stock.warehouse.orderpoint"].create(values)
+            # if orderpoint:
+            #     orderpoint.write(values)
+            # else:
+            #     values.update({
+            #         "product_id": product.id,
+            #         "location_id": self.location_id.id,
+            #         "company_id": self.company_id.id,
+            #         "warehouse_id": self.warehouse_id.id,
+            #     })
+            #     env["stock.warehouse.orderpoint"].create(values)
 
         self.state = "done"
         return {
