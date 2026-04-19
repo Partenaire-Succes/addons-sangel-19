@@ -241,15 +241,15 @@ class StockExcelImportWizard(models.TransientModel):
             # ], limit=1)
 
             if product:
-                # tmpl = product.product_tmpl_id.with_context(
-                #     allowed_company_ids=[self.company_id.id]
-                # ).with_company(self.company_id)
-                # tmpl.standard_price = line.quantity
-
-                prod = product.with_context(
+                tmpl = product.product_tmpl_id.with_context(
                     allowed_company_ids=[self.company_id.id]
                 ).with_company(self.company_id)
-                prod.avg_cost = line.quantity
+                tmpl.standard_price = line.quantity
+
+                # prod = product.with_context(
+                #     allowed_company_ids=[self.company_id.id]
+                # ).with_company(self.company_id)
+                # prod.avg_cost = line.quantity
 
             # orderpoint = env["stock.warehouse.orderpoint"].search([
             #     ("product_id", "=", product.id),
