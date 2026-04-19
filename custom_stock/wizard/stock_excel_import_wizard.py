@@ -241,10 +241,10 @@ class StockExcelImportWizard(models.TransientModel):
             # ], limit=1)
 
             if product:
-                # tmpl = product.product_tmpl_id.with_context(
-                #     allowed_company_ids=[self.company_id.id]
-                # ).with_company(self.company_id)
-                # tmpl.standard_price = line.quantity
+                tmpl = product.product_tmpl_id.with_context(
+                    allowed_company_ids=[self.company_id.id]
+                ).with_company(self.company_id)
+                tmpl.standard_price = line.quantity
 
                 prod = product.with_context(
                     allowed_company_ids=[self.company_id.id]
