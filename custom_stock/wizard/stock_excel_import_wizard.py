@@ -216,72 +216,73 @@ class StockExcelImportWizard(models.TransientModel):
     def action_confirm(self):
         self.ensure_one()
         if self.import_mode == "product":
-            return self._confirm_products()
+            # return self._confirm_products()
+            return self.action_confirm_pmp()
         elif self.import_mode == "partner":
             return self._confirm_partners()
 
 
-    def _confirm_products(self):
-        env = self.env(context=dict(
-            self.env.context,
-            allowed_company_ids=[self.company_id.id]
-        ))
-        count_lines = len(self.line_ids.filtered(lambda l: l.found))
+    # def _confirm_products(self):
+    #     env = self.env(context=dict(
+    #         self.env.context,
+    #         allowed_company_ids=[self.company_id.id]
+    #     ))
+    #     count_lines = len(self.line_ids.filtered(lambda l: l.found))
 
-        for line in self.line_ids.filtered(lambda l: l.found):
-            product = line.product_id.with_company(self.company_id)
+    #     for line in self.line_ids.filtered(lambda l: l.found):
+    #         product = line.product_id.with_company(self.company_id)
 
-            # status = self.env["product.status"].search([
-            #     ("code", "=", line.p_state),
-            #     ("active", "=", True)
-            # ], limit=1)
+    #         # status = self.env["product.status"].search([
+    #         #     ("code", "=", line.p_state),
+    #         #     ("active", "=", True)
+    #         # ], limit=1)
 
-            # status = self.env["code.inventory"].search([
-            #     ("name", "=", line.p_state),
-            # ], limit=1)
+    #         # status = self.env["code.inventory"].search([
+    #         #     ("name", "=", line.p_state),
+    #         # ], limit=1)
 
-            if product:
-                # tmpl = product.product_tmpl_id.with_context(
-                #     allowed_company_ids=[self.company_id.id]
-                # ).with_company(self.company_id)
-                # tmpl.standard_price = line.quantity
+    #         if product:
+    #             # tmpl = product.product_tmpl_id.with_context(
+    #             #     allowed_company_ids=[self.company_id.id]
+    #             # ).with_company(self.company_id)
+    #             # tmpl.standard_price = line.quantity
 
-                prod = product.with_context(
-                    allowed_company_ids=[self.company_id.id]
-                ).with_company(self.company_id)
-                prod.avg_cost = line.quantity
+    #             prod = product.with_context(
+    #                 allowed_company_ids=[self.company_id.id]
+    #             ).with_company(self.company_id)
+    #             prod.avg_cost = line.quantity
 
-            # orderpoint = env["stock.warehouse.orderpoint"].search([
-            #     ("product_id", "=", product.id),
-            #     ("warehouse_id", "=", self.warehouse_id.id),
-            # ], limit=1)
+    #         # orderpoint = env["stock.warehouse.orderpoint"].search([
+    #         #     ("product_id", "=", product.id),
+    #         #     ("warehouse_id", "=", self.warehouse_id.id),
+    #         # ], limit=1)
 
-            # values = {
-            #     "product_min_qty": line.quantity,
-            #     "product_max_qty": line.quantity,
-            # }
+    #         # values = {
+    #         #     "product_min_qty": line.quantity,
+    #         #     "product_max_qty": line.quantity,
+    #         # }
 
-            # if orderpoint:
-            #     orderpoint.write(values)
-            # else:
-            #     values.update({
-            #         "product_id": product.id,
-            #         "location_id": self.location_id.id,
-            #         "company_id": self.company_id.id,
-            #         "warehouse_id": self.warehouse_id.id,
-            #     })
-            #     env["stock.warehouse.orderpoint"].create(values)
+    #         # if orderpoint:
+    #         #     orderpoint.write(values)
+    #         # else:
+    #         #     values.update({
+    #         #         "product_id": product.id,
+    #         #         "location_id": self.location_id.id,
+    #         #         "company_id": self.company_id.id,
+    #         #         "warehouse_id": self.warehouse_id.id,
+    #         #     })
+    #         #     env["stock.warehouse.orderpoint"].create(values)
 
-        self.state = "done"
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': 'Produits mis à jour — %s ligne(s)' % count_lines,
-                'message': "Import produits terminé avec succès.",
-                'type': 'success',
-            }
-        }
+    #     self.state = "done"
+    #     return {
+    #         'type': 'ir.actions.client',
+    #         'tag': 'display_notification',
+    #         'params': {
+    #             'title': 'Produits mis à jour — %s ligne(s)' % count_lines,
+    #             'message': "Import produits terminé avec succès.",
+    #             'type': 'success',
+    #         }
+    #     }
 
 
     def _confirm_partners(self):
@@ -309,67 +310,68 @@ class StockExcelImportWizard(models.TransientModel):
     # -------------------------
     # CONFIRM INVENTORY UPDATE
     # -------------------------
-    # def action_confirm(self):
-    #     self.ensure_one()
+    def action_confirm_pmp(self):
+        self.ensure_one()
 
-    #     env = self.env(context=dict(
-    #         self.env.context,
-    #         allowed_company_ids=[self.company_id.id]
-    #     ))
-    #     quants_to_apply = env["stock.quant"]
-    #     count_lines = len(self.line_ids.filtered(lambda l: l.found))
+        env = self.env(context=dict(
+            self.env.context,
+            allowed_company_ids=[self.company_id.id]
+        ))
+        quants_to_apply = env["stock.quant"]
+        count_lines = len(self.line_ids.filtered(lambda l: l.found))
 
-    #     for line in self.line_ids.filtered(lambda l: l.found):
+        for line in self.line_ids.filtered(lambda l: l.found):
 
-    #         product = line.product_id.with_company(self.company_id)
+            product = line.product_id.with_company(self.company_id)
 
-    #         status = self.env["product.status"].search([
-    #             ("code", "=", line.p_state),
-    #             ("active", "=", True)
-    #         ], limit=1)
+            # status = self.env["product.status"].search([
+            #     ("code", "=", line.p_state),
+            #     ("active", "=", True)
+            # ], limit=1)
 
-    #         if status:
-    #             # ✅ Écrire sur le template avec le bon contexte société
-    #             tmpl = product.product_tmpl_id.with_context(
-    #                 allowed_company_ids=[self.company_id.id]
-    #             ).with_company(self.company_id)
-    #             tmpl.current_company_status_id = status.id
+            # if status:
+            #     # ✅ Écrire sur le template avec le bon contexte société
+            #     tmpl = product.product_tmpl_id.with_context(
+            #         allowed_company_ids=[self.company_id.id]
+            #     ).with_company(self.company_id)
+            #     tmpl.current_company_status_id = status.id
 
-    #         if product:
-    #             product.standard_price = line.cost
+            # if product:
+            #     product.standard_price = line.cost
 
-    #         quant = env["stock.quant"].search([
-    #             ("product_id", "=", product.id),
-    #             ("location_id", "=", self.location_id.id),
-    #         ], limit=1)
+            quant = env["stock.quant"].search([
+                ("product_id", "=", product.id),
+                ("location_id", "=", self.location_id.id),
+            ], limit=1)
 
-    #         if quant:
-    #             quant.inventory_quantity = line.quantity
-    #         else:
-    #             quant = env["stock.quant"].create({
-    #                 "product_id": product.id,
-    #                 "location_id": self.location_id.id,
-    #                 "company_id": self.company_id.id,
-    #                 "inventory_quantity": line.quantity,
-    #             })
+            if quant:
+                # quant.inventory_quantity = line.quantity
+                quant.standard_price = line.quantity
+            # else:
+            #     quant = env["stock.quant"].create({
+            #         "product_id": product.id,
+            #         "location_id": self.location_id.id,
+            #         "company_id": self.company_id.id,
+            #         "inventory_quantity": line.quantity,
+            #     })
 
-    #         quants_to_apply |= quant
+            quants_to_apply |= quant
 
-    #     if quants_to_apply:
-    #         quants_to_apply._apply_inventory()
+        if quants_to_apply:
+            quants_to_apply._apply_inventory()
 
-    #     self.state = "done"
+        self.state = "done"
 
-    #     # return {"type": "ir.actions.act_window_close"}
-    #     return {
-    #             'type': 'ir.actions.client',
-    #             'tag': 'display_notification',
-    #             'params': {
-    #                 'title': 'Mise à jour du stock ligne total : %s' % count_lines,
-    #                 'message': "Import terminé avec succès.",
-    #                 'type': 'success',
-    #             }
-    #         }
+        # return {"type": "ir.actions.act_window_close"}
+        return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Mise à jour du stock ligne total : %s' % count_lines,
+                    'message': "Import terminé avec succès.",
+                    'type': 'success',
+                }
+            }
 
 
     # def action_confirm(self):
