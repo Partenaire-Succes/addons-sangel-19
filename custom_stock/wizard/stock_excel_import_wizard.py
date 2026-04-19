@@ -86,14 +86,14 @@ class StockExcelImportWizard(models.TransientModel):
         headers = [str(h).strip() for h in rows[0]]
 
         # required_columns = ["product_code", "product_state", "quantity"]
-        required_columns = ["product_code", "product_state"]
+        required_columns = ["product_code", "quantity"]
         for col in required_columns:
             if col not in headers:
                 raise UserError(_("Missing column: %s") % col)
 
         product_index = headers.index("product_code")
-        status_index = headers.index("product_state")
-        # qty_index = headers.index("quantity")
+        # status_index = headers.index("product_state")
+        qty_index = headers.index("quantity")
 
         env = self.env(context=dict(
             self.env.context,
@@ -107,8 +107,8 @@ class StockExcelImportWizard(models.TransientModel):
                 continue
 
             product_code = self._clean_code(row[product_index])
-            product_state = self._clean_code(row[status_index])
-            # quantity = float(row[qty_index] or 0.0)
+            # product_state = self._clean_code(row[status_index])
+            quantity = float(row[qty_index] or 0.0)
 
             if not product_code:
                 continue
@@ -120,8 +120,8 @@ class StockExcelImportWizard(models.TransientModel):
             lines_vals.append((0, 0, {
                 "product_code": product_code,
                 "product_id": product.id if product else False,
-                "p_state": product_state,
-                # "quantity": quantity,
+                # "p_state": product_state,
+                "quantity": quantity,
                 "found": bool(product),
             }))
 
@@ -236,15 +236,15 @@ class StockExcelImportWizard(models.TransientModel):
             #     ("active", "=", True)
             # ], limit=1)
 
-            status = self.env["code.inventory"].search([
-                ("name", "=", line.p_state),
-            ], limit=1)
+            # status = self.env["code.inventory"].search([
+            #     ("name", "=", line.p_state),
+            # ], limit=1)
 
-            if status:
+            if product:
                 tmpl = product.product_tmpl_id.with_context(
                     allowed_company_ids=[self.company_id.id]
                 ).with_company(self.company_id)
-                tmpl.code_inventory_id = status.id
+                tmpl.standard_price = line.quantity
 
             # orderpoint = env["stock.warehouse.orderpoint"].search([
             #     ("product_id", "=", product.id),
