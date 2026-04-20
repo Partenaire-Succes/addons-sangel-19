@@ -80,14 +80,6 @@ class ReportDailySalesWizard(models.TransientModel):
                 refund_ttc = sum(refunds.mapped('amount_total'))
 
             if self.report_type == 'sale':
-                # orders = self.env['sale.order'].search([
-                #     ('date_order', '>=', fields.Datetime.to_datetime(current_date)),
-                #     ('date_order', '<', fields.Datetime.to_datetime(next_day)),
-                #     ('state', 'in', ['sale', 'done']),
-                #     ('invoice_ids.move_type', '=', 'out_invoice'),
-                #     ('invoice_ids.state', '=', 'posted'),
-                #     ('company_id', '=', self.company_id.id),
-                # ])
                 moves = self.env['account.move'].search([
                     ('invoice_date', '>=', fields.Date.to_date(current_date)),
                     ('invoice_date', '<', fields.Date.to_date(next_day)),
@@ -97,10 +89,6 @@ class ReportDailySalesWizard(models.TransientModel):
                     ('company_id', 'in', self.company_ids.ids),
                 ])
 
-                # order_lines = self.env['sale.order.line'].search([
-                #     ('order_id', 'in', orders.ids),
-                #     ('state', '!=', 'cancel')
-                # ])
                 order_lines = self.env['account.move.line'].search([
                     ('move_id', 'in', moves.ids)
                 ])
@@ -173,17 +161,6 @@ class ReportDailySalesWizard(models.TransientModel):
                 )
 
             else:  # 'all' : ventes + POS combinés
-                # --- Ventes ---
-                # sale_orders = self.env['sale.order'].search([
-                #     ('date_order', '>=', fields.Datetime.to_datetime(current_date)),
-                #     ('date_order', '<', fields.Datetime.to_datetime(next_day)),
-                #     ('state', 'in', ['sale', 'done']),
-                #     ('company_id', '=', self.company_id.id),
-                # ])
-                # sale_order_lines = self.env['sale.order.line'].search([
-                #     ('order_id', 'in', sale_orders.ids),
-                #     ('state', '!=', 'cancel')
-                # ])
 
                 sale_moves = self.env['account.move'].search([
                     ('invoice_date', '>=', fields.Date.to_date(current_date)),

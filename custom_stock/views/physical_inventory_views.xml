@@ -53,17 +53,20 @@
                                 <field name="code_category_id" 
                                        invisible="inventory_mode in ['verification_carryover', 'libre']" 
                                        required="inventory_mode == 'normal'"
-                                       readonly="state == 'done'"/>
+                                       readonly="state == 'done'"
+                                       options="{'no_create': True}"/>
                                 <field name="code_inventory_id"
                                        widget="many2many_tags"
                                        invisible="inventory_mode in ['verification_carryover', 'libre']" 
                                        required="inventory_mode == 'normal'"
                                        domain="[('code_category_id', '=', code_category_id)]"
-                                       readonly="state == 'done'"/>
+                                       readonly="state == 'done'"
+                                       options="{'no_create': True}"/>
                                 <field name="team_inventory_id" 
                                        invisible="inventory_mode in ['verification_carryover', 'libre']" 
                                        required="inventory_mode == 'normal'"
-                                       readonly="state == 'done'"/>
+                                       readonly="state == 'done'"
+                                       options="{'no_create': True}"/>
                                 <field name="unverified_product_count"/>
                             </group>
                             <group>
@@ -95,11 +98,11 @@
                                         <field name="state" column_invisible="1"/>
                                         <field name="code_category_id" column_invisible="True"/>
                                         <field name="inventory_physical_id" column_invisible="True"/>
-                                        <field name="quant_id" column_invisible="True"/>
-                                        <field name="product_id" column_invisible="True"/>
-                                        <field name="location_id" column_invisible="True" domain="[('usage', 'in', ['internal'])]" required="True"/>       
+                                        <field name="quant_id" column_invisible="True" options="{'no_create': True}"/>
+                                        <field name="product_id" column_invisible="True" options="{'no_create': True}"/>
+                                        <field name="location_id" column_invisible="True" domain="[('usage', 'in', ['internal'])]" required="True" options="{'no_create': True}"/>       
                                         <field name="quantity" invisible="state == 'draft'"/>
-                                        <field name="product_uom_id" column_invisible="False"/>
+                                        <field name="product_uom_id" column_invisible="False" options="{'no_create': True}"/>
                                         <field name="physical_qty" column_invisible="False"/>
                                         <field name="qty_diff" string="Difference" invisible="state == 'draft'"
                                                decoration-muted="qty_diff == 0" decoration-danger="qty_diff &lt; 0"

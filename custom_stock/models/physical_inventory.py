@@ -9,6 +9,7 @@
 #############################################################################
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
+from collections import defaultdict
 
 
 class PhysicalInventory(models.Model):
@@ -138,40 +139,40 @@ class PhysicalInventory(models.Model):
     
     
     def create_line_physical(self):
-        """Generate physical inventory lines based on mode (normal or verification carryover)"""
-        self.physical_line_ids.unlink()
-        
+        self.ensure_one()
+
+        # MODE LIBRE
+        if self.inventory_mode == 'libre':
+            for line in self.physical_line_ids:
+                if line.code_category_id:
+                    self.code_inventory_id = [(4, line.code_category_id.id)]
+            return
+
+        # RESET LINES
+        self.physical_line_ids = [(5, 0, 0)]
+
+        vals_list = []
+
         if self.inventory_mode == 'normal':
-            # Normal mode: generate from stock quants
-            for stck in self.line_quant_ids:
-                self.env['physical.inventory.line'].create({
-                    'inventory_physical_id': self.id,
-                    'quant_id': stck.id,
-                    'product_tmpl_id' : stck.product_tmpl_id.id,
-                    'product_id' : stck.product_id.id,
-                    'location_id' : stck.location_id.id,
-                    'quantity' : stck.quantity,
-                    'lot_id': stck.lot_id.id if stck.lot_id else False,
-                    'product_uom_id': stck.product_uom_id.id,
-                    'code_category_id': self.code_category_id.id,
-                })
+            source_lines = self.line_quant_ids
         else:
-            # Verification carryover mode: generate from unverified products in previous sessions
-            unverified_archives = self._get_unverified_products_from_previous_sessions()
-            
-            for archive in unverified_archives:
-                self.env['physical.inventory.line'].create({
-                    'inventory_physical_id': self.id,
-                    'quant_id': archive.quant_id.id,
-                    'product_tmpl_id': archive.product_tmpl_id.id,
-                    'product_id': archive.product_id.id,
-                    'location_id': archive.location_id.id,
-                    'quantity': archive.quantity,
-                    'lot_id': archive.lot_id.id if archive.lot_id else False,
-                    'product_uom_id': archive.product_uom_id.id,
-                    'code_category_id': archive.code_category_id.id,
-                    'needs_verification': True,
-                })
+            source_lines = self._get_unverified_products_from_previous_sessions()
+
+        for src in source_lines:
+            vals_list.append({
+                'inventory_physical_id': self.id,
+                'quant_id': src.id,
+                'product_tmpl_id': src.product_tmpl_id.id,
+                'product_id': src.product_id.id,
+                'location_id': src.location_id.id,
+                'quantity': src.quantity,
+                'lot_id': src.lot_id.id if src.lot_id else False,
+                'product_uom_id': src.product_uom_id.id,
+                'code_category_id': src.code_category_id.id,
+                'needs_verification': self.inventory_mode != 'normal',
+            })
+
+        self.env['physical.inventory.line'].create(vals_list)
 
 
     def action_print_inventaire_report(self):
@@ -251,20 +252,24 @@ class PhysicalInventoryLine(models.Model):
     )
     product_id = fields.Many2one(
         'product.product',
-        'Produits'
+        string='Produit',
+        compute='_compute_product_id',
+        store=True
     )
+
     location_id = fields.Many2one(
         'stock.location',
         'Emplacement',
         default=lambda self: self.env['stock.location'].search([('usage', '=', 'internal')], limit=1)
     )
-    quantity = fields.Float('Stock')
+ 
     product_uom_id = fields.Many2one('uom.uom', "Unite", related="product_id.uom_id", readonly=True)
 
     physical_qty = fields.Float('Qte compté', default=0)
     qty_diff = fields.Float('Difference', compute="compute_qty_dif")
     valorisation = fields.Float('Valorisation', compute="compute_qty_dif")
     standard_price = fields.Float('Prix standard', related='product_tmpl_id.standard_price')
+    quantity = fields.Float('Stock', related='product_tmpl_id.qty_available')
 
     inventory_physical_id = fields.Many2one('physical.inventory', string='Inventaire Physique', copy=True)
     code_category_id = fields.Many2one('code.category.inventory', string='Categorie Code Inventaire', copy=True)
@@ -283,6 +288,23 @@ class PhysicalInventoryLine(models.Model):
         for qt in self:
             qt.qty_diff = qt.physical_qty - qt.quantity
             qt.valorisation = qt.standard_price * qt.qty_diff
+
+    @api.depends('product_tmpl_id')
+    def _compute_product_id(self):
+        for line in self:
+            line.product_id = line.product_tmpl_id.product_variant_id
+            
+
+    @api.onchange('product_id', 'location_id')
+    def _onchange_quant(self):
+        for line in self:
+            if line.product_id and line.location_id:
+                quant = self.env['stock.quant'].search([
+                    ('product_id', '=', line.product_id.id),
+                    ('location_id', '=', line.location_id.id),
+                ], limit=1)
+                line.quant_id = quant
+
 
     def action_archive_line(self):
         """Archive la ligne et marque comme à vérifier si applicable"""
