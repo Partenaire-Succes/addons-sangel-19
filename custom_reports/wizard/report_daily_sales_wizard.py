@@ -46,6 +46,64 @@ class ReportDailySalesWizard(models.TransientModel):
     def action_print_report(self):
         return self.env.ref('custom_reports.action_report_daily_sales').report_action(self)
 
+    def _get_historical_pmp(self, product_ids, date_end):
+        """
+        Reconstitue le PMP (AVCO) de chaque produit jusqu'à la fin du jour donné,
+        en rejouant la logique cumulative de stock.avco.report.
+        Retourne un dict {product_id: pmp}
+        """
+        if not product_ids:
+            return {}
+
+        from collections import defaultdict
+
+        date_limit = fields.Datetime.to_datetime(date_end) + timedelta(days=1) - timedelta(seconds=1)
+
+        self.env.cr.execute("""
+            SELECT product_id, res_model_name, value, quantity, date, id
+            FROM stock_avco_report
+            WHERE product_id = ANY(%s)
+            AND date <= %s
+            AND company_id = ANY(%s)
+            ORDER BY product_id, date, id
+        """, (list(product_ids), date_limit, self.company_ids.ids))
+
+        rows = self.env.cr.dictfetchall()
+
+        product_data = defaultdict(lambda: {
+            'total_value': 0.0,
+            'total_quantity': 0.0,
+            'last_known_pmp': 0.0,
+        })
+
+        for row in rows:
+            pid = row['product_id']
+            d = product_data[pid]
+
+            if row['res_model_name'] == 'stock.move':
+                d['total_value'] += row['value']
+                d['total_quantity'] += row['quantity']
+
+            elif row['res_model_name'] == 'product.value':
+                d['total_value'] = row['value'] * d['total_quantity']
+                # Ajustement initial : qty=0, on sauvegarde quand même le PMP unitaire
+                if not d['total_quantity']:
+                    d['last_known_pmp'] = row['value']
+
+            # Mettre à jour le dernier PMP connu dès qu'on peut le calculer
+            if d['total_quantity']:
+                d['last_known_pmp'] = d['total_value'] / d['total_quantity']
+
+        pmp_dict = {}
+        for pid, d in product_data.items():
+            if d['total_quantity']:
+                pmp_dict[pid] = d['total_value'] / d['total_quantity']
+            else:
+                # Stock épuisé ou jamais entré : dernier PMP connu avant épuisement
+                pmp_dict[pid] = d['last_known_pmp']
+
+        return pmp_dict
+
     def get_daily_sales(self):
         """Récupère les ventes journalières avec jours en français"""
         data = []
@@ -95,10 +153,17 @@ class ReportDailySalesWizard(models.TransientModel):
 
                 ca_ht = sum(order.amount_untaxed for order in orders) - refund_ht
                 ca_ttc = sum(order.amount_total for order in orders) - refund_ttc
+                # cout_total = sum(
+                #     line.quantity * line.product_id.standard_price
+                #     for line in order_lines
+                # )
+                product_ids = set(order_lines.mapped('product_id').ids)
+                pmp_dict = self._get_historical_pmp(product_ids, current_date)
                 cout_total = sum(
-                    line.quantity * line.product_id.standard_price
+                    line.quantity * (pmp_dict.get(line.product_id.id) or line.product_id.standard_price or 0.0)
                     for line in order_lines
                 )
+
                 marge = ca_ht - cout_total
                 remises = 0.0
                 remise_line = sum(
@@ -137,10 +202,18 @@ class ReportDailySalesWizard(models.TransientModel):
                     for order in orders
                 ) - refund_ht
                 ca_ttc = sum(order.amount_total for order in orders) - refund_ttc
+
+                product_ids = set(order_lines.mapped('product_id').ids)
+                pmp_dict = self._get_historical_pmp(product_ids, current_date)
                 cout_total = sum(
-                    line.qty * line.product_id.standard_price
+                    line.qty * (pmp_dict.get(line.product_id.id) or line.product_id.standard_price or 0.0)
                     for line in order_lines
                 )
+                # cout_total = sum(
+                #     line.qty * line.product_id.standard_price
+                #     for line in order_lines
+                # )
+
                 marge = ca_ht - cout_total
                 remises = 0.0
                 remise_line = sum(
@@ -178,10 +251,17 @@ class ReportDailySalesWizard(models.TransientModel):
 
                 sale_ca_ht = sum(order.amount_untaxed for order in sale_moves)
                 sale_ca_ttc = sum(order.amount_total for order in sale_moves)
+                sale_product_ids = set(sale_order_lines.mapped('product_id').ids)
+                sale_pmp_dict = self._get_historical_pmp(sale_product_ids, current_date)
+
                 sale_cout_total = sum(
-                    line.quantity * line.product_id.standard_price
+                    line.quantity * (sale_pmp_dict.get(line.product_id.id) or line.product_id.standard_price or 0.0)
                     for line in sale_order_lines
                 )
+                # sale_cout_total = sum(
+                #     line.quantity * line.product_id.standard_price
+                #     for line in sale_order_lines
+                # )
                 sale_marge = sale_ca_ht - sale_cout_total
                 sale_remises = 0.0
                 sale_remise_line = sum(
@@ -217,10 +297,17 @@ class ReportDailySalesWizard(models.TransientModel):
                     for order in pos_orders
                 )
                 pos_ca_ttc = sum(order.amount_total for order in pos_orders)
+
+                pos_product_ids = set(pos_order_lines.mapped('product_id').ids)
+                pos_pmp_dict = self._get_historical_pmp(pos_product_ids, current_date)
                 pos_cout_total = sum(
-                    line.qty * line.product_id.standard_price
+                    line.qty * (pos_pmp_dict.get(line.product_id.id) or line.product_id.standard_price or 0.0)
                     for line in pos_order_lines
                 )
+                # pos_cout_total = sum(
+                #     line.qty * line.product_id.standard_price
+                #     for line in pos_order_lines
+                # )
                 pos_marge = pos_ca_ht - pos_cout_total
                 pos_remises = 0.0
                 pos_remise_line = sum(

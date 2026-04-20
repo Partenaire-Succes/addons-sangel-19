@@ -67,9 +67,21 @@ class PhysicalInventory(models.Model):
         self.write({'state': 'draft', 'date_done': False})
 
     def action_start(self):
-        if not self.physical_line_ids:
-            raise UserError(_("Vous devez d'abord créer les lignes d'inventaire physique."))
+        for rec in self:
+            if not rec.physical_line_ids:
+                raise UserError(
+                    _("Vous devez d'abord créer les lignes d'inventaire physique.")
+                )
+
+        # Toutes les validations sont passées, on peut procéder
+        for rec in self:
+            if rec.inventory_mode == 'libre':
+                for line in rec.physical_line_ids:
+                    # Mise à jour groupée par enregistrement
+                    line.write({'quantity': line.qty})
+
         self.write({'state': 'in_progress'})
+
 
     @api.constrains('inventory_mode', 'code_inventory_id', 'code_category_id', 'team_inventory_id')
     def _check_required_fields_for_normal_mode(self):
@@ -146,6 +158,7 @@ class PhysicalInventory(models.Model):
             for line in self.physical_line_ids:
                 if line.code_category_id:
                     self.code_inventory_id = [(4, line.code_category_id.id)]
+                    line.quantity = line.qty
             return
 
         # RESET LINES
@@ -269,7 +282,8 @@ class PhysicalInventoryLine(models.Model):
     qty_diff = fields.Float('Difference', compute="compute_qty_dif")
     valorisation = fields.Float('Valorisation', compute="compute_qty_dif")
     standard_price = fields.Float('Prix standard', related='product_tmpl_id.standard_price')
-    quantity = fields.Float('Stock', related='product_tmpl_id.qty_available')
+    qty = fields.Float('Stock', related='product_tmpl_id.qty_available')
+    quantity = fields.Float('Stock')
 
     inventory_physical_id = fields.Many2one('physical.inventory', string='Inventaire Physique', copy=True)
     code_category_id = fields.Many2one('code.category.inventory', string='Categorie Code Inventaire', copy=True)
