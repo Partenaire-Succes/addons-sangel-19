@@ -83,6 +83,8 @@
             # Bouton ouverture manuelle caisse + raccourci Alt+C
             "/custom_pos/static/src/js/cashbox_button.js",
             "/custom_pos/static/src/xml/cashbox_button.xml",
+            # Taxe AIRSI - application automatique selon client et produit
+            "/custom_pos/static/src/js/airsi_patch.js",
         ],
     },
 }
