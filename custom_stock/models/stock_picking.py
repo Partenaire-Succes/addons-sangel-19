@@ -23,19 +23,19 @@ class StockPicking(models.Model):
 
         # ── 1. Pre-validation checks (before calling super) ──────────────────
         errors = []
-        for picking in self:
-            for move in picking.move_ids:
-                product_name = move.product_id.display_name
+        # for picking in self:
+        #     for move in picking.move_ids:
+        #         product_name = move.product_id.display_name
 
-                # 🔴 Block validation if price is 0
-                if move.price_unit == 0:
-                    errors.append(f"{product_name} (Prix = 0)")
+        #         # 🔴 Block validation if price is 0
+        #         if move.price_unit == 0:
+        #             errors.append(f"{product_name} (Prix = 0)")
 
-        if errors:
-            raise UserError(
-                "Validation impossible pour les produits suivants :\n- " +
-                "\n- ".join(errors)
-            )
+        # if errors:
+        #     raise UserError(
+        #         "Validation impossible pour les produits suivants :\n- " +
+        #         "\n- ".join(errors)
+        #     )
 
         # ── 2. Standard Odoo validation ───────────────────────────────────────
         res = super().button_validate()
