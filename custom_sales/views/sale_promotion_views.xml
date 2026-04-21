@@ -60,8 +60,8 @@
                                     <!-- ── Prix d'achat promo (saisie) ── -->
                                     <field name="promo_pa" optional="show"/>
 
-                                    <!-- ── Prix promo TTC + taxes (lecture seule) ── -->
-                                    <field name="promo_ttc" readonly="1" optional="show"/>
+                                    <!-- ── Prix promo TTC + taxes ── -->
+                                    <field name="promo_ttc" optional="show"/>
                                     <field name="ht_tx" readonly="1" optional="show"/>
                                     <field name="ttc_tx" readonly="1" optional="show"/>
 
