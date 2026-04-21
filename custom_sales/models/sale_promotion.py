@@ -54,7 +54,14 @@ class SalePromotion(models.Model):
 
     @api.model
     def _load_pos_data_domain(self, data, config):
-        return [('apply_in_pos', '=', True), ('active', '=', True)]
+        company_id = config.company_id.id
+        return [
+            ('apply_in_pos', '=', True),
+            ('active', '=', True),
+            '|',
+            ('company_ids', '=', False),
+            ('company_ids', 'in', [company_id]),
+        ]
 
     @api.model
     def _load_pos_data_fields(self, config):
@@ -367,9 +374,13 @@ class SalePromotionLine(models.Model):
 
     @api.model
     def _load_pos_data_domain(self, data, config):
+        company_id = config.company_id.id
         active_promo_ids = self.env['sale.promotion'].search([
             ('apply_in_pos', '=', True),
             ('active', '=', True),
+            '|',
+            ('company_ids', '=', False),
+            ('company_ids', 'in', [company_id]),
         ]).ids
         return [('promotion_id', 'in', active_promo_ids)]
 

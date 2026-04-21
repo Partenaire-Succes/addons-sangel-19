@@ -15,6 +15,13 @@ class ProductTemplate(models.Model):
         for product in self:
             product.pricelist_rule_count = len(product.pricelist_rule_ids)
 
+    def _load_pos_data_fields(self, config_id):
+        fields = super()._load_pos_data_fields(config_id)
+        for f in ('airsi_taxes_id', 'percentage_airsi'):
+            if f not in fields:
+                fields.append(f)
+        return fields
+
     def action_delete_pricelist_rules(self):
         products = self.env['product.template'].search([])
         for product in products:
