@@ -18,27 +18,27 @@ class StockPicking(models.Model):
     date_sage = fields.Datetime(string="Date SAGE", readonly=True)
 
 
-    # def button_validate(self):
-    #     errors = []
+    def button_validate(self):
+        errors = []
 
-    #     for picking in self:
-    #         for move in picking.move_ids:
+        for picking in self:
+            for move in picking.move_ids:
 
-    #             product_name = move.product_id.display_name
+                product_name = move.product_id.display_name
 
-    #             if move.quantity == 0:
-    #                 errors.append(f"{product_name} (Qté = 0)")
+                if move.quantity == 0:
+                    errors.append(f"{product_name} (Qté = 0)")
                     
-    #             # 🔴 Vérifier prix
-    #             if move.price_unit == 0:
-    #                 errors.append(f"{product_name} (Prix = 0)")
+                # 🔴 Vérifier prix
+                if move.price_unit == 0:
+                    errors.append(f"{product_name} (Prix = 0)")
 
-    #     if errors:
-    #         raise UserError(
-    #             "Validation impossible pour les produits suivants :\n- " +
-    #             "\n- ".join(errors)
-    #         )
-    #     return super().button_validate()
+        if errors:
+            raise UserError(
+                "Validation impossible pour les produits suivants :\n- " +
+                "\n- ".join(errors)
+            )
+        return super().button_validate()
 
     # def button_validate(self):
     #     """Override: synchronisation pack/unités selon les bonnes pratiques Odoo"""

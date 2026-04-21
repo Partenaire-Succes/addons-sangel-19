@@ -270,6 +270,19 @@ class ProductTemplateInherit(models.Model):
         help="Cochez si ce produit fait partie de la gamme Koumassi.",
     )
 
+    _sql_constraints = [
+        (
+            'default_code_unique',
+            'UNIQUE(default_code)',
+            'La référence interne (default_code) doit être unique !'
+        ),
+        (
+            'name_unique',
+            'UNIQUE(name)',
+            'Le nom du produit doit être unique !'
+        ),
+    ]
+
 
     @api.depends_context('company')
     def _compute_max_qty_orderpoint(self):
