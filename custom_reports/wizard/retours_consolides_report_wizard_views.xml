@@ -56,13 +56,13 @@
     </record>
 
     <!-- Menu : Analyse et Rapports > Stock et Inventaire -->
-    <menuitem
+    <!-- <menuitem
         id="menu_retours_consolides_report"
         name="Retours et Réceptions consolidés"
         parent="custom_reports.menu_reports_stock"
         action="action_retours_consolides_report_wizard"
         sequence="20"
         groups="custom_pos.group_superviseur,custom_pos.group_assistant_magasin,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
-    />
+    /> -->
 
 </odoo>

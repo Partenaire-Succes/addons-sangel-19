@@ -127,9 +127,10 @@ class SalePromotionLine(models.Model):
 
     # ─── Prix promo : PIVOT = promo_ht (editable OU calculé depuis remise) ──────
     #
-    #   Deux modes de saisie possibles :
-    #   1. L'utilisateur saisit la remise (%) → promo_ht se calcule
-    #   2. L'utilisateur saisit directement promo_ht → la remise se calcule
+    #   Trois modes de saisie possibles :
+    #   1. L'utilisateur saisit la remise (%) → promo_ht et promo_ttc se calculent
+    #   2. L'utilisateur saisit directement promo_ht → remise et promo_ttc se calculent
+    #   3. L'utilisateur saisit directement promo_ttc → promo_ht et remise se calculent
     #
     # ────────────────────────────────────────────────────────────────────────────
 
@@ -155,8 +156,11 @@ class SalePromotionLine(models.Model):
     promo_ttc = fields.Float(
         string='Promo TTC',
         compute='_compute_promo_prices',
+        inverse='_inverse_promo_ttc',
+        store=True,
         digits='Product Price',
-        help="Prix de vente TTC après remise (calculé depuis Promo HT + taxes).",
+        help="Prix de vente TTC après remise. Calculé depuis Promo HT + taxes, "
+             "ou saisissez ce prix pour calculer automatiquement Promo HT et la Remise (%).",
     )
     ht_tx = fields.Float(
         string='HT+TX',
@@ -260,6 +264,19 @@ class SalePromotionLine(models.Model):
             line.promo_ttc = p_promo_ttc
             line.ht_tx = p_promo_ttc - p_promo_ht
 
+    def _inverse_promo_ttc(self):
+        """Promo TTC saisi → recalcule Promo HT et Remise (%) à la sauvegarde."""
+        for line in self:
+            promo_ttc = line.promo_ttc or 0.0
+            p_ht = line.price_ht
+            p_ttc = line.price_ttc
+            if not p_ttc:
+                continue
+            promo_ht = round(promo_ttc * p_ht / p_ttc, 6) if p_ht else promo_ttc
+            line.promo_ht = promo_ht
+            if p_ht and p_ht > 0:
+                line.discount = round((1.0 - promo_ht / p_ht) * 100.0, 2)
+
     @api.depends('price_ht', 'promo_ht', 'promo_pa')
     def _compute_ratios(self):
         """Ratios commerciaux : coeff, promo_coeff, taux de marque."""
@@ -286,7 +303,7 @@ class SalePromotionLine(models.Model):
                 line.qty_available = 0.0
                 line.virtual_available = 0.0
 
-    # ─── Onchanges bidirectionnels (remise ↔ promo_ht) ─────────────────────────
+    # ─── Onchanges ──────────────────────────────────────────────────────────────
 
     @api.onchange('discount', 'product_id')
     def _onchange_discount(self):
@@ -302,6 +319,19 @@ class SalePromotionLine(models.Model):
         """Promo HT saisi directement → recalcule la remise (%)."""
         p_ht = self.price_ht
         promo_ht = self.promo_ht or 0.0
+        if p_ht and p_ht > 0:
+            self.discount = round((1.0 - promo_ht / p_ht) * 100.0, 2)
+
+    @api.onchange('promo_ttc')
+    def _onchange_promo_ttc(self):
+        """Promo TTC saisi → recalcule Promo HT et Remise (%) en temps réel."""
+        promo_ttc = self.promo_ttc or 0.0
+        p_ht = self.price_ht
+        p_ttc = self.price_ttc
+        if not p_ttc:
+            return
+        promo_ht = round(promo_ttc * p_ht / p_ttc, 6) if p_ht else promo_ttc
+        self.promo_ht = promo_ht
         if p_ht and p_ht > 0:
             self.discount = round((1.0 - promo_ht / p_ht) * 100.0, 2)
 
