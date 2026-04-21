@@ -221,9 +221,10 @@
             <field name="model">physical.inventory</field>
             <field name="arch" type="xml">
                 <list string="Code inventaire">
+                    <field name="date"/>
                     <field name="name"/>
-                    <field name="code_inventory_id"/>
-                    <field name="team_inventory_id"/>
+                    <field name="inventory_mode"/>
+                    <field name="state"/>
                 </list>
             </field>
         </record>

@@ -151,7 +151,6 @@ class SageX3SendWizard(models.TransientModel):
             ('state',         '=',  'posted'),
             ('sage_x3_sent',  '=',  False),
             ('pos_order_ids', '=',  False),
-            ('sage_sent',     '=',  True),
             ('company_id',    'in', company_ids),
             ('invoice_date',  '>=', self.date_from),
             ('invoice_date',  '<=', self.date_to),
@@ -193,6 +192,7 @@ class SageX3SendWizard(models.TransientModel):
             title      = "⚠️ Envoi terminé avec erreurs"
             notif_type = "warning"
             message    = (
+                f"Fermez toutes les sessions avant d'envoyer à SAGE X3\n"
                 f"Récap caisse POS  : {result_pos['success']} succès "
                 f"/ {result_pos['errors']} erreur(s)\n"
                 f"Factures / Avoirs : {result_invoices['success']} succès "

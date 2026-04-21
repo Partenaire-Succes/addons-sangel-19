@@ -19,17 +19,15 @@ class StockPicking(models.Model):
 
 
     def button_validate(self):
-        errors = []
+        """Override: price validation + pack/unit sync."""
 
+        # ── 1. Pre-validation checks (before calling super) ──────────────────
+        errors = []
         for picking in self:
             for move in picking.move_ids:
-
                 product_name = move.product_id.display_name
 
-                # if move.quantity == 0:
-                #     errors.append(f"{product_name} (Qté = 0)")
-                    
-                # 🔴 Vérifier prix
+                # 🔴 Block validation if price is 0
                 if move.price_unit == 0:
                     errors.append(f"{product_name} (Prix = 0)")
 
@@ -38,25 +36,27 @@ class StockPicking(models.Model):
                 "Validation impossible pour les produits suivants :\n- " +
                 "\n- ".join(errors)
             )
-        return super().button_validate()
 
-    # def button_validate(self):
-    #     """Override: synchronisation pack/unités selon les bonnes pratiques Odoo"""
-    #     res = super().button_validate()
+        # ── 2. Standard Odoo validation ───────────────────────────────────────
+        res = super().button_validate()
 
-    #     # Réceptions → explosion cartons en unités
-    #     if self.picking_type_code == "incoming":
-    #         self._process_pack_explosion()
+        # ── 3. Post-validation: pack/unit synchronisation ─────────────────────
+        # Réceptions → explosion cartons en unités
+        if self.picking_type_code == "incoming":
+            self._process_pack_explosion()
 
-    #     # Livraisons → synchronisation unités vers cartons
-    #     elif self.picking_type_code == "outgoing":
-    #         self._process_unit_to_pack_sync()
-    #         for move in self.move_ids.filtered(lambda m: m.state == "done" and m.product_id):
-    #             pack_template = self._get_pack_template_for_move(move)
-    #             if pack_template:
-    #                 # 👉 décrémenter les unités correspondant aux cartons vendus
-    #                 self._decrement_units_for_sold_cartons(move, pack_template)
-    #     return res
+        # Livraisons → synchronisation unités vers cartons
+        elif self.picking_type_code == "outgoing":
+            self._process_unit_to_pack_sync()
+            for move in self.move_ids.filtered(
+                lambda m: m.state == "done" and m.product_id
+            ):
+                pack_template = self._get_pack_template_for_move(move)
+                if pack_template:
+                    # 👉 décrémenter les unités correspondant aux cartons vendus
+                    self._decrement_units_for_sold_cartons(move, pack_template)
+
+        return res
 
     def _process_pack_explosion(self):
         """

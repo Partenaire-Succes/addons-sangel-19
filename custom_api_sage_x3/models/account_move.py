@@ -239,6 +239,7 @@ class AccountMoveSageX3(models.Model):
         magasin      = self._get_company_code(company)
         date_yy      = target_date.strftime("%d%m%y")
         date_fr      = target_date.strftime("%d/%m/%Y")
+        divers       = company.partner_devers_id.customer_id
 
         for label, val in [
             ("Site SAGE X3",           site),
@@ -301,8 +302,8 @@ class AccountMoveSageX3(models.Model):
 
                 partner    = payment.partner_id
                 tiers_code = (
-                    partner.customer_id.strip()
-                    if partner and partner.customer_id else ""
+                    partner.customer_account.strip()
+                    if partner and partner.customer_account else ""
                 )
                 pay_date   = (
                     payment.payment_date.strftime("%d/%m/%Y")
@@ -325,7 +326,10 @@ class AccountMoveSageX3(models.Model):
                     # })
 
                     if method.is_food:
-                        # Individuel avec tiers
+                        if not tiers_code:
+                            pay_account = cust_account
+                            tiers_code = divers
+                        # Individuel avec tiers 
                         partner_name = partner.name if partner else ''
                         decai_individual_food.append({
                             "compte":  pay_account.code,
@@ -432,8 +436,6 @@ class AccountMoveSageX3(models.Model):
                 f"REGLT {journal_name} N°{ref_pmt}/{pmt.partner_id.name}"
             )[:50]
             tiers_code   = pmt.partner_id.customer_id.strip()
-            if tiers_code.startswith(('10', '20')):
-                tiers_code = (company.partner_devers_id.customer_id or "").strip()
 
             lignes_encai.append(self._build_ligne(
                 site    = site,
@@ -483,17 +485,17 @@ class AccountMoveSageX3(models.Model):
         # Lignes individuelles (is_food), triées (compte, tiers)
 
         
-        # for line in sorted(decai_individual_food,
-        #                    key=lambda x: (x['compte'], x.get('tiers', ''))):
-        #     lignes_decai.append(self._build_ligne(
-        #         site    = site,
-        #         compte  = line['compte'],
-        #         sens    = 1,
-        #         montant = round(line['montant'], 2),
-        #         libelle = line['libelle'],
-        #         tiers   = line.get('tiers', ''),
-        #     ))
-        #     total_decai += line['montant']    
+        for line in sorted(decai_individual_food,
+                           key=lambda x: (x['compte'], x.get('tiers', ''))):
+            lignes_decai.append(self._build_ligne(
+                site    = site,
+                compte  = line['compte'],
+                sens    = 1,
+                montant = round(line['montant'], 2),
+                libelle = line['libelle'],
+                tiers   = line.get('tiers', ''),
+            ))
+            total_decai += line['montant']    
 
         # [3]+[4]+[5] Lignes groupées par compte (is_bank_card, is_cheque, is_titre_paiement)
         # → 1 seule ligne par code compte, triées par code compte
@@ -523,7 +525,7 @@ class AccountMoveSageX3(models.Model):
         # ASSEMBLAGE FINAL
         # =====================================================================
         ecritures = []
-        result  = self._ligne_ecritures_is_limit(pos_sessions)
+        result  = self._ligne_ecritures_is_limit(pos_sessions, company)
 
         if lignes_encai and total_encai > 0:
             ecritures.append(self._build_ecriture(
@@ -555,9 +557,8 @@ class AccountMoveSageX3(models.Model):
 
         return {"ecritures": ecritures}
 
-    def _ligne_ecritures_is_limit(self, sessions):
+    def _ligne_ecritures_is_limit(self, sessions, company):
 
-        company      = self.env.user.company_id
         receivable   = company.sage_x3_account_customer_default_id
         sale_acct    = company.sage_x3_account_sale_id
         sale_tva_9   = company.sage_x3_account_sale_tva_9_id
@@ -583,8 +584,6 @@ class AccountMoveSageX3(models.Model):
                 partner = payment.partner_id
 
                 tiers_code = (partner.customer_id or "").strip() if partner else ""
-                if tiers_code.startswith(('10', '20')):
-                    tiers_code = (company.partner_devers_id.customer_id or "").strip()
                 partner_name = partner.name if partner else "CLIENT"
 
                 pay_date = payment.payment_date.strftime("%d%m%y") if payment.payment_date else ""
@@ -934,9 +933,6 @@ class AccountMoveSageX3(models.Model):
         date_fr     = invoice.invoice_date.strftime("%d/%m/%Y")
         magasin     = self._get_company_code(company)
         lignes      = []
-
-        if third_party.startswith(('10', '20')):
-            third_party = (invoice.company_id.partner_devers_id.customer_id or "").strip()
 
         # =========================
         # Ligne client

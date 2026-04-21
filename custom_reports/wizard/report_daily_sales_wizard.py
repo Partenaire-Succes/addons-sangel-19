@@ -1,5 +1,6 @@
 from odoo import models, fields, api
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
+from collections import defaultdict
 import locale
 
 
@@ -51,11 +52,17 @@ class ReportDailySalesWizard(models.TransientModel):
         Reconstitue le PMP (AVCO) de chaque produit jusqu'à la fin du jour donné,
         en rejouant la logique cumulative de stock.avco.report.
         Retourne un dict {product_id: pmp}
+        Les PMP avant le 20/04/2026 ne sont pas fiables :
+        pour toute période antérieure on utilise le PMP du 20/04/2026.
         """
         if not product_ids:
             return {}
 
-        from collections import defaultdict
+        DATE_FIABLE = date(2026, 4, 20)
+
+        # Si la date demandée est avant la date fiable, on prend le PMP du 20/04/2026
+        if date_end < DATE_FIABLE:
+            date_end = DATE_FIABLE
 
         date_limit = fields.Datetime.to_datetime(date_end) + timedelta(days=1) - timedelta(seconds=1)
 
@@ -99,7 +106,7 @@ class ReportDailySalesWizard(models.TransientModel):
             if d['total_quantity']:
                 pmp_dict[pid] = d['total_value'] / d['total_quantity']
             else:
-                # Stock épuisé ou jamais entré : dernier PMP connu avant épuisement
+                # Stock épuisé ou jamais entré : dernier PMP connu
                 pmp_dict[pid] = d['last_known_pmp']
 
         return pmp_dict

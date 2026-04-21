@@ -16,6 +16,7 @@ class PhysicalInventory(models.Model):
     _name = 'physical.inventory'
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _description = 'Physical Inventory'
+    _order = 'create_date desc'
 
     name = fields.Char(string='Nom', required=True, copy=False)
     code_inventory_id = fields.Many2many('code.inventory', string='Code Inventaire', copy=True)
