@@ -26,8 +26,8 @@ class StockPicking(models.Model):
 
                 product_name = move.product_id.display_name
 
-                if move.quantity == 0:
-                    errors.append(f"{product_name} (Qté = 0)")
+                # if move.quantity == 0:
+                #     errors.append(f"{product_name} (Qté = 0)")
                     
                 # 🔴 Vérifier prix
                 if move.price_unit == 0:
