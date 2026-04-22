@@ -165,12 +165,15 @@
                     </style>
 
                     <!-- ═══ EN-TÊTE ════════════════════════════════════════════ -->
-                    <!-- Détection retour : au moins un mouvement a une origine retournée -->
-                    <t t-set="is_return" t-value="bool(doc.move_ids.filtered(lambda m: m.origin_returned_move_id))"/>
+                    <!-- Détection retour natif Odoo (origin_returned_move_id) ou wizard retour fournisseur (dest = supplier) -->
+                    <t t-set="is_return_native" t-value="bool(doc.move_ids.filtered(lambda m: m.origin_returned_move_id))"/>
+                    <t t-set="is_retour_fournisseur" t-value="doc.location_dest_id.usage == 'supplier'"/>
+                    <t t-set="is_return" t-value="is_return_native or is_retour_fournisseur"/>
 
                     <div class="br-title">
-                        <t t-if="is_return and doc.picking_type_id.code == 'outgoing'">Retour fournisseur</t>
-                        <t t-elif="is_return and doc.picking_type_id.code == 'incoming'">Retour client</t>
+                        <t t-if="is_retour_fournisseur">Retour fournisseur</t>
+                        <t t-elif="is_return_native and doc.picking_type_id.code == 'outgoing'">Retour fournisseur</t>
+                        <t t-elif="is_return_native and doc.picking_type_id.code == 'incoming'">Retour client</t>
                         <t t-elif="doc.picking_type_id.code == 'incoming'">Bon de réception</t>
                         <t t-elif="doc.picking_type_id.code == 'outgoing'">Bon de livraison</t>
                         <t t-else="">Transfert interne</t>
@@ -232,7 +235,8 @@
                                         <t t-if="doc.partner_id">
                                             <tr>
                                                 <td class="lbl">
-                                                    <t t-if="is_return and doc.picking_type_id.code == 'incoming'">Client :</t>
+                                                    <t t-if="is_retour_fournisseur">Fournisseur :</t>
+                                                    <t t-elif="is_return_native and doc.picking_type_id.code == 'incoming'">Client :</t>
                                                     <t t-elif="doc.picking_type_id.code == 'outgoing'">Client :</t>
                                                     <t t-else="">Fournisseur :</t>
                                                 </td>

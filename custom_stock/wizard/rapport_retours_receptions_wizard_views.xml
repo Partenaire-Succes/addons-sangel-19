@@ -13,16 +13,13 @@
             <form string="Rapport Retours et Réceptions consolidé">
                 <sheet>
                     <div class="oe_title">
-                        <h1>Rapport Retours &amp; Réceptions</h1>
+                        <h1>Rapport Retours</h1>
                         <h3 class="text-muted">
                             Choisissez le contenu et les filtres, puis téléchargez le PDF
                         </h3>
                     </div>
 
                     <group>
-                        <group string="Contenu du rapport">
-                            <field name="type_rapport" widget="radio"/>
-                        </group>
                         <group string="Filtres">
                             <field name="date_debut"/>
                             <field name="date_fin"/>
@@ -33,6 +30,7 @@
                                    placeholder="Référence exacte (ex: CESS-2026-001)"/>
                         </group>
                     </group>
+                    <field name="type_rapport" invisible="1"/>
 
                     <div class="alert alert-info mt-2" role="alert">
                         <i class="fa fa-info-circle"/>
@@ -62,20 +60,20 @@
 
     <!-- Action popup -->
     <record id="action_rapport_retours_receptions_wizard" model="ir.actions.act_window">
-        <field name="name">Rapport Retours &amp; Réceptions</field>
+        <field name="name">Rapport Retours</field>
         <field name="res_model">rapport.retours.receptions.wizard</field>
         <field name="view_mode">form</field>
         <field name="target">new</field>
     </record>
 
     <!-- Menu enfant sous Rapports -->
-    <!-- <menuitem
+    <menuitem
         id="menu_rapport_retours_receptions"
-        name="Rapport Retours &amp; Réceptions"
+        name="Rapport Retours"
         parent="custom_stock.menu_sortie_entrant_rapports"
         action="action_rapport_retours_receptions_wizard"
         sequence="10"
         groups="custom_pos.group_superviseur,custom_pos.group_assistant_magasin,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
-    /> -->
+    />
 
 </odoo>

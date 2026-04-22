@@ -85,23 +85,26 @@ class RetourFournisseurWizard(models.TransientModel):
         if not self.line_ids:
             raise UserError(_("Ajoutez au moins une ligne d'article à retourner."))
 
-        # 1. Type de mouvement : incoming inversé = retour vers fournisseur
+        # 1. Type de mouvement : outgoing (livraisons) — donne WH/OUT/XXXXX
         picking_type = self.env['stock.picking.type'].search([
-            ('code', '=', 'incoming'),
+            ('code', '=', 'outgoing'),
             ('company_id', '=', self.env.company.id),
             ('warehouse_id', '!=', False),
         ], limit=1)
         if not picking_type:
             raise UserError(_(
-                "Aucun type 'Réceptions' trouvé pour la société %s."
+                "Aucun type 'Livraisons' trouvé pour la société %s."
             ) % self.env.company.name)
 
-        # Destination = emplacement fournisseur (inverse de la réception)
-        location_dest = picking_type.default_location_src_id
+        # Destination = emplacement fournisseur virtuel
+        location_dest = self.env.ref(
+            'stock.stock_location_suppliers', raise_if_not_found=False
+        )
         if not location_dest:
-            location_dest = self.env.ref(
-                'stock.stock_location_suppliers', raise_if_not_found=False
-            )
+            location_dest = self.env['stock.location'].search([
+                ('usage', '=', 'supplier'),
+                ('company_id', 'in', [self.env.company.id, False]),
+            ], limit=1)
         if not location_dest:
             raise UserError(_("Emplacement fournisseur introuvable."))
 
