@@ -160,17 +160,10 @@ class ReportDailySalesWizard(models.TransientModel):
 
                 ca_ht = sum(order.amount_untaxed for order in orders) - refund_ht
                 ca_ttc = sum(order.amount_total for order in orders) - refund_ttc
-                # cout_total = sum(
-                #     line.quantity * line.product_id.standard_price
-                #     for line in order_lines
-                # )
-                product_ids = set(order_lines.mapped('product_id').ids)
-                pmp_dict = self._get_historical_pmp(product_ids, current_date)
                 cout_total = sum(
-                    line.quantity * (pmp_dict.get(line.product_id.id) or line.product_id.standard_price or 0.0)
+                    line.quantity * line.product_id.standard_price
                     for line in order_lines
                 )
-
                 marge = ca_ht - cout_total
                 remises = 0.0
                 remise_line = sum(
@@ -210,18 +203,13 @@ class ReportDailySalesWizard(models.TransientModel):
                 ) - refund_ht
                 ca_ttc = sum(order.amount_total for order in orders) - refund_ttc
 
-                product_ids = set(order_lines.mapped('product_id').ids)
-                pmp_dict = self._get_historical_pmp(product_ids, current_date)
-                cout_total = sum(
-                    line.qty * (pmp_dict.get(line.product_id.id) or line.product_id.standard_price or 0.0)
-                    for line in order_lines
-                )
                 # cout_total = sum(
                 #     line.qty * line.product_id.standard_price
                 #     for line in order_lines
                 # )
+                # marge = ca_ht - cout_total
 
-                marge = ca_ht - cout_total
+                marge = sum(orders.mapped('margin'))
                 remises = 0.0
                 remise_line = sum(
                     l.price_unit * l.qty * (l.discount or 0.0) / 100.0
@@ -258,17 +246,10 @@ class ReportDailySalesWizard(models.TransientModel):
 
                 sale_ca_ht = sum(order.amount_untaxed for order in sale_moves)
                 sale_ca_ttc = sum(order.amount_total for order in sale_moves)
-                sale_product_ids = set(sale_order_lines.mapped('product_id').ids)
-                sale_pmp_dict = self._get_historical_pmp(sale_product_ids, current_date)
-
                 sale_cout_total = sum(
-                    line.quantity * (sale_pmp_dict.get(line.product_id.id) or line.product_id.standard_price or 0.0)
+                    line.quantity * line.product_id.standard_price
                     for line in sale_order_lines
                 )
-                # sale_cout_total = sum(
-                #     line.quantity * line.product_id.standard_price
-                #     for line in sale_order_lines
-                # )
                 sale_marge = sale_ca_ht - sale_cout_total
                 sale_remises = 0.0
                 sale_remise_line = sum(
@@ -304,18 +285,12 @@ class ReportDailySalesWizard(models.TransientModel):
                     for order in pos_orders
                 )
                 pos_ca_ttc = sum(order.amount_total for order in pos_orders)
-
-                pos_product_ids = set(pos_order_lines.mapped('product_id').ids)
-                pos_pmp_dict = self._get_historical_pmp(pos_product_ids, current_date)
-                pos_cout_total = sum(
-                    line.qty * (pos_pmp_dict.get(line.product_id.id) or line.product_id.standard_price or 0.0)
-                    for line in pos_order_lines
-                )
                 # pos_cout_total = sum(
                 #     line.qty * line.product_id.standard_price
                 #     for line in pos_order_lines
                 # )
-                pos_marge = pos_ca_ht - pos_cout_total
+                # pos_marge = pos_ca_ht - pos_cout_total
+                pos_marge = sum(pos_orders.mapped('margin'))
                 pos_remises = 0.0
                 pos_remise_line = sum(
                     l.price_unit * l.qty * (l.discount or 0.0) / 100.0
