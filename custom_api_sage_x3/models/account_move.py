@@ -236,6 +236,7 @@ class AccountMoveSageX3(models.Model):
         caisse_acct  = company.sage_x3_account_caisse_id
         sale_tva_9   = company.sage_x3_account_sale_tva_9_id
         sale_tva_18  = company.sage_x3_account_sale_tva_18_id
+        sale_airsi   = company.sage_x3_account_sale_airsi_id
         magasin      = self._get_company_code(company)
         date_yy      = target_date.strftime("%d%m%y")
         date_fr      = target_date.strftime("%d/%m/%Y")
@@ -401,7 +402,7 @@ class AccountMoveSageX3(models.Model):
             elif taux_int == 9:
                 compte = sale_tva_9
             else:
-                continue  # ignore les autres taux
+                compte = sale_airsi
 
             if montant > 0:
                 lignes_encai.append(self._build_ligne(
@@ -563,6 +564,7 @@ class AccountMoveSageX3(models.Model):
         sale_acct    = company.sage_x3_account_sale_id
         sale_tva_9   = company.sage_x3_account_sale_tva_9_id
         sale_tva_18  = company.sage_x3_account_sale_tva_18_id
+        sale_airsi   = company.sage_x3_account_sale_airsi_id
         site         = company.sage_x3_site
         journal      = company.sage_x3_journal_sale
         type_piece   = "FACLI"
@@ -657,7 +659,7 @@ class AccountMoveSageX3(models.Model):
                     elif taux_int == 9:
                         compte = sale_tva_9
                     else:
-                        continue
+                        compte = sale_airsi
 
                     if montant > 0:
                         lignes.append(self._build_ligne(
@@ -913,6 +915,7 @@ class AccountMoveSageX3(models.Model):
         sale_acct   = company.sage_x3_account_sale_id
         sale_tva_9  = company.sage_x3_account_sale_tva_9_id
         sale_tva_18 = company.sage_x3_account_sale_tva_18_id
+        sale_airsi = company.sage_x3_account_sale_airsi_id
         site        = company.sage_x3_site
         journal     = company.sage_x3_journal_sale
 
@@ -924,6 +927,7 @@ class AccountMoveSageX3(models.Model):
             ("Journal vente", journal),
             ("Compte TVA 9%",  sale_tva_9),
             ("Compte TVA 18%", sale_tva_18),
+            ("Compte AIRSI", sale_airsi),
         ]:
             if not val:
                 raise UserError(f"{label} non configuré pour {company.name}")
@@ -964,6 +968,10 @@ class AccountMoveSageX3(models.Model):
                 elif tax.amount == 18:
                     tax_val = self._compute_tva(line.price_total, 0.18)
                     tax_facli[sale_tva_18] += tax_val
+
+                else:
+                    tax_val = self._compute_tva(line.price_total, tax.amount/100)
+                    tax_facli[sale_airsi] += tax_val
 
         # =========================
         # Ligne vente (HT)

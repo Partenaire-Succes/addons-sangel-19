@@ -97,6 +97,11 @@ class ResCompany(models.Model):
           string="Compte TVA 9%",
           help="Compte 44310000 pour les ventes TVA 9%"
      )
+     sage_x3_account_sale_airsi_id = fields.Many2one(
+          'account.account',
+          string="Compte AIRSI",
+          help="Compte 44600000 pour les ventes AIRSI"
+     )
      
      # Envoi automatique
      sage_x3_auto_send = fields.Boolean(

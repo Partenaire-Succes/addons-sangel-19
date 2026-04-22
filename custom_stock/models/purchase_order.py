@@ -21,36 +21,62 @@ class PurchaseOrderSageX3Optimized(models.Model):
         ('local', 'Local/Autres'),
     ], string="Type de fournisseur", default='vridi', copy=False)
 
-    def action_pending_to_sage_x3(self):
+    # def action_verify_product(self):
+    #     for order in self:
+    #         inactive_products = []
+    #         dormant_products = []
+
+    #         for line in order.order_line:
+    #             product = line.product_id
+
+    #             if product.actif_x3 != '1':
+    #                 inactive_products.append(product.name)
+
+    #             if not product.current_company_status_id or product.current_company_status_id.code != 'C':
+    #                 dormant_products.append(product.name)
+
+    #         messages = []
+
+    #         if inactive_products:
+    #             messages.append(_(
+    #                 "Produits non actifs pour SAGE X3 :\n- %s"
+    #             ) % "\n- ".join(inactive_products))
+
+    #         if dormant_products:
+    #             messages.append(_(
+    #                 "Produits Dormants :\n- %s"
+    #             ) % "\n- ".join(dormant_products))
+
+    #         if messages:
+    #             raise UserError("\n\n".join(messages))
+
+    def action_verify_product(self):
         for order in self:
-            inactive_products = []
-            dormant_products = []
+            products = order.order_line.mapped('product_id')
 
-            for line in order.order_line:
-                product = line.product_id
-
-                if product.actif_x3 != '1':
-                    inactive_products.append(product.name)
-
-                if not product.current_company_status_id or product.current_company_status_id.code != 'C':
-                    dormant_products.append(product.name)
+            inactive_products = products.filtered(lambda p: p.actif_x3 != '1')
+            dormant_products = products.filtered(
+                lambda p: not p.current_company_status_id or p.current_company_status_id.code != 'C'
+            )
 
             messages = []
 
             if inactive_products:
                 messages.append(_(
                     "Produits non actifs pour SAGE X3 :\n- %s"
-                ) % "\n- ".join(inactive_products))
+                ) % "\n- ".join(inactive_products.mapped('name')))
 
             if dormant_products:
                 messages.append(_(
                     "Produits Dormants :\n- %s"
-                ) % "\n- ".join(dormant_products))
+                ) % "\n- ".join(dormant_products.mapped('name')))
 
             if messages:
                 raise UserError("\n\n".join(messages))
 
-            order.write({'state': 'sent'})
+    def action_pending_to_sage_x3(self):
+        self.action_verify_product()
+        self.write({'state': 'sent'})
 
     def button_confirm_local(self):
         self.button_confirm()

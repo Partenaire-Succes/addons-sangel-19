@@ -30,6 +30,7 @@ class PurchaseOrderSageX3(models.Model):
         self.ensure_one()
         if self.type_command != 'urgent':
             raise UserError("La commande doit être marquée comme urgente pour cette action.")
+        self.action_verify_product()
         return self.action_submit_to_sage_x3()
 
     def action_submit_all_pending_to_sage_x3(self):

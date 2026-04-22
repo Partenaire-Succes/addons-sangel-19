@@ -105,6 +105,10 @@
                                     options="{'no_create': True}"
                                     placeholder="44310000 - TVA 9"
                                     required="1"/>
+                                <field name="sage_x3_account_sale_airsi_id"
+                                    options="{'no_create': True}"
+                                    placeholder="44600000 - AIRSI"
+                                    required="1"/>
                             </group>
 
                             <group>
