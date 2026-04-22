@@ -101,16 +101,16 @@
                                         </td>
                                         
                                         <td style="padding: 4px; text-align: center; font-size: 10pt; font-weight: 900; background: #0a3d4d; color: #00c8e0;">
-                                            <t t-esc="'%.0f' % line['st_disp']"/>
+                                            <t t-esc="'%.2f' % line['st_disp']"/>
                                         </td>
                                         <td colspan="1" style="padding: 5px 3px; text-align: center; font-size: 10pt;">
                                             <!-- colonnes vides (MAXI) -->
                                         </td>
                                         <td style="padding: 4px; text-align: center; font-size: 10pt; font-weight: 900; background: #0a3d4d; color: #00c8e0;">
-                                            <t t-esc="'%.0f' % line['cmd']"/>
+                                            <t t-esc="'%.2f' % line['cmd']"/>
                                         </td>
                                         <td style="padding: 4px; text-align: center; font-size: 10pt; font-weight: 900; background: #0a3d4d; color: #00c8e0;">
-                                            <t t-esc="'%.0f' % line['marg']"/>
+                                            <t t-esc="'%.2f' % line['marg']"/>
                                         </td>
                                         <td colspan="1" style="padding: 5px 3px; text-align: center; font-size: 10pt;">
                                             <!-- colonnes vides (PVTC) -->
@@ -118,7 +118,7 @@
                                         <t t-foreach="line['ventes']" t-as="qty">
                                             <t t-if="qty > 0">
                                                 <td style="padding: 4px 2px; text-align: center; font-size: 10pt; font-weight: 900; background: #0a3d4d; color: #00c8e0;">
-                                                    <t t-esc="'%.0f' % qty"/>
+                                                    <t t-esc="'%.2f' % qty"/>
                                                 </td>
                                             </t>
                                             <t t-else="">
@@ -126,7 +126,7 @@
                                             </t>
                                         </t>
                                         <td style="padding: 4px; text-align: center; font-size: 10pt; font-weight: 900; background: #ff6b35; color: white;">
-                                            <t t-esc="'%.0f' % line['total']"/>
+                                            <t t-esc="'%.2f' % line['total']"/>
                                         </td>
                                     </tr>
                                 </t>
@@ -147,24 +147,24 @@
                                             <t t-esc="line['famille']"/>
                                         </td>
                                         <td style="padding: 4px; text-align: center; font-size: 12pt;">
-                                            <t t-esc="'%.0f' % line['st_disp']"/>
+                                            <t t-esc="'%.2f' % line['st_disp']"/>
                                         </td>
                                         <td style="padding: 4px; text-align: center; font-size: 12pt;">
-                                            <t t-esc="'%.0f' % line['maxi']"/>
+                                            <t t-esc="'%.2f' % line['maxi']"/>
                                         </td>
                                         <td style="padding: 4px; text-align: center; font-size: 12pt;">
-                                            <t t-esc="'%.0f' % line['cmd']"/>
+                                            <t t-esc="'%.2f' % line['cmd']"/>
                                         </td>
                                         <td style="padding: 4px; text-align: center; font-size: 12pt;">
-                                            <t t-esc="'%.0f' % line['marg']"/>
+                                            <t t-esc="'%.2f' % line['marg']"/>
                                         </td>
                                         <td style="padding: 4px; text-align: center; font-size: 12pt;">
-                                            <t t-esc="'{:,.0f}'.format(line['pvtc']).replace(',', ' ')"/>
+                                            <t t-esc="'{:,.2f}'.format(line['pvtc']).replace(',', ' ')"/>
                                         </td>
                                         <t t-foreach="line['ventes']" t-as="qty">
                                             <t t-if="qty > 0">
                                                 <td style="padding: 4px 2px; text-align: center; font-size: 12pt;">
-                                                    <t t-esc="'%.0f' % qty"/>
+                                                    <t t-esc="'%.2f' % qty"/>
                                                 </td>
                                             </t>
                                             <t t-else="">
@@ -173,7 +173,7 @@
                                         </t>
                                         <t t-if="line['total'] &gt; 0">
                                             <td style="padding: 4px; text-align: center; font-size: 12pt; font-weight: 700;">
-                                                <t t-esc="'%.0f' % line['total']"/>
+                                                <t t-esc="'%.2f' % line['total']"/>
                                             </td>
                                         </t>
                                         <t t-else="">

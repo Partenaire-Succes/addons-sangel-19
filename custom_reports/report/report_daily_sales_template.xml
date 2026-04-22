@@ -33,7 +33,10 @@
                                 </div>
                                 <div><strong>Posté(s):</strong> Tous les postes</div>
                                 <div style="display:flex;justify-content:space-between;">
-                                    <div><strong>Dépôt :</strong> <span t-esc="o.company_id.name"/></div>
+                                    <div>
+                                        <strong>Dépôt :</strong>
+                                        <span t-esc="', '.join(o.company_ids.mapped('name'))"/>
+                                    </div>
                                     <div><strong>Utilisateur(s):</strong> Tous les utilisateurs</div>
                                 </div>
                                 <div><strong>Édition faite le :</strong>

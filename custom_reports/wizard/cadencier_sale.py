@@ -320,7 +320,7 @@ class CadencierWizard(models.TransientModel):
     # def _get_report_data(self, year, company_id, famille_ids=None):
     #     company = self.env['res.company'].browse(company_id)
     #     date_from = date(int(year), 1, 1)
-    #     date_to = date(int(year), 12, 31)
+    #     date_to   = date(int(year), 12, 31)
     #     product_data = defaultdict(lambda: defaultdict(float))
 
     #     products = self.env['product.template'].search([
@@ -330,81 +330,87 @@ class CadencierWizard(models.TransientModel):
     #         ('cat_gestion_id.name', 'in', ['01', '02', '04', '05', '06', 'DI'])
     #     ])
 
+    #     # ✅ Règle métier :
+    #     #    - Statut C → toujours inclus
+    #     #    - Statut D → seulement si stock > 0
     #     final_products = self.env['product.template']
-
     #     for p in products:
-    #         if p.current_company_status_id and p.current_company_status_id.code == 'C':
+    #         code = p.current_company_status_id.code if p.current_company_status_id else False
+    #         if code == 'C':
     #             final_products |= p
-    #         else:
+    #         elif code == 'D':
     #             if any(v.qty_available > 0 for v in p.product_variant_ids):
     #                 final_products |= p
+    #         # Autres statuts → exclus
 
     #     for p in final_products:
     #         for variant in p.product_variant_ids:
     #             product_data[variant.id]
 
+    #     # ✅ IDs valides pré-calculés — utilisés pour filtrer les lignes sans boucle
+    #     valid_product_ids = set(product_data.keys())
+
+    #     if not valid_product_ids:
+    #         return []
+
+    #     # ── Domaines ─────────────────────────────────────────────
+    #     date_from_str = str(date_from)
+    #     date_to_str   = str(date_to)
+    #     cat_filter    = ['01', '02', '04', '05', '06', 'DI']
+
+    #     common_filters = [
+    #         ('product_id', 'in', list(valid_product_ids)),  # ✅ filtre direct sur IDs
+    #         ('product_id.type', '=', 'consu'),
+    #         ('product_id.cat_gestion_id.name', 'in', cat_filter),
+    #         ('product_id.active', '=', True),
+    #     ]
+
     #     sale_domain = [
     #         ('order_id.state', 'in', ['sale', 'done']),
     #         ('order_id.company_id', '=', company_id),
-    #         ('product_id.type', '=', 'consu'),
-    #         ('order_id.date_order', '>=', str(date_from)),
-    #         ('order_id.date_order', '<=', str(date_to)),
-    #         ('product_id.cat_gestion_id.name', 'in', ['01', '02', '04', '05', '06', 'DI']),
-    #         ('product_id.active', '=', True),
-    #     ]
-    #     sale_lines = self.env['sale.order.line'].search(sale_domain)
+    #         ('order_id.date_order', '>=', date_from_str),
+    #         ('order_id.date_order', '<=', date_to_str),
+    #     ] + common_filters
 
     #     pos_domain = [
     #         ('order_id.state', 'in', ['done', 'paid', 'invoiced']),
     #         ('order_id.company_id', '=', company_id),
-    #         ('product_id.type', '=', 'consu'),
-    #         ('order_id.date_order', '>=', str(date_from)),
-    #         ('order_id.date_order', '<=', str(date_to)),
-    #         ('product_id.cat_gestion_id.name', 'in', ['01', '02', '04', '05', '06', 'DI']),
-    #         ('product_id.active', '=', True),
-    #     ]
-    #     pos_lines = self.env['pos.order.line'].search(pos_domain)
+    #         ('order_id.date_order', '>=', date_from_str),
+    #         ('order_id.date_order', '<=', date_to_str),
+    #     ] + common_filters
+
+    #     sale_lines = self.env['sale.order.line'].with_context(company_id=company_id).search(sale_domain)
+    #     pos_lines  = self.env['pos.order.line'].with_context(company_id=company_id).search(pos_domain)
+
+    #     # ✅ Plus besoin de _filter_lines — le domaine SQL fait déjà le travail
+
+    #     # ── Pré-agrégation ────────────────────────────────────────
+    #     ca_by_product = defaultdict(float)
 
     #     for line in sale_lines:
     #         month_idx = line.order_id.date_order.month - 1
     #         product_data[line.product_id.id][month_idx] += line.product_uom_qty
+    #         ca_by_product[line.product_id.id] += line.price_subtotal
 
     #     for line in pos_lines:
     #         month_idx = line.order_id.date_order.month - 1
     #         product_data[line.product_id.id][month_idx] += line.qty
-
-    #     if not product_data:
-    #         return []
+    #         ca_by_product[line.product_id.id] += line.price_subtotal
 
     #     product_ids = list(product_data.keys())
-    #     products = self.env['product.product'].browse(product_ids)
-    #     self.nbre_product = len(products)
+    #     products    = self.env['product.product'].browse(product_ids)
 
     #     if famille_ids:
-    #         products = products.filtered(
-    #             lambda p: p.categ_id.id in famille_ids
-    #         )
+    #         products = products.filtered(lambda p: p.categ_id.id in famille_ids)
 
-    #     result = []
-    #     for product in products.sorted(key=lambda p: ((p.categ_id.code or '').lower(), (p.default_code or '').lower())):
-    #         monthly_qtys = product_data[product.id]
-    #         ventes = [round(monthly_qtys.get(i, 0), 2) for i in range(12)]
-    #         total = sum(ventes)
-    #         stock = product.with_company(company).qty_available
-    #         pmp = product.avg_cost if product.avg_cost else product.standard_price
+    #     # ── Pré-calculs ───────────────────────────────────────────
+    #     stock_by_product = {
+    #         p.id: p.with_company(company).qty_available
+    #         for p in products
+    #     }
 
-    #         total_ca = 0.0
-    #         for line in sale_lines:
-    #             if line.product_id.id == product.id:
-    #                 total_ca += line.price_subtotal
-
-    #         for line in pos_lines:
-    #             if line.product_id.id == product.id:
-    #                 total_ca += line.price_subtotal
-
-    #         total_cost = total * pmp
-    #         taux_marge = round((total_ca - total_cost) / total_ca * 100, 2) if total_ca > 0 else 0.0
-
+    #     ttc_by_product = {}
+    #     for product in products:
     #         taxes = product.taxes_id.compute_all(
     #             product.list_price,
     #             currency=product.currency_id,
@@ -412,64 +418,105 @@ class CadencierWizard(models.TransientModel):
     #             product=product,
     #             partner=None,
     #         )
-    #         price_ttc = taxes['total_included']
+    #         ttc_by_product[product.id] = taxes['total_included']
+
+    #     # ── Construction résultat ─────────────────────────────────
+    #     result = []
+    #     for product in products.sorted(
+    #         key=lambda p: ((p.categ_id.code or '').lower(), (p.default_code or '').lower())
+    #     ):
+    #         monthly_qtys = product_data[product.id]
+    #         ventes = [round(monthly_qtys.get(i, 0), 2) for i in range(12)]
+    #         total  = sum(ventes)
+
+    #         stock      = stock_by_product.get(product.id, 0.0)
+    #         pmp        = product.avg_cost or product.standard_price
+    #         total_ca   = ca_by_product.get(product.id, 0.0)
+    #         total_cost = total * pmp
+    #         taux_marge = (
+    #             round((total_ca - total_cost) / total_ca * 100, 2)
+    #             if total_ca > 0 else 0.0
+    #         )
 
     #         result.append({
-    #             'code': product.default_code or '',
-    #             'designation': product.name,
-    #             'sta': product.current_company_status_id.code if product.current_company_status_id else '',
-    #             'maxi': product.max_qty_orderpoint,
-    #             'cmd': product.pending_reception_qty,
-    #             'marg': taux_marge,
-    #             'famille': product.categ_id.name,
+    #             'code':         product.default_code or '',
+    #             'designation':  product.name,
+    #             'sta':          product.current_company_status_id.code if product.current_company_status_id else '',
+    #             'maxi':         product.max_qty_orderpoint,
+    #             'cmd':          product.pending_reception_qty,
+    #             'marg':         taux_marge,
+    #             'famille':      product.categ_id.name,
     #             'code_famille': product.categ_id.code,
-    #             'st_disp': round(stock, 2),
-    #             'pvtc': price_ttc,
-    #             'ventes': ventes,
-    #             'total': total,
+    #             'st_disp':      round(stock, 2),
+    #             'pvtc':         ttc_by_product.get(product.id, 0.0),
+    #             'ventes':       ventes,
+    #             'total':        total,
+    #             # ✅ Stocker ca et cost pour le calcul agrégé du sous-total
+    #             '_ca':          total_ca,
+    #             '_cost':        total_cost,
     #         })
 
+    #     # ── Sous-totaux ───────────────────────────────────────────
     #     final_result = []
     #     current_famille_code = None
     #     famille_ventes = [0.0] * 12
-    #     famille_total = 0.0
-    #     famille_label = ''
-    #     total_marge = 0.0
+    #     famille_total  = 0.0
+    #     famille_label  = ''
+    #     famille_st_disp = 0.0   # ✅
+    #     famille_cmd     = 0.0   # ✅
+    #     famille_ca      = 0.0   # ✅ pour la formule de marge agrégée
+    #     famille_cost    = 0.0   # ✅
+
+    #     def _compute_subtotal(label, code, ventes, total, st_disp, cmd, ca, cost):
+    #         marge = round((ca - cost) / ca * 100, 2) if ca > 0 else 0.0
+    #         return {
+    #             'is_subtotal':  True,
+    #             'famille':      label,
+    #             'code_famille': code,
+    #             'marg':         marge,       # ✅ formule agrégée
+    #             'st_disp':      round(st_disp, 2),  # ✅ total st_disp
+    #             'cmd':          round(cmd, 2),      # ✅ total cmd
+    #             'ventes':       [round(v, 2) for v in ventes],
+    #             'total':        round(total, 2),
+    #         }
 
     #     for item in result:
     #         item['is_subtotal'] = False
     #         if current_famille_code is not None and item['code_famille'] != current_famille_code:
-    #             final_result.append({
-    #                 'is_subtotal': True,
-    #                 'famille': famille_label,
-    #                 'code_famille': current_famille_code,
-    #                 'marg': total_marge,
-    #                 'ventes': [round(v, 2) for v in famille_ventes],
-    #                 'total': round(famille_total, 2),
-    #             })
-    #             famille_ventes = [0.0] * 12
-    #             famille_total = 0.0
-    #             total_marge = 0.0
+    #             final_result.append(_compute_subtotal(
+    #                 famille_label, current_famille_code,
+    #                 famille_ventes, famille_total,
+    #                 famille_st_disp, famille_cmd,
+    #                 famille_ca, famille_cost,
+    #             ))
+    #             famille_ventes  = [0.0] * 12
+    #             famille_total   = 0.0
+    #             famille_st_disp = 0.0
+    #             famille_cmd     = 0.0
+    #             famille_ca      = 0.0
+    #             famille_cost    = 0.0
 
     #         current_famille_code = item['code_famille']
-    #         famille_label = item['famille']
+    #         famille_label        = item['famille']
     #         final_result.append(item)
     #         for i in range(12):
     #             famille_ventes[i] += item['ventes'][i]
-    #         famille_total += item['total']
-    #         total_marge += item['marg']
+    #         famille_total   += item['total']
+    #         famille_st_disp += item['st_disp']   # ✅
+    #         famille_cmd     += item['cmd']       # ✅
+    #         famille_ca      += item['_ca']       # ✅
+    #         famille_cost    += item['_cost']     # ✅
 
     #     if current_famille_code is not None:
-    #         final_result.append({
-    #             'is_subtotal': True,
-    #             'famille': famille_label,
-    #             'code_famille': current_famille_code,
-    #             'marg': round(total_marge, 2),
-    #             'ventes': [round(v, 2) for v in famille_ventes],
-    #             'total': round(famille_total, 2),
-    #         })
+    #         final_result.append(_compute_subtotal(
+    #             famille_label, current_famille_code,
+    #             famille_ventes, famille_total,
+    #             famille_st_disp, famille_cmd,
+    #             famille_ca, famille_cost,
+    #         ))
 
     #     return final_result
+
 
     def _get_report_data(self, year, company_id, famille_ids=None):
         company = self.env['res.company'].browse(company_id)
@@ -513,7 +560,7 @@ class CadencierWizard(models.TransientModel):
         cat_filter    = ['01', '02', '04', '05', '06', 'DI']
 
         common_filters = [
-            ('product_id', 'in', list(valid_product_ids)),  # ✅ filtre direct sur IDs
+            ('product_id', 'in', list(valid_product_ids)),
             ('product_id.type', '=', 'consu'),
             ('product_id.cat_gestion_id.name', 'in', cat_filter),
             ('product_id.active', '=', True),
@@ -536,20 +583,21 @@ class CadencierWizard(models.TransientModel):
         sale_lines = self.env['sale.order.line'].with_context(company_id=company_id).search(sale_domain)
         pos_lines  = self.env['pos.order.line'].with_context(company_id=company_id).search(pos_domain)
 
-        # ✅ Plus besoin de _filter_lines — le domaine SQL fait déjà le travail
-
         # ── Pré-agrégation ────────────────────────────────────────
-        ca_by_product = defaultdict(float)
+        ca_by_product     = defaultdict(float)
+        margin_by_product = defaultdict(float)  # ✅ marge brute directe depuis les lignes
 
         for line in sale_lines:
             month_idx = line.order_id.date_order.month - 1
             product_data[line.product_id.id][month_idx] += line.product_uom_qty
-            ca_by_product[line.product_id.id] += line.price_subtotal
+            ca_by_product[line.product_id.id]     += line.price_subtotal
+            margin_by_product[line.product_id.id] += line.margin  # ✅ champ natif SO
 
         for line in pos_lines:
             month_idx = line.order_id.date_order.month - 1
             product_data[line.product_id.id][month_idx] += line.qty
-            ca_by_product[line.product_id.id] += line.price_subtotal
+            ca_by_product[line.product_id.id]     += line.price_subtotal
+            margin_by_product[line.product_id.id] += line.margin  # ✅ champ natif POS
 
         product_ids = list(product_data.keys())
         products    = self.env['product.product'].browse(product_ids)
@@ -583,12 +631,11 @@ class CadencierWizard(models.TransientModel):
             ventes = [round(monthly_qtys.get(i, 0), 2) for i in range(12)]
             total  = sum(ventes)
 
-            stock      = stock_by_product.get(product.id, 0.0)
-            pmp        = product.avg_cost or product.standard_price
-            total_ca   = ca_by_product.get(product.id, 0.0)
-            total_cost = total * pmp
-            taux_marge = (
-                round((total_ca - total_cost) / total_ca * 100, 2)
+            stock        = stock_by_product.get(product.id, 0.0)
+            total_ca     = ca_by_product.get(product.id, 0.0)
+            total_margin = margin_by_product.get(product.id, 0.0)  # ✅
+            taux_marge   = (
+                round(total_margin / total_ca * 100, 2)
                 if total_ca > 0 else 0.0
             )
 
@@ -605,31 +652,30 @@ class CadencierWizard(models.TransientModel):
                 'pvtc':         ttc_by_product.get(product.id, 0.0),
                 'ventes':       ventes,
                 'total':        total,
-                # ✅ Stocker ca et cost pour le calcul agrégé du sous-total
                 '_ca':          total_ca,
-                '_cost':        total_cost,
+                '_margin':      total_margin,  # ✅ remplace _cost
             })
 
         # ── Sous-totaux ───────────────────────────────────────────
         final_result = []
         current_famille_code = None
-        famille_ventes = [0.0] * 12
-        famille_total  = 0.0
-        famille_label  = ''
-        famille_st_disp = 0.0   # ✅
-        famille_cmd     = 0.0   # ✅
-        famille_ca      = 0.0   # ✅ pour la formule de marge agrégée
-        famille_cost    = 0.0   # ✅
+        famille_ventes  = [0.0] * 12
+        famille_total   = 0.0
+        famille_label   = ''
+        famille_st_disp = 0.0
+        famille_cmd     = 0.0
+        famille_ca      = 0.0
+        famille_margin  = 0.0  # ✅ remplace famille_cost
 
-        def _compute_subtotal(label, code, ventes, total, st_disp, cmd, ca, cost):
-            marge = round((ca - cost) / ca * 100, 2) if ca > 0 else 0.0
+        def _compute_subtotal(label, code, ventes, total, st_disp, cmd, ca, margin):
+            marge = round(margin / ca * 100, 2) if ca > 0 else 0.0  # ✅
             return {
                 'is_subtotal':  True,
                 'famille':      label,
                 'code_famille': code,
-                'marg':         marge,       # ✅ formule agrégée
-                'st_disp':      round(st_disp, 2),  # ✅ total st_disp
-                'cmd':          round(cmd, 2),      # ✅ total cmd
+                'marg':         marge,
+                'st_disp':      round(st_disp, 2),
+                'cmd':          round(cmd, 2),
                 'ventes':       [round(v, 2) for v in ventes],
                 'total':        round(total, 2),
             }
@@ -641,14 +687,14 @@ class CadencierWizard(models.TransientModel):
                     famille_label, current_famille_code,
                     famille_ventes, famille_total,
                     famille_st_disp, famille_cmd,
-                    famille_ca, famille_cost,
+                    famille_ca, famille_margin,  # ✅
                 ))
                 famille_ventes  = [0.0] * 12
                 famille_total   = 0.0
                 famille_st_disp = 0.0
                 famille_cmd     = 0.0
                 famille_ca      = 0.0
-                famille_cost    = 0.0
+                famille_margin  = 0.0  # ✅
 
             current_famille_code = item['code_famille']
             famille_label        = item['famille']
@@ -656,17 +702,17 @@ class CadencierWizard(models.TransientModel):
             for i in range(12):
                 famille_ventes[i] += item['ventes'][i]
             famille_total   += item['total']
-            famille_st_disp += item['st_disp']   # ✅
-            famille_cmd     += item['cmd']       # ✅
-            famille_ca      += item['_ca']       # ✅
-            famille_cost    += item['_cost']     # ✅
+            famille_st_disp += item['st_disp']
+            famille_cmd     += item['cmd']
+            famille_ca      += item['_ca']
+            famille_margin  += item['_margin']  # ✅
 
         if current_famille_code is not None:
             final_result.append(_compute_subtotal(
                 famille_label, current_famille_code,
                 famille_ventes, famille_total,
                 famille_st_disp, famille_cmd,
-                famille_ca, famille_cost,
+                famille_ca, famille_margin,  # ✅
             ))
 
         return final_result
