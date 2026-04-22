@@ -26,14 +26,82 @@ class ProductTemplateImport(models.Model):
     # POINTS D'ENTRÉE
     # =========================================================================
 
-    def normalize_taxes_all_companies(self):
-        _logger.info("🚀 Début normalisation des taxes multi-sociétés")
+    # def normalize_taxes_all_companies(self):
+    #     _logger.info("🚀 Début normalisation des taxes multi-sociétés")
 
-        Tax = self.env['account.tax'].sudo()
+    #     Tax = self.env['account.tax'].sudo()
+    #     Company = self.env['res.company'].sudo()
+    #     products = self.env['product.template'].with_context(active_test=False).search([])
+
+    #     total = len(products)
+    #     batch_size = 200
+
+    #     for i in range(0, total, batch_size):
+    #         batch = products[i:i + batch_size]
+
+    #         for product in batch:
+    #             try:
+    #                 taxes = product.taxes_id
+
+    #                 # 🚫 Aucun taxe → skip
+    #                 if not taxes:
+    #                     continue
+
+    #                 # 🎯 On prend la première taxe (hypothèse : une seule taxe principale)
+    #                 base_tax = taxes[0]
+    #                 amount = base_tax.amount
+
+    #                 if not amount:
+    #                     product.write({'taxes_id': [(6, 0, [])]})
+    #                     continue
+
+    #                 new_tax_ids = []
+
+    #                 # 🔁 Boucle sur toutes les sociétés
+    #                 for company in Company.search([]):
+    #                     tax = Tax.with_company(company).search([
+    #                         ('amount', '=', amount),
+    #                         ('amount_type', '=', 'percent'),
+    #                         ('type_tax_use', '=', 'sale'),
+    #                         ('company_id', '=', company.id),
+    #                     ], limit=1)
+
+    #                     # ➕ Création si n'existe pas
+    #                     if not tax:
+    #                         tax = Tax.with_company(company).create({
+    #                             'name': f"TVA {amount}%",
+    #                             'amount': amount,
+    #                             'amount_type': 'percent',
+    #                             'type_tax_use': 'sale',
+    #                             'company_id': company.id,
+    #                         })
+
+    #                     new_tax_ids.append(tax.id)
+
+    #                 # 🔥 Appliquer toutes les taxes (multi société clean)
+    #                 product.write({
+    #                     'taxes_id': [(6, 0, new_tax_ids)]
+    #                 })
+
+    #             except Exception as e:
+    #                 _logger.error("❌ Erreur produit %s : %s", product.default_code, str(e))
+
+    #         self.env.cr.commit()
+    #         _logger.info("💾 Batch %s / %s traité", i, total)
+
+    #     _logger.info("✅ Normalisation terminée")
+
+
+    def _normalize_taxes_for_field(self, field_name, is_airsi):
+        """Normalise les taxes TVA ou AIRSI sur toutes les sociétés."""
+        label = "AIRSI" if is_airsi else "TVA"
+        _logger.info("🚀 Début normalisation taxes %s multi-sociétés", label)
+
+        Tax     = self.env['account.tax'].sudo()
         Company = self.env['res.company'].sudo()
         products = self.env['product.template'].with_context(active_test=False).search([])
 
-        total = len(products)
+        total      = len(products)
         batch_size = 200
 
         for i in range(0, total, batch_size):
@@ -41,47 +109,45 @@ class ProductTemplateImport(models.Model):
 
             for product in batch:
                 try:
-                    taxes = product.taxes_id
+                    taxes = product[field_name]
 
-                    # 🚫 Aucun taxe → skip
+                    # 🚫 Aucune taxe → skip
                     if not taxes:
                         continue
 
-                    # 🎯 On prend la première taxe (hypothèse : une seule taxe principale)
                     base_tax = taxes[0]
-                    amount = base_tax.amount
+                    amount   = base_tax.amount
 
+                    # Montant nul → vider les taxes
                     if not amount:
-                        product.write({'taxes_id': [(6, 0, [])]})
+                        product.write({field_name: [(6, 0, [])]})
                         continue
 
                     new_tax_ids = []
 
-                    # 🔁 Boucle sur toutes les sociétés
                     for company in Company.search([]):
                         tax = Tax.with_company(company).search([
-                            ('amount', '=', amount),
+                            ('amount',      '=', amount),
                             ('amount_type', '=', 'percent'),
-                            ('type_tax_use', '=', 'sale'),
-                            ('company_id', '=', company.id),
+                            ('type_tax_use','=', 'sale'),
+                            ('company_id',  '=', company.id),
+                            ('is_airsi',    '=', is_airsi),  # ✅ filtre clé
                         ], limit=1)
 
-                        # ➕ Création si n'existe pas
                         if not tax:
+                            name = f"TVA AIRSI {amount}%" if is_airsi else f"TVA {amount}%"  # ✅
                             tax = Tax.with_company(company).create({
-                                'name': f"TVA {amount}%",
-                                'amount': amount,
-                                'amount_type': 'percent',
+                                'name':         name,
+                                'amount':       amount,
+                                'amount_type':  'percent',
                                 'type_tax_use': 'sale',
-                                'company_id': company.id,
+                                'company_id':   company.id,
+                                'is_airsi':     is_airsi,  # ✅
                             })
 
                         new_tax_ids.append(tax.id)
 
-                    # 🔥 Appliquer toutes les taxes (multi société clean)
-                    product.write({
-                        'taxes_id': [(6, 0, new_tax_ids)]
-                    })
+                    product.write({field_name: [(6, 0, new_tax_ids)]})
 
                 except Exception as e:
                     _logger.error("❌ Erreur produit %s : %s", product.default_code, str(e))
@@ -89,7 +155,41 @@ class ProductTemplateImport(models.Model):
             self.env.cr.commit()
             _logger.info("💾 Batch %s / %s traité", i, total)
 
-        _logger.info("✅ Normalisation terminée")
+        _logger.info("✅ Normalisation %s terminée", label)
+
+
+    def normalize_taxes_tva_all_companies(self):
+        self._normalize_taxes_for_field('taxes_id', is_airsi=False)
+
+
+    def normalize_taxes_airsi_all_companies(self):
+        self._normalize_taxes_for_field('airsi_taxes_id', is_airsi=True)
+
+    def reset_airsi_taxes_all_products(self):
+        """Supprime toutes les taxes AIRSI de tous les produits pour reprendre l'import."""
+        _logger.info("🚀 Début suppression taxes AIRSI sur tous les produits")
+
+        products = self.env['product.template'].with_context(active_test=False).search([
+            ('airsi_taxes_id', '!=', False)
+        ])
+
+        total = len(products)
+        _logger.info("📦 %s produits avec taxes AIRSI trouvés", total)
+
+        for idx, product in enumerate(products):
+            try:
+                product.write({'airsi_taxes_id': [(5, 0, 0)]})
+            except Exception as e:
+                _logger.error("❌ Erreur produit %s : %s", product.default_code, str(e))
+
+            # Commit tous les 200 produits
+            if (idx + 1) % 200 == 0:
+                self.env.cr.commit()
+                _logger.info("💾 %s / %s traités", idx + 1, total)
+
+        self.env.cr.commit()
+        _logger.info("✅ Suppression terminée — %s produits mis à jour", total)
+    
 
     def import_products_job(self):
         self.action_import_products_external_source()
@@ -195,10 +295,13 @@ class ProductTemplateImport(models.Model):
 
                     if existing:
                         new_price = vals.get("list_price", 0)
-                        if existing.list_price != new_price:
+                        old_price = existing.list_price        # ✅ sauvegarder AVANT l'écriture
+
+                        existing.write(vals)                   # ✅ écrire sur existing
+
+                        if old_price != new_price:             # ✅ comparer ancien vs nouveau
                             _logger.info("💰 Prix mis à jour %s : %.2f → %.2f",
-                                         existing.default_code, existing.list_price, new_price)
-                            existing.write({'list_price': new_price})
+                                        existing.default_code, old_price, new_price)
                             price_updated += 1
 
                         tmpl_model._create_pricelist_items(existing, item)
@@ -312,6 +415,10 @@ class ProductTemplateImport(models.Model):
                 return 9.0
             elif tax_code == "T00":
                 return 0.0
+            elif tax_code == "1,500":
+                return 1.5
+            elif tax_code == "5,000":
+                return 5.0
 
             return float(tax_code)
 
@@ -343,7 +450,7 @@ class ProductTemplateImport(models.Model):
                 or env.create({"name": "Taxe générique", "company_id": company.id})
             )
 
-    def _get_or_create_tax(self, name, amount, company):
+    def _get_or_create_tax(self, name, amount, company, actif):
         """Cherche ou crée une taxe pour une société donnée."""
         # sudo() pour contourner les règles multi-sociétés lors de la création
         env_tax = self.env['account.tax'].sudo().with_company(company)
@@ -352,6 +459,7 @@ class ProductTemplateImport(models.Model):
             ("amount_type",  "=",  "percent"),
             ("type_tax_use", "=",  "sale"),
             ("company_id",   "=",  company.id),
+            ("is_airsi",    "=", actif),
         ], limit=1)
         if tax:
             return tax
@@ -370,6 +478,7 @@ class ProductTemplateImport(models.Model):
             "tax_group_id": group.id,
             "company_id":   company.id,
             "country_id":   country_id,
+            "is_airsi": actif,
         })
 
     def _get_taxes_id(self, tax_code):
@@ -388,10 +497,10 @@ class ProductTemplateImport(models.Model):
 
         # S'assurer que la taxe existe dans toutes les sociétés
         for company in self.env['res.company'].sudo().search([]):
-            self._get_or_create_tax(f"TVA {amount}%", amount, company)
+            self._get_or_create_tax(f"TVA {amount}%", amount, company, False)
 
         # Appliquer uniquement la taxe de la société courante
-        current_tax = self._get_or_create_tax(f"TVA {amount}%", amount, current_company)
+        current_tax = self._get_or_create_tax(f"TVA {amount}%", amount, current_company, False)
 
         return [(6, 0, [current_tax.id])]
 
@@ -405,9 +514,9 @@ class ProductTemplateImport(models.Model):
         current_company = self.env.company
 
         for company in self.env['res.company'].sudo().search([]):
-            self._get_or_create_tax(f"TVA AIRSI {amount}%", amount, company)
+            self._get_or_create_tax(f"TVA AIRSI {amount}%", amount, company, True)
 
-        current_tax = self._get_or_create_tax(f"TVA AIRSI {amount}%", amount, current_company)
+        current_tax = self._get_or_create_tax(f"TVA AIRSI {amount}%", amount, current_company, True)
 
         return [(6, 0, [current_tax.id])]
     
