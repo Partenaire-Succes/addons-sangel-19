@@ -20,10 +20,10 @@ class RapportRetoursReceptionsWizard(models.TransientModel):
 
     # ── Filtre principal ─────────────────────────────────────────────────────
     type_rapport = fields.Selection([
-        ('retours',    'Retours fournisseurs uniquement'),
-        ('receptions', 'Réceptions directes uniquement'),
-        ('tous',       'Tout (Retours + Réceptions)'),
-    ], string='Contenu du rapport', default='tous', required=True)
+        ('retours', 'Retours fournisseurs uniquement'),
+        # ('receptions', 'Réceptions directes uniquement'),
+        # ('tous', 'Tout (Retours + Réceptions)'),
+    ], string='Contenu du rapport', default='retours', required=True)
 
     # ── Filtres secondaires ──────────────────────────────────────────────────
     date_debut = fields.Date(string='Date début')
@@ -57,12 +57,12 @@ class RapportRetoursReceptionsWizard(models.TransientModel):
 
     # ── Accesseurs données ───────────────────────────────────────────────────
     def get_retours(self):
-        """Retours fournisseurs filtrés (pickings stock → fournisseur)."""
+        """Retours fournisseurs filtrés (pickings stock → fournisseur, état done)."""
         if self.type_rapport not in ('retours', 'tous'):
             return self.env['stock.picking']
         domain = [
             ('location_dest_id.usage', '=', 'supplier'),
-            ('picking_type_code', '=', 'incoming'),
+            ('state', '=', 'done'),
         ] + self._clauses_communes()
         return self.env['stock.picking'].search(domain, order='scheduled_date desc')
 
@@ -108,14 +108,13 @@ class RapportRetoursReceptionsWizard(models.TransientModel):
 
     # ── Action principale ────────────────────────────────────────────────────
     def action_imprimer(self):
-        """Génère et télécharge le rapport PDF consolidé."""
+        """Génère et télécharge le rapport PDF des retours fournisseurs."""
         self.ensure_one()
-        retours    = self.get_retours()
-        receptions = self.get_receptions()
-        if not retours and not receptions:
+        retours = self.get_retours()
+        if not retours:
             raise UserError(_(
-                "Aucun mouvement trouvé pour les filtres sélectionnés.\n"
-                "Essayez d'élargir la période ou de modifier le type de rapport."
+                "Aucun retour fournisseur validé trouvé pour les filtres sélectionnés.\n"
+                "Essayez d'élargir la période ou de changer le fournisseur."
             ))
         return self.env.ref(
             'custom_stock.action_report_retours_receptions'
