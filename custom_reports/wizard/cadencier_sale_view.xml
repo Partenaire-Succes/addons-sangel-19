@@ -46,10 +46,10 @@
 
     <!-- MENU -->
 
-    <menuitem id="menu_cadencier_wizard"
+    <!-- <menuitem id="menu_cadencier_wizard"
               name="Cadencier Stat Articles"
               parent="custom_reports.menu_reports_sale"
               action="action_cadencier_wizard"
-              sequence="1"/>
+              sequence="1"/> -->
 
 </odoo>
