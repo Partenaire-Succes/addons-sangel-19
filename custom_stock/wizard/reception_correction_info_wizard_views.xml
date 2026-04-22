@@ -148,14 +148,14 @@
         </field>
     </record>
 
-    <!-- <record id="action_reception_correction_stock_wizard" model="ir.actions.act_window">
+    <record id="action_reception_correction_stock_wizard" model="ir.actions.act_window">
         <field name="name">Corriger le stock</field>
         <field name="res_model">reception.correction.stock.wizard</field>
         <field name="view_mode">form</field>
         <field name="target">new</field>
         <field name="binding_model_id" ref="stock.model_stock_picking"/>
         <field name="binding_view_types">form</field>
-    </record> -->
+    </record>
 
 
     <!-- ── HÉRITAGE PICKING FORM — Bouton impression (toutes réceptions) ── -->
