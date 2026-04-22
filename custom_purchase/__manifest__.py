@@ -13,6 +13,7 @@
     'data': [
         'security/ir.model.access.csv',
         'views/purchase_order_inherit_views.xml',
+        'wizard/supplier_price_import_wizard_views.xml',
     ],
     'license': 'AGPL-3',
     'installable': True,
