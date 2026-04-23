@@ -51,7 +51,7 @@
                         background-color: #0057a8;
                         color: #fff;
                         font-weight: bold;
-                        font-size: 15px;
+                        font-size: 13px;
                         padding: 7px 20px;
                         text-align: center;
                         letter-spacing: 2px;
@@ -219,8 +219,8 @@
                                 <th class="col-stock">STOCK</th>
                                 <th class="col-carton">CARTON</th>
                                 <th class="col-detail">DÉTAIL</th>
-                                <th class="col-margc">MARG C</th>
-                                <th class="col-margd">MARG DÉT</th>
+                                <th class="col-margc">MARG C %</th>
+                                <th class="col-margd">MARG D %</th>
                                 <th class="col-tva">T.V.A</th>
                                 <th class="col-airsi">AIRSI</th>
                                 <th class="col-r">R</th>
@@ -280,7 +280,7 @@
 
                                         <!-- PMPA -->
                                         <td class="tr">
-                                            <t t-esc="'{:,.2f}'.format(product.standard_price).replace(',', ' ')"/>
+                                            <t t-esc="'{:,.0f}'.format(product.standard_price).replace(',', ' ')"/>
                                         </td>
 
                                         <!-- CONDT -->
@@ -301,28 +301,31 @@
 
                                         <!-- STOCK : coloré selon valeur -->
                                         <td class="tr">
-                                            <t t-if="product.qty_available > 0">
-                                                <span>
-                                                    <t t-esc="'{:,.2f}'.format(product.qty_available).replace(',', ' ')"/>
-                                                </span>
-                                            </t>
-                                            <t t-else="">
-                                                <span style="color:#888;">0</span>
-                                            </t>
+                                            <span>
+                                                <t t-esc="'{:,.2f}'.format(product.qty_available).replace(',', ' ')"/>
+                                            </span>
                                         </td>
 
                                         <!-- CARTON -->
                                         <td class="tr">
                                             <t>
                                                 <t t-if="product.price_carton">
-                                                    <t t-esc="'{:,.2f}'.format(product.price_carton).replace(',', ' ')"/>
+                                                    <t t-esc="'{:,.0f}'.format(product.price_carton).replace(',', ' ')"/>
+                                                </t>
+                                                <t t-else="">
+                                                    <span style="color:#aaa;">0</span>
                                                 </t>
                                             </t>
                                         </td>
 
                                         <!-- DETAIL : Prix vente – mis en valeur -->
                                         <td class="tr">
-                                            <t t-esc="'{:,.2f}'.format(product.price_unit_ttc).replace(',', ' ')"/>
+                                            <t t-if="product.price_carton">
+                                                <t t-esc="'{:,.0f}'.format(product.price_unit_ttc).replace(',', ' ')"/>
+                                            </t>
+                                            <t t-else="">
+                                                <span style="color:#aaa;">0</span>
+                                            </t>
                                         </td>
 
                                         <!-- MARG C -->
@@ -332,11 +335,11 @@
                                                 <t t-set="price_ht" t-value="product.price_carton / (1 + rate)"/>
                                                 <t t-set="marg" t-value="((price_ht - product.standard_price) / price_ht) * 100 if price_ht else 0"/>
                                                 <span>
-                                                    <t t-esc="'{:.2f}'.format(marg)"/>%
+                                                    <t t-esc="'{:.2f}'.format(marg)"/>
                                                 </span>
                                             </t>
                                             <t t-else="">
-                                                <span style="color:#aaa;">0.00%</span>
+                                                <span style="color:#aaa;">0</span>
                                             </t>
                                         </td>
 
@@ -345,10 +348,10 @@
                                             <t t-if="product.list_price and product.list_price != 0">
                                                 <t t-set="marg_d" t-value="((product.list_price - product.standard_price) / product.list_price) * 100"/>
                                                 <span>
-                                                    <t t-esc="'{:.2f}'.format(marg_d)"/>%
+                                                    <t t-esc="'{:.2f}'.format(marg_d)"/>
                                                 </span>
                                             </t>
-                                            <t t-else=""><span style="color:#aaa;">0.00%</span></t>
+                                            <t t-else=""><span style="color:#aaa;">0</span></t>
                                         </td>
 
                                         <!-- T.V.A -->
@@ -356,6 +359,7 @@
                                             <t t-if="product.taxes_id">
                                                 <t t-esc="product.taxes_id[0].name"/>
                                             </t>
+                                            <t t-else=""><span style="color:#aaa;">0</span></t>
                                         </td>
 
                                         <!-- AIRSI -->
@@ -363,6 +367,7 @@
                                             <t t-if="product.airsi_taxes_id">
                                                 <t t-esc="product.airsi_taxes_id[0].amount"/>
                                             </t>
+                                            <t t-else=""><span style="color:#aaa;">0</span></t>
                                         </td>
 
                                         <!-- R -->

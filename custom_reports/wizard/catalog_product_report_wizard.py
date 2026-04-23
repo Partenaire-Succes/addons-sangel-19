@@ -40,6 +40,9 @@ class ProductReportWizard(models.TransientModel):
             domain.append(('categ_id', 'child_of', self.categ_ids.ids))
 
         products = self.env['product.template'].search(domain)
+        products = products.filtered(
+            lambda p: p.current_company_status_id and p.current_company_status_id.code == 'C'
+        )
         _logger.info("PRODUCTS FOUND: %s", len(products))
 
         if not products:
