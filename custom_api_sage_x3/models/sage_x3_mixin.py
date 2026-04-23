@@ -29,12 +29,12 @@ class SageX3Mixin(models.AbstractModel):
         Retourne un dict de configuration depuis ir.config_parameter.
 
         Clés à créer dans Paramètres > Technique > Paramètres système :
-            sage_x3.base_url  →  http://172.16.2.150:8030
+            sage_x3.base_url  →  http://172.16.2.150:8040
             sage_x3.username  →  odoo
             sage_x3.password  →  InterfaceX3_Odoo
         """
         params   = self.env['ir.config_parameter'].sudo()
-        base_url = params.get_param('sage_x3.base_url', 'http://172.16.2.150:8030')
+        base_url = params.get_param('sage_x3.base_url', 'http://172.16.2.150:8040')
         username = params.get_param('sage_x3.username', 'odoo')
         password = params.get_param('sage_x3.password', 'InterfaceX3_Odoo')
 

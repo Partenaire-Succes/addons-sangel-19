@@ -684,60 +684,128 @@ class AccountMoveSageX3(models.Model):
 
         return {"ecritures": ecritures}
 
+    # def _send_daily_to_sage_x3_api(self, accounting_data, company, target_date):
+    #     """Envoie ENCAI + DECAI à SAGE X3 et marque les enregistrements."""
+
+    #     config = self._get_sage_x3_config()
+
+    #     _logger.info(
+    #         "📦 JSON POS (%s — %s):\n%s",
+    #         company.name, target_date,
+    #         json.dumps(accounting_data, indent=2, ensure_ascii=False),
+    #     )
+
+    #     token = self._authenticate_sage_x3()
+    #     if not token:
+    #         raise UserError("Échec de l'authentification SAGE X3")
+
+    #     headers = {
+    #         "Authorization": f"Bearer {token}",
+    #         "Content-Type": "application/json",
+    #         "Accept": "application/json",
+    #     }
+
+    #     response = self._safe_post(config['accounting_url'], headers, accounting_data)
+
+    #     if response.status_code not in (200, 201):
+    #         raise UserError(f"Erreur HTTP {response.status_code}: {response.text}")
+
+    #     # 🔥 Extraction complète
+    #     x3_results = self._extract_x3_results(response, f"POS_{target_date}")
+
+    #     errors = []
+    #     success_pieces = []
+    #     success_messages = []
+
+    #     for res in x3_results:
+    #         if res["piece"]:
+    #             success_pieces.append(res["piece"])
+    #             success_messages.append(res["message"])
+    #         else:
+    #             errors.append(res["message"])
+
+    #     # ❌ S'il y a au moins une erreur → on bloque tout
+    #     if errors:
+    #         raise UserError(
+    #             "❌ SAGE X3 a rejeté certaines écritures :\n" + "\n".join(errors)
+    #         )
+
+    #     # ✅ Succès
+    #     piece_numbers = ", ".join(success_pieces)
+    #     full_message = "\n".join(success_messages)
+
+    #     _logger.info("✅ SAGE X3 OK — Pièces : %s", piece_numbers)
+
+    #     # 🔥 Passage message + pièces
+    #     self._mark_daily_as_sent(company, target_date, piece_numbers, full_message)
+
+
     def _send_daily_to_sage_x3_api(self, accounting_data, company, target_date):
-        """Envoie ENCAI + DECAI à SAGE X3 et marque les enregistrements."""
+        """Envoie chaque écriture individuellement à SAGE X3 et appelle _mark_daily_as_sent()."""
 
+        TIMEOUT = 60  # Ajuste selon la charge (30, 60 ou 120)
         config = self._get_sage_x3_config()
-
-        _logger.info(
-            "📦 JSON POS (%s — %s):\n%s",
-            company.name, target_date,
-            json.dumps(accounting_data, indent=2, ensure_ascii=False),
-        )
-
-        token = self._authenticate_sage_x3()
+        token  = self._authenticate_sage_x3()
         if not token:
-            raise UserError("Échec de l'authentification SAGE X3")
+            raise UserError("Impossible d'obtenir un token SAGE X3")
 
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
+        headers = {"Authorization": f"Bearer {token}"}
+        success_count = 0
+        error_count   = 0
+        results       = []
+
+        ecritures = accounting_data.get("ecritures", [])
+        if not ecritures:
+            _logger.info("ℹ️ %s — %s : aucune écriture à envoyer", company.name, target_date)
+            return
+
+        for idx, ecriture in enumerate(ecritures, start=1):
+            try:
+                _logger.info("📡 [%s/%s] Envoi écriture %s (%s)",
+                            idx, len(ecritures), ecriture.get("type"), ecriture.get("libelle"))
+
+                response = self._safe_post(
+                    config['accounting_url'],
+                    headers,
+                    ecriture,   # ⚠️ une seule écriture
+                    timeout=TIMEOUT
+                )
+
+                if response.status_code in (200, 201):
+                    success_count += 1
+                    res = self._extract_x3_results(response, ecriture.get("libelle"))
+                    results.extend(res)
+
+                    # Récupérer numéro de pièce + message
+                    piece_numbers = ", ".join([r.get("piece") or "" for r in res])
+                    message       = "; ".join([r.get("message") or "" for r in res])
+
+                    # Appel de ta méthode de mise à jour
+                    self._mark_daily_as_sent(company, target_date, piece_numbers, message)
+
+                    _logger.info("✅ %s — %s : écriture %s envoyée avec succès",
+                                company.name, target_date, ecriture.get("libelle"))
+                else:
+                    error_count += 1
+                    _logger.error("❌ %s — %s : HTTP %s pour écriture %s",
+                                company.name, target_date,
+                                response.status_code, ecriture.get("libelle"))
+
+            except Exception as e:
+                error_count += 1
+                _logger.error("❌ %s — %s : erreur %s pour écriture %s",
+                            company.name, target_date, str(e), ecriture.get("libelle"))
+
+        _logger.info("📊 %s — %s : %s succès / %s erreurs",
+                    company.name, target_date, success_count, error_count)
+
+        return {
+            "success": success_count,
+            "errors": error_count,
+            "results": results
         }
 
-        response = self._safe_post(config['accounting_url'], headers, accounting_data)
 
-        if response.status_code not in (200, 201):
-            raise UserError(f"Erreur HTTP {response.status_code}: {response.text}")
-
-        # 🔥 Extraction complète
-        x3_results = self._extract_x3_results(response, f"POS_{target_date}")
-
-        errors = []
-        success_pieces = []
-        success_messages = []
-
-        for res in x3_results:
-            if res["piece"]:
-                success_pieces.append(res["piece"])
-                success_messages.append(res["message"])
-            else:
-                errors.append(res["message"])
-
-        # ❌ S'il y a au moins une erreur → on bloque tout
-        if errors:
-            raise UserError(
-                "❌ SAGE X3 a rejeté certaines écritures :\n" + "\n".join(errors)
-            )
-
-        # ✅ Succès
-        piece_numbers = ", ".join(success_pieces)
-        full_message = "\n".join(success_messages)
-
-        _logger.info("✅ SAGE X3 OK — Pièces : %s", piece_numbers)
-
-        # 🔥 Passage message + pièces
-        self._mark_daily_as_sent(company, target_date, piece_numbers, full_message)
 
     def _mark_daily_as_sent(self, company, target_date, piece_numbers, message):
         """Marque les paiements comme envoyés avec numéro + message."""

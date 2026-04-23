@@ -3,41 +3,41 @@
     {
       "type": "ENCAI",
       "site": "SIEGE",
-      "date": "140426",
-      "journal": "CSQR",
-      "libelle": "ENCAI CAISSE SQUARE DU 14/04/2026",
+      "date": "200426",
+      "journal": "CYL",
+      "libelle": "ENCAI CAISSE YOP02 DU 20/04/2026",
       "devise": "XOF",
       "lignes": [
         {
           "site": "SIEGE",
-          "compte": "70118000",
-          "libelle": "VENTES SQUARE DU 14/04/2026",
+          "compte": "70115000",
+          "libelle": "VENTES YOP02 DU 20/04/2026",
           "sens": -1,
-          "montant": 5782120.0,
+          "montant": 3129099.0,
           "devise": "XOF"
         },
         {
           "site": "SIEGE",
           "compte": "44312000",
-          "libelle": "TVA 9% 14/04/2026",
+          "libelle": "TVA 9% 20/04/2026",
           "sens": -1,
-          "montant": 93650.0,
+          "montant": 30948.0,
           "devise": "XOF"
         },
         {
           "site": "SIEGE",
           "compte": "44311000",
-          "libelle": "TVA 18% 14/04/2026",
+          "libelle": "TVA 18% 20/04/2026",
           "sens": -1,
-          "montant": 310134.0,
+          "montant": 128987.0,
           "devise": "XOF"
         },
         {
           "site": "SIEGE",
-          "compte": "57110005",
-          "libelle": "CAISSE SQUARE DU 14/04/2026",
+          "compte": "57130000",
+          "libelle": "CAISSE YOP02 DU 20/04/2026",
           "sens": 1,
-          "montant": 6185904.0,
+          "montant": 3289034.0,
           "devise": "XOF"
         }
       ]
@@ -45,67 +45,120 @@
     {
       "type": "DECAI",
       "site": "SIEGE",
-      "date": "140426",
-      "journal": "CSQR",
-      "libelle": "DECAI CAISSE SQUARE DU 14/04/2026",
+      "date": "200426",
+      "journal": "CYL",
+      "libelle": "DECAI CAISSE YOP02 DU 20/04/2026",
       "devise": "XOF",
       "lignes": [
         {
           "site": "SIEGE",
           "compte": "41110000",
-          "libelle": "CREDIT ALIMENT XAVIER DIOMANDE N°CAISSE -4/ SQUARE - 000435",
+          "libelle": "CREDIT ALIMENT KOUAKOU ALBERT N'GUESSAN N°CAISSE - 2 / YOP02 - 000012",
           "sens": 1,
-          "montant": 17509.0,
+          "montant": 30000.0,
           "devise": "XOF",
-          "tiers": "10052181"
+          "tiers": "4111DIVERS-YPLS"
+        },
+        {
+          "site": "SIEGE",
+          "compte": "41110000",
+          "libelle": "CREDIT ALIMENT KOUADIO ANGAMAN N°CAISSE - 2 / YOP02 - 000158",
+          "sens": 1,
+          "montant": 5407.0,
+          "devise": "XOF",
+          "tiers": "4111DIVERS-YPLS"
+        },
+        {
+          "site": "SIEGE",
+          "compte": "41110000",
+          "libelle": "CREDIT ALIMENT KOUADIO ANGAMAN N°CAISSE - 2 / YOP02 - 000159",
+          "sens": 1,
+          "montant": 7500.0,
+          "devise": "XOF",
+          "tiers": "4111DIVERS-YPLS"
         },
         {
           "site": "SIEGE",
           "compte": "42112000",
-          "libelle": "CREDIT ALIMENT ISMAEL A ONSE N°CAISSE -1/ SQUARE - 000295",
+          "libelle": "CREDIT ALIMENT KONE DJOMAHAN N°CAISSE - 5 / YOP02 - 000011",
           "sens": 1,
-          "montant": 171.0,
+          "montant": 1675.0,
           "devise": "XOF",
-          "tiers": "42110053"
+          "tiers": "42110081"
         },
         {
           "site": "SIEGE",
-          "compte": "52110012",
-          "libelle": "CB SGCI - TPE DU 14/04/2026",
+          "compte": "42112000",
+          "libelle": "CREDIT ALIMENT EZAN JUNIOR ASSOUAN N°CAISSE - 2 / YOP02 - 000001",
           "sens": 1,
-          "montant": 511562.0,
+          "montant": 931.0,
+          "devise": "XOF",
+          "tiers": "42110118"
+        },
+        {
+          "site": "SIEGE",
+          "compte": "42112000",
+          "libelle": "CREDIT ALIMENT LONZO YVES ROLAND YAO N°CAISSE - 4 / YOP02 - 000190",
+          "sens": 1,
+          "montant": 18462.0,
+          "devise": "XOF",
+          "tiers": "42110157"
+        },
+        {
+          "site": "SIEGE",
+          "compte": "42112000",
+          "libelle": "CREDIT ALIMENT EBAH KOUTOUA ANGE TIMOTHEE N°CAISSE - 2 / YOP02 - 000148",
+          "sens": 1,
+          "montant": 13685.0,
+          "devise": "XOF",
+          "tiers": "42110231"
+        },
+        {
+          "site": "SIEGE",
+          "compte": "52110011",
+          "libelle": "PAIEMT Orange Money - TPE DU 20/04/2026",
+          "sens": 1,
+          "montant": 1780.0,
           "devise": "XOF"
         },
         {
           "site": "SIEGE",
           "compte": "52110013",
-          "libelle": "PAIEMT Wave QR CODE DU 14/04/2026",
+          "libelle": "PAIEMT Wave - QR CODE DU 20/04/2026",
           "sens": 1,
-          "montant": 1134387.0,
+          "montant": 1067502.0,
           "devise": "XOF"
         },
         {
           "site": "SIEGE",
           "compte": "52110014",
-          "libelle": "PAIEMT Orange Money QR CODE DU 14/04/2026",
+          "libelle": "PAIEMT Orange Money - QR CODE DU 20/04/2026",
           "sens": 1,
-          "montant": 369314.0,
+          "montant": 20181.0,
           "devise": "XOF"
         },
         {
           "site": "SIEGE",
-          "compte": "52110016",
-          "libelle": "PAIEMT Money (FLOOZ) - TPE DU 14/04/2026",
+          "compte": "52110015",
+          "libelle": "PAIEMT MTN Money - TPE DU 20/04/2026",
           "sens": 1,
-          "montant": 50362.0,
+          "montant": 22035.0,
           "devise": "XOF"
         },
         {
           "site": "SIEGE",
-          "compte": "57110005",
-          "libelle": "CAISSE SQUARE DU 14/04/2026",
+          "compte": "52110021",
+          "libelle": "PAIEMT PRIZY DU 20/04/2026",
+          "sens": 1,
+          "montant": 7000.0,
+          "devise": "XOF"
+        },
+        {
+          "site": "SIEGE",
+          "compte": "57130000",
+          "libelle": "CAISSE YOP02 DU 20/04/2026",
           "sens": -1,
-          "montant": 2083305.0,
+          "montant": 1196158.0,
           "devise": "XOF"
         }
       ]
@@ -113,591 +166,130 @@
     {
       "type": "FACLI",
       "site": "SIEGE",
-      "date": "140426",
+      "date": "200426",
       "journal": "VTE",
-      "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE SQUARE",
+      "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE YOPOUGON",
       "devise": "XOF",
       "lignes": [
-        {
-          "site": "SIEGE",
-          "compte": "41110000",
-          "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE SQUARE",
-          "sens": 1,
-          "montant": 19350.0,
-          "devise": "XOF",
-          "tiers": "4111GLOVO-SQR"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "70118000",
-          "libelle": "CAISSE EN COMPTE SANGEL SQUARE DU 14/04/2026",
-          "sens": -1,
-          "montant": 16398.0,
-          "devise": "XOF"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "44311000",
-          "libelle": "TVA 18% 14/04/2026",
-          "sens": -1,
-          "montant": 2952.0,
-          "devise": "XOF"
-        }
+        { "site": "SIEGE", "compte": "41110000", "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE YOPOUGON", "sens": 1, "montant": 9854.0, "devise": "XOF", "tiers": "4111GLOVO-YOP" },
+        { "site": "SIEGE", "compte": "70115000", "libelle": "CAISSE EN COMPTE SANGEL YOP DETAIL DU 20/04/2026", "sens": -1, "montant": 9024.0, "devise": "XOF" },
+        { "site": "SIEGE", "compte": "44312000", "libelle": "TVA 9% 20/04/2026", "sens": -1, "montant": 277.0, "devise": "XOF" },
+        { "site": "SIEGE", "compte": "44311000", "libelle": "TVA 18% 20/04/2026", "sens": -1, "montant": 553.0, "devise": "XOF" }
       ]
     },
     {
       "type": "FACLI",
       "site": "SIEGE",
-      "date": "140426",
-      "journal": "VTE",
-      "libelle": "Mise en compte SHA IBIS MARCORY",
-      "devise": "XOF",
-      "lignes": [
-        {
-          "site": "SIEGE",
-          "compte": "41110000",
-          "libelle": "Mise en compte SHA IBIS MARCORY",
-          "sens": 1,
-          "montant": 183248.0,
-          "devise": "XOF",
-          "tiers": "4111IBIS-MARCOR"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "70118000",
-          "libelle": "CAISSE EN COMPTE SANGEL SQUARE DU 14/04/2026",
-          "sens": -1,
-          "montant": 155295.0,
-          "devise": "XOF"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "44311000",
-          "libelle": "TVA 18% 14/04/2026",
-          "sens": -1,
-          "montant": 27953.0,
-          "devise": "XOF"
-        }
-      ]
-    },
-    {
-      "type": "FACLI",
-      "site": "SIEGE",
-      "date": "140426",
-      "journal": "VTE",
-      "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE SQUARE",
-      "devise": "XOF",
-      "lignes": [
-        {
-          "site": "SIEGE",
-          "compte": "41110000",
-          "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE SQUARE",
-          "sens": 1,
-          "montant": 17848.0,
-          "devise": "XOF",
-          "tiers": "4111GLOVO-SQR"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "70118000",
-          "libelle": "CAISSE EN COMPTE SANGEL SQUARE DU 14/04/2026",
-          "sens": -1,
-          "montant": 15126.0,
-          "devise": "XOF"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "44311000",
-          "libelle": "TVA 18% 14/04/2026",
-          "sens": -1,
-          "montant": 2722.0,
-          "devise": "XOF"
-        }
-      ]
-    },
-    {
-      "type": "FACLI",
-      "site": "SIEGE",
-      "date": "140426",
-      "journal": "VTE",
-      "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE SQUARE",
-      "devise": "XOF",
-      "lignes": [
-        {
-          "site": "SIEGE",
-          "compte": "41110000",
-          "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE SQUARE",
-          "sens": 1,
-          "montant": 4136.0,
-          "devise": "XOF",
-          "tiers": "4111GLOVO-SQR"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "70118000",
-          "libelle": "CAISSE EN COMPTE SANGEL SQUARE DU 14/04/2026",
-          "sens": -1,
-          "montant": 4136.0,
-          "devise": "XOF"
-        }
-      ]
-    },
-    {
-      "type": "FACLI",
-      "site": "SIEGE",
-      "date": "140426",
-      "journal": "VTE",
-      "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE SQUARE",
-      "devise": "XOF",
-      "lignes": [
-        {
-          "site": "SIEGE",
-          "compte": "41110000",
-          "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE SQUARE",
-          "sens": 1,
-          "montant": 8200.0,
-          "devise": "XOF",
-          "tiers": "4111GLOVO-SQR"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "70118000",
-          "libelle": "CAISSE EN COMPTE SANGEL SQUARE DU 14/04/2026",
-          "sens": -1,
-          "montant": 6950.0,
-          "devise": "XOF"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "44311000",
-          "libelle": "TVA 18% 14/04/2026",
-          "sens": -1,
-          "montant": 1250.0,
-          "devise": "XOF"
-        }
-      ]
-    },
-    {
-      "type": "FACLI",
-      "site": "SIEGE",
-      "date": "140426",
-      "journal": "VTE",
-      "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE SQUARE",
-      "devise": "XOF",
-      "lignes": [
-        {
-          "site": "SIEGE",
-          "compte": "41110000",
-          "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE SQUARE",
-          "sens": 1,
-          "montant": 1250.0,
-          "devise": "XOF",
-          "tiers": "4111GLOVO-SQR"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "70118000",
-          "libelle": "CAISSE EN COMPTE SANGEL SQUARE DU 14/04/2026",
-          "sens": -1,
-          "montant": 1059.0,
-          "devise": "XOF"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "44311000",
-          "libelle": "TVA 18% 14/04/2026",
-          "sens": -1,
-          "montant": 191.0,
-          "devise": "XOF"
-        }
-      ]
-    },
-    {
-      "type": "FACLI",
-      "site": "SIEGE",
-      "date": "140426",
-      "journal": "VTE",
-      "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE SQUARE",
-      "devise": "XOF",
-      "lignes": [
-        {
-          "site": "SIEGE",
-          "compte": "41110000",
-          "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE SQUARE",
-          "sens": 1,
-          "montant": 6950.0,
-          "devise": "XOF",
-          "tiers": "4111GLOVO-SQR"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "70118000",
-          "libelle": "CAISSE EN COMPTE SANGEL SQUARE DU 14/04/2026",
-          "sens": -1,
-          "montant": 5890.0,
-          "devise": "XOF"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "44311000",
-          "libelle": "TVA 18% 14/04/2026",
-          "sens": -1,
-          "montant": 1060.0,
-          "devise": "XOF"
-        }
-      ]
-    },
-    {
-      "type": "FACLI",
-      "site": "SIEGE",
-      "date": "140426",
-      "journal": "VTE",
-      "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE SQUARE",
-      "devise": "XOF",
-      "lignes": [
-        {
-          "site": "SIEGE",
-          "compte": "41110000",
-          "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE SQUARE",
-          "sens": 1,
-          "montant": 4550.0,
-          "devise": "XOF",
-          "tiers": "4111GLOVO-SQR"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "70118000",
-          "libelle": "CAISSE EN COMPTE SANGEL SQUARE DU 14/04/2026",
-          "sens": -1,
-          "montant": 4550.0,
-          "devise": "XOF"
-        }
-      ]
-    },
-    {
-      "type": "FACLI",
-      "site": "SIEGE",
-      "date": "140426",
-      "journal": "VTE",
-      "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE SQUARE",
-      "devise": "XOF",
-      "lignes": [
-        {
-          "site": "SIEGE",
-          "compte": "41110000",
-          "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE SQUARE",
-          "sens": 1,
-          "montant": 8800.0,
-          "devise": "XOF",
-          "tiers": "4111GLOVO-SQR"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "70118000",
-          "libelle": "CAISSE EN COMPTE SANGEL SQUARE DU 14/04/2026",
-          "sens": -1,
-          "montant": 7458.0,
-          "devise": "XOF"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "44311000",
-          "libelle": "TVA 18% 14/04/2026",
-          "sens": -1,
-          "montant": 1342.0,
-          "devise": "XOF"
-        }
-      ]
-    },
-    {
-      "type": "FACLI",
-      "site": "SIEGE",
-      "date": "140426",
+      "date": "200426",
       "journal": "VTE",
       "libelle": "Mise en compte CLIENT YANGO",
       "devise": "XOF",
       "lignes": [
-        {
-          "site": "SIEGE",
-          "compte": "41110000",
-          "libelle": "Mise en compte CLIENT YANGO",
-          "sens": 1,
-          "montant": 1850.0,
-          "devise": "XOF",
-          "tiers": "100000000002"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "70118000",
-          "libelle": "CAISSE EN COMPTE SANGEL SQUARE DU 14/04/2026",
-          "sens": -1,
-          "montant": 1568.0,
-          "devise": "XOF"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "44311000",
-          "libelle": "TVA 18% 14/04/2026",
-          "sens": -1,
-          "montant": 282.0,
-          "devise": "XOF"
-        }
+        { "site": "SIEGE", "compte": "41110000", "libelle": "Mise en compte CLIENT YANGO", "sens": 1, "montant": 2100.0, "devise": "XOF", "tiers": "4111YANGODELI" },
+        { "site": "SIEGE", "compte": "70115000", "libelle": "CAISSE EN COMPTE SANGEL YOP DETAIL DU 20/04/2026", "sens": -1, "montant": 1780.0, "devise": "XOF" },
+        { "site": "SIEGE", "compte": "44311000", "libelle": "TVA 18% 20/04/2026", "sens": -1, "montant": 320.0, "devise": "XOF" }
       ]
     },
     {
       "type": "FACLI",
       "site": "SIEGE",
-      "date": "140426",
+      "date": "200426",
       "journal": "VTE",
       "libelle": "Mise en compte CLIENT YANGO",
       "devise": "XOF",
       "lignes": [
-        {
-          "site": "SIEGE",
-          "compte": "41110000",
-          "libelle": "Mise en compte CLIENT YANGO",
-          "sens": 1,
-          "montant": 4850.0,
-          "devise": "XOF",
-          "tiers": "100000000002"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "70118000",
-          "libelle": "CAISSE EN COMPTE SANGEL SQUARE DU 14/04/2026",
-          "sens": -1,
-          "montant": 4850.0,
-          "devise": "XOF"
-        }
+        { "site": "SIEGE", "compte": "41110000", "libelle": "Mise en compte CLIENT YANGO", "sens": 1, "montant": 4290.0, "devise": "XOF", "tiers": "4111YANGODELI" },
+        { "site": "SIEGE", "compte": "70115000", "libelle": "CAISSE EN COMPTE SANGEL YOP DETAIL DU 20/04/2026", "sens": -1, "montant": 3635.0, "devise": "XOF" },
+        { "site": "SIEGE", "compte": "44311000", "libelle": "TVA 18% 20/04/2026", "sens": -1, "montant": 655.0, "devise": "XOF" }
       ]
     },
     {
       "type": "FACLI",
       "site": "SIEGE",
-      "date": "140426",
+      "date": "200426",
       "journal": "VTE",
-      "libelle": "Mise en compte HOTEL IBIS PLATEAU",
+      "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE YOPOUGON",
       "devise": "XOF",
       "lignes": [
-        {
-          "site": "SIEGE",
-          "compte": "41110000",
-          "libelle": "Mise en compte HOTEL IBIS PLATEAU",
-          "sens": 1,
-          "montant": -100.0,
-          "devise": "XOF",
-          "tiers": "4111IBIS-PLATO"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "70118000",
-          "libelle": "CAISSE EN COMPTE SANGEL SQUARE DU 14/04/2026",
-          "sens": -1,
-          "montant": -85.0,
-          "devise": "XOF"
-        }
+        { "site": "SIEGE", "compte": "41110000", "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE YOPOUGON", "sens": 1, "montant": 2937.0, "devise": "XOF", "tiers": "4111GLOVO-YOP" },
+        { "site": "SIEGE", "compte": "70115000", "libelle": "CAISSE EN COMPTE SANGEL YOP DETAIL DU 20/04/2026", "sens": -1, "montant": 2489.0, "devise": "XOF" },
+        { "site": "SIEGE", "compte": "44311000", "libelle": "TVA 18% 20/04/2026", "sens": -1, "montant": 448.0, "devise": "XOF" }
       ]
     },
     {
       "type": "FACLI",
       "site": "SIEGE",
-      "date": "140426",
+      "date": "200426",
       "journal": "VTE",
-      "libelle": "Mise en compte SHA IBIS MARCORY",
+      "libelle": "Mise en compte CLIENT YANGO",
       "devise": "XOF",
       "lignes": [
-        {
-          "site": "SIEGE",
-          "compte": "41110000",
-          "libelle": "Mise en compte SHA IBIS MARCORY",
-          "sens": 1,
-          "montant": -100.0,
-          "devise": "XOF",
-          "tiers": "4111IBIS-MARCOR"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "70118000",
-          "libelle": "CAISSE EN COMPTE SANGEL SQUARE DU 14/04/2026",
-          "sens": -1,
-          "montant": -85.0,
-          "devise": "XOF"
-        }
+        { "site": "SIEGE", "compte": "41110000", "libelle": "Mise en compte CLIENT YANGO", "sens": 1, "montant": 11803.0, "devise": "XOF", "tiers": "4111YANGODELI" },
+        { "site": "SIEGE", "compte": "70115000", "libelle": "CAISSE EN COMPTE SANGEL YOP DETAIL DU 20/04/2026", "sens": -1, "montant": 10898.0, "devise": "XOF" },
+        { "site": "SIEGE", "compte": "44311000", "libelle": "TVA 18% 20/04/2026", "sens": -1, "montant": 905.0, "devise": "XOF" }
       ]
     },
     {
       "type": "FACLI",
       "site": "SIEGE",
-      "date": "140426",
+      "date": "200426",
       "journal": "VTE",
-      "libelle": "Mise en compte SHA IBIS MARCORY",
+      "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE YOPOUGON",
       "devise": "XOF",
       "lignes": [
-        {
-          "site": "SIEGE",
-          "compte": "41110000",
-          "libelle": "Mise en compte SHA IBIS MARCORY",
-          "sens": 1,
-          "montant": 100.0,
-          "devise": "XOF",
-          "tiers": "4111IBIS-MARCOR"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "70118000",
-          "libelle": "CAISSE EN COMPTE SANGEL SQUARE DU 14/04/2026",
-          "sens": -1,
-          "montant": 85.0,
-          "devise": "XOF"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "44311000",
-          "libelle": "TVA 18% 14/04/2026",
-          "sens": -1,
-          "montant": 15.0,
-          "devise": "XOF"
-        }
+        { "site": "SIEGE", "compte": "41110000", "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE YOPOUGON", "sens": 1, "montant": 12503.0, "devise": "XOF", "tiers": "4111GLOVO-YOP" },
+        { "site": "SIEGE", "compte": "70115000", "libelle": "CAISSE EN COMPTE SANGEL YOP DETAIL DU 20/04/2026", "sens": -1, "montant": 11225.0, "devise": "XOF" },
+        { "site": "SIEGE", "compte": "44312000", "libelle": "TVA 9% 20/04/2026", "sens": -1, "montant": 744.0, "devise": "XOF" },
+        { "site": "SIEGE", "compte": "44311000", "libelle": "TVA 18% 20/04/2026", "sens": -1, "montant": 534.0, "devise": "XOF" }
       ]
     },
     {
       "type": "FACLI",
       "site": "SIEGE",
-      "date": "140426",
+      "date": "200426",
       "journal": "VTE",
-      "libelle": "Mise en compte HOTEL IBIS PLATEAU",
+      "libelle": "Mise en compte CLIENT YANGO",
       "devise": "XOF",
       "lignes": [
-        {
-          "site": "SIEGE",
-          "compte": "41110000",
-          "libelle": "Mise en compte HOTEL IBIS PLATEAU",
-          "sens": 1,
-          "montant": 100.0,
-          "devise": "XOF",
-          "tiers": "4111IBIS-PLATO"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "70118000",
-          "libelle": "CAISSE EN COMPTE SANGEL SQUARE DU 14/04/2026",
-          "sens": -1,
-          "montant": 85.0,
-          "devise": "XOF"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "44311000",
-          "libelle": "TVA 18% 14/04/2026",
-          "sens": -1,
-          "montant": 15.0,
-          "devise": "XOF"
-        }
+        { "site": "SIEGE", "compte": "41110000", "libelle": "Mise en compte CLIENT YANGO", "sens": 1, "montant": 5334.0, "devise": "XOF", "tiers": "4111YANGODELI" },
+        { "site": "SIEGE", "compte": "70115000", "libelle": "CAISSE EN COMPTE SANGEL YOP DETAIL DU 20/04/2026", "sens": -1, "montant": 4838.0, "devise": "XOF" },
+        { "site": "SIEGE", "compte": "44311000", "libelle": "TVA 18% 20/04/2026", "sens": -1, "montant": 496.0, "devise": "XOF" }
       ]
     },
     {
       "type": "FACLI",
       "site": "SIEGE",
-      "date": "140426",
+      "date": "200426",
       "journal": "VTE",
-      "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE SQUARE",
+      "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE YOPOUGON",
       "devise": "XOF",
       "lignes": [
-        {
-          "site": "SIEGE",
-          "compte": "41110000",
-          "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE SQUARE",
-          "sens": 1,
-          "montant": 3750.0,
-          "devise": "XOF",
-          "tiers": "4111GLOVO-SQR"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "70118000",
-          "libelle": "CAISSE EN COMPTE SANGEL SQUARE DU 14/04/2026",
-          "sens": -1,
-          "montant": 3178.0,
-          "devise": "XOF"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "44311000",
-          "libelle": "TVA 18% 14/04/2026",
-          "sens": -1,
-          "montant": 572.0,
-          "devise": "XOF"
-        }
+        { "site": "SIEGE", "compte": "41110000", "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE YOPOUGON", "sens": 1, "montant": 3350.0, "devise": "XOF", "tiers": "4111GLOVO-YOP" },
+        { "site": "SIEGE", "compte": "70115000", "libelle": "CAISSE EN COMPTE SANGEL YOP DETAIL DU 20/04/2026", "sens": -1, "montant": 3350.0, "devise": "XOF" }
       ]
     },
     {
       "type": "FACLI",
       "site": "SIEGE",
-      "date": "140426",
+      "date": "200426",
       "journal": "VTE",
-      "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE SQUARE",
+      "libelle": "Mise en compte CLIENT YANGO",
       "devise": "XOF",
       "lignes": [
-        {
-          "site": "SIEGE",
-          "compte": "41110000",
-          "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE SQUARE",
-          "sens": 1,
-          "montant": 3271.0,
-          "devise": "XOF",
-          "tiers": "4111GLOVO-SQR"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "70118000",
-          "libelle": "CAISSE EN COMPTE SANGEL SQUARE DU 14/04/2026",
-          "sens": -1,
-          "montant": 2772.0,
-          "devise": "XOF"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "44311000",
-          "libelle": "TVA 18% 14/04/2026",
-          "sens": -1,
-          "montant": 499.0,
-          "devise": "XOF"
-        }
+        { "site": "SIEGE", "compte": "41110000", "libelle": "Mise en compte CLIENT YANGO", "sens": 1, "montant": 4870.0, "devise": "XOF", "tiers": "4111YANGODELI" },
+        { "site": "SIEGE", "compte": "70115000", "libelle": "CAISSE EN COMPTE SANGEL YOP DETAIL DU 20/04/2026", "sens": -1, "montant": 4870.0, "devise": "XOF" }
       ]
     },
     {
       "type": "FACLI",
       "site": "SIEGE",
-      "date": "140426",
+      "date": "200426",
       "journal": "VTE",
-      "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE SQUARE",
+      "libelle": "Mise en compte CLIENT YANGO",
       "devise": "XOF",
       "lignes": [
-        {
-          "site": "SIEGE",
-          "compte": "41110000",
-          "libelle": "Mise en compte GLOVO APP COTE D'IVOIRE SQUARE",
-          "sens": 1,
-          "montant": 12950.0,
-          "devise": "XOF",
-          "tiers": "4111GLOVO-SQR"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "70118000",
-          "libelle": "CAISSE EN COMPTE SANGEL SQUARE DU 14/04/2026",
-          "sens": -1,
-          "montant": 10974.0,
-          "devise": "XOF"
-        },
-        {
-          "site": "SIEGE",
-          "compte": "44311000",
-          "libelle": "TVA 18% 14/04/2026",
-          "sens": -1,
-          "montant": 1976.0,
-          "devise": "XOF"
-        }
+        { "site": "SIEGE", "compte": "41110000", "libelle": "Mise en compte CLIENT YANGO", "sens": 1, "montant": 7112.0, "devise": "XOF", "tiers": "4111YANGODELI" },
+        { "site": "SIEGE", "compte": "70115000", "libelle": "CAISSE EN COMPTE SANGEL YOP DETAIL DU 20/04/2026", "sens": -1, "montant": 7112.0, "devise": "XOF" }
       ]
     }
   ]
