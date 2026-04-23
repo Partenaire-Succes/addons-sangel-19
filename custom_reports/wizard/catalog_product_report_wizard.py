@@ -30,7 +30,7 @@ class ProductReportWizard(models.TransientModel):
     def action_print_report(self):
         self.ensure_one()
         domain = []
-        domain.append(('current_company_status_id.code', '==', 'C'))
+        domain = [('current_company_status_id.code', '=', 'C')]
 
         if self.active_products_only:
             domain.append(('active', '=', True))
