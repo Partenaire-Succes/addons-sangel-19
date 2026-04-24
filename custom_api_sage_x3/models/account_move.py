@@ -348,7 +348,7 @@ class AccountMoveSageX3(models.Model):
                     encai_payment_ids.append(payment.id)   # ← ENCAI
 
         # =====================================================================
-        # CONSTRUCTION ENCAI
+        # CONSTRUCTION ENCAI (facture)
         # =====================================================================
         lignes_encai = []
         total_encai  = 0.0
