@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
+import io
+import base64
 from odoo import models, fields, api
+from odoo.exceptions import UserError
 from odoo.tools import float_round
 
 
@@ -147,14 +150,94 @@ class StockValoriseReport(models.TransientModel):
     def action_print_report(self):
         """Générer le rapport PDF et fermer le wizard"""
         self.ensure_one()
-
-        # 1️⃣ Lancer le rapport PDF
         report_action = self.env.ref('custom_reports.action_report_stock_valorise').report_action(self)
-
-        # 2️⃣ Ajouter l'action de fermeture
         report_action['close_on_report_download'] = True
-
         return report_action
+
+    def action_export_excel(self):
+        self.ensure_one()
+        try:
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        except ImportError:
+            raise UserError("La bibliothèque openpyxl est requise.")
+
+        data = self._get_stock_by_category()
+        if not data['categories']:
+            raise UserError("Aucune donnée de stock trouvée.")
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Stock Valorisé"
+
+        BLUE = "1A5276"; LBLUE = "D6EAF8"; WHITE = "FFFFFF"
+        thin = Side(style='thin', color="AAAAAA")
+        brd  = Border(left=thin, right=thin, top=thin, bottom=thin)
+        def fill(h): return PatternFill("solid", fgColor=h)
+        def aln(h="left"): return Alignment(horizontal=h, vertical="center")
+
+        ws.merge_cells("A1:G1")
+        ws["A1"] = self.company_id.name
+        ws["A1"].font = Font(name="Arial", bold=True, size=11)
+
+        ws.merge_cells("A2:G2")
+        ws["A2"] = f"STOCK VALORISÉ — {self.date_report.strftime('%d/%m/%Y')} — {self.location_id.complete_name}"
+        ws["A2"].font = Font(name="Arial", bold=True, color=WHITE, size=11)
+        ws["A2"].fill = fill(BLUE)
+        ws["A2"].alignment = aln("center")
+        ws.row_dimensions[2].height = 18
+        ws.append([])
+
+        headers = ["Code Article", "Réf. Interne", "Désignation", "Catégorie", "Qté", "PAMP", "Valorisation"]
+        ws.append(headers)
+        hrow = ws.max_row
+        for col in range(1, 8):
+            c = ws.cell(row=hrow, column=col)
+            c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
+            c.fill = fill(BLUE); c.alignment = aln("center"); c.border = brd
+
+        for cat in data['categories']:
+            for p in cat['products']:
+                ws.append([p['code_article'], p['default_code'], p['name'],
+                            cat['category'], p['qty'], p['pamp'], p['valorisation']])
+                r = ws.max_row
+                for col in range(1, 8):
+                    c = ws.cell(row=r, column=col)
+                    c.font = Font(name="Arial", size=9); c.border = brd
+                    c.alignment = aln("right" if col >= 5 else "left")
+                for col in (5, 6, 7):
+                    ws.cell(row=r, column=col).number_format = '#,##0.00'
+
+            ws.append(["", "", "", "Sous-total " + cat['category'], "", "", cat['total']])
+            r = ws.max_row
+            for col in range(1, 8):
+                c = ws.cell(row=r, column=col)
+                c.font = Font(name="Arial", bold=True, size=9)
+                c.fill = fill(LBLUE); c.border = brd
+                c.alignment = aln("right" if col >= 6 else "left")
+            ws.cell(row=r, column=7).number_format = '#,##0.00'
+
+        ws.append(["", "", "", "", "", "TOTAL GÉNÉRAL", data['total_valorisation']])
+        r = ws.max_row
+        for col in range(1, 8):
+            c = ws.cell(row=r, column=col)
+            c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
+            c.fill = fill(BLUE); c.border = brd
+            c.alignment = aln("right" if col >= 6 else "left")
+        ws.cell(row=r, column=7).number_format = '#,##0.00'
+
+        for col, width in enumerate([14, 14, 30, 22, 10, 14, 16], 1):
+            ws.column_dimensions[chr(64 + col)].width = width
+
+        buffer = io.BytesIO(); wb.save(buffer); buffer.seek(0)
+        xlsx_data = base64.b64encode(buffer.read()).decode()
+        filename = f"Stock_Valorise_{self.date_report.strftime('%d%m%Y')}.xlsx"
+        attachment = self.env['ir.attachment'].create({
+            'name': filename, 'type': 'binary', 'datas': xlsx_data,
+            'mimetype': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'res_model': self._name, 'res_id': self.id,
+        })
+        return {'type': 'ir.actions.act_url', 'url': f'/web/content/{attachment.id}?download=true', 'target': 'new'}
 
 
 

@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+import io
+import base64
 from odoo import models, fields, api
 from odoo.exceptions import UserError
 
@@ -36,59 +39,55 @@ class SupplierReturnReportWizard(models.TransientModel):
                 raise UserError("La date de début doit être antérieure à la date de fin.")
 
     def action_print_report(self):
-        """Imprimer le rapport PDF"""
         self.ensure_one()
+        self._get_report_data()  # lève UserError si vide
         return self.env.ref('custom_reports.action_report_supplier_returns').report_action(self)
 
-
-
     def _get_domain(self):
-        """Construire le domaine pour filtrer les retours fournisseurs"""
         domain = [
+            ('location_dest_id.usage', '=', 'supplier'),
             ('state', '=', 'done'),
             ('date_done', '>=', self.date_from),
             ('date_done', '<=', self.date_to),
             ('company_id', '=', self.company_id.id),
-            ('origin', '=like', 'Retour de%'),
         ]
-
-
         if self.partner_ids:
             domain.append(('partner_id', 'in', self.partner_ids.ids))
-
         return domain
 
     def _get_report_data(self):
-        """Récupérer et structurer les données du rapport"""
-        pickings = self.env['stock.picking'].search(self._get_domain())
+        pickings = self.env['stock.picking'].search(
+            self._get_domain(), order='partner_id, date_done'
+        )
+        if not pickings:
+            raise UserError("Aucun retour fournisseur trouvé pour la période sélectionnée.")
 
-
-        # Grouper par fournisseur
         data_by_supplier = {}
-
         for picking in pickings:
             supplier = picking.partner_id
-            if supplier not in data_by_supplier:
-                data_by_supplier[supplier] = {
-                    'supplier_name': supplier.name,
+            key = supplier.id if supplier else 0
+            if key not in data_by_supplier:
+                data_by_supplier[key] = {
+                    'supplier_name': supplier.name if supplier else '—',
                     'returns': [],
                     'total_amount': 0.0,
                 }
 
-            # Calculer le montant total
-            amount = sum(
-                move.product_uom_qty * move.product_id.standard_price
-                for move in picking.move_ids
-            )
+            amount = 0.0
+            for move in picking.move_ids.filtered(lambda m: m.state == 'done'):
+                qty_done = (
+                    sum(move.move_line_ids.mapped('quantity'))
+                    or move.product_uom_qty
+                )
+                amount += qty_done * (move.price_unit or 0.0)
 
-            data_by_supplier[supplier]['returns'].append({
+            data_by_supplier[key]['returns'].append({
                 'date': picking.date_done,
                 'reference': picking.name,
-                'origin': picking.origin,
+                'origin': picking.origin or '',
                 'amount': amount,
-                'moves': picking.move_ids,
             })
-            data_by_supplier[supplier]['total_amount'] += amount
+            data_by_supplier[key]['total_amount'] += amount
 
         return {
             'date_from': self.date_from,
@@ -96,4 +95,116 @@ class SupplierReturnReportWizard(models.TransientModel):
             'company': self.company_id,
             'suppliers': list(data_by_supplier.values()),
             'grand_total': sum(s['total_amount'] for s in data_by_supplier.values()),
+        }
+
+    def action_export_excel(self):
+        self.ensure_one()
+        try:
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        except ImportError:
+            raise UserError("La bibliothèque openpyxl est requise.")
+
+        data = self._get_report_data()
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Retours Fournisseurs"
+
+        BLUE  = "1A5276"
+        LBLUE = "D6EAF8"
+        WHITE = "FFFFFF"
+        thin  = Side(style='thin', color="AAAAAA")
+        brd   = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+        def fill(h):
+            return PatternFill("solid", fgColor=h)
+
+        def aln(h="left", v="center"):
+            return Alignment(horizontal=h, vertical=v)
+
+        ws.merge_cells("A1:F1")
+        ws["A1"] = self.company_id.name
+        ws["A1"].font = Font(name="Arial", bold=True, size=11)
+
+        ws.merge_cells("A2:F2")
+        ws["A2"] = (
+            f"RÉCAPITULATIF RETOURS FOURNISSEURS — "
+            f"Du {self.date_from.strftime('%d/%m/%Y')} au {self.date_to.strftime('%d/%m/%Y')}"
+        )
+        ws["A2"].font = Font(name="Arial", bold=True, color=WHITE, size=11)
+        ws["A2"].fill = fill(BLUE)
+        ws["A2"].alignment = aln("center")
+        ws.row_dimensions[2].height = 18
+        ws.append([])
+
+        headers = ["Type Mvt", "Date", "N° Retour", "Fournisseur", "Référence", "Montant Total"]
+        ws.append(headers)
+        hrow = ws.max_row
+        for col in range(1, 7):
+            c = ws.cell(row=hrow, column=col)
+            c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
+            c.fill = fill(BLUE)
+            c.alignment = aln("center")
+            c.border = brd
+
+        for supplier in data['suppliers']:
+            for ret in supplier['returns']:
+                ws.append([
+                    'BRF',
+                    ret['date'].strftime('%d/%m/%Y') if ret['date'] else '',
+                    ret['reference'],
+                    supplier['supplier_name'],
+                    ret['origin'],
+                    ret['amount'],
+                ])
+                r = ws.max_row
+                for col in range(1, 7):
+                    c = ws.cell(row=r, column=col)
+                    c.font = Font(name="Arial", size=9)
+                    c.border = brd
+                    c.alignment = aln("right" if col == 6 else "center" if col in (1, 2) else "left")
+                ws.cell(row=r, column=6).number_format = '#,##0'
+
+            ws.append(["", "", "", "", "Sous-total " + supplier['supplier_name'], supplier['total_amount']])
+            r = ws.max_row
+            for col in range(1, 7):
+                c = ws.cell(row=r, column=col)
+                c.font = Font(name="Arial", bold=True, size=9)
+                c.fill = fill(LBLUE)
+                c.border = brd
+                c.alignment = aln("right" if col >= 5 else "left")
+            ws.cell(row=r, column=6).number_format = '#,##0'
+
+        ws.append(["", "", "", "", "TOTAL GÉNÉRAL", data['grand_total']])
+        r = ws.max_row
+        for col in range(1, 7):
+            c = ws.cell(row=r, column=col)
+            c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
+            c.fill = fill(BLUE)
+            c.border = brd
+            c.alignment = aln("right" if col >= 5 else "left")
+        ws.cell(row=r, column=6).number_format = '#,##0'
+
+        for col, width in enumerate([10, 13, 18, 28, 22, 16], 1):
+            ws.column_dimensions[chr(64 + col)].width = width
+
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        xlsx_data = base64.b64encode(buffer.read()).decode()
+
+        filename = f"Retours_Fournisseurs_{self.date_from.strftime('%d%m%Y')}_{self.date_to.strftime('%d%m%Y')}.xlsx"
+        attachment = self.env['ir.attachment'].create({
+            'name':      filename,
+            'type':      'binary',
+            'datas':     xlsx_data,
+            'mimetype':  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'res_model': self._name,
+            'res_id':    self.id,
+        })
+        return {
+            'type':   'ir.actions.act_url',
+            'url':    f'/web/content/{attachment.id}?download=true',
+            'target': 'new',
         }

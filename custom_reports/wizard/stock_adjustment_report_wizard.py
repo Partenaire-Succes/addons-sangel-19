@@ -1,3 +1,5 @@
+import io
+import base64
 from odoo import models, fields, api
 from odoo.exceptions import UserError
 
@@ -113,13 +115,82 @@ class StockAdjustmentReportWizard(models.TransientModel):
         return totals
 
     def get_grand_totals(self, totals):
-        """Calculer les totaux généraux"""
         grand_total_qty = sum(t['quantity'] for t in totals.values())
         grand_total_pa = sum(t['total_pa'] for t in totals.values())
-        return {
-            'quantity': grand_total_qty,
-            'total_pa': grand_total_pa
-        }
+        return {'quantity': grand_total_qty, 'total_pa': grand_total_pa}
+
+    def action_export_excel(self):
+        self.ensure_one()
+        if not self.scrap_lines_ids:
+            raise UserError("Aucune donnée trouvée pour la période sélectionnée.")
+        try:
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        except ImportError:
+            raise UserError("La bibliothèque openpyxl est requise.")
+
+        wb = Workbook(); ws = wb.active; ws.title = "Ajustements Stock"
+        BLUE = "1A5276"; LBLUE = "D6EAF8"; WHITE = "FFFFFF"
+        thin = Side(style='thin', color="AAAAAA")
+        brd  = Border(left=thin, right=thin, top=thin, bottom=thin)
+        def fill(h): return PatternFill("solid", fgColor=h)
+        def aln(h="left"): return Alignment(horizontal=h, vertical="center")
+
+        ws.merge_cells("A1:I1")
+        ws["A1"] = self.company_id.name
+        ws["A1"].font = Font(name="Arial", bold=True, size=11)
+        ws.merge_cells("A2:I2")
+        ws["A2"] = f"AJUSTEMENTS STOCK — Du {self.date_from.strftime('%d/%m/%Y')} au {self.date_to.strftime('%d/%m/%Y')}"
+        ws["A2"].font = Font(name="Arial", bold=True, color=WHITE, size=11)
+        ws["A2"].fill = fill(BLUE); ws["A2"].alignment = aln("center")
+        ws.row_dimensions[2].height = 18; ws.append([])
+
+        headers = ["Type", "Raison", "N° Document", "Date", "Opérateur", "Code Article", "Désignation", "Quantité", "Total PA"]
+        ws.append(headers)
+        hrow = ws.max_row
+        for col in range(1, 10):
+            c = ws.cell(row=hrow, column=col)
+            c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
+            c.fill = fill(BLUE); c.alignment = aln("center"); c.border = brd
+
+        grouped = self.get_grouped_data()
+        grand_qty = grand_pa = 0.0
+        for adj_type, reasons in grouped.items():
+            for reason_data in reasons.values():
+                for line in reason_data['lines']:
+                    ws.append([adj_type, reason_data['reason_name'], line['document'],
+                                line['date'].strftime('%d/%m/%Y') if line['date'] else '',
+                                line['cashier'], line['article'], line['designation'],
+                                line['quantity'], line['total_pa']])
+                    r = ws.max_row
+                    for col in range(1, 10):
+                        c = ws.cell(row=r, column=col)
+                        c.font = Font(name="Arial", size=9); c.border = brd
+                        c.alignment = aln("right" if col >= 8 else "center" if col == 4 else "left")
+                    ws.cell(row=r, column=9).number_format = '#,##0.00'
+                    grand_qty += line['quantity']; grand_pa += line['total_pa']
+
+        ws.append(["", "", "", "", "", "", "", "TOTAL GÉNÉRAL", grand_pa])
+        r = ws.max_row
+        for col in range(1, 10):
+            c = ws.cell(row=r, column=col)
+            c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
+            c.fill = fill(BLUE); c.border = brd
+            c.alignment = aln("right" if col >= 8 else "left")
+        ws.cell(row=r, column=9).number_format = '#,##0.00'
+
+        for col, width in enumerate([18, 20, 16, 13, 18, 14, 28, 10, 14], 1):
+            ws.column_dimensions[chr(64 + col)].width = width
+
+        buffer = io.BytesIO(); wb.save(buffer); buffer.seek(0)
+        xlsx_data = base64.b64encode(buffer.read()).decode()
+        filename = f"Ajustements_Stock_{self.date_from.strftime('%d%m%Y')}_{self.date_to.strftime('%d%m%Y')}.xlsx"
+        attachment = self.env['ir.attachment'].create({
+            'name': filename, 'type': 'binary', 'datas': xlsx_data,
+            'mimetype': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'res_model': self._name, 'res_id': self.id,
+        })
+        return {'type': 'ir.actions.act_url', 'url': f'/web/content/{attachment.id}?download=true', 'target': 'new'}
 
 
 

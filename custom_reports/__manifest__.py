@@ -45,6 +45,8 @@
         'report/recap_caisses_report.xml',
         'report/recap_caisses_template.xml',
         'wizard/recap_caisses_wizard_views.xml',
+        # 'wizard/livraison_report_wizard_views.xml',
+        # 'report/report_livraison_template.xml',
     ],
     'installable': True,
     'auto_install': False

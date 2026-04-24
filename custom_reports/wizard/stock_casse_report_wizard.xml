@@ -32,6 +32,7 @@
                     </sheet>
                     <footer>
                         <button string="Imprimer PDF" name="action_print_report" type="object" class="btn-primary"/>
+                        <button string="Télécharger Excel" name="action_export_excel" type="object" class="btn-success" icon="fa-file-excel-o"/>
                         <button string="Annuler" class="btn-secondary" special="cancel"/>
                     </footer>
                 </form>

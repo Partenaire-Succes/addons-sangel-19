@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import io
+import base64
 from odoo import models, fields, api
 from odoo.exceptions import UserError
 
@@ -224,6 +226,87 @@ class SaleStatReportWizard(models.TransientModel):
         return dict(sorted(categories_data.items()))
 
     def action_print_report(self):
-        """Générer le rapport PDF"""
         self.ensure_one()
         return self.env.ref('custom_reports.action_report_sale_statistics').report_action(self)
+
+    def action_export_excel(self):
+        self.ensure_one()
+        try:
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        except ImportError:
+            raise UserError("La bibliothèque openpyxl est requise.")
+
+        categories_data = self.get_sale_data_by_category()
+        if not categories_data:
+            raise UserError("Aucune donnée trouvée pour la période sélectionnée.")
+
+        wb = Workbook(); ws = wb.active; ws.title = "Stats Ventes"
+        BLUE = "1A5276"; LBLUE = "D6EAF8"; WHITE = "FFFFFF"
+        thin = Side(style='thin', color="AAAAAA")
+        brd  = Border(left=thin, right=thin, top=thin, bottom=thin)
+        def fill(h): return PatternFill("solid", fgColor=h)
+        def aln(h="left"): return Alignment(horizontal=h, vertical="center")
+
+        p1_label = f"{self.date_start_period1.strftime('%d/%m/%Y')} → {self.date_end_period1.strftime('%d/%m/%Y')}" if self.date_start_period1 else "Période 1"
+        p2_label = f"{self.date_start_period2.strftime('%d/%m/%Y')} → {self.date_end_period2.strftime('%d/%m/%Y')}" if self.date_start_period2 else "Période 2"
+
+        ws.merge_cells("A1:L1")
+        ws["A1"] = self.company_id.name
+        ws["A1"].font = Font(name="Arial", bold=True, size=11)
+        ws.merge_cells("A2:L2")
+        ws["A2"] = f"STATISTIQUES VENTES — P1: {p1_label} | P2: {p2_label}"
+        ws["A2"].font = Font(name="Arial", bold=True, color=WHITE, size=11)
+        ws["A2"].fill = fill(BLUE); ws["A2"].alignment = aln("center")
+        ws.row_dimensions[2].height = 18; ws.append([])
+
+        headers = ["Catégorie", "Client", "Qté P1", "CA HT P1", "Marge P1", "% Marge P1",
+                   "Qté P2", "CA HT P2", "Marge P2", "% Marge P2", "Prog CA", "% Prog CA"]
+        ws.append(headers)
+        hrow = ws.max_row
+        for col in range(1, 13):
+            c = ws.cell(row=hrow, column=col)
+            c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
+            c.fill = fill(BLUE); c.alignment = aln("center"); c.border = brd
+
+        for cat_key, cat_data in categories_data.items():
+            for client in cat_data['clients'].values():
+                ws.append([
+                    cat_data['category_name'], client['partner_name'],
+                    client['qty_p1'], client['ca_p1'], client['margin_p1'], round(client['margin_pct_p1'], 2),
+                    client['qty_p2'], client['ca_p2'], client['margin_p2'], round(client['margin_pct_p2'], 2),
+                    client['prog_ca'], round(client['prog_ca_pct'], 2),
+                ])
+                r = ws.max_row
+                for col in range(1, 13):
+                    c = ws.cell(row=r, column=col)
+                    c.font = Font(name="Arial", size=9); c.border = brd
+                    c.alignment = aln("right" if col >= 3 else "left")
+                for col in (4, 5, 8, 9, 11):
+                    ws.cell(row=r, column=col).number_format = '#,##0.00'
+
+            ws.append(["Sous-total " + cat_data['category_name'], "",
+                       cat_data['total_p1_qty'], cat_data['total_p1_ca'], cat_data['total_p1_margin'], round(cat_data.get('total_p1_margin_pct', 0.0), 2),
+                       cat_data['total_p2_qty'], cat_data['total_p2_ca'], cat_data['total_p2_margin'], round(cat_data.get('total_p2_margin_pct', 0.0), 2),
+                       cat_data.get('total_prog_ca', 0.0), round(cat_data.get('total_prog_ca_pct', 0.0), 2)])
+            r = ws.max_row
+            for col in range(1, 13):
+                c = ws.cell(row=r, column=col)
+                c.font = Font(name="Arial", bold=True, size=9)
+                c.fill = fill(LBLUE); c.border = brd
+                c.alignment = aln("right" if col >= 3 else "left")
+            for col in (4, 5, 8, 9, 11):
+                ws.cell(row=r, column=col).number_format = '#,##0.00'
+
+        for col, width in enumerate([22, 25, 8, 14, 14, 10, 8, 14, 14, 10, 14, 10], 1):
+            ws.column_dimensions[chr(64 + col)].width = width
+
+        buffer = io.BytesIO(); wb.save(buffer); buffer.seek(0)
+        xlsx_data = base64.b64encode(buffer.read()).decode()
+        filename = "Stats_Ventes.xlsx"
+        attachment = self.env['ir.attachment'].create({
+            'name': filename, 'type': 'binary', 'datas': xlsx_data,
+            'mimetype': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'res_model': self._name, 'res_id': self.id,
+        })
+        return {'type': 'ir.actions.act_url', 'url': f'/web/content/{attachment.id}?download=true', 'target': 'new'}

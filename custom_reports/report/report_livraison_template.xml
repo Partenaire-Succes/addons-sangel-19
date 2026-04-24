@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_livraison_document">
+        <t t-call="web.external_layout">
+            <t t-foreach="docs" t-as="o">
+                <t t-set="data" t-value="o._get_livraisons_data()"/>
+                <div class="page">
+                    <main>
+                        <div class="text-center" style="margin-bottom: 30px;">
+                            <h3 style="margin: 10px 0; color: #2c3e50;">Récapitulatif Livraisons</h3>
+                            <p style="font-size: 16px; color: black;">
+                                <strong>Du</strong>
+                                <span t-esc="o.date_debut" t-options="{'widget': 'date', 'format': 'dd/MM/yyyy'}"/>
+                                <strong>Au</strong>
+                                <span t-esc="o.date_fin" t-options="{'widget': 'date', 'format': 'dd/MM/yyyy'}"/>
+                            </p>
+                        </div>
+
+                        <t t-foreach="data" t-as="cdata">
+                            <div style="margin-bottom: 25px;">
+                                <div style="background-color: #1a5276; color: white; padding: 6px 10px; margin-bottom: 6px;">
+                                    <strong>
+                                        <span t-esc="cdata['partner'].name if cdata['partner'] else '—'"/>
+                                    </strong>
+                                </div>
+                                <table class="table table-sm table-bordered" style="margin-bottom: 10px;">
+                                    <thead style="background-color: #ecf0f1;">
+                                        <tr>
+                                            <th style="width: 13%; text-align: center;">Date</th>
+                                            <th style="width: 18%; text-align: center;">N° Livraison</th>
+                                            <th style="width: 39%; text-align: center;">Client</th>
+                                            <th style="width: 18%; text-align: center;">Référence</th>
+                                            <th style="width: 12%; text-align: right;">Montant Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="cdata['livraisons']" t-as="liv">
+                                            <tr>
+                                                <td style="text-align: center;">
+                                                    <span t-esc="liv['date']"
+                                                          t-options="{'widget': 'date', 'format': 'dd/MM/yyyy'}"/>
+                                                </td>
+                                                <td style="text-align: center;">
+                                                    <span t-esc="liv['numero']"/>
+                                                </td>
+                                                <td>
+                                                    <span t-esc="cdata['partner'].name if cdata['partner'] else '—'"/>
+                                                </td>
+                                                <td style="text-align: center;">
+                                                    <span t-esc="liv['ref']"/>
+                                                </td>
+                                                <td style="text-align: right; font-weight: bold;">
+                                                    <span t-esc="'{:,.0f}'.format(liv['total']).replace(',', ' ')"/>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+
+                                <table class="table table-sm" style="width: 50%; border-top: 2px solid #2c3e50; margin-left: 50%;">
+                                    <tr style="background-color: #f8f9fa;">
+                                        <td style="padding: 10px; width: 55%; text-align: right; font-weight: bold; color: #3498db; font-size: 14pt;">
+                                            <span t-esc="cdata['partner'].name if cdata['partner'] else '—'"/>
+                                        </td>
+                                        <td style="padding: 10px; width: 45%; text-align: right; font-weight: bold; font-size: 14pt; color: black;">
+                                            <span t-esc="'{:,.0f}'.format(cdata['total']).replace(',', ' ')"/>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </t>
+
+                        <div style="margin-top: 20px; padding: 20px; color: black; border-radius: 5px; background-color: #f8f9fa;">
+                            <div class="row">
+                                <div class="col-6">
+                                    <h4 style="margin: 0;">TOTAL GÉNÉRAL</h4>
+                                </div>
+                                <div class="col-6 text-end">
+                                    <h3 style="margin: 0; font-size: 24px;">
+                                        <span t-esc="'{:,.0f}'.format(sum(c['total'] for c in data)).replace(',', ' ')"/>
+                                    </h3>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #bdc3c7; font-size: 12px; color: #7f8c8d;">
+                            <div class="row">
+                                <div class="col-6">
+                                    <p>Imprimé le:
+                                        <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y %H:%M')"/>
+                                    </p>
+                                </div>
+                                <div class="col-6 text-end">
+                                    <p>Nombre de clients:
+                                        <span t-esc="len(data)"/>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <record id="action_report_livraison" model="ir.actions.report">
+        <field name="name">Livraisons</field>
+        <field name="model">livraison.report.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">custom_reports.report_livraison_document</field>
+        <field name="report_file">custom_reports.report_livraison_document</field>
+        <field name="binding_model_id" ref="model_livraison_report_wizard"/>
+        <field name="binding_type">report</field>
+        <field name="print_report_name">'Livraisons_%s_%s' % (object.date_debut.strftime('%Y%m%d'), object.date_fin.strftime('%Y%m%d'))</field>
+        <field name="paperformat_id" ref="base.paperformat_euro"/>
+    </record>
+</odoo>
