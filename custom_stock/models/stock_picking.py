@@ -11,6 +11,21 @@ class StockQuant(models.Model):
 
     standard_price = fields.Float(string="Prix standard", related='product_id.standard_price', readonly=False)
 
+class StockMoveInherit(models.Model):
+    _inherit = 'stock.move'
+
+    amount_total = fields.Float(
+        string="Total",
+        compute="_compute_amount_total",
+        store=True
+    )
+
+    @api.depends('quantity', 'price_unit')
+    def _compute_amount_total(self):
+        for move in self:
+            move.amount_total = move.quantity * move.price_unit
+
+
 class StockPicking(models.Model):
     _inherit = 'stock.picking'
 
@@ -23,19 +38,20 @@ class StockPicking(models.Model):
 
         # ── 1. Pre-validation checks (before calling super) ──────────────────
         errors = []
-        # for picking in self:
-        #     for move in picking.move_ids:
-        #         product_name = move.product_id.display_name
+        for picking in self:
+            if picking.picking_type_id.code == 'incoming':
+                for move in picking.move_ids:
+                    product_name = move.product_id.display_name
 
-        #         # 🔴 Block validation if price is 0
-        #         if move.price_unit == 0:
-        #             errors.append(f"{product_name} (Prix = 0)")
+                    # 🔴 Block validation if price is 0
+                    if move.price_unit == 0:
+                        errors.append(f"{product_name} (Prix = 0)")
 
-        # if errors:
-        #     raise UserError(
-        #         "Validation impossible pour les produits suivants :\n- " +
-        #         "\n- ".join(errors)
-        #     )
+        if errors:
+            raise UserError(
+                "Validation impossible pour les produits suivants :\n- " +
+                "\n- ".join(errors)
+            )
 
         # ── 2. Standard Odoo validation ───────────────────────────────────────
         res = super().button_validate()
