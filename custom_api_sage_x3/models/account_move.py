@@ -567,7 +567,7 @@ class AccountMoveSageX3(models.Model):
                 partner      = payment.partner_id
                 partner_name = partner.name if partner else "CLIENT"
 
-                customer_id = (partner.partner_id.customer_id or "").strip()
+                customer_id = (partner.customer_id or "").strip()
                 if customer_id.startswith(("10", "20")):
                     tiers_code = divers
                 else:
