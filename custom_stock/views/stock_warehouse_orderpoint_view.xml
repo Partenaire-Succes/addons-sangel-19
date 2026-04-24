@@ -16,7 +16,7 @@
                 <field name="price_unit" string="Prix unitaire" sum="Total amount"/>
             </xpath>
             <xpath expr="//notebook/page[@name='operations']/field[@name='move_ids']//field[@name='product_uom']" position="after">
-                <field name="amount_total" string="Total" sum="Total amount"/>
+                <field name="amount_total" string="Total" widget="monetary" sum="Total amount"/>
             </xpath>
         </field>
     </record>
