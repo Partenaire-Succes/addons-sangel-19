@@ -623,13 +623,118 @@ class AccountMoveSageX3(models.Model):
     # Marque les pos.payment IMMÉDIATEMENT après chaque écriture réussie
     # =========================================================================
 
-    def _send_daily_to_sage_x3_api(self, accounting_data, company, target_date):
-        """
-        Envoie chaque écriture individuellement à SAGE X3.
+    # def _send_daily_to_sage_x3_api(self, accounting_data, company, target_date):
+    #     """
+    #     Envoie chaque écriture individuellement à SAGE X3.
 
-        Après chaque POST réussi, les pos.payment liés sont marqués
-        sage_x3_sent=True immédiatement → évite les doublons en cas de crash.
-        """
+    #     Après chaque POST réussi, les pos.payment liés sont marqués
+    #     sage_x3_sent=True immédiatement → évite les doublons en cas de crash.
+    #     """
+    #     config = self._get_sage_x3_config()
+
+    #     _logger.info(
+    #         "📦 JSON POS (%s — %s):\n%s",
+    #         company.name, target_date,
+    #         json.dumps(accounting_data, indent=2, ensure_ascii=False),
+    #     )
+
+    #     token = self._authenticate_sage_x3()
+    #     if not token:
+    #         raise UserError("Échec de l'authentification SAGE X3")
+
+    #     headers = {
+    #         "Authorization": f"Bearer {token}",
+    #         "Content-Type":  "application/json",
+    #         "Accept":        "application/json",
+    #     }
+
+    #     ecritures   = accounting_data.get("ecritures", [])
+    #     payment_map = accounting_data.get("payment_map", {})  # {idx: [pos.payment ids]}
+
+    #     all_pieces   = []
+    #     all_messages = []
+    #     errors       = []
+
+    #     for idx, ecriture in enumerate(ecritures):
+    #         payload = {"ecritures": [ecriture]}   # ← 1 seule écriture par appel
+
+    #         _logger.info(
+    #             "📤 Envoi écriture [%s] index=%s (%s — %s)",
+    #             ecriture.get("type"), idx, company.name, target_date,
+    #         )
+
+    #         try:
+    #             response = self._safe_post(config['accounting_url'], headers, payload)
+
+    #             if response.status_code not in (200, 201):
+    #                 errors.append(
+    #                     f"[{ecriture.get('type')}] HTTP {response.status_code}: {response.text}"
+    #                 )
+    #                 continue
+
+    #             x3_results = self._extract_x3_results(
+    #                 response, f"{ecriture.get('type')}_{target_date}"
+    #             )
+
+    #             ecriture_ok   = True
+    #             piece_numbers = []
+    #             messages      = []
+
+    #             for res in x3_results:
+    #                 if res["piece"]:
+    #                     piece_numbers.append(res["piece"])
+    #                     messages.append(res["message"])
+    #                     _logger.info(
+    #                         "✅ [%s] Pièce SAGE X3 : %s",
+    #                         ecriture.get("type"), res["piece"],
+    #                     )
+    #                 else:
+    #                     errors.append(f"[{ecriture.get('type')}] {res['message']}")
+    #                     ecriture_ok = False
+
+    #             if ecriture_ok:
+    #                 piece_str   = ", ".join(piece_numbers)
+    #                 message_str = "\n".join(messages)
+
+    #                 all_pieces.extend(piece_numbers)
+    #                 all_messages.extend(messages)
+
+    #                 # ✅ Marquer immédiatement les pos.payment de cette écriture
+    #                 pos_payment_ids = payment_map.get(idx, [])
+    #                 if pos_payment_ids:
+    #                     self._mark_pos_payments(pos_payment_ids, piece_str, message_str)
+    #                     _logger.info(
+    #                         "🔒 [%s] %s pos.payment(s) marqué(s) — pièce %s",
+    #                         ecriture.get("type"), len(pos_payment_ids), piece_str,
+    #                     )
+
+    #         except Exception as e:
+    #             errors.append(
+    #                 f"[{ecriture.get('type')}] Timeout ou erreur réseau : {str(e)}"
+    #             )
+    #             _logger.error(
+    #                 "❌ [%s] Échec envoi — %s", ecriture.get("type"), str(e)
+    #             )
+    #             # On continue les autres écritures malgré l'erreur
+
+    #     # ── Résultat final ──────────────────────────────────────────────────
+    #     if errors:
+    #         _logger.warning(
+    #             "⚠️ %s écriture(s) en erreur sur %s :\n%s",
+    #             len(errors), target_date, "\n".join(errors),
+    #         )
+    #         raise UserError(
+    #             "❌ Certaines écritures ont échoué :\n" + "\n".join(errors)
+    #         )
+
+    #     piece_numbers_all = ", ".join(all_pieces)
+    #     full_message      = "\n".join(all_messages)
+
+    #     _logger.info("✅ SAGE X3 OK — Pièces : %s", piece_numbers_all)
+    #     self._mark_daily_as_sent(company, target_date, piece_numbers_all, full_message)
+    
+
+    def _send_daily_to_sage_x3_api(self, accounting_data, company, target_date):
         config = self._get_sage_x3_config()
 
         _logger.info(
@@ -649,14 +754,14 @@ class AccountMoveSageX3(models.Model):
         }
 
         ecritures   = accounting_data.get("ecritures", [])
-        payment_map = accounting_data.get("payment_map", {})  # {idx: [pos.payment ids]}
+        payment_map = accounting_data.get("payment_map", {})
 
         all_pieces   = []
         all_messages = []
         errors       = []
 
         for idx, ecriture in enumerate(ecritures):
-            payload = {"ecritures": [ecriture]}   # ← 1 seule écriture par appel
+            payload = {"ecritures": [ecriture]}
 
             _logger.info(
                 "📤 Envoi écriture [%s] index=%s (%s — %s)",
@@ -699,12 +804,13 @@ class AccountMoveSageX3(models.Model):
                     all_pieces.extend(piece_numbers)
                     all_messages.extend(messages)
 
-                    # ✅ Marquer immédiatement les pos.payment de cette écriture
+                    # ✅ Marquer + commit immédiat → protège contre le rollback
                     pos_payment_ids = payment_map.get(idx, [])
                     if pos_payment_ids:
                         self._mark_pos_payments(pos_payment_ids, piece_str, message_str)
+                        self.env.cr.commit()   # ← COMMIT immédiat après chaque succès
                         _logger.info(
-                            "🔒 [%s] %s pos.payment(s) marqué(s) — pièce %s",
+                            "🔒 [%s] %s pos.payment(s) marqué(s) et commité(s) — pièce %s",
                             ecriture.get("type"), len(pos_payment_ids), piece_str,
                         )
 
@@ -715,9 +821,17 @@ class AccountMoveSageX3(models.Model):
                 _logger.error(
                     "❌ [%s] Échec envoi — %s", ecriture.get("type"), str(e)
                 )
-                # On continue les autres écritures malgré l'erreur
 
-        # ── Résultat final ──────────────────────────────────────────────────
+        # ── Résultat final ───────────────────────────────────────────────────────
+        # On marque les sessions et account.payments AVANT de lever l'erreur
+        # pour ne pas perdre ce qui a réussi
+        piece_numbers_all = ", ".join(all_pieces)
+        full_message      = "\n".join(all_messages)
+
+        # if piece_numbers_all:
+        #     self._mark_daily_as_sent(company, target_date, piece_numbers_all, full_message)
+        #     self.env.cr.commit()   # ← COMMIT des sessions avant raise éventuel
+
         if errors:
             _logger.warning(
                 "⚠️ %s écriture(s) en erreur sur %s :\n%s",
@@ -727,11 +841,9 @@ class AccountMoveSageX3(models.Model):
                 "❌ Certaines écritures ont échoué :\n" + "\n".join(errors)
             )
 
-        piece_numbers_all = ", ".join(all_pieces)
-        full_message      = "\n".join(all_messages)
-
         _logger.info("✅ SAGE X3 OK — Pièces : %s", piece_numbers_all)
         self._mark_daily_as_sent(company, target_date, piece_numbers_all, full_message)
+
 
     # =========================================================================
     # MARQUAGE IMMÉDIAT pos.payment (appelé après chaque écriture réussie)

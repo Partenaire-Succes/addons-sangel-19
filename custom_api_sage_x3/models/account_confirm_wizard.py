@@ -146,15 +146,21 @@ class SageX3SendWizard(models.TransientModel):
         account_model  = self.env['account.move']
 
         # Factures et avoirs classiques hors POS (les deux types ensemble)
-        pending_invoices_and_refunds = account_model.search([
-            ('move_type',     'in', ['out_invoice', 'out_refund']),
-            ('state',         '=',  'posted'),
-            ('sage_x3_sent',  '=',  False),
-            ('pos_order_ids', '=',  False),
-            ('company_id',    'in', company_ids),
-            ('invoice_date',  '>=', self.date_from),
-            ('invoice_date',  '<=', self.date_to),
+        moves = account_model.search([
+            ('move_type', '=', 'out_refund'),
+            ('state', '=', 'posted'),
+            ('sage_x3_sent', '=', False),
+            ('company_id', 'in', company_ids),
+            ('invoice_date', '>=', self.date_from),
+            ('invoice_date', '<=', self.date_to),
         ])
+        pending_invoices_refunds = moves.filtered(
+            lambda m: any(
+                p.payment_method_id.is_limit
+                for o in m.pos_order_ids
+                for p in o.payment_ids
+            )
+        )
 
         _logger.info(
             "📤 Envoi SAGE X3 | Sociétés: %s | Période: %s → %s | "
@@ -162,7 +168,7 @@ class SageX3SendWizard(models.TransientModel):
             self.company_ids.mapped('name'),
             self.date_from,
             self.date_to,
-            len(pending_invoices_and_refunds),
+            len(pending_invoices_refunds),
         )
 
         # ── Flux 1 : Récap journalier POS (ENCAI + DECAI) ────────────────────
@@ -173,7 +179,7 @@ class SageX3SendWizard(models.TransientModel):
 
         # ── Flux 2 : Factures et avoirs classiques (FACLI / AVCLI) ───────────
         result_invoices = account_model._process_bulk_send_classic_invoices_to_sage_x3(
-            pending_invoices_and_refunds.ids
+            pending_invoices_refunds.ids
         )
 
         # ── Résumé ────────────────────────────────────────────────────────────
