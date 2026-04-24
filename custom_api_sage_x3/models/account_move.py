@@ -394,7 +394,12 @@ class AccountMoveSageX3(models.Model):
             journal_name = pmt.journal_id.name or ''
             ref_pmt      = pmt.name or ''
             libelle_pmt  = f"REGLT {journal_name} N°{ref_pmt}/{pmt.partner_id.name}"[:50]
-            tiers_code   = pmt.partner_id.customer_id.strip()
+
+            customer_id = (pmt.partner_id.customer_id or "").strip()
+            if customer_id.startswith(("10", "20")):
+                tiers_code = divers
+            else:
+                tiers_code = customer_id
 
             lignes_encai.append(self._build_ligne(
                 site    = site,
@@ -543,6 +548,7 @@ class AccountMoveSageX3(models.Model):
         site        = company.sage_x3_site
         journal     = company.sage_x3_journal_sale
         type_piece  = "FACLI"
+        divers       = company.partner_devers_id.customer_id
 
         if not sessions:
             return []
@@ -559,8 +565,13 @@ class AccountMoveSageX3(models.Model):
 
             for payment in payments:
                 partner      = payment.partner_id
-                tiers_code   = (partner.customer_id or "").strip() if partner else ""
                 partner_name = partner.name if partner else "CLIENT"
+
+                customer_id = (partner.partner_id.customer_id or "").strip()
+                if customer_id.startswith(("10", "20")):
+                    tiers_code = divers
+                else:
+                    tiers_code = customer_id
 
                 pay_date = payment.payment_date.strftime("%d%m%y")  if payment.payment_date else ""
                 date_fr  = payment.payment_date.strftime("%d/%m/%Y") if payment.payment_date else ""
