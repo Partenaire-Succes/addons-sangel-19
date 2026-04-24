@@ -132,8 +132,9 @@ class AccountMoveSageX3(models.Model):
 
         grouped_tax = defaultdict(float)
         for line in lines:
+            price = line.price_unit * (1 - (line.discount or 0.0) / 100.0)
             tax_res = line.tax_ids.compute_all(
-                line.price_unit,
+                price,
                 quantity=line.qty,
                 product=line.product_id,
             )
@@ -156,8 +157,9 @@ class AccountMoveSageX3(models.Model):
 
         total_ht = 0.0
         for line in lines:
+            price = line.price_unit * (1 - (line.discount or 0.0) / 100.0)
             tax_res   = line.tax_ids.compute_all(
-                line.price_unit,
+                price,
                 quantity=line.qty,
                 product=line.product_id,
             )
@@ -461,6 +463,27 @@ class AccountMoveSageX3(models.Model):
         ecritures   = []
         payment_map = {}
 
+        total_debit = 0.0
+        total_credit = 0.0
+
+        for l in lignes_encai:
+            if l['sens'] == 1:
+                total_debit += l['montant']
+            else:
+                total_credit += l['montant']
+
+        total_debit = round(total_debit, 2)
+        total_credit = round(total_credit, 2)
+
+        ecart = round(total_debit - total_credit, 2)
+
+        # ── Ajustement si déséquilibre ─────────────────────────
+        if ecart != 0:
+            for l in lignes_encai:
+                if l['sens'] == 1:  # ligne client (débit)
+                    l['montant'] = round(l['montant'] - ecart, 2)
+                    break
+
         if lignes_encai and total_encai > 0:
             idx = len(ecritures)
             ecritures.append(self._build_ecriture(
@@ -552,8 +575,9 @@ class AccountMoveSageX3(models.Model):
                 lignes         = []
 
                 for line in lines:
+                    price = line.price_unit * (1 - (line.discount or 0.0) / 100.0)
                     tax_res   = line.tax_ids.compute_all(
-                        line.price_unit,
+                        price,
                         quantity=line.qty,
                         product=line.product_id,
                     )
@@ -602,6 +626,28 @@ class AccountMoveSageX3(models.Model):
                             montant = round(montant, 2),
                             libelle = f"TVA {taux_int}% {date_fr}",
                         ))
+
+                # ── Vérification équilibre ─────────────────────────────
+                total_debit = 0.0
+                total_credit = 0.0
+
+                for l in lignes:
+                    if l['sens'] == 1:
+                        total_debit += l['montant']
+                    else:
+                        total_credit += l['montant']
+
+                total_debit = round(total_debit, 2)
+                total_credit = round(total_credit, 2)
+
+                ecart = round(total_debit - total_credit, 2)
+
+                # ── Ajustement si déséquilibre ─────────────────────────
+                if ecart != 0:
+                    for l in lignes:
+                        if l['sens'] == 1:  # ligne client (débit)
+                            l['montant'] = round(l['montant'] - ecart, 2)
+                            break
 
                 ecritures.append(self._build_ecriture(
                     type_piece  = type_piece,
@@ -732,7 +778,7 @@ class AccountMoveSageX3(models.Model):
 
     #     _logger.info("✅ SAGE X3 OK — Pièces : %s", piece_numbers_all)
     #     self._mark_daily_as_sent(company, target_date, piece_numbers_all, full_message)
-    
+
 
     def _send_daily_to_sage_x3_api(self, accounting_data, company, target_date):
         config = self._get_sage_x3_config()
@@ -1106,13 +1152,20 @@ class AccountMoveSageX3(models.Model):
 
         for account, amount in tax_facli.items():
             if amount > 0:
-                taux = 9 if account == sale_tva_9 else 18
+                if account == sale_tva_9:
+                    taux = 9 
+                    name ='TVA'
+                elif account == sale_tva_18:
+                    taux = 18
+                    name ='TVA'
+                else:
+                    name = 'AIRSI'
                 lignes.append(self._build_ligne(
                     site    = site,
                     compte  = account.code,
                     sens    = sens_vente,
                     montant = round(amount, 2),
-                    libelle = f"TVA {taux}% {date_fr}",
+                    libelle = f"{name} {taux}% {date_fr}",
                 ))
 
         return {
