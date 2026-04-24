@@ -160,7 +160,7 @@
                                                     <td><span t-esc="line['article']"/></td>
                                                     <td><span t-esc="line['designation']"/></td>
                                                     <td class="text-right"><span t-esc="'%.2f' % line['quantity']"/></td>
-                                                    <td class="text-right"><span t-esc="'%.2f' % line['total_pa']"/></td>
+                                                    <td class="text-right"><span t-esc="'{:,.0f}'.format(line['total_pa'] or 0).replace(',', ' ')"/></td>
                                                 </tr>
                                             </t>
 
@@ -170,7 +170,7 @@
                                             <tr class="subtotal-row">
                                                 <td colspan="5" class="text-right">Cumuls : <span t-esc="reason_data['reason_name']"/></td>
                                                 <td class="text-right"><span t-esc="'%.2f' % reason_qty"/></td>
-                                                <td class="text-right"><span t-esc="'%.2f' % reason_total"/></td>
+                                                <td class="text-right"><span t-esc="'{:,.0f}'.format(reason_total or 0).replace(',', ' ')"/></td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -190,7 +190,7 @@
                                             <strong><span t-esc="'%.2f' % grand_totals['quantity']"/></strong>
                                         </td>
                                         <td  style="width:25%; font-size: 15pt" class="text-right">
-                                            <strong><span t-esc="'%.2f' % grand_totals['total_pa']"/></strong>
+                                            <strong><span t-esc="'{:,.0f}'.format(grand_totals['total_pa'] or 0).replace(',', ' ')"/></strong>
                                         </td>
                                     </tr>
                                 </tbody>

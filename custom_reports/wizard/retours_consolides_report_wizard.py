@@ -62,7 +62,7 @@ class RetoursConsolidesReportWizard(models.TransientModel):
 
     def _fmt_amount(self, amount):
         symbol = self.company_id.currency_id.symbol or ''
-        return '%.2f %s' % (amount, symbol)
+        return '{:,.0f} {}'.format(amount or 0, symbol).replace(',', ' ')
 
     # ────────────────────────────────────────────────────────────────────────
     # DONNÉES RAPPORT

@@ -48,7 +48,7 @@ class ProductReportWizard(models.TransientModel):
         _logger.info("PRODUCTS FOUND: %s", len(products))
 
         if not products:
-            raise models.ValidationError('Aucun article trouvé avec ces critères.')
+            raise ValidationError('Aucun article trouvé avec ces critères.')
 
         return self.env.ref(
             'custom_reports.action_report_product_template'

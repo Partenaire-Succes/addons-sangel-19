@@ -191,16 +191,16 @@
                                     <td><t t-esc="row['produit']"/></td>
                                     <td class="num"><t t-esc="'%.2f' % row['qty']"/></td>
                                     <td class="ctr"><t t-esc="row['uom']"/></td>
-                                    <td class="num"><t t-esc="'%.2f' % row['prix_standard']"/></td>
+                                    <td class="num"><t t-esc="'{:,.0f}'.format(row['prix_standard'] or 0).replace(',', ' ')"/></td>
                                     <td class="num">
                                         <t t-if="row['a_nouveau_prix']">
                                             <span class="prix-modifie">
-                                                <t t-esc="'%.2f' % row['prix_reception']"/>
+                                                <t t-esc="'{:,.0f}'.format(row['prix_reception'] or 0).replace(',', ' ')"/>
                                             </span>
                                             <span class="badge-nouveau">MAJ</span>
                                         </t>
                                         <t t-else="">
-                                            <t t-esc="'%.2f' % row['prix_reception']"/>
+                                            <t t-esc="'{:,.0f}'.format(row['prix_reception'] or 0).replace(',', ' ')"/>
                                         </t>
                                     </td>
                                     <td class="num"><t t-esc="data['fmt'](row['montant'])"/></td>
@@ -250,7 +250,7 @@
                                     <td><t t-esc="row['produit']"/></td>
                                     <td class="num"><t t-esc="'%.2f' % row['qty']"/></td>
                                     <td class="ctr"><t t-esc="row['uom']"/></td>
-                                    <td class="num"><t t-esc="'%.2f' % row['prix_unitaire']"/></td>
+                                    <td class="num"><t t-esc="'{:,.0f}'.format(row['prix_unitaire'] or 0).replace(',', ' ')"/></td>
                                     <td class="num"><t t-esc="data['fmt'](row['montant'])"/></td>
                                 </tr>
                             </t>
@@ -297,7 +297,7 @@
                                     <td><t t-esc="row['fournisseur']"/></td>
                                     <td><t t-esc="row['produit']"/></td>
                                     <td class="num"><t t-esc="'%.2f' % row['qty']"/></td>
-                                    <td class="num"><t t-esc="'%.2f' % row['prix_unitaire']"/></td>
+                                    <td class="num"><t t-esc="'{:,.0f}'.format(row['prix_unitaire'] or 0).replace(',', ' ')"/></td>
                                     <td class="num"><t t-esc="data['fmt'](row['montant'])"/></td>
                                     <td class="ctr">
                                         <span t-attf-class="etat-{{ row['etat_code'] }}">
