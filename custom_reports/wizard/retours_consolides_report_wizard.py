@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import io
+import base64
 from odoo import models, fields, api
 from odoo.exceptions import UserError
 
@@ -210,7 +212,6 @@ class RetoursConsolidesReportWizard(models.TransientModel):
 
     def action_print_report(self):
         self.ensure_one()
-        # Validation : vérifier qu'il y a des données
         data = self._get_report_data()
         total_lines = (
             len(data['receptions_directes'])
@@ -224,3 +225,147 @@ class RetoursConsolidesReportWizard(models.TransientModel):
         return self.env.ref(
             'custom_reports.action_report_retours_consolides'
         ).report_action(self)
+
+    def action_export_excel(self):
+        self.ensure_one()
+        try:
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        except ImportError:
+            raise UserError("La bibliothèque openpyxl est requise.")
+
+        data = self._get_report_data()
+        total_lines = (
+            len(data['receptions_directes'])
+            + len(data['retours_fournisseur'])
+            + len(data['retours_inventaire'])
+        )
+        if not total_lines:
+            raise UserError(
+                "Aucune opération trouvée pour la période et la société sélectionnées."
+            )
+
+        wb = Workbook()
+
+        BLUE  = "1A5276"
+        LBLUE = "D6EAF8"
+        WHITE = "FFFFFF"
+        thin  = Side(style='thin', color="AAAAAA")
+        brd   = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+        def fill(h):
+            return PatternFill("solid", fgColor=h)
+
+        def aln(h="left", v="center"):
+            return Alignment(horizontal=h, vertical=v)
+
+        def write_section(ws, title, headers, rows, col_widths):
+            ws.merge_cells(f"A1:{chr(64 + len(headers))}1")
+            ws["A1"] = self.company_id.name
+            ws["A1"].font = Font(name="Arial", bold=True, size=11)
+
+            ws.merge_cells(f"A2:{chr(64 + len(headers))}2")
+            ws["A2"] = (
+                f"{title} — "
+                f"Du {self.date_from.strftime('%d/%m/%Y')} au {self.date_to.strftime('%d/%m/%Y')}"
+            )
+            ws["A2"].font = Font(name="Arial", bold=True, color=WHITE, size=11)
+            ws["A2"].fill = fill(BLUE)
+            ws["A2"].alignment = aln("center")
+            ws.row_dimensions[2].height = 18
+            ws.append([])
+
+            ws.append(headers)
+            hrow = ws.max_row
+            for col in range(1, len(headers) + 1):
+                c = ws.cell(row=hrow, column=col)
+                c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
+                c.fill = fill(BLUE)
+                c.alignment = aln("center")
+                c.border = brd
+
+            for row_data in rows:
+                ws.append(row_data)
+                r = ws.max_row
+                for col in range(1, len(headers) + 1):
+                    c = ws.cell(row=r, column=col)
+                    c.font = Font(name="Arial", size=9)
+                    c.border = brd
+                    c.alignment = aln("right" if col == len(headers) else "left")
+                ws.cell(row=r, column=len(headers)).number_format = '#,##0.00'
+
+            total = sum(row[-1] for row in rows if isinstance(row[-1], (int, float)))
+            ws.append([""] * (len(headers) - 2) + ["TOTAL", total])
+            r = ws.max_row
+            for col in range(1, len(headers) + 1):
+                c = ws.cell(row=r, column=col)
+                c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
+                c.fill = fill(BLUE)
+                c.border = brd
+                c.alignment = aln("right" if col >= len(headers) - 1 else "left")
+            ws.cell(row=r, column=len(headers)).number_format = '#,##0.00'
+
+            for col, width in enumerate(col_widths, 1):
+                ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = width
+
+        # ── Onglet Réceptions directes ────────────────────────────────────────
+        if data['receptions_directes']:
+            ws1 = wb.active
+            ws1.title = "Réceptions"
+            rows1 = [
+                [r['date'], r['reference'], r['fournisseur'], r['produit'],
+                 r['qty'], r['uom'], r['prix_reception'], r['montant']]
+                for r in data['receptions_directes']
+            ]
+            write_section(ws1, "RÉCEPTIONS DIRECTES",
+                          ["Date", "Référence", "Fournisseur", "Produit", "Qté", "UdM", "Prix Unit.", "Montant"],
+                          rows1, [13, 18, 25, 30, 8, 8, 12, 14])
+        else:
+            wb.active.title = "Réceptions"
+
+        # ── Onglet Retours fournisseurs ───────────────────────────────────────
+        if data['retours_fournisseur']:
+            ws2 = wb.create_sheet("Retours Fournisseurs")
+            rows2 = [
+                [r['date'], r['reference'], r['fournisseur'], r['produit'],
+                 r['qty'], r['uom'], r['prix_unitaire'], r['montant']]
+                for r in data['retours_fournisseur']
+            ]
+            write_section(ws2, "RETOURS FOURNISSEURS",
+                          ["Date", "Référence", "Fournisseur", "Produit", "Qté", "UdM", "Prix Unit.", "Montant"],
+                          rows2, [13, 18, 25, 30, 8, 8, 12, 14])
+
+        # ── Onglet Retours inventaires ────────────────────────────────────────
+        if data['retours_inventaire']:
+            ws3 = wb.create_sheet("Retours Inventaires")
+            rows3 = [
+                [r['date'], r['reference'], r['fournisseur'], r['produit'],
+                 r['qty'], r['prix_unitaire'], r['montant'], r['etat']]
+                for r in data['retours_inventaire']
+            ]
+            write_section(ws3, "RETOURS INVENTAIRES",
+                          ["Date", "Référence", "Fournisseur", "Produit", "Qté", "Prix Unit.", "Montant", "État"],
+                          rows3, [13, 18, 25, 30, 8, 12, 14, 12])
+
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        xlsx_data = base64.b64encode(buffer.read()).decode()
+
+        filename = (
+            f"Retours_Consolides_{self.date_from.strftime('%d%m%Y')}"
+            f"_{self.date_to.strftime('%d%m%Y')}.xlsx"
+        )
+        attachment = self.env['ir.attachment'].create({
+            'name':      filename,
+            'type':      'binary',
+            'datas':     xlsx_data,
+            'mimetype':  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'res_model': self._name,
+            'res_id':    self.id,
+        })
+        return {
+            'type':   'ir.actions.act_url',
+            'url':    f'/web/content/{attachment.id}?download=true',
+            'target': 'new',
+        }

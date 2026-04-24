@@ -1,4 +1,7 @@
+import io
+import base64
 from odoo import models, fields, api
+from odoo.exceptions import UserError
 from datetime import datetime, timedelta, date
 from collections import defaultdict
 import locale
@@ -46,6 +49,88 @@ class ReportDailySalesWizard(models.TransientModel):
 
     def action_print_report(self):
         return self.env.ref('custom_reports.action_report_daily_sales').report_action(self)
+
+    def action_export_excel(self):
+        self.ensure_one()
+        try:
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        except ImportError:
+            raise UserError("La bibliothèque openpyxl est requise.")
+
+        lignes = self.get_daily_sales()
+        if not lignes:
+            raise UserError("Aucune donnée trouvée pour la période sélectionnée.")
+        totaux = self.get_totaux(lignes)
+
+        wb = Workbook(); ws = wb.active; ws.title = "CA Journalier"
+        BLUE = "1A5276"; LBLUE = "D6EAF8"; WHITE = "FFFFFF"
+        thin = Side(style='thin', color="AAAAAA")
+        brd  = Border(left=thin, right=thin, top=thin, bottom=thin)
+        def fill(h): return PatternFill("solid", fgColor=h)
+        def aln(h="left"): return Alignment(horizontal=h, vertical="center")
+
+        ws.merge_cells("A1:L1")
+        ws["A1"] = ', '.join(self.company_ids.mapped('name'))
+        ws["A1"].font = Font(name="Arial", bold=True, size=11)
+        ws.merge_cells("A2:L2")
+        ws["A2"] = f"CHIFFRE D'AFFAIRES JOURNALIER — Du {self.date_from.strftime('%d/%m/%Y')} au {self.date_to.strftime('%d/%m/%Y')}"
+        ws["A2"].font = Font(name="Arial", bold=True, color=WHITE, size=11)
+        ws["A2"].fill = fill(BLUE); ws["A2"].alignment = aln("center")
+        ws.row_dimensions[2].height = 18; ws.append([])
+
+        headers = ["Jour", "Date", "CA HT", "CA TTC", "Budget", "Marge", "% Marge",
+                   "Nb Clients", "Panier Val.", "Panier Qté", "Remises", "Budget Marge"]
+        ws.append(headers)
+        hrow = ws.max_row
+        for col in range(1, 13):
+            c = ws.cell(row=hrow, column=col)
+            c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
+            c.fill = fill(BLUE); c.alignment = aln("center"); c.border = brd
+
+        for ligne in lignes:
+            ws.append([
+                ligne['jour'],
+                ligne['date'].strftime('%d/%m/%Y') if hasattr(ligne['date'], 'strftime') else str(ligne['date']),
+                ligne['ca_ht'], ligne['ca_ttc'], ligne['budget'], ligne['marge'],
+                round(ligne['pct_marge'], 2), ligne['nb_clients'],
+                round(ligne['panier_valeur'], 2), round(ligne['panier_qte'], 2),
+                ligne['remises'], ligne['budget_marge'],
+            ])
+            r = ws.max_row
+            for col in range(1, 13):
+                c = ws.cell(row=r, column=col)
+                c.font = Font(name="Arial", size=9); c.border = brd
+                c.alignment = aln("right" if col >= 3 else "center" if col == 1 else "left")
+            for col in (3, 4, 5, 6, 9, 11, 12):
+                ws.cell(row=r, column=col).number_format = '#,##0.00'
+
+        ws.append(["TOTAUX", "",
+                   totaux['ca_ht'], totaux['ca_ttc'], totaux['budget'], totaux['marge'],
+                   round(totaux['pct_marge'], 2), totaux['nb_clients'],
+                   round(totaux['panier_valeur'], 2), round(totaux['panier_qte'], 2),
+                   totaux['remises'], totaux['budget_marge']])
+        r = ws.max_row
+        for col in range(1, 13):
+            c = ws.cell(row=r, column=col)
+            c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
+            c.fill = fill(BLUE); c.border = brd
+            c.alignment = aln("right" if col >= 3 else "left")
+        for col in (3, 4, 5, 6, 9, 11, 12):
+            ws.cell(row=r, column=col).number_format = '#,##0.00'
+
+        for col, width in enumerate([8, 13, 14, 14, 14, 14, 10, 10, 12, 12, 14, 14], 1):
+            ws.column_dimensions[chr(64 + col)].width = width
+
+        buffer = io.BytesIO(); wb.save(buffer); buffer.seek(0)
+        xlsx_data = base64.b64encode(buffer.read()).decode()
+        filename = f"CA_Journalier_{self.date_from.strftime('%d%m%Y')}_{self.date_to.strftime('%d%m%Y')}.xlsx"
+        attachment = self.env['ir.attachment'].create({
+            'name': filename, 'type': 'binary', 'datas': xlsx_data,
+            'mimetype': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'res_model': self._name, 'res_id': self.id,
+        })
+        return {'type': 'ir.actions.act_url', 'url': f'/web/content/{attachment.id}?download=true', 'target': 'new'}
 
     def _get_historical_pmp(self, product_ids, date_end):
         """

@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
+import io
+import base64
 import logging
 from datetime import date
 from odoo import api, fields, models
+from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
@@ -66,6 +69,116 @@ class RecapCaissesWizard(models.TransientModel):
     def action_print_report(self):
         self.ensure_one()
         return self.env.ref('custom_reports.action_report_recap_caisses').report_action(self)
+
+    def action_export_excel(self):
+        self.ensure_one()
+        try:
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        except ImportError:
+            raise UserError("La bibliothèque openpyxl est requise.")
+
+        data = self.get_report_data()
+        wb = Workbook()
+        BLUE = "1A5276"; LBLUE = "D6EAF8"; WHITE = "FFFFFF"; GRAY = "F0F0F0"
+        thin = Side(style='thin', color="AAAAAA")
+        brd  = Border(left=thin, right=thin, top=thin, bottom=thin)
+        def fill(h): return PatternFill("solid", fgColor=h)
+        def aln(h="left"): return Alignment(horizontal=h, vertical="center")
+        def hdr(ws, title):
+            ws.merge_cells("A1:F1"); ws["A1"] = data['header']['company_name']
+            ws["A1"].font = Font(name="Arial", bold=True, size=11)
+            ws.merge_cells("A2:F2"); ws["A2"] = f"{title} — Du {self.date_from.strftime('%d/%m/%Y')} au {self.date_to.strftime('%d/%m/%Y')}"
+            ws["A2"].font = Font(name="Arial", bold=True, color=WHITE, size=11)
+            ws["A2"].fill = fill(BLUE); ws["A2"].alignment = aln("center")
+            ws.row_dimensions[2].height = 18; ws.append([])
+
+        # ── Feuille 1 : CA Détaillé ───────────────────────────────────────────
+        ws1 = wb.active; ws1.title = "CA Détaillé"
+        hdr(ws1, "RÉCAPITULATIF CAISSES — CA DÉTAILLÉ")
+        ws1.append(["Type", "CA HT", "CA TTC", "Marge", "% Marge", "% Marque"])
+        hrow = ws1.max_row
+        for col in range(1, 7):
+            c = ws1.cell(row=hrow, column=col)
+            c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
+            c.fill = fill(BLUE); c.alignment = aln("center"); c.border = brd
+        ca = data['ca_detaille']
+        for label, key in [("Comptant", "comptant"), ("Avoir émis", "avoir_emis"), ("En compte facturé", "en_compte_facture"), ("TOTAL", "total")]:
+            d = ca[key]
+            ws1.append([label, d['ca_ht'], d['ca_ttc'], d['marge'], d['pct_marge'], d.get('pct_marque', 0.0)])
+            r = ws1.max_row
+            is_total = label == "TOTAL"
+            for col in range(1, 7):
+                c = ws1.cell(row=r, column=col)
+                c.font = Font(name="Arial", bold=is_total, color=WHITE if is_total else "1A1A1A", size=9 if not is_total else 10)
+                if is_total: c.fill = fill(BLUE)
+                elif label == "Comptant": c.fill = fill(GRAY)
+                c.border = brd; c.alignment = aln("right" if col >= 2 else "left")
+            for col in (2, 3, 4): ws1.cell(row=r, column=col).number_format = '#,##0.00'
+        for col, w in enumerate([22, 14, 14, 14, 10, 10], 1):
+            ws1.column_dimensions[chr(64 + col)].width = w
+
+        # ── Feuille 2 : Encaissements ─────────────────────────────────────────
+        ws2 = wb.create_sheet("Encaissements")
+        hdr(ws2, "RÉCAPITULATIF CAISSES — ENCAISSEMENTS")
+        ws2.append(["Mode paiement", "FDC Init", "Encaissements", "Total Enc.", "Décaissements", "Total Déc.", "FDC Final"])
+        hrow = ws2.max_row
+        for col in range(1, 8):
+            c = ws2.cell(row=hrow, column=col)
+            c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
+            c.fill = fill(BLUE); c.alignment = aln("center"); c.border = brd
+        labels = {'especes': 'Espèces', 'cheques': 'Chèques', 'cartes': 'Cartes', 'titres': 'Titres de paiement',
+                  'avoir': 'Avoirs / Food', 'porte_monnaie': 'Porte-monnaie', 'virements': 'Virements', 'ecart_regl': 'Écart règlement'}
+        rows_enc = data['encaissements']['rows']
+        for key, lbl in labels.items():
+            row = rows_enc[key]
+            ws2.append([lbl, row['fdc_init'], row['comptants'], row['total_enc'], row['prelev'], row['total_dec'], row['fdc_final']])
+            r = ws2.max_row
+            for col in range(1, 8):
+                c = ws2.cell(row=r, column=col)
+                c.font = Font(name="Arial", size=9); c.border = brd
+                c.alignment = aln("right" if col >= 2 else "left")
+            for col in range(2, 8): ws2.cell(row=r, column=col).number_format = '#,##0.00'
+        t1 = data['encaissements']['total1']
+        ws2.append(["TOTAL", t1['fdc_init'], t1['comptants'], t1['total_enc'], t1['prelev'], t1['total_dec'], t1['fdc_final']])
+        r = ws2.max_row
+        for col in range(1, 8):
+            c = ws2.cell(row=r, column=col)
+            c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
+            c.fill = fill(BLUE); c.border = brd; c.alignment = aln("right" if col >= 2 else "left")
+        for col in range(2, 8): ws2.cell(row=r, column=col).number_format = '#,##0.00'
+        for col, w in enumerate([22, 14, 14, 14, 14, 14, 14], 1):
+            ws2.column_dimensions[chr(64 + col)].width = w
+
+        # ── Feuille 3 : TVA ───────────────────────────────────────────────────
+        ws3 = wb.create_sheet("TVA")
+        hdr(ws3, "RÉCAPITULATIF CAISSES — RÉPARTITION TVA")
+        ws3.append(["% TVA", "CA TTC", "Base HT", "TVA", "Base calculée", "TVA calculée", "Écart"])
+        hrow = ws3.max_row
+        for col in range(1, 8):
+            c = ws3.cell(row=hrow, column=col)
+            c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
+            c.fill = fill(BLUE); c.alignment = aln("center"); c.border = brd
+        for tva in data['tva_repartition']:
+            ws3.append([f"{tva['tax_percent']}%", tva['ca_ttc'], tva['base_ht'], tva['tva'], tva['base_calc'], tva['tva_calc'], tva['ecart']])
+            r = ws3.max_row
+            for col in range(1, 8):
+                c = ws3.cell(row=r, column=col)
+                c.font = Font(name="Arial", size=9); c.border = brd
+                c.alignment = aln("right" if col >= 2 else "center")
+            for col in range(2, 8): ws3.cell(row=r, column=col).number_format = '#,##0.00'
+        for col, w in enumerate([10, 14, 14, 14, 14, 14, 12], 1):
+            ws3.column_dimensions[chr(64 + col)].width = w
+
+        buffer = io.BytesIO(); wb.save(buffer); buffer.seek(0)
+        xlsx_data = base64.b64encode(buffer.read()).decode()
+        filename = f"Recap_Caisses_{self.date_from.strftime('%d%m%Y')}_{self.date_to.strftime('%d%m%Y')}.xlsx"
+        attachment = self.env['ir.attachment'].create({
+            'name': filename, 'type': 'binary', 'datas': xlsx_data,
+            'mimetype': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'res_model': self._name, 'res_id': self.id,
+        })
+        return {'type': 'ir.actions.act_url', 'url': f'/web/content/{attachment.id}?download=true', 'target': 'new'}
 
     # ------------------------------------------------------------------
     # Helpers
