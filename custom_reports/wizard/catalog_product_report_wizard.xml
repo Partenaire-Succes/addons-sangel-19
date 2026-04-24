@@ -22,6 +22,12 @@
                             string="Imprimer le Catalogue"
                             class="btn-primary"
                             icon="fa-print"/>
+                    <button name="action_print_excel"
+                            string="Exporter Excel"
+                            type="object"
+                            class="btn-success"
+                            icon="fa-file-excel-o"/>
+                            
                     <button string="Annuler"
                             class="btn-secondary"
                             special="cancel"/>

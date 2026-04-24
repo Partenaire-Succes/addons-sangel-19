@@ -11,4 +11,5 @@ from . import (
     catalog_product_report_wizard,
     retours_consolides_report_wizard,
     recap_caisses_wizard,
+    catalogue_excel,
 )

@@ -2,7 +2,9 @@
 from odoo import models, fields
 import datetime
 from collections import defaultdict
+from odoo.exceptions import ValidationError
 import logging
+import base64
 
 _logger = logging.getLogger(__name__)
 
@@ -51,6 +53,53 @@ class ProductReportWizard(models.TransientModel):
         return self.env.ref(
             'custom_reports.action_report_product_template'
         ).report_action(products)
+
+    
+    def action_print_excel(self):
+        """Exporte le catalogue en fichier Excel (.xlsx)."""
+        self.ensure_one()
+ 
+        # ── Même domaine que action_print_report ──────────────────────────────
+        domain = []
+        if self.active_products_only:
+            domain.append(('active', '=', True))
+        if self.company_id:
+            domain.append(('allowed_company_ids', 'in', [self.company_id.id]))
+        if self.categ_ids:
+            domain.append(('categ_id', 'child_of', self.categ_ids.ids))
+ 
+        products = self.env['product.template'].search(domain)
+        products = products.filtered(
+            lambda p: p.current_company_status_id
+                      and p.current_company_status_id.code == 'C'
+        )
+ 
+        if not products:
+            raise ValidationError('Aucun article trouvé avec ces critères.')
+ 
+        # ── Génération du fichier ─────────────────────────────────────────────
+        report = self.env['report.custom_reports.catalogue_xlsx']
+        xlsx_bytes = report.generate(products, self.company_id)
+ 
+        # ── Stockage en pièce jointe temporaire ───────────────────────────────
+        today  = fields.Date.today().strftime('%Y%m%d')
+        fname  = f"Catalogue_Articles_{today}.xlsx"
+        attach = self.env['ir.attachment'].create({
+            'name':       fname,
+            'type':       'binary',
+            'datas':      base64.b64encode(xlsx_bytes),
+            'res_model':  self._name,
+            'res_id':     self.id,
+            'mimetype':   'application/vnd.openxmlformats-officedocument'
+                          '.spreadsheetml.sheet',
+        })
+ 
+        # ── Retour action téléchargement ──────────────────────────────────────
+        return {
+            'type':   'ir.actions.act_url',
+            'url':    f'/web/content/{attach.id}?download=true',
+            'target': 'self',
+        }
 
 
 class ProductCatalogueReport(models.AbstractModel):

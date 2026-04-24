@@ -179,7 +179,6 @@
                                 <div class="rpt-date-box">
                                     Edite le : <t t-esc="today"/>
                                 </div>
-                                <div class="rpt-page-box">Document confidentiel</div>
                             </td>
                         </tr>
                     </table>
