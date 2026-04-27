@@ -197,16 +197,24 @@ class SageX3SendWizard(models.TransientModel):
         else:
             title      = "⚠️ Envoi terminé avec erreurs"
             notif_type = "warning"
-            message    = (
-                f"Fermez toutes les sessions avant d'envoyer à SAGE X3\n"
+
+            # ── Détail des écritures en erreur ───────────────────────────────
+            all_errors = result_pos['error_details'] + result_invoices['error_details']
+
+            detail_lines = []
+            for err in all_errors:
+                detail_lines.append(f"  • {err}")
+                _logger.error("❌ %s", err)
+
+            detail_str = "\n".join(detail_lines) if detail_lines else "Voir les logs serveur."
+
+            message = (
                 f"Récap caisse POS  : {result_pos['success']} succès "
                 f"/ {result_pos['errors']} erreur(s)\n"
                 f"Factures / Avoirs : {result_invoices['success']} succès "
-                f"/ {result_invoices['errors']} erreur(s)"
+                f"/ {result_invoices['errors']} erreur(s)\n"
+                f"\nÉcritures non envoyées :\n{detail_str}"
             )
-            # Logger le détail des erreurs
-            for err in result_pos['error_details'] + result_invoices['error_details']:
-                _logger.error("❌ %s", err)
 
         return {
             'type': 'ir.actions.client',

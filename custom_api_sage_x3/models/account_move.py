@@ -62,6 +62,59 @@ class AccountMoveSageX3(models.Model):
     # =========================================================================
 
     @api.model
+    # def _process_bulk_send_to_sage_x3(self, date_from, date_to, company_ids):
+    #     """
+    #     Envoi groupé par société et par jour.
+    #     Chaque journée produit jusqu'à 2 écritures : ENCAI et/ou DECAI.
+    #     Les account.payment du jour sont inclus dans l'ENCAI.
+    #     """
+    #     success_count = 0
+    #     error_count   = 0
+    #     errors        = []
+
+    #     for company_id in company_ids:
+    #         company = self.env['res.company'].browse(company_id)
+    #         if not company.exists():
+    #             _logger.error("❌ Société ID %s introuvable", company_id)
+    #             continue
+
+    #         current_date    = fields.Date.from_string(date_from)
+    #         end_date        = fields.Date.from_string(date_to)
+    #         company_success = 0
+    #         company_errors  = 0
+
+    #         while current_date <= end_date:
+    #             try:
+    #                 data = self._prepare_daily_entry(company, current_date)
+
+    #                 if data and data.get('ecritures'):
+    #                     self._send_daily_to_sage_x3_api(data, company, current_date)
+    #                     success_count   += 1
+    #                     company_success += 1
+    #                     _logger.info(
+    #                         "✅ %s — %s : %s écriture(s) envoyée(s)",
+    #                         company.name, current_date, len(data['ecritures'])
+    #                     )
+    #                 else:
+    #                     _logger.info("ℹ️  %s — %s : aucune donnée",
+    #                                  company.name, current_date)
+
+    #                 self.env.cr.commit()
+
+    #             except Exception as e:
+    #                 error_count    += 1
+    #                 company_errors += 1
+    #                 msg = f"{company.name} — {current_date}: {str(e)}"
+    #                 errors.append(msg)
+    #                 _logger.error("❌ %s", msg, exc_info=True)
+
+    #             current_date = fields.Date.add(current_date, days=1)
+
+    #         _logger.info("📊 %s : %s succès / %s erreurs",
+    #                      company.name, company_success, company_errors)
+
+    #     return {'success': success_count, 'errors': error_count, 'error_details': errors}
+
     def _process_bulk_send_to_sage_x3(self, date_from, date_to, company_ids):
         """
         Envoi groupé par société et par jour.
@@ -88,20 +141,34 @@ class AccountMoveSageX3(models.Model):
                     data = self._prepare_daily_entry(company, current_date)
 
                     if data and data.get('ecritures'):
-                        self._send_daily_to_sage_x3_api(data, company, current_date)
-                        success_count   += 1
-                        company_success += 1
-                        _logger.info(
-                            "✅ %s — %s : %s écriture(s) envoyée(s)",
-                            company.name, current_date, len(data['ecritures'])
-                        )
-                    else:
-                        _logger.info("ℹ️  %s — %s : aucune donnée",
-                                     company.name, current_date)
 
-                    self.env.cr.commit()
+                        # ✅ CORRECTION : on lit le retour au lieu de ignorer
+                        result = self._send_daily_to_sage_x3_api(data, company, current_date)
+
+                        # Erreurs partielles (certaines écritures ont échoué)
+                        if result.get("errors"):
+                            for err in result["errors"]:
+                                errors.append(err)
+                                error_count    += 1
+                                company_errors += 1
+
+                        # Succès total ou partiel (au moins 1 pièce créée)
+                        if result.get("pieces"):
+                            success_count   += 1
+                            company_success += 1
+                            _logger.info(
+                                "✅ %s — %s : pièces créées : %s",
+                                company.name, current_date, result["pieces"]
+                            )
+
+                    else:
+                        _logger.info(
+                            "ℹ️  %s — %s : aucune donnée",
+                            company.name, current_date
+                        )
 
                 except Exception as e:
+                    # Erreur bloquante (session ouverte, config manquante, etc.)
                     error_count    += 1
                     company_errors += 1
                     msg = f"{company.name} — {current_date}: {str(e)}"
@@ -110,10 +177,16 @@ class AccountMoveSageX3(models.Model):
 
                 current_date = fields.Date.add(current_date, days=1)
 
-            _logger.info("📊 %s : %s succès / %s erreurs",
-                         company.name, company_success, company_errors)
+            _logger.info(
+                "📊 %s : %s succès / %s erreurs",
+                company.name, company_success, company_errors
+            )
 
-        return {'success': success_count, 'errors': error_count, 'error_details': errors}
+        return {
+            'success':       success_count,
+            'errors':        error_count,
+            'error_details': errors,
+        }
 
     # =========================================================================
     # HELPERS TVA / HT
@@ -680,13 +753,8 @@ class AccountMoveSageX3(models.Model):
     # Marque les pos.payment IMMÉDIATEMENT après chaque écriture réussie
     # =========================================================================
 
-    # def _send_daily_to_sage_x3_api(self, accounting_data, company, target_date):
-    #     """
-    #     Envoie chaque écriture individuellement à SAGE X3.
 
-    #     Après chaque POST réussi, les pos.payment liés sont marqués
-    #     sage_x3_sent=True immédiatement → évite les doublons en cas de crash.
-    #     """
+    # def _send_daily_to_sage_x3_api(self, accounting_data, company, target_date):
     #     config = self._get_sage_x3_config()
 
     #     _logger.info(
@@ -706,14 +774,14 @@ class AccountMoveSageX3(models.Model):
     #     }
 
     #     ecritures   = accounting_data.get("ecritures", [])
-    #     payment_map = accounting_data.get("payment_map", {})  # {idx: [pos.payment ids]}
+    #     payment_map = accounting_data.get("payment_map", {})
 
     #     all_pieces   = []
     #     all_messages = []
     #     errors       = []
 
     #     for idx, ecriture in enumerate(ecritures):
-    #         payload = {"ecritures": [ecriture]}   # ← 1 seule écriture par appel
+    #         payload = {"ecritures": [ecriture]}
 
     #         _logger.info(
     #             "📤 Envoi écriture [%s] index=%s (%s — %s)",
@@ -725,7 +793,8 @@ class AccountMoveSageX3(models.Model):
 
     #             if response.status_code not in (200, 201):
     #                 errors.append(
-    #                     f"[{ecriture.get('type')}] HTTP {response.status_code}: {response.text}"
+    #                     f"{company.name} — {target_date} [{ecriture.get('type')}] "
+    #                     f"HTTP {response.status_code}: {response.text[:100]}"
     #                 )
     #                 continue
 
@@ -746,7 +815,10 @@ class AccountMoveSageX3(models.Model):
     #                         ecriture.get("type"), res["piece"],
     #                     )
     #                 else:
-    #                     errors.append(f"[{ecriture.get('type')}] {res['message']}")
+    #                     errors.append(
+    #                         f"{company.name} — {target_date} [{ecriture.get('type')}] "
+    #                         f"{res['message']}"
+    #                     )
     #                     ecriture_ok = False
 
     #             if ecriture_ok:
@@ -756,25 +828,35 @@ class AccountMoveSageX3(models.Model):
     #                 all_pieces.extend(piece_numbers)
     #                 all_messages.extend(messages)
 
-    #                 # ✅ Marquer immédiatement les pos.payment de cette écriture
+    #                 # ✅ Marquer + commit immédiat → protège contre le rollback
     #                 pos_payment_ids = payment_map.get(idx, [])
     #                 if pos_payment_ids:
     #                     self._mark_pos_payments(pos_payment_ids, piece_str, message_str)
+    #                     self.env.cr.commit()   # ← COMMIT immédiat après chaque succès
     #                     _logger.info(
-    #                         "🔒 [%s] %s pos.payment(s) marqué(s) — pièce %s",
+    #                         "🔒 [%s] %s pos.payment(s) marqué(s) et commité(s) — pièce %s",
     #                         ecriture.get("type"), len(pos_payment_ids), piece_str,
     #                     )
 
     #         except Exception as e:
     #             errors.append(
-    #                 f"[{ecriture.get('type')}] Timeout ou erreur réseau : {str(e)}"
+    #                 f"{company.name} — {target_date} [{ecriture.get('type')}] "
+    #                 f"Timeout ou erreur réseau : {str(e)}"
     #             )
     #             _logger.error(
     #                 "❌ [%s] Échec envoi — %s", ecriture.get("type"), str(e)
     #             )
-    #             # On continue les autres écritures malgré l'erreur
 
-    #     # ── Résultat final ──────────────────────────────────────────────────
+    #     # ── Résultat final ───────────────────────────────────────────────────────
+    #     # On marque les sessions et account.payments AVANT de lever l'erreur
+    #     # pour ne pas perdre ce qui a réussi
+    #     piece_numbers_all = ", ".join(all_pieces)
+    #     full_message      = "\n".join(all_messages)
+
+    #     # if piece_numbers_all:
+    #     #     self._mark_daily_as_sent(company, target_date, piece_numbers_all, full_message)
+    #     #     self.env.cr.commit()   # ← COMMIT des sessions avant raise éventuel
+
     #     if errors:
     #         _logger.warning(
     #             "⚠️ %s écriture(s) en erreur sur %s :\n%s",
@@ -784,12 +866,8 @@ class AccountMoveSageX3(models.Model):
     #             "❌ Certaines écritures ont échoué :\n" + "\n".join(errors)
     #         )
 
-    #     piece_numbers_all = ", ".join(all_pieces)
-    #     full_message      = "\n".join(all_messages)
-
     #     _logger.info("✅ SAGE X3 OK — Pièces : %s", piece_numbers_all)
     #     self._mark_daily_as_sent(company, target_date, piece_numbers_all, full_message)
-
 
     def _send_daily_to_sage_x3_api(self, accounting_data, company, target_date):
         config = self._get_sage_x3_config()
@@ -830,7 +908,8 @@ class AccountMoveSageX3(models.Model):
 
                 if response.status_code not in (200, 201):
                     errors.append(
-                        f"[{ecriture.get('type')}] HTTP {response.status_code}: {response.text}"
+                        f"{company.name} — {target_date} [{ecriture.get('type')}] "
+                        f"HTTP {response.status_code}: {response.text[:100]}"
                     )
                     continue
 
@@ -851,7 +930,10 @@ class AccountMoveSageX3(models.Model):
                             ecriture.get("type"), res["piece"],
                         )
                     else:
-                        errors.append(f"[{ecriture.get('type')}] {res['message']}")
+                        errors.append(
+                            f"{company.name} — {target_date} [{ecriture.get('type')}] "
+                            f"{res['message']}"
+                        )
                         ecriture_ok = False
 
                 if ecriture_ok:
@@ -861,11 +943,12 @@ class AccountMoveSageX3(models.Model):
                     all_pieces.extend(piece_numbers)
                     all_messages.extend(messages)
 
-                    # ✅ Marquer + commit immédiat → protège contre le rollback
+                    # ✅ Marquer les pos.payment immédiatement + commit
+                    # → protège contre le rollback en cas d'erreur ultérieure
                     pos_payment_ids = payment_map.get(idx, [])
                     if pos_payment_ids:
                         self._mark_pos_payments(pos_payment_ids, piece_str, message_str)
-                        self.env.cr.commit()   # ← COMMIT immédiat après chaque succès
+                        self.env.cr.commit()
                         _logger.info(
                             "🔒 [%s] %s pos.payment(s) marqué(s) et commité(s) — pièce %s",
                             ecriture.get("type"), len(pos_payment_ids), piece_str,
@@ -873,33 +956,31 @@ class AccountMoveSageX3(models.Model):
 
             except Exception as e:
                 errors.append(
-                    f"[{ecriture.get('type')}] Timeout ou erreur réseau : {str(e)}"
+                    f"{company.name} — {target_date} [{ecriture.get('type')}] "
+                    f"Timeout ou erreur réseau : {str(e)}"
                 )
                 _logger.error(
                     "❌ [%s] Échec envoi — %s", ecriture.get("type"), str(e)
                 )
 
-        # ── Résultat final ───────────────────────────────────────────────────────
-        # On marque les sessions et account.payments AVANT de lever l'erreur
-        # pour ne pas perdre ce qui a réussi
+        # ── Résultat final ──────────────────────────────────────────────────────
         piece_numbers_all = ", ".join(all_pieces)
         full_message      = "\n".join(all_messages)
-
-        # if piece_numbers_all:
-        #     self._mark_daily_as_sent(company, target_date, piece_numbers_all, full_message)
-        #     self.env.cr.commit()   # ← COMMIT des sessions avant raise éventuel
 
         if errors:
             _logger.warning(
                 "⚠️ %s écriture(s) en erreur sur %s :\n%s",
                 len(errors), target_date, "\n".join(errors),
             )
-            raise UserError(
-                "❌ Certaines écritures ont échoué :\n" + "\n".join(errors)
-            )
+            # ❌ Erreurs présentes → pos.session NON marquée
+            # Les pos.payment déjà commités restent marqués
+            return {"errors": errors, "pieces": piece_numbers_all}
 
+        # ✅ Zéro erreur → on marque la session
         _logger.info("✅ SAGE X3 OK — Pièces : %s", piece_numbers_all)
         self._mark_daily_as_sent(company, target_date, piece_numbers_all, full_message)
+        self.env.cr.commit()
+        return {"errors": [], "pieces": piece_numbers_all}
 
 
     # =========================================================================
@@ -1052,8 +1133,7 @@ class AccountMoveSageX3(models.Model):
         if not isinstance(response_data, list):
             raise UserError("Réponse inattendue de SAGE X3 (format non-liste)")
 
-        target_date      = response_data[0]['numero']
-        x3_results       = self._extract_x3_results(response, f"POS_{target_date}")
+        x3_results       = self._extract_x3_results(response, self.name)
         errors           = []
         success_pieces   = []
         success_messages = []
@@ -1164,19 +1244,21 @@ class AccountMoveSageX3(models.Model):
         for account, amount in tax_facli.items():
             if amount > 0:
                 if account == sale_tva_9:
-                    taux = 9 
-                    name ='TVA'
+                    name    = 'TVA'
+                    taux    = 9
+                    libelle = f"{name} {taux}% {date_fr}"
                 elif account == sale_tva_18:
-                    taux = 18
-                    name ='TVA'
+                    name    = 'TVA'
+                    taux    = 18
+                    libelle = f"{name} {taux}% {date_fr}"
                 else:
-                    name = 'AIRSI'
+                    libelle = f"AIRSI {date_fr}"
                 lignes.append(self._build_ligne(
                     site    = site,
                     compte  = account.code,
                     sens    = sens_vente,
                     montant = round(amount, 2),
-                    libelle = f"{name} {taux}% {date_fr}",
+                    libelle = libelle,
                 ))
 
         return {
