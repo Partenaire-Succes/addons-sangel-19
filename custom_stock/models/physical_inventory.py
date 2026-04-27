@@ -80,6 +80,8 @@ class PhysicalInventory(models.Model):
                 for line in rec.physical_line_ids:
                     # Mise à jour groupée par enregistrement
                     line.write({'quantity': line.qty})
+            else:
+                continue
 
         self.write({'state': 'in_progress'})
 
@@ -149,44 +151,87 @@ class PhysicalInventory(models.Model):
             if record.state != 'draft':
                 raise UserError(_("Vous ne pouvez supprimer que les inventaires à l'état Brouillon."))
         return super(PhysicalInventory, self).unlink()
-    
-    
-    def create_line_physical(self):
-        self.ensure_one()
 
-        # MODE LIBRE
-        if self.inventory_mode == 'libre':
+
+    def create_line_physical(self):
+        """Generate physical inventory lines based on mode (normal or verification carryover)"""
+        self.physical_line_ids.unlink()
+        
+        if self.inventory_mode == 'normal':
+            # Normal mode: generate from stock quants
+            for stck in self.line_quant_ids:
+                self.env['physical.inventory.line'].create({
+                    'inventory_physical_id': self.id,
+                    'quant_id': stck.id,
+                    'product_tmpl_id' : stck.product_tmpl_id.id,
+                    'product_id' : stck.product_id.id,
+                    'location_id' : stck.location_id.id,
+                    'quantity' : stck.quantity,
+                    'lot_id': stck.lot_id.id if stck.lot_id else False,
+                    'product_uom_id': stck.product_uom_id.id,
+                    'code_category_id': self.code_category_id.id,
+                })
+        elif self.inventory_mode == 'verification_carryover':
+            # Verification carryover mode: generate from unverified products in previous sessions
+            unverified_archives = self._get_unverified_products_from_previous_sessions()
+            
+            for archive in unverified_archives:
+                self.env['physical.inventory.line'].create({
+                    'inventory_physical_id': self.id,
+                    'quant_id': archive.quant_id.id,
+                    'product_tmpl_id': archive.product_tmpl_id.id,
+                    'product_id': archive.product_id.id,
+                    'location_id': archive.location_id.id,
+                    'quantity': archive.quantity,
+                    'lot_id': archive.lot_id.id if archive.lot_id else False,
+                    'product_uom_id': archive.product_uom_id.id,
+                    'code_category_id': archive.code_category_id.id,
+                    'needs_verification': True,
+                })
+
+        elif self.inventory_mode == 'libre':
             for line in self.physical_line_ids:
                 if line.code_category_id:
                     self.code_inventory_id = [(4, line.code_category_id.id)]
                     line.quantity = line.qty
-            return
+    
+    
+    # def create_line_physical(self):
+    #     self.ensure_one()
 
-        # RESET LINES
-        self.physical_line_ids = [(5, 0, 0)]
+    #     # MODE LIBRE
+    #     if self.inventory_mode == 'libre':
+    #         for line in self.physical_line_ids:
+    #             if line.code_category_id:
+    #                 self.code_inventory_id = [(4, line.code_category_id.id)]
+    #                 line.quantity = line.qty
+    #         return
 
-        vals_list = []
+    #     # RESET LINES
+    #     self.physical_line_ids = [(5, 0, 0)]
 
-        if self.inventory_mode == 'normal':
-            source_lines = self.line_quant_ids
-        else:
-            source_lines = self._get_unverified_products_from_previous_sessions()
+    #     vals_list = []
 
-        for src in source_lines:
-            vals_list.append({
-                'inventory_physical_id': self.id,
-                'quant_id': src.id,
-                'product_tmpl_id': src.product_tmpl_id.id,
-                'product_id': src.product_id.id,
-                'location_id': src.location_id.id,
-                'quantity': src.quantity,
-                'lot_id': src.lot_id.id if src.lot_id else False,
-                'product_uom_id': src.product_uom_id.id,
-                'code_category_id': src.code_category_id.id,
-                'needs_verification': self.inventory_mode != 'normal',
-            })
+    #     if self.inventory_mode == 'normal':
+    #         source_lines = self.line_quant_ids
+    #     else:
+    #         source_lines = self._get_unverified_products_from_previous_sessions()
 
-        self.env['physical.inventory.line'].create(vals_list)
+    #     for src in source_lines:
+    #         vals_list.append({
+    #             'inventory_physical_id': self.id,
+    #             'quant_id': src.id,
+    #             'product_tmpl_id': src.product_tmpl_id.id,
+    #             'product_id': src.product_id.id,
+    #             'location_id': src.location_id.id,
+    #             'quantity': src.quantity,
+    #             'lot_id': src.lot_id.id if src.lot_id else False,
+    #             'product_uom_id': src.product_uom_id.id,
+    #             'code_category_id': src.code_category_id.id,
+    #             'needs_verification': self.inventory_mode != 'normal',
+    #         })
+
+    #     self.env['physical.inventory.line'].create(vals_list)
 
 
     def action_print_inventaire_report(self):
