@@ -229,6 +229,7 @@ class FoodCreditLine(models.Model):
         'Client',
         ondelete='cascade',  # Auto-delete line if partner is deleted
     ) 
+    customer_id = fields.Char(related='partner_id.customer_id', string='Id client', store=True)
     partner_name = fields.Char(related='partner_id.name', string='Nom du client', store=True)
     amount = fields.Float('Montant du crédit mensuel', default=0)
     start = fields.Datetime(string="Date de debut", default=fields.Datetime.now, required=True, copy=False)

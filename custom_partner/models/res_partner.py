@@ -13,7 +13,8 @@ class ResPartnerInherit(models.Model):
     customer_id = fields.Char(
         string="ID client",
         copy=False,
-        tracking=True
+        tracking=True,
+        index=True
     )
     customer_account = fields.Char(
         string="Compte personnel",
@@ -105,6 +106,15 @@ class ResPartnerInherit(models.Model):
     #             partner.display_name = f"{partner.customer_id}"
     #         else:
     #             partner.display_name = partner.name
+
+    def name_search(self, name='', args=None, operator='ilike', limit=100):
+        args = args or []
+        # Recherche par customer_id si l’utilisateur tape un ID
+        partners = self.search([('customer_id', operator, name)] + args, limit=limit)
+        if not partners:
+            # Sinon recherche standard (par nom, email, etc.)
+            partners = super().name_search(name, args=args, operator=operator, limit=limit)
+        return partners.name_get()
 
     def _assign_barcode_from_customer_id(self, cid):
         """Assigne barcode = customer_id si commence par '20' et barcode vide.

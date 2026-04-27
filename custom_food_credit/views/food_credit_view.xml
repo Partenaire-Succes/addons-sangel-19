@@ -60,6 +60,7 @@
                                     <list editable="bottom" create="0" edit="1" delete="0">
                                         <field name="food_id" column_invisible="True"/>
                                         <field name="partner_id" string='Client' column_invisible="True"/>
+                                        <field name="customer_id" string='ID Client' />
                                         <field name="partner_name" string='Client' />
                                         <field name="start" string='Date Debut' optional="hide"/>
                                         <field name="end" string="Date Fin" optional="hide"/>
