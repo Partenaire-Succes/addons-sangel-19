@@ -107,15 +107,6 @@ class ResPartnerInherit(models.Model):
     #         else:
     #             partner.display_name = partner.name
 
-    def name_search(self, name='', args=None, operator='ilike', limit=100):
-        args = args or []
-        # Recherche par customer_id si l’utilisateur tape un ID
-        partners = self.search([('customer_id', operator, name)] + args, limit=limit)
-        if not partners:
-            # Sinon recherche standard (par nom, email, etc.)
-            partners = super().name_search(name, args=args, operator=operator, limit=limit)
-        return partners.name_get()
-
     def _assign_barcode_from_customer_id(self, cid):
         """Assigne barcode = customer_id si commence par '20' et barcode vide.
         Utilise un savepoint pour éviter de corrompre la transaction principale
