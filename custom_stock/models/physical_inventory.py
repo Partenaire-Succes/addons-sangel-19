@@ -495,7 +495,7 @@ class PhysicalInventoryLineArchive(models.Model):
             # Réactiver la ligne originale
             self.original_line_id.write({'active': True})
 
-            # Supprimer l'enregistrement d'archive
+            # Supprimer l'enregistrement d'archive 
             self.unlink()
 
             return {
