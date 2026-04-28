@@ -48,10 +48,14 @@ class StockPicking(models.Model):
                         errors.append(f"{product_name} (Prix = 0)")
 
         if errors:
-            raise UserError(
-                "Validation impossible pour les produits suivants :\n- " +
-                "\n- ".join(errors)
-            )
+            raise UserError(_(
+                "🚫 Stop là 😄 !\n\n"
+                "On ne réceptionne pas des articles gratuits comme ça 👀.\n"
+                "Même les cadeaux ont une valeur sentimentale 😂.\n\n"
+                "👉 Donne-moi un prix avant de valider la réception.\n"
+                "👉 Sinon, mets la quantité à 0 si tu ne l’as pas reçu.\n\n"
+                "📦 Articles concernés :\n- " + "\n- ".join(errors)
+            ))
 
         # ── 2. Standard Odoo validation ───────────────────────────────────────
         res = super().button_validate()

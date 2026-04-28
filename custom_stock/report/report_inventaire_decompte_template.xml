@@ -1,33 +1,91 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-        <!-- Template du rapport d'inventaire complet - Un rapport par code inventaire -->
         <template id="report_physical_inventory_decompte_document">
             <t t-call="web.external_layout">
-                <t t-set="code_inventories" t-value="doc.code_inventory_id"/>
-                
-                <!-- Boucle sur chaque code inventaire pour créer une page séparée -->
-                <t t-foreach="code_inventories" t-as="code_inv">
-                    <div class="page" t-att-style="'page-break-before: always;' if not code_inv_first else ''">
-                        <div class="oe_structure"/>
 
-                        <!-- En-tête du rapport -->
-                        <div class="row">
-                            <div class="col-4"> </div>
-                            <div class="col-4 text-center">
-                                <span>Code Inv. : </span><span t-esc="code_inv.name"/>
+                <!-- ═══════════════════════════════════════════════════════════
+                     CAS 1 — INVENTAIRE JOURNALIER (code_inventory_id défini)
+                     Une page par code inventaire
+                ════════════════════════════════════════════════════════════ -->
+                <t t-if="doc.code_inventory_id">
+                    <t t-foreach="doc.code_inventory_id" t-as="code_inv">
+                        <div class="page" t-att-style="'page-break-before: always;' if not code_inv_first else ''">
+                            <div class="oe_structure"/>
+
+                            <div class="row">
+                                <div class="col-4"> </div>
+                                <div class="col-4 text-center">
+                                    <span>Code Inv. : </span><span t-esc="code_inv.name"/>
+                                </div>
                             </div>
+
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <strong>Liste Comptage Inventaire au </strong>
+                                    <span t-field="doc.date" t-options="{'format': 'dd/MM/yyyy'}"/>
+                                    <strong><h3><span t-field="doc.company_id.name"/></h3></strong>
+                                </div>
+                            </div>
+
+                            <div class="row mt-3">
+                                <div class="col-12" style="border: solid 1px #000;">
+                                    <div class="row">
+                                        <div class="col-2"><strong>Code Article :</strong></div>
+                                        <div class="col-5"><strong>Désignation</strong></div>
+                                        <div class="col-5"><strong>Qté Comptée</strong></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <t t-set="filtered_lines" t-value="doc.physical_line_ids.filtered(lambda l: l.code_inventory_id.id == code_inv.id)"/>
+                                    <t t-if="filtered_lines">
+                                        <t t-foreach="filtered_lines" t-as="line">
+                                            <div class="row" style="margin-bottom: 15px;">
+                                                <div class="col-2">
+                                                    <span t-field="line.product_tmpl_id.code_article"/>
+                                                </div>
+                                                <div class="col-5">
+                                                    <span t-field="line.product_tmpl_id.name"/>
+                                                </div>
+                                                <div class="col-5">
+                                                    <strong>Qté Totale = ___________________</strong>
+                                                </div>
+                                                <br/><br/>
+                                            </div>
+                                        </t>
+                                    </t>
+                                    <t t-else="">
+                                        <div class="alert alert-warning">
+                                            <strong>Aucune ligne d'inventaire trouvée pour ce code.</strong>
+                                        </div>
+                                    </t>
+                                </div>
+                            </div>
+
+                            <div class="oe_structure"/>
                         </div>
+                    </t>
+                </t>
+
+                <!-- ═══════════════════════════════════════════════════════════
+                     CAS 2 — INVENTAIRE LIBRE (code_inventory_id non défini)
+                     Une seule page avec toutes les lignes
+                ════════════════════════════════════════════════════════════ -->
+                <t t-else="">
+                    <div class="page">
+                        <div class="oe_structure"/>
 
                         <div class="row mt-3">
                             <div class="col-12">
-                                <strong>Liste Comptage Inventaire au </strong>
+                                <strong>Liste Comptage Inventaire Libre au </strong>
                                 <span t-field="doc.date" t-options="{'format': 'dd/MM/yyyy'}"/>
-                                <strong> <h3><span t-field="doc.company_id.name"/></h3></strong>
+                                <strong><h3><span t-field="doc.company_id.name"/></h3></strong>
                             </div>
                         </div>
 
-                        <!-- En-tête des colonnes -->
                         <div class="row mt-3">
                             <div class="col-12" style="border: solid 1px #000;">
                                 <div class="row">
@@ -38,12 +96,10 @@
                             </div>
                         </div>
 
-                        <!-- Liste des articles filtrés par code inventaire -->
                         <div class="row mt-4">
                             <div class="col-12">
-                                <t t-set="filtered_lines" t-value="doc.physical_line_ids.filtered(lambda l: l.code_inventory_id.id == code_inv.id)"/>
-                                <t t-if="filtered_lines">
-                                    <t t-foreach="filtered_lines" t-as="line">
+                                <t t-if="doc.physical_line_ids">
+                                    <t t-foreach="doc.physical_line_ids" t-as="line">
                                         <div class="row" style="margin-bottom: 15px;">
                                             <div class="col-2">
                                                 <span t-field="line.product_tmpl_id.code_article"/>
@@ -53,7 +109,6 @@
                                             </div>
                                             <div class="col-5">
                                                 <strong>Qté Totale = ___________________</strong>
-                                                &#160;
                                             </div>
                                             <br/><br/>
                                         </div>
@@ -61,7 +116,7 @@
                                 </t>
                                 <t t-else="">
                                     <div class="alert alert-warning">
-                                        <strong>Aucune ligne d'inventaire trouvée pour ce code.</strong>
+                                        <strong>Aucune ligne d'inventaire trouvée.</strong>
                                     </div>
                                 </t>
                             </div>
@@ -70,10 +125,10 @@
                         <div class="oe_structure"/>
                     </div>
                 </t>
+
             </t>
         </template>
 
-        <!-- Définition du rapport principal -->
         <template id="report_physical_inventory_decompte">
             <t t-call="web.html_container">
                 <t t-foreach="docs" t-as="doc">

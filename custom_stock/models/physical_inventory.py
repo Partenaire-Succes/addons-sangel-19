@@ -82,8 +82,29 @@ class PhysicalInventory(models.Model):
                     line.write({'quantity': line.qty})
             else:
                 continue
-
+        self.mark_check()
         self.write({'state': 'in_progress'})
+
+
+    def mark_check(self):
+        """Marquer comme vérifiés les produits en se basant sur les lignes actuelles"""
+
+        for inventory in self:
+            for line in inventory.physical_line_ids:
+                archives = self.env['physical.inventory.line.archive'].search([
+                    ('product_id', '=', line.product_id.id),
+                    ('location_id', '=', line.location_id.id),
+                    ('company_id', '=', inventory.company_id.id),
+                    ('needs_verification', '=', True),
+                    ('verify', '=', False),
+                ])
+
+                if archives:
+                    archives.write({
+                        'verify': True,
+                    })
+
+        return True
 
 
     @api.constrains('inventory_mode', 'code_inventory_id', 'code_category_id', 'team_inventory_id')
@@ -107,6 +128,7 @@ class PhysicalInventory(models.Model):
                 #    ('archived_date', '<=', record.date),
                     ('inventory_physical_id.company_id', '=', record.company_id.id),
                     ('needs_verification', '=', True),
+                    ('verify', '=', False),
                 ])
                 record.unverified_product_count = len(unverified_products)
             else:
@@ -122,6 +144,7 @@ class PhysicalInventory(models.Model):
         #    ('archived_date', '<=', self.date),
             ('inventory_physical_id.company_id', '=', self.company_id.id),
             ('needs_verification', '=', True),
+            ('verify', '=', False),
         ], order='product_tmpl_id,inventory_physical_id DESC')
         
         # Group by product to avoid duplicates (take latest archive per product)
@@ -155,6 +178,14 @@ class PhysicalInventory(models.Model):
 
     def create_line_physical(self):
         """Generate physical inventory lines based on mode (normal or verification carryover)"""
+
+        if self.inventory_mode == 'libre':
+            for line in self.physical_line_ids:
+                if line.code_category_id:
+                    self.code_inventory_id = [(4, line.code_category_id.id)]
+                    line.quantity = line.qty
+            return
+
         self.physical_line_ids.unlink()
         
         if self.inventory_mode == 'normal':
@@ -188,12 +219,6 @@ class PhysicalInventory(models.Model):
                     'code_category_id': archive.code_category_id.id,
                     'needs_verification': True,
                 })
-
-        elif self.inventory_mode == 'libre':
-            for line in self.physical_line_ids:
-                if line.code_category_id:
-                    self.code_inventory_id = [(4, line.code_category_id.id)]
-                    line.quantity = line.qty
     
     
     # def create_line_physical(self):
@@ -370,6 +395,14 @@ class PhysicalInventoryLine(models.Model):
         """Archive la ligne et marque comme à vérifier si applicable"""
         self.ensure_one()
 
+        if self.inventory_physical_id.inventory_mode == 'libre':
+            raise UserError(_(
+                "🚫 Hey toi 😄 !\n\n"
+                "Cet article vit sa meilleure vie en mode *inventaire libre* 🕺.\n"
+                "Impossible de le forcer à passer en 'vérifié' (il n’aime pas la pression 😬).\n\n"
+                "👉 S'il ne te plaît pas, fais simple : supprime-le de l’inventaire et on n’en parle plus 😉"
+            ))
+
         # Création de l'enregistrement archive
         # Automatically mark as needs_verification=True when archiving
         # because archived lines need to be verified in a future session
@@ -422,7 +455,12 @@ class PhysicalInventoryLineArchive(models.Model):
 
     original_line_id = fields.Many2one('physical.inventory.line', string='Ligne originale', ondelete='set null')
     needs_verification = fields.Boolean('À vérifier', default=False, help='Produit marqué comme à vérifier pour session ultérieure')
-
+    verify = fields.Boolean(
+        string='Inventorier',
+        default=False,
+        help='Déjà inventorié'
+    )
+    
     quant_id = fields.Many2one('stock.quant', 'Stock')
     product_tmpl_id = fields.Many2one('product.template', 'Produit', required=True)
     product_id = fields.Many2one('product.product', 'Produits', required=True)
