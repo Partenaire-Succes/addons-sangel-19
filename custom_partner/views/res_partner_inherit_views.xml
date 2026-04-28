@@ -101,16 +101,5 @@
             </field>
         </record>
 
-        <record id="view_partner_filter_customerid" model="ir.ui.view">
-            <field name="name">res.partner.filter.customerid</field>
-            <field name="model">res.partner</field>
-            <field name="inherit_id" ref="base.view_res_partner_filter"/>
-            <field name="arch" type="xml">
-                <xpath expr="//filter[@name='customer']" position="after">
-                    <filter string="Customer ID" name="customer_id" domain="[('customer_id','ilike',self)]"/>
-                </xpath>
-            </field>
-        </record>
-
     </data>
 </odoo>
