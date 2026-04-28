@@ -126,7 +126,7 @@
                                             </t>
                                         </t>
                                         <td style="padding: 4px; text-align: center; font-size: 10pt; font-weight: 900; background: #ff6b35; color: white;">
-                                            <t t-esc="'%.2f' % line['total']"/>
+                                            <t t-esc="'{:,.0f}'.format(line['total'] or 0).replace(',', ' ')"/>
                                         </td>
                                     </tr>
                                 </t>
@@ -173,7 +173,7 @@
                                         </t>
                                         <t t-if="line['total'] &gt; 0">
                                             <td style="padding: 4px; text-align: center; font-size: 12pt; font-weight: 700;">
-                                                <t t-esc="'%.2f' % line['total']"/>
+                                                <t t-esc="'{:,.0f}'.format(line['total']).replace(',', ' ')"/>
                                             </td>
                                         </t>
                                         <t t-else="">
