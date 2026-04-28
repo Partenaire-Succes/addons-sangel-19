@@ -96,15 +96,14 @@ function applyGlobalDiscountToLine(line, partner) {
         const discountPercentage = getGlobalDiscountPercentage(partner);
         const currentDiscount = line.getDiscount() || 0;
         
-        // Only apply if no manual discount exists, or if global discount is higher
-        // Don't override if line has a manually applied discount that's higher
-        if (!line._manualDiscountApplied || currentDiscount < discountPercentage) {
+        // Apply global only if: no manual/promo discount blocks it, or global is strictly higher
+        if ((!line._manualDiscountApplied && !line._promoDiscountApplied) || currentDiscount < discountPercentage) {
             line.setDiscount(discountPercentage);
             line._globalDiscountApplied = true;
             return true;
         }
-    } else if (line._globalDiscountApplied) {
-        // If conditions no longer met and discount was auto-applied, remove it
+    } else if (line._globalDiscountApplied && !line._promoDiscountApplied) {
+        // Remove auto-applied global discount only if no promo is active on this line
         line.setDiscount(0);
         line._globalDiscountApplied = false;
         return true;

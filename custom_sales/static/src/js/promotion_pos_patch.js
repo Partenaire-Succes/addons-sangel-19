@@ -1,6 +1,7 @@
 /** @odoo-module */
 
 import { PosStore } from "@point_of_sale/app/services/pos_store";
+import { PosOrder } from "@point_of_sale/app/models/pos_order";
 import { PosOrderline } from "@point_of_sale/app/models/pos_order_line";
 import { patch } from "@web/core/utils/patch";
 
@@ -117,6 +118,26 @@ patch(PosOrderline.prototype, {
 });
 
 /**
+ * Patch PosOrder.setPartner : si le nouveau partenaire est exclu des promotions,
+ * on retire les remises promo des lignes existantes AVANT que la remise globale
+ * ne soit recalculée (le super déclenche global_discount_patch qui réapplique la
+ * remise partenaire si elle est configurée).
+ */
+patch(PosOrder.prototype, {
+    setPartner(partner) {
+        if (partner && partner.no_promotion && this.lines) {
+            for (const line of this.lines) {
+                if (line._promoDiscountApplied) {
+                    line._promoDiscountApplied = false;
+                    line.setDiscount(0);
+                }
+            }
+        }
+        super.setPartner(partner);
+    },
+});
+
+/**
  * Patch PosStore.addLineToOrder pour appliquer la remise promo après ajout de ligne.
  * Prend la remise la plus haute entre remise globale partenaire et remise promo.
  */
@@ -125,6 +146,12 @@ patch(PosStore.prototype, {
         const result = await super.addLineToOrder(vals, order, opts, configure);
 
         if (order) {
+            // Ne pas appliquer si le partenaire est exclu des promotions
+            const partner = order.get_partner ? order.get_partner() : order.partner_id;
+            if (partner && partner.no_promotion) {
+                return result;
+            }
+
             const selectedLine = order.getSelectedOrderline();
             if (selectedLine && selectedLine.product_id) {
                 const productId = selectedLine.product_id.id || selectedLine.product_id;

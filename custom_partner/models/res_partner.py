@@ -92,11 +92,19 @@ class ResPartnerInherit(models.Model):
         help="Si coché, ce client ne cumule aucun point de fidélité (ni en caisse ni sur commande).",
     )
 
+    no_promotion = fields.Boolean(
+        string='Exclure des promotions',
+        default=False,
+        tracking=True,
+        help="Si coché, aucune remise promotionnelle ne sera appliquée à ce client en caisse.",
+    )
+
     @api.model
     def _load_pos_data_fields(self, config):
-        """Expose no_loyalty_points au POS pour fonctionnement hors-ligne."""
+        """Expose no_loyalty_points et no_promotion au POS pour fonctionnement hors-ligne."""
         result = super()._load_pos_data_fields(config)
         result.append('no_loyalty_points')
+        result.append('no_promotion')
         return result
 
     # @api.depends('name', 'customer_id')

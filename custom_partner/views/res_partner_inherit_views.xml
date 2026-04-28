@@ -65,6 +65,9 @@
                             <field name="no_loyalty_points"
                                    widget="boolean_toggle"
                                    string="Exclure des points de fidélité"/>
+                            <field name="no_promotion"
+                                   widget="boolean_toggle"
+                                   string="Exclure des promotions"/>
                         </group>
                         <field name="loyalty_card_ids" readonly="1">
                             <list>

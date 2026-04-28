@@ -77,22 +77,29 @@ patch(PosStore.prototype, {
         }
 
         // ========== Détection des remises MANUELLES uniquement ==========
-        // Seules les remises manuelles (discount > 0 sur la ligne) nécessitent un code d'accès
-        // Les lignes de récompense Odoo (via "Saisir un code" natif) ne nécessitent PAS de code d'accès
-        
-        // Type 1: Remise manuelle sur la ligne (discount > 0) - NÉCESSITE code d'accès
-        const hasManualLineDiscount = orderLines.some(line => line && line.discount > 0);
+        // Seules les remises manuelles nécessitent un code d'accès.
+        // Les remises auto-appliquées (sale.promotion, remise partenaire) sont exclues
+        // grâce aux flags _promoDiscountApplied et _globalDiscountApplied.
 
-        // Collecter les infos des produits avec remise manuelle pour affichage dans le popup
+        // Type 1: Remise manuelle sur la ligne - NÉCESSITE code d'accès
+        // Exclure les remises auto-appliquées par sale.promotion ou par la remise partenaire
+        const hasManualLineDiscount = orderLines.some(line =>
+            line &&
+            line.discount > 0 &&
+            !line._promoDiscountApplied &&
+            !line._globalDiscountApplied
+        );
+
+        // Collecter les infos des produits avec remise MANUELLE pour affichage dans le popup
         const discountedProducts = [];
         orderLines.forEach(line => {
-            if (line && line.discount > 0) {
+            if (line && line.discount > 0 && !line._promoDiscountApplied && !line._globalDiscountApplied) {
                 const product = line.product_id;
                 if (product) {
                     const code = product.default_code || product.barcode || '';
                     discountedProducts.push({
                         code: code,
-                        name: product.name,  // Utiliser name (pas display_name qui inclut déjà le code)
+                        name: product.name,
                         discount: line.discount
                     });
                 }
