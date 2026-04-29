@@ -43,6 +43,7 @@ class CumulInventaryReportWizard(models.TransientModel):
                 ('create_date', '>=', record.date_from),
                 ('create_date', '<=', record.date_to),
                 ('company_id', '=', record.company_id.id),
+                ('active', '=', True),
             ]
 
             # Filtrer par code article si spécifié

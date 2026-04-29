@@ -132,69 +132,6 @@ class ReportDailySalesWizard(models.TransientModel):
         })
         return {'type': 'ir.actions.act_url', 'url': f'/web/content/{attachment.id}?download=true', 'target': 'new'}
 
-    def _get_historical_pmp(self, product_ids, date_end):
-        """
-        Reconstitue le PMP (AVCO) de chaque produit jusqu'à la fin du jour donné,
-        en rejouant la logique cumulative de stock.avco.report.
-        Retourne un dict {product_id: pmp}
-        Les PMP avant le 20/04/2026 ne sont pas fiables :
-        pour toute période antérieure on utilise le PMP du 20/04/2026.
-        """
-        if not product_ids:
-            return {}
-
-        DATE_FIABLE = date(2026, 4, 20)
-
-        # Si la date demandée est avant la date fiable, on prend le PMP du 20/04/2026
-        if date_end < DATE_FIABLE:
-            date_end = DATE_FIABLE
-
-        date_limit = fields.Datetime.to_datetime(date_end) + timedelta(days=1) - timedelta(seconds=1)
-
-        self.env.cr.execute("""
-            SELECT product_id, res_model_name, value, quantity, date, id
-            FROM stock_avco_report
-            WHERE product_id = ANY(%s)
-            AND date <= %s
-            AND company_id = ANY(%s)
-            ORDER BY product_id, date, id
-        """, (list(product_ids), date_limit, self.company_ids.ids))
-
-        rows = self.env.cr.dictfetchall()
-
-        product_data = defaultdict(lambda: {
-            'total_value': 0.0,
-            'total_quantity': 0.0,
-            'last_known_pmp': 0.0,
-        })
-
-        for row in rows:
-            pid = row['product_id']
-            d = product_data[pid]
-
-            if row['res_model_name'] == 'stock.move':
-                d['total_value'] += row['value']
-                d['total_quantity'] += row['quantity']
-
-            elif row['res_model_name'] == 'product.value':
-                d['total_value'] = row['value'] * d['total_quantity']
-                # Ajustement initial : qty=0, on sauvegarde quand même le PMP unitaire
-                if not d['total_quantity']:
-                    d['last_known_pmp'] = row['value']
-
-            # Mettre à jour le dernier PMP connu dès qu'on peut le calculer
-            if d['total_quantity']:
-                d['last_known_pmp'] = d['total_value'] / d['total_quantity']
-
-        pmp_dict = {}
-        for pid, d in product_data.items():
-            if d['total_quantity']:
-                pmp_dict[pid] = d['total_value'] / d['total_quantity']
-            else:
-                # Stock épuisé ou jamais entré : dernier PMP connu
-                pmp_dict[pid] = d['last_known_pmp']
-
-        return pmp_dict
 
     def get_daily_sales(self):
         """Récupère les ventes journalières avec jours en français"""

@@ -11,6 +11,10 @@ from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 from collections import defaultdict
 
+# ── Seuil pour détecter un coût AVCO aberrant avant/après ajustement ─────────
+_AVCO_MAX_PLAUSIBLE = 10_000_000   # 10 millions FCFA max par unité
+_AVCO_QTY_EPSILON   = 1e-6
+
 
 class PhysicalInventory(models.Model):
     _name = 'physical.inventory'
@@ -59,10 +63,99 @@ class PhysicalInventory(models.Model):
     )
 
 
+    # def action_done(self):
+    #     self.write({'state': 'done', 'date_done': fields.Datetime.now()})
+    #     for line in self.physical_line_ids.filtered(lambda l: l.active):
+    #         line.product_tmpl_id.write({'qty_available': line.physical_qty})
+
     def action_done(self):
+        """
+        Valide l'inventaire physique en appliquant les ajustements de stock
+        via le mécanisme NATIF Odoo (stock.quant._apply_inventory).
+        """
+        self.ensure_one()
+
         self.write({'state': 'done', 'date_done': fields.Datetime.now()})
-        for line in self.physical_line_ids:
-            line.product_tmpl_id.write({'qty_available': line.physical_qty})
+
+        active_lines = self.physical_line_ids.filtered(lambda l: l.active)
+        if not active_lines:
+            return
+
+        # Regrouper les ajustements par quant pour les appliquer en batch
+        quants_to_apply = self.env['stock.quant']
+
+        for line in active_lines:
+            quant = line.quant_id
+
+            # ── Si le quant de référence n'existe plus, le retrouver/créer ──
+            if not quant or not quant.exists():
+                quant = self.env['stock.quant'].search([
+                    ('product_id',  '=', line.product_id.id),
+                    ('location_id', '=', line.location_id.id),
+                    ('lot_id',      '=', line.lot_id.id if line.lot_id else False),
+                ], limit=1)
+
+            if quant:
+                # ── Fixer la quantité comptée via inventory_mode ─────────────
+                # inventory_quantity = quantité physiquement comptée
+                # inventory_diff_quantity = inventory_quantity - quantity (auto)
+                # _apply_inventory() crée le stock.move pour l'écart
+                quant.with_context(inventory_mode=True).write({
+                    'inventory_quantity': line.physical_qty,
+                })
+                quants_to_apply |= quant
+            else:
+                # ── Quant inexistant : créer via inventory_mode ──────────────
+                # Odoo crée le quant ET le stock.move d'ajustement
+                if line.physical_qty:
+                    new_quant = self.env['stock.quant'].with_context(
+                        inventory_mode=True
+                    ).create({
+                        'product_id':   line.product_id.id,
+                        'location_id':  line.location_id.id,
+                        'lot_id':       line.lot_id.id if line.lot_id else False,
+                        'inventory_quantity': line.physical_qty,
+                    })
+                    quants_to_apply |= new_quant
+
+        # ── Appliquer tous les ajustements en une seule passe ─────────────────
+        # Crée les stock.move (is_inventory=True) et les valide
+        # Le nom de l'inventaire est passé via le contexte pour la traçabilité
+        if quants_to_apply:
+            quants_to_apply.with_context(
+                inventory_mode=False,
+                inventory_name=self.name,   # apparaît dans le libellé du mouvement
+            )._apply_inventory(date=self.date)
+
+        # ── Vérification post-ajustement : détecter les AVCO aberrants ────────
+        self._check_avco_after_inventory(active_lines)
+
+    def _check_avco_after_inventory(self, lines):
+        """
+        Vérifie après validation que l'AVCO des produits ajustés est cohérent.
+        Si aberrant, log une alerte et notifie le canal stock.
+        """
+        aberrant = []
+        for line in lines:
+            if not line.product_id:
+                continue
+            cost = line.product_id.product_tmpl_id.standard_price
+            if cost < 0 or cost > _AVCO_MAX_PLAUSIBLE:
+                aberrant.append(
+                    f"[{line.product_id.default_code or '?'}] "
+                    f"{line.product_id.name} → {cost:,.0f} FCFA"
+                )
+
+        if aberrant:
+            msg = (
+                "🚨 <b>AVCO aberrant détecté après validation de l'inventaire</b><br/>"
+                f"Inventaire : <b>{self.name}</b><br/>"
+                "Produits concernés :<br/>"
+                + "<br/>".join(f"• {p}" for p in aberrant)
+                + "<br/><b>Action requise : corriger le coût via Inventaire → "
+                "Fiche article → Mettre à jour le coût</b>"
+            )
+            self.message_post(body=msg, message_type='notification')
 
     def action_draft(self):
         self.write({'state': 'draft', 'date_done': False})
@@ -290,7 +383,7 @@ class PhysicalInventory(models.Model):
 
     def _get_filtered_lines(self):
         """Méthode pour filtrer les lignes selon vos critères"""
-        lines = self.physical_line_ids        
+        lines = self.physical_line_ids.filtered(lambda l: l.active)    
         if self.is_negative_stock:
             lines = lines.filtered(lambda l: l.qty_diff < 0)        
         return lines
@@ -350,11 +443,12 @@ class PhysicalInventoryLine(models.Model):
     product_uom_id = fields.Many2one('uom.uom', "Unite", related="product_id.uom_id", readonly=True)
 
     physical_qty = fields.Float('Qte compté', default=0)
-    qty_diff = fields.Float('Difference', compute="compute_qty_dif")
-    valorisation = fields.Float('Valorisation', compute="compute_qty_dif")
     standard_price = fields.Float('Prix standard', related='product_tmpl_id.standard_price')
     qty = fields.Float('Stock', related='product_tmpl_id.qty_available')
     quantity = fields.Float('Stock')
+
+    qty_diff      = fields.Float('Difference',   compute='compute_qty_dif', store=True)
+    valorisation  = fields.Float('Valorisation', compute='compute_qty_dif', store=True)
 
     inventory_physical_id = fields.Many2one('physical.inventory', string='Inventaire Physique', copy=True)
     code_category_id = fields.Many2one('code.category.inventory', string='Categorie Code Inventaire', copy=True)
@@ -368,11 +462,14 @@ class PhysicalInventoryLine(models.Model):
     company_id = fields.Many2one('res.company', string='Société', related='inventory_physical_id.company_id')
     code_article = fields.Char(string='Code Article', related='product_tmpl_id.code_article')
                 
-    @api.onchange('physical_qty')
+
+    @api.depends('physical_qty', 'quantity', 'standard_price')
     def compute_qty_dif(self):
-        for qt in self:
-            qt.qty_diff = qt.physical_qty - qt.quantity
-            qt.valorisation = qt.standard_price * qt.qty_diff
+        for line in self:
+            # Utiliser `quantity` (stock du quant) et non `qty` (qty_available)
+            line.qty_diff    = line.physical_qty - line.quantity
+            line.valorisation = line.standard_price * line.qty_diff
+
 
     @api.depends('product_tmpl_id')
     def _compute_product_id(self):

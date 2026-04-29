@@ -901,6 +901,28 @@ class AccountMoveSageX3(models.Model):
                 # =============================================================
                 # HELPER — récupère les lignes + TVA d'une commande POS
                 # =============================================================
+                # def _get_order_data(order_id):
+                #     lines          = self.env['pos.order.line'].search([('order_id', '=', order_id)])
+                #     total_ht       = 0.0
+                #     lines_with_tax = lines.filtered(lambda l: l.tax_ids)
+                #     grouped_tax    = defaultdict(float)
+
+                #     for line in lines:
+                #         price   = line.price_unit * (1 - (line.discount or 0.0) / 100.0)
+                #         tax_res = line.tax_ids.compute_all(
+                #             price,
+                #             quantity=line.qty,
+                #             product=line.product_id,
+                #         )
+                #         total_ht += tax_res['total_excluded']
+                #         for tax_line in tax_res['taxes']:
+                #             tax  = self.env['account.tax'].browse(tax_line['id'])
+                #             taux = tax.amount
+                #             grouped_tax[taux] += tax_line['amount']
+                #             grouped_tax[taux]  = round(grouped_tax[taux], 2)
+
+                #     return lines_with_tax, round(total_ht, 2), grouped_tax
+
                 def _get_order_data(order_id):
                     lines          = self.env['pos.order.line'].search([('order_id', '=', order_id)])
                     total_ht       = 0.0
@@ -914,13 +936,15 @@ class AccountMoveSageX3(models.Model):
                             quantity=line.qty,
                             product=line.product_id,
                         )
-                        total_ht += tax_res['total_excluded']
+                        total_ht += abs(tax_res['total_excluded'])   # ✅ abs()
+
                         for tax_line in tax_res['taxes']:
                             tax  = self.env['account.tax'].browse(tax_line['id'])
                             taux = tax.amount
-                            grouped_tax[taux] += tax_line['amount']
-                            grouped_tax[taux]  = round(grouped_tax[taux], 2)
+                            grouped_tax[taux] += abs(tax_line['amount'])   # ✅ abs()
 
+                    # Arrondi unique à la fin, pas à chaque itération
+                    grouped_tax = {t: round(m, 2) for t, m in grouped_tax.items()}
                     return lines_with_tax, round(total_ht, 2), grouped_tax
 
                 # =============================================================
@@ -1054,7 +1078,7 @@ class AccountMoveSageX3(models.Model):
                         compte_code = _get_compte_code(taux_int)
                         if not compte_code:
                             continue
-                        if montant > 0:
+                        if montant != 0:
                             lignes.append(self._build_ligne(
                                 site    = site,
                                 compte  = compte_code,
