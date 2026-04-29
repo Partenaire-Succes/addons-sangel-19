@@ -901,27 +901,6 @@ class AccountMoveSageX3(models.Model):
                 # =============================================================
                 # HELPER — récupère les lignes + TVA d'une commande POS
                 # =============================================================
-                # def _get_order_data(order_id):
-                #     lines          = self.env['pos.order.line'].search([('order_id', '=', order_id)])
-                #     total_ht       = 0.0
-                #     lines_with_tax = lines.filtered(lambda l: l.tax_ids)
-                #     grouped_tax    = defaultdict(float)
-
-                #     for line in lines:
-                #         price   = line.price_unit * (1 - (line.discount or 0.0) / 100.0)
-                #         tax_res = line.tax_ids.compute_all(
-                #             price,
-                #             quantity=line.qty,
-                #             product=line.product_id,
-                #         )
-                #         total_ht += tax_res['total_excluded']
-                #         for tax_line in tax_res['taxes']:
-                #             tax  = self.env['account.tax'].browse(tax_line['id'])
-                #             taux = tax.amount
-                #             grouped_tax[taux] += tax_line['amount']
-                #             grouped_tax[taux]  = round(grouped_tax[taux], 2)
-
-                #     return lines_with_tax, round(total_ht, 2), grouped_tax
 
                 def _get_order_data(order_id):
                     lines          = self.env['pos.order.line'].search([('order_id', '=', order_id)])
@@ -1087,8 +1066,8 @@ class AccountMoveSageX3(models.Model):
                                 libelle = f"TVA {taux_int}% {date_fr}",
                             ))
 
-                    # Équilibre — ajuster ligne client (sens=-1)
-                    _equilibrer(lignes, sens_cible=-1)
+                    # Équilibre — ajuster ligne client (sens=1)
+                    _equilibrer(lignes, sens_cible=1)
 
                     ecritures.append(self._build_ecriture(
                         type_piece  = type_piece_av,
