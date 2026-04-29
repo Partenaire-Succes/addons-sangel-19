@@ -303,7 +303,7 @@ class AccountMoveSageX3(models.Model):
         magasin      = self._get_company_code(company)
         date_yy      = target_date.strftime("%d%m%y")
         date_fr      = target_date.strftime("%d/%m/%Y")
-        divers       = company.partner_devers_id.customer_id
+        divers       = company.partner_devers_id.customer_id if company.partner_devers_id else ""
 
         for label, val in [
             ("Site SAGE X3",   site),
@@ -612,6 +612,250 @@ class AccountMoveSageX3(models.Model):
     # → même ordre que "ecritures" pour le mapping dans payment_map
     # =========================================================================
 
+    # def _ligne_ecritures_is_limit(self, sessions, company):
+    #     receivable  = company.sage_x3_account_customer_default_id
+    #     sale_acct   = company.sage_x3_account_sale_id
+    #     sale_tva_9  = company.sage_x3_account_sale_tva_9_id
+    #     sale_tva_18 = company.sage_x3_account_sale_tva_18_id
+    #     sale_airsi  = company.sage_x3_account_sale_airsi_id
+    #     site        = company.sage_x3_site
+    #     journal     = company.sage_x3_journal_sale
+    #     type_piece  = "FACLI"
+    #     type_piece_av  = "AVCLI"
+    #     divers      = company.partner_devers_id.customer_id if company.partner_devers_id else ""
+
+    #     if not sessions:
+    #         return []
+
+    #     ecritures   = []
+    #     payment_ids = []   # même ordre que ecritures
+
+    #     for session in sessions:
+    #         payments = self.env['pos.payment'].search([
+    #             ('session_id', '=', session.id),
+    #             ('sage_x3_sent', '=',  False),
+    #             ('payment_method_id.is_limit', '=', True),
+    #         ])
+
+    #         for payment in payments:
+    #             partner      = payment.partner_id
+    #             partner_name_c = partner.name if partner else "CLIENT"
+    #             ticket_c = payment.pos_order_id.pos_reference or ""
+
+    #             partner_name = partner_name_c[:10]
+    #             ticket = ticket_c[-6:]
+
+    #             customer_id = (partner.customer_id or "").strip() if partner else ""
+    #             if customer_id.startswith(("10", "20")):
+    #                 tiers_code = divers
+    #             else:
+    #                 tiers_code = customer_id
+
+    #             pay_date = payment.payment_date.strftime("%d%m%y")  if payment.payment_date else ""
+    #             date_fr  = payment.payment_date.strftime("%d/%m/%Y") if payment.payment_date else ""
+
+    #             if payment.amount > 0:
+    #                 lines = self.env['pos.order.line'].search([
+    #                     ('order_id', '=', payment.pos_order_id.id),
+    #                 ])
+
+    #                 # lines = payment.pos_order_id.lines
+
+    #                 total_ht       = 0.0
+    #                 lines_with_tax = lines.filtered(lambda l: l.tax_ids)
+    #                 grouped_tax    = defaultdict(float)
+    #                 lignes         = []
+
+    #                 for line in lines:
+    #                     price = line.price_unit * (1 - (line.discount or 0.0) / 100.0)
+    #                     tax_res   = line.tax_ids.compute_all(
+    #                         price,
+    #                         quantity=line.qty,
+    #                         product=line.product_id,
+    #                     )
+    #                     total_ht += tax_res['total_excluded']
+    #                     for tax_line in tax_res['taxes']:
+    #                         tax  = self.env['account.tax'].browse(tax_line['id'])
+    #                         taux = tax.amount
+    #                         grouped_tax[taux] += tax_line['amount']
+    #                         grouped_tax[taux] = round(grouped_tax[taux], 2)
+
+    #                 total_ht = round(total_ht, 2)
+
+    #                 lignes.append(self._build_ligne(
+    #                     site    = site,
+    #                     compte  = receivable.code,
+    #                     sens    = 1,
+    #                     montant = round(payment.amount, 2),
+    #                     libelle = f"FACLI-{partner_name}-{ticket}",
+    #                     tiers   = tiers_code,
+    #                 ))
+
+    #                 if not lines_with_tax:
+    #                     total_ht = round(payment.amount, 2)
+
+    #                 lignes.append(self._build_ligne(
+    #                     site    = site,
+    #                     compte  = sale_acct.code,
+    #                     sens    = -1,
+    #                     montant = total_ht,
+    #                     libelle = f"CAISSE EN COMPTE {company.name} DU {date_fr}",
+    #                 ))
+
+    #                 for taux, montant in sorted(grouped_tax.items()):
+    #                     taux_int = int(round(taux))
+    #                     if taux_int == 18:
+    #                         compte = sale_tva_18
+    #                     elif taux_int == 9:
+    #                         compte = sale_tva_9
+    #                     else:
+    #                         compte = sale_airsi
+
+    #                     if montant > 0:
+    #                         lignes.append(self._build_ligne(
+    #                             site    = site,
+    #                             compte  = compte.code,
+    #                             sens    = -1,
+    #                             montant = round(montant, 2),
+    #                             libelle = f"TVA {taux_int}% {date_fr}",
+    #                         ))
+
+    #                 # ── Vérification équilibre ─────────────────────────────
+    #                 total_debit = 0.0
+    #                 total_credit = 0.0
+
+    #                 for l in lignes:
+    #                     if l['sens'] == 1:
+    #                         total_debit += l['montant']
+    #                     else:
+    #                         total_credit += l['montant']
+
+    #                 total_debit = round(total_debit, 2)
+    #                 total_credit = round(total_credit, 2)
+
+    #                 ecart = round(total_debit - total_credit, 2)
+
+    #                 # ── Ajustement si déséquilibre ─────────────────────────
+    #                 if ecart != 0:
+    #                     for l in lignes:
+    #                         if l['sens'] == 1:  # ligne client (débit)
+    #                             l['montant'] = round(l['montant'] - ecart, 2)
+    #                             break
+
+    #                 ecritures.append(self._build_ecriture(
+    #                     type_piece  = type_piece,
+    #                     site        = site,
+    #                     date_ddmmyy = pay_date,
+    #                     journal     = journal,
+    #                     libelle     = f"Mise en compte {partner_name}",
+    #                     lignes      = lignes,
+    #                 ))
+    #                 payment_ids.append(payment.id)   # ← même index que l'écriture
+
+    #             else:
+    #                 lines = self.env['pos.order.line'].search([
+    #                     ('order_id', '=', payment.pos_order_id.id),
+    #                 ])
+
+    #                 # lines = payment.pos_order_id.lines
+
+    #                 total_ht       = 0.0
+    #                 lines_with_tax = lines.filtered(lambda l: l.tax_ids)
+    #                 grouped_tax    = defaultdict(float)
+    #                 lignes         = []
+
+    #                 for line in lines:
+    #                     price = line.price_unit * (1 - (line.discount or 0.0) / 100.0)
+    #                     tax_res   = line.tax_ids.compute_all(
+    #                         price,
+    #                         quantity=line.qty,
+    #                         product=line.product_id,
+    #                     )
+    #                     total_ht += tax_res['total_excluded']
+    #                     for tax_line in tax_res['taxes']:
+    #                         tax  = self.env['account.tax'].browse(tax_line['id'])
+    #                         taux = tax.amount
+    #                         grouped_tax[taux] += tax_line['amount']
+    #                         grouped_tax[taux] = round(grouped_tax[taux], 2)
+
+    #                 total_ht = round(total_ht, 2)
+
+    #                 lignes.append(self._build_ligne(
+    #                     site    = site,
+    #                     compte  = receivable.code,
+    #                     sens    = -1,
+    #                     montant = round(-payment.amount, 2),
+    #                     libelle = f"AVCLI-{partner_name}-{ticket}",
+    #                     tiers   = tiers_code,
+    #                 ))
+
+    #                 if not lines_with_tax:
+    #                     total_ht = abs(payment.amount)
+
+    #                 lignes.append(self._build_ligne(
+    #                     site    = site,
+    #                     compte  = sale_acct.code,
+    #                     sens    = 1,
+    #                     montant = -total_ht,
+    #                     libelle = f"CAISSE EN COMPTE {company.name} DU {date_fr}",
+    #                 ))
+
+    #                 for taux, montant in sorted(grouped_tax.items()):
+    #                     taux_int = int(round(taux))
+    #                     if taux_int == 18:
+    #                         compte = sale_tva_18
+    #                     elif taux_int == 9:
+    #                         compte = sale_tva_9
+    #                     else:
+    #                         compte = sale_airsi
+
+    #                     if montant > 0:
+    #                         lignes.append(self._build_ligne(
+    #                             site    = site,
+    #                             compte  = compte.code,
+    #                             sens    = 1,
+    #                             montant = round(-montant, 2),
+    #                             libelle = f"TVA {taux_int}% {date_fr}",
+    #                         ))
+
+    #                 # ── Vérification équilibre ─────────────────────────────
+    #                 total_debit = 0.0
+    #                 total_credit = 0.0
+
+    #                 for l in lignes:
+    #                     if l['sens'] == 1:
+    #                         total_debit += l['montant']
+    #                     else:
+    #                         total_credit += l['montant']
+
+    #                 total_debit = round(total_debit, 2)
+    #                 total_credit = round(total_credit, 2)
+
+    #                 ecart = round(total_debit - total_credit, 2)
+
+    #                 # ── Ajustement si déséquilibre ─────────────────────────
+    #                 if ecart != 0:
+    #                     for l in lignes:
+    #                         if l['sens'] == 1:  # ligne client (débit)
+    #                             l['montant'] = round(l['montant'] - ecart, 2)
+    #                             break
+
+    #                 ecritures.append(self._build_ecriture(
+    #                     type_piece  = type_piece_av,
+    #                     site        = site,
+    #                     date_ddmmyy = pay_date,
+    #                     journal     = journal,
+    #                     libelle     = f"Avoir client {partner_name}",
+    #                     lignes      = lignes,
+    #                 ))
+    #                 payment_ids.append(payment.id)  
+
+    #     return {
+    #         "ecritures":   ecritures,
+    #         "payment_ids": payment_ids,
+    #     }
+
+
     def _ligne_ecritures_is_limit(self, sessions, company):
         receivable  = company.sage_x3_account_customer_default_id
         sale_acct   = company.sage_x3_account_sale_id
@@ -620,8 +864,9 @@ class AccountMoveSageX3(models.Model):
         sale_airsi  = company.sage_x3_account_sale_airsi_id
         site        = company.sage_x3_site
         journal     = company.sage_x3_journal_sale
-        type_piece  = "FACLI"
-        divers       = company.partner_devers_id.customer_id
+        type_piece     = "FACLI"
+        type_piece_av  = "AVCLI"
+        divers      = company.partner_devers_id.customer_id if company.partner_devers_id else ""
 
         if not sessions:
             return []
@@ -637,117 +882,204 @@ class AccountMoveSageX3(models.Model):
             ])
 
             for payment in payments:
-                partner      = payment.partner_id
-                partner_name = partner.name if partner else "CLIENT"
+                partner        = payment.partner_id
+                partner_name_c = partner.name if partner else "CLIENT"
+                ticket_c       = payment.pos_order_id.pos_reference or ""
 
-                customer_id = (partner.customer_id or "").strip()
+                partner_name = partner_name_c[:10]
+                ticket       = ticket_c[-6:]
+
+                customer_id = (partner.customer_id or "").strip() if partner else ""
                 if customer_id.startswith(("10", "20")):
                     tiers_code = divers
                 else:
                     tiers_code = customer_id
 
-                pay_date = payment.payment_date.strftime("%d%m%y")  if payment.payment_date else ""
+                pay_date = payment.payment_date.strftime("%d%m%y")   if payment.payment_date else ""
                 date_fr  = payment.payment_date.strftime("%d/%m/%Y") if payment.payment_date else ""
 
-                lines = self.env['pos.order.line'].search([
-                    ('order_id', '=', payment.pos_order_id.id),
-                ])
+                # =============================================================
+                # HELPER — récupère les lignes + TVA d'une commande POS
+                # =============================================================
+                def _get_order_data(order_id):
+                    lines          = self.env['pos.order.line'].search([('order_id', '=', order_id)])
+                    total_ht       = 0.0
+                    lines_with_tax = lines.filtered(lambda l: l.tax_ids)
+                    grouped_tax    = defaultdict(float)
 
-                total_ht       = 0.0
-                lines_with_tax = lines.filtered(lambda l: l.tax_ids)
-                grouped_tax    = defaultdict(float)
-                lignes         = []
+                    for line in lines:
+                        price   = line.price_unit * (1 - (line.discount or 0.0) / 100.0)
+                        tax_res = line.tax_ids.compute_all(
+                            price,
+                            quantity=line.qty,
+                            product=line.product_id,
+                        )
+                        total_ht += tax_res['total_excluded']
+                        for tax_line in tax_res['taxes']:
+                            tax  = self.env['account.tax'].browse(tax_line['id'])
+                            taux = tax.amount
+                            grouped_tax[taux] += tax_line['amount']
+                            grouped_tax[taux]  = round(grouped_tax[taux], 2)
 
-                for line in lines:
-                    price = line.price_unit * (1 - (line.discount or 0.0) / 100.0)
-                    tax_res   = line.tax_ids.compute_all(
-                        price,
-                        quantity=line.qty,
-                        product=line.product_id,
-                    )
-                    total_ht += tax_res['total_excluded']
-                    for tax_line in tax_res['taxes']:
-                        tax  = self.env['account.tax'].browse(tax_line['id'])
-                        taux = tax.amount
-                        grouped_tax[taux] += tax_line['amount']
+                    return lines_with_tax, round(total_ht, 2), grouped_tax
 
-                total_ht = round(total_ht, 2)
-
-                lignes.append(self._build_ligne(
-                    site    = site,
-                    compte  = receivable.code,
-                    sens    = 1,
-                    montant = round(payment.amount, 2),
-                    libelle = f"Mise en compte {partner_name}",
-                    tiers   = tiers_code,
-                ))
-
-                if not lines_with_tax:
-                    total_ht = round(payment.amount, 2)
-
-                lignes.append(self._build_ligne(
-                    site    = site,
-                    compte  = sale_acct.code,
-                    sens    = -1,
-                    montant = total_ht,
-                    libelle = f"CAISSE EN COMPTE {company.name} DU {date_fr}",
-                ))
-
-                for taux, montant in sorted(grouped_tax.items()):
-                    taux_int = int(round(taux))
+                # =============================================================
+                # HELPER — sécurise le code compte TVA
+                # =============================================================
+                def _get_compte_code(taux_int):
                     if taux_int == 18:
-                        compte = sale_tva_18
+                        compte_obj = sale_tva_18
                     elif taux_int == 9:
-                        compte = sale_tva_9
+                        compte_obj = sale_tva_9
                     else:
-                        compte = sale_airsi
+                        compte_obj = sale_airsi
 
-                    if montant > 0:
-                        lignes.append(self._build_ligne(
-                            site    = site,
-                            compte  = compte.code,
-                            sens    = -1,
-                            montant = round(montant, 2),
-                            libelle = f"TVA {taux_int}% {date_fr}",
-                        ))
+                    code = compte_obj.code if compte_obj and compte_obj.code else None
+                    if not code:
+                        _logger.error(
+                            "❌ Compte TVA %s%% non configuré pour %s — ligne ignorée",
+                            taux_int, company.name
+                        )
+                    return code
 
-                # ── Vérification équilibre ─────────────────────────────
-                total_debit = 0.0
-                total_credit = 0.0
+                # =============================================================
+                # HELPER — équilibre débit/crédit et ajuste la ligne cible
+                # =============================================================
+                def _equilibrer(lignes, sens_cible):
+                    total_debit  = round(sum(l['montant'] for l in lignes if l['sens'] ==  1), 2)
+                    total_credit = round(sum(l['montant'] for l in lignes if l['sens'] == -1), 2)
+                    ecart        = round(total_debit - total_credit, 2)
+                    if ecart != 0:
+                        for l in lignes:
+                            if l['sens'] == sens_cible:
+                                l['montant'] = round(l['montant'] - ecart, 2)
+                                break
 
-                for l in lignes:
-                    if l['sens'] == 1:
-                        total_debit += l['montant']
-                    else:
-                        total_credit += l['montant']
+                # =============================================================
+                # CAS 1 — FACLI (paiement positif)
+                # =============================================================
+                if payment.amount > 0:
 
-                total_debit = round(total_debit, 2)
-                total_credit = round(total_credit, 2)
+                    lines_with_tax, total_ht, grouped_tax = _get_order_data(
+                        payment.pos_order_id.id
+                    )
+                    lignes = []
 
-                ecart = round(total_debit - total_credit, 2)
+                    # Ligne client (débit)
+                    lignes.append(self._build_ligne(
+                        site    = site,
+                        compte  = receivable.code,
+                        sens    = 1,
+                        montant = round(payment.amount, 2),
+                        libelle = f"FACLI-{partner_name}-{ticket}",
+                        tiers   = tiers_code,
+                    ))
 
-                # ── Ajustement si déséquilibre ─────────────────────────
-                if ecart != 0:
-                    for l in lignes:
-                        if l['sens'] == 1:  # ligne client (débit)
-                            l['montant'] = round(l['montant'] - ecart, 2)
-                            break
+                    # Ligne vente HT (crédit)
+                    if not lines_with_tax:
+                        total_ht = round(payment.amount, 2)
 
-                ecritures.append(self._build_ecriture(
-                    type_piece  = type_piece,
-                    site        = site,
-                    date_ddmmyy = pay_date,
-                    journal     = journal,
-                    libelle     = f"Mise en compte {partner_name}",
-                    lignes      = lignes,
-                ))
-                payment_ids.append(payment.id)   # ← même index que l'écriture
+                    lignes.append(self._build_ligne(
+                        site    = site,
+                        compte  = sale_acct.code,
+                        sens    = -1,
+                        montant = total_ht,
+                        libelle = f"CAISSE EN COMPTE {company.name} DU {date_fr}",
+                    ))
+
+                    # Lignes TVA (crédit)
+                    for taux, montant in sorted(grouped_tax.items()):
+                        taux_int    = int(round(taux))
+                        compte_code = _get_compte_code(taux_int)
+                        if not compte_code:
+                            continue
+                        if montant > 0:
+                            lignes.append(self._build_ligne(
+                                site    = site,
+                                compte  = compte_code,
+                                sens    = -1,
+                                montant = round(montant, 2),
+                                libelle = f"TVA {taux_int}% {date_fr}",
+                            ))
+
+                    # Équilibre — ajuster ligne client (sens=1)
+                    _equilibrer(lignes, sens_cible=1)
+
+                    ecritures.append(self._build_ecriture(
+                        type_piece  = type_piece,
+                        site        = site,
+                        date_ddmmyy = pay_date,
+                        journal     = journal,
+                        libelle     = f"Mise en compte {partner_name}",
+                        lignes      = lignes,
+                    ))
+                    payment_ids.append(payment.id)
+
+                # =============================================================
+                # CAS 2 — AVCLI (paiement négatif = avoir / remboursement)
+                # =============================================================
+                else:
+
+                    lines_with_tax, total_ht, grouped_tax = _get_order_data(
+                        payment.pos_order_id.id
+                    )
+                    total_ht = abs(total_ht)   # ✅ toujours positif
+                    lignes   = []
+
+                    # Ligne client (crédit)
+                    lignes.append(self._build_ligne(
+                        site    = site,
+                        compte  = receivable.code,
+                        sens    = -1,
+                        montant = round(abs(payment.amount), 2),   # ✅ positif
+                        libelle = f"AVCLI-{partner_name}-{ticket}",
+                        tiers   = tiers_code,
+                    ))
+
+                    # Ligne vente HT (débit)
+                    if not lines_with_tax:
+                        total_ht = round(abs(payment.amount), 2)
+
+                    lignes.append(self._build_ligne(
+                        site    = site,
+                        compte  = sale_acct.code,
+                        sens    = 1,
+                        montant = total_ht,   # ✅ positif
+                        libelle = f"CAISSE EN COMPTE {company.name} DU {date_fr}",
+                    ))
+
+                    # Lignes TVA (débit)
+                    for taux, montant in sorted(grouped_tax.items()):
+                        taux_int    = int(round(taux))
+                        compte_code = _get_compte_code(taux_int)
+                        if not compte_code:
+                            continue
+                        if montant > 0:
+                            lignes.append(self._build_ligne(
+                                site    = site,
+                                compte  = compte_code,
+                                sens    = 1,
+                                montant = round(abs(montant), 2),   # ✅ positif
+                                libelle = f"TVA {taux_int}% {date_fr}",
+                            ))
+
+                    # Équilibre — ajuster ligne client (sens=-1)
+                    _equilibrer(lignes, sens_cible=-1)
+
+                    ecritures.append(self._build_ecriture(
+                        type_piece  = type_piece_av,
+                        site        = site,
+                        date_ddmmyy = pay_date,
+                        journal     = journal,
+                        libelle     = f"Avoir client {partner_name}",
+                        lignes      = lignes,
+                    ))
+                    payment_ids.append(payment.id)
 
         return {
             "ecritures":   ecritures,
             "payment_ids": payment_ids,
         }
-
     # =========================================================================
     # ENVOI INDIVIDUEL — anti-timeout
     # Marque les pos.payment IMMÉDIATEMENT après chaque écriture réussie
