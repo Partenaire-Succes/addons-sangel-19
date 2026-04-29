@@ -70,6 +70,7 @@
         'views/physical_inventory_retour_views.xml',
         'views/pos_session_views.xml',
         'views/fournisseur_shortcuts_views.xml',
+        'views/physical_inventory_archive.xml',
     ],
     'license': 'AGPL-3',
     'installable': True,
