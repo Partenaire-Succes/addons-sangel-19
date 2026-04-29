@@ -92,7 +92,7 @@
                             </div>
                             <div class="o_action_content">
                                 <h4>Envoi Factures X3</h4>
-                                <p class="text-muted"><t t-esc="state.data?.statistics?.invoices_to_send || 0"/> à envoyer</p>
+                                <p class="text-muted"><t t-esc="state.data?.statistics?.invoices_to_send || 0"/> sessions à envoyer</p>
                                 <button class="btn btn-sm btn-danger" 
                                         t-on-click="onSendInvoicesX3"
                                         t-att-disabled="isActionLoading('action_send_invoices_x3')">

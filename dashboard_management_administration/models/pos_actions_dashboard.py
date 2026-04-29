@@ -143,12 +143,18 @@ class PosActionsDashboard(models.Model):
 
             # FIX : utilise sage_x3_sent (pas sage_x3_submitted qui n'existe pas sur account.move)
             # Ne compte que les factures clients hors POS non encore envoyées
-            'invoices_to_send': self.env['account.move'].search_count([
-                ('company_id',     '=',  company_id),
-                ('move_type',     'in', ['out_invoice', 'out_refund']),
-                ('state',          '=',  'posted'),
-                ('sage_x3_sent',   '=',  False),
-                ('pos_order_ids',  '=',  False),
+            # 'invoices_to_send': self.env['account.move'].search_count([
+            #     ('company_id',     '=',  company_id),
+            #     ('move_type',     'in', ['out_invoice', 'out_refund']),
+            #     ('state',          '=',  'posted'),
+            #     ('sage_x3_sent',   '=',  False),
+            #     ('pos_order_ids',  '=',  False),
+            # ]),
+
+            'invoices_to_send': self.env['pos.session'].search_count([
+                ('company_id',   '=', company_id),
+                ('sage_x3_sent', '=',  False),
+                ('state',        '=', 'closed'),
             ]),
             
 
