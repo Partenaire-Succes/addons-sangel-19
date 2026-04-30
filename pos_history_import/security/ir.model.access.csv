@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_pos_history_import_wizard_manager,pos.history.import.wizard manager,model_pos_history_import_wizard,point_of_sale.group_pos_manager,1,1,1,1
+access_pos_history_import_wizard_user,pos.history.import.wizard user,model_pos_history_import_wizard,point_of_sale.group_pos_user,1,0,0,0
+access_pos_import_preview_line_manager,pos.import.preview.line manager,model_pos_import_preview_line,point_of_sale.group_pos_manager,1,1,1,1
+access_pos_import_preview_line_user,pos.import.preview.line user,model_pos_import_preview_line,point_of_sale.group_pos_user,1,0,0,0

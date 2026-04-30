@@ -262,6 +262,7 @@ class AccountMoveSageX3(models.Model):
         pos_sessions = self.env['pos.session'].search([
             ('company_id', '=', company.id),
             ('sage_x3_sent', '=',  False),
+            ('cash_register_balance_end', '>', 0),
             ('start_at',   '>=', dt_min),
             ('start_at',   '<=', dt_max),
         ])

@@ -1,0 +1,795 @@
+# -*- coding: utf-8 -*-
+import base64
+import io
+import logging
+from datetime import datetime, date
+from collections import defaultdict, OrderedDict
+
+from odoo import models, fields, api, _
+from odoo.exceptions import UserError
+
+_logger = logging.getLogger(__name__)
+
+try:
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    OPENPYXL_AVAILABLE = True
+except ImportError:
+    OPENPYXL_AVAILABLE = False
+    _logger.warning("openpyxl non installé. pip install openpyxl")
+
+
+class PosHistoryImportWizard(models.TransientModel):
+    _name = 'pos.history.import.wizard'
+    _description = 'Assistant Import Historique POS'
+
+    # ── Configuration ─────────────────────────────────────────────────────
+    pos_config_id = fields.Many2one(
+        comodel_name='pos.config',
+        string='Point de Vente',
+        required=True,
+    )
+    grouping = fields.Selection(
+        selection=[
+            ('day',   'Par Jour  (1 session / jour)'),
+            ('month', 'Par Mois  (1 session / mois)'),
+        ],
+        string='Regroupement des sessions',
+        default='day',
+        required=True,
+    )
+
+    # ── Fichier ───────────────────────────────────────────────────────────
+    import_file     = fields.Binary(string='Fichier Excel (.xlsx)', attachment=False)
+    import_filename = fields.Char(string='Nom du fichier')
+
+    # ── État ──────────────────────────────────────────────────────────────
+    state = fields.Selection(
+        selection=[
+            ('draft',   'Configuration'),
+            ('preview', 'Prévisualisation'),
+            ('done',    'Terminé'),
+            ('error',   'Terminé avec erreurs'),
+        ],
+        default='draft',
+        readonly=True,
+    )
+
+    # ── Lignes de prévisualisation ─────────────────────────────────────────
+    preview_line_ids = fields.One2many(
+        comodel_name='pos.import.preview.line',
+        inverse_name='wizard_id',
+        string='Lignes à importer',
+        readonly=True,
+    )
+
+    # ── Compteurs prévisualisation ─────────────────────────────────────────
+    preview_total    = fields.Integer(string='Total lignes',   compute='_compute_preview_stats')
+    preview_ok       = fields.Integer(string='OK',             compute='_compute_preview_stats')
+    preview_warnings = fields.Integer(string='Avertissements', compute='_compute_preview_stats')
+    preview_errors   = fields.Integer(string='Erreurs',        compute='_compute_preview_stats')
+    preview_orders   = fields.Integer(string='Commandes',      compute='_compute_preview_stats')
+    preview_sessions = fields.Integer(string='Sessions',       compute='_compute_preview_stats')
+    can_import       = fields.Boolean(string='Importable',     compute='_compute_preview_stats')
+
+    # ── Résultats d'import ─────────────────────────────────────────────────
+    import_log       = fields.Html(string="Journal d'import", readonly=True)
+    sessions_created = fields.Integer(string='Sessions créées',  readonly=True)
+    orders_created   = fields.Integer(string='Commandes créées', readonly=True)
+    lines_created    = fields.Integer(string='Lignes créées',    readonly=True)
+    errors_count     = fields.Integer(string='Erreurs',          readonly=True)
+
+    # ──────────────────────────────────────────────────────────────────────
+    @api.depends('preview_line_ids', 'preview_line_ids.line_state')
+    def _compute_preview_stats(self):
+        for rec in self:
+            lines = rec.preview_line_ids
+            rec.preview_total    = len(lines)
+            rec.preview_ok       = len(lines.filtered(lambda l: l.line_state == 'ok'))
+            rec.preview_warnings = len(lines.filtered(lambda l: l.line_state == 'warning'))
+            rec.preview_errors   = len(lines.filtered(lambda l: l.line_state == 'error'))
+            rec.preview_orders   = len(set(lines.mapped('order_ref')))
+            rec.preview_sessions = len(set(lines.mapped('session_key')))
+            rec.can_import       = rec.preview_total > 0 and rec.preview_errors == 0
+
+    # ══════════════════════════════════════════════════════════════════════
+    # ACTION 1 : Télécharger le template Excel
+    # ══════════════════════════════════════════════════════════════════════
+    def action_download_template(self):
+        if not OPENPYXL_AVAILABLE:
+            raise UserError(_("openpyxl non installé. Exécutez : pip install openpyxl"))
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Import POS"
+
+        COLUMNS = [
+            ('date_order',     'date_order\n(JJ/MM/AAAA HH:MM)',      True,  22),
+            ('order_ref',      'order_ref\n(optionnel)',               False, 20),
+            ('customer_ref',   'customer_ref\n(réf. Odoo)',            False, 18),
+            ('customer_name',  'customer_name\n(nom)',                 False, 22),
+            ('product_ref',    'product_ref *\n(réf. interne Odoo)',   True,  18),
+            ('product_name',   'product_name\n(fallback)',             False, 22),
+            ('qty',            'qty *',                                True,  10),
+            ('price_unit',     'price_unit *\n(TTC)',                  True,  16),
+            ('discount',       'discount\n(%)',                        False, 12),
+            ('payment_method', 'payment_method *\n(1ère ligne ordre)', True,  20),
+            ('amount_paid',    'amount_paid *\n(1ère ligne ordre)',    True,  16),
+            ('note',           'note\n(optionnel)',                    False, 22),
+        ]
+
+        fill_req = PatternFill("solid", fgColor="1F4E79")
+        fill_opt = PatternFill("solid", fgColor="2E75B6")
+        fill_ex  = PatternFill("solid", fgColor="EBF3FB")
+        font_hdr = Font(color="FFFFFF", bold=True, size=10)
+        font_dat = Font(size=10)
+        align_c  = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        thin     = Side(style='thin', color='CCCCCC')
+        border   = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+        ws.row_dimensions[1].height = 48
+        for c, (key, label, req, width) in enumerate(COLUMNS, 1):
+            cell = ws.cell(row=1, column=c, value=label)
+            cell.font      = font_hdr
+            cell.fill      = fill_req if req else fill_opt
+            cell.alignment = align_c
+            cell.border    = border
+            ws.column_dimensions[openpyxl.utils.get_column_letter(c)].width = width
+
+        examples = [
+            # CMD-001 : 2 produits + 2 paiements (Cash + Card)
+            ['15/01/2024 09:30','CMD-001','CLI-001','Jean Dupont', 'CAFE-001','Café Espresso',2,1500, 0,'Cash',2000,''],
+            ['15/01/2024 09:30','CMD-001','',       '',            'CROI-001','Croissant',    1, 800, 0,'',   '',  ''],
+            ['15/01/2024 09:30','CMD-001','',       '',            '',        '',             '','',  '','Card', 300,''],
+            # CMD-002 : 1 produit + 1 paiement
+            ['15/01/2024 10:15','CMD-002','',       'Marie Martin','SAND-001','Sandwich',     1,2500,10,'Card',2250,'Sans tomate'],
+        ]
+        for r, row in enumerate(examples, 2):
+            ws.row_dimensions[r].height = 20
+            for c, v in enumerate(row, 1):
+                cell           = ws.cell(row=r, column=c, value=v)
+                cell.font      = font_dat
+                cell.fill      = fill_ex
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+                cell.border    = border
+
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+        att = self.env['ir.attachment'].create({
+            'name':      'template_import_pos_odoo19.xlsx',
+            'type':      'binary',
+            'datas':     base64.b64encode(output.read()),
+            'mimetype':  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'res_model': self._name,
+            'res_id':    self.id,
+        })
+        return {'type': 'ir.actions.act_url', 'url': f'/web/content/{att.id}?download=true', 'target': 'self'}
+
+    # ══════════════════════════════════════════════════════════════════════
+    # ACTION 2 : Prévisualiser
+    # ══════════════════════════════════════════════════════════════════════
+    def action_preview(self):
+        """Parse le fichier Excel, valide et crée les lignes de prévisualisation."""
+        self.ensure_one()
+        if not OPENPYXL_AVAILABLE:
+            raise UserError(_("openpyxl non installé. pip install openpyxl"))
+        if not self.import_file:
+            raise UserError(_("Veuillez sélectionner un fichier Excel."))
+        if not self.pos_config_id:
+            raise UserError(_("Veuillez sélectionner un Point de Vente."))
+
+        self.preview_line_ids.unlink()
+
+        rows = self._read_excel_file()
+        parse_errors = []
+        orders_data  = self._parse_rows_to_orders(rows, parse_errors)
+
+        if not orders_data and parse_errors:
+            raise UserError(_("Impossible de parser le fichier :\n") + "\n".join(parse_errors[:10]))
+
+        sessions_map = self._group_by_session(orders_data)
+        preview_vals = []
+        seq          = 0
+
+        for session_key, s_orders in sessions_map.items():
+            for order_data in s_orders:
+                is_first_product = True
+
+                # ── Lignes produit ────────────────────────────────────────
+                for line_data in order_data['lines']:
+                    seq += 10
+                    state, msg, prod_id, partner_id = self._validate_product_line(order_data, line_data)
+
+                    preview_vals.append({
+                        'wizard_id':    self.id,
+                        'sequence':     seq,
+                        'session_key':  session_key,
+                        'date_order':   order_data['date_order'].strftime('%d/%m/%Y %H:%M'),
+                        'order_ref':    order_data['name'],
+                        'customer_info': self._fmt_customer(
+                            order_data.get('customer_ref'),
+                            order_data.get('customer_name'),
+                        ) if is_first_product else '',
+                        'product_ref':  line_data.get('product_ref', ''),
+                        'product_name': line_data.get('product_name', ''),
+                        'qty':          line_data['qty'],
+                        'price_unit':   line_data['price_unit'],
+                        'discount':     line_data.get('discount', 0.0),
+                        'payment_method': '',
+                        'amount_paid':    0.0,
+                        'note':         line_data.get('note', ''),
+                        'line_state':   state,
+                        'message':      msg,
+                        'resolved_product_id':        prod_id,
+                        'resolved_partner_id':        partner_id if is_first_product else 0,
+                        'resolved_payment_method_id': 0,
+                        'line_type':    'product',
+                    })
+                    is_first_product = False
+
+                # ── Lignes paiement ───────────────────────────────────────
+                for pay_data in order_data.get('payments', []):
+                    seq += 10
+                    pm = self._find_payment_method(pay_data['method'])
+                    if pm:
+                        p_state, p_msg = 'ok', '✅ Prêt'
+                    else:
+                        p_state = 'warning'
+                        p_msg   = f"Mode paiement '{pay_data['method']}' non trouvé → 1er mode POS utilisé."
+
+                    preview_vals.append({
+                        'wizard_id':    self.id,
+                        'sequence':     seq,
+                        'session_key':  session_key,
+                        'date_order':   order_data['date_order'].strftime('%d/%m/%Y %H:%M'),
+                        'order_ref':    order_data['name'],
+                        'customer_info': '',
+                        'product_ref':  '',
+                        'product_name': '',
+                        'qty':          0.0,
+                        'price_unit':   0.0,
+                        'discount':     0.0,
+                        'payment_method': pay_data['method'],
+                        'amount_paid':    pay_data['amount'],
+                        'note':         '',
+                        'line_state':   p_state,
+                        'message':      p_msg,
+                        'resolved_product_id':        0,
+                        'resolved_partner_id':        0,
+                        'resolved_payment_method_id': pm.id if pm else 0,
+                        'line_type':    'payment',
+                    })
+
+        if preview_vals:
+            self.env['pos.import.preview.line'].create(preview_vals)
+
+        self.write({'state': 'preview'})
+        return {
+            'type': 'ir.actions.act_window', 'res_model': self._name,
+            'res_id': self.id, 'view_mode': 'form', 'target': 'new',
+        }
+
+    def _validate_product_line(self, order_data, line_data):
+        """Valide une ligne produit et résout les IDs. Retourne (state, message, prod_id, partner_id)."""
+        msgs = []
+        state = 'ok'
+        prod_id = partner_id = 0
+
+        # Produit
+        product = self._find_product(line_data.get('product_ref'), line_data.get('product_name'))
+        if product:
+            prod_id = product.id
+        else:
+            state = 'error'
+            msgs.append(f"Produit introuvable (réf: '{line_data.get('product_ref')}' / nom: '{line_data.get('product_name')}')")
+
+        # Client
+        cref, cname = order_data.get('customer_ref', ''), order_data.get('customer_name', '')
+        if cref or cname:
+            partner = self._find_partner_no_create(cref, cname)
+            if partner:
+                partner_id = partner.id
+            else:
+                if state != 'error':
+                    state = 'warning'
+                msgs.append(f"Client '{cname or cref}' non trouvé → sera créé à l'import.")
+
+        msg = ' | '.join(msgs) if msgs else ('✅ Prêt' if state == 'ok' else '')
+        return state, msg, prod_id, partner_id
+
+    def _find_partner_no_create(self, ref, name):
+        P = self.env['res.partner']
+        if ref:
+            p = P.search([('ref', '=', ref)], limit=1)
+            if p:
+                return p
+        if name:
+            p = P.search([('name', 'ilike', name)], limit=1)
+            if p:
+                return p
+        return None
+
+    # ══════════════════════════════════════════════════════════════════════
+    # ACTION 3 : Retour au draft
+    # ══════════════════════════════════════════════════════════════════════
+    def action_back_to_draft(self):
+        self.ensure_one()
+        self.preview_line_ids.unlink()
+        self.write({'state': 'draft'})
+        return {
+            'type': 'ir.actions.act_window', 'res_model': self._name,
+            'res_id': self.id, 'view_mode': 'form', 'target': 'new',
+        }
+
+    # ══════════════════════════════════════════════════════════════════════
+    # ACTION 4 : Valider l'import
+    # ══════════════════════════════════════════════════════════════════════
+    def action_import(self):
+        self.ensure_one()
+        if not self.preview_line_ids:
+            raise UserError(_("Aucune ligne en prévisualisation. Lancez d'abord la prévisualisation."))
+
+        err_lines = self.preview_line_ids.filtered(lambda l: l.line_state == 'error')
+        if err_lines:
+            raise UserError(_(
+                f"{len(err_lines)} ligne(s) en erreur. "
+                "Corrigez votre fichier et relancez la prévisualisation."
+            ))
+
+        logs = []
+        errors = []
+        sessions_created = orders_created = lines_created = 0
+
+        try:
+            orders_map, sessions_map = self._build_data_from_preview()
+            logs.append(
+                f"<p>✅ <b>{len(orders_map)}</b> commande(s) / "
+                f"<b>{len(sessions_map)}</b> session(s) à créer.</p>"
+            )
+
+            for session_key, s_order_refs in sessions_map.items():
+                try:
+                    s_orders = [orders_map[r] for r in s_order_refs if r in orders_map]
+                    session  = self._create_session(session_key, s_orders)
+                    sessions_created += 1
+                    logs.append(f"<p>📅 Session <b>{session.name}</b> — {len(s_orders)} commande(s).</p>")
+
+                    for order_data in s_orders:
+                        try:
+                            order, n = self._create_order(session, order_data)
+                            orders_created += 1
+                            lines_created  += n
+                        except Exception as exc:
+                            errors.append(f"Commande <b>{order_data.get('name')}</b> : {exc}")
+                            _logger.exception("Erreur commande %s", order_data.get('name'))
+
+                except Exception as exc:
+                    errors.append(f"Session <b>{session_key}</b> : {exc}")
+                    _logger.exception("Erreur session %s", session_key)
+
+        except UserError:
+            raise
+        except Exception as exc:
+            raise UserError(_(f"Erreur inattendue : {exc}"))
+
+        self.write({
+            'state':            'error' if errors else 'done',
+            'import_log':       self._build_log_html(logs, errors, sessions_created, orders_created, lines_created),
+            'sessions_created': sessions_created,
+            'orders_created':   orders_created,
+            'lines_created':    lines_created,
+            'errors_count':     len(errors),
+        })
+        return {
+            'type': 'ir.actions.act_window', 'res_model': self._name,
+            'res_id': self.id, 'view_mode': 'form', 'target': 'new',
+        }
+
+    def _build_data_from_preview(self):
+        orders_map   = OrderedDict()
+        sessions_map = defaultdict(list)
+
+        for line in self.preview_line_ids.sorted('sequence'):
+            ref = line.order_ref
+            sk  = line.session_key
+
+            if ref not in orders_map:
+                # Extraire ref et nom bruts depuis customer_info ("ref / nom" ou juste "nom")
+                info = line.customer_info or ''
+                if ' / ' in info:
+                    raw_ref, raw_name = info.split(' / ', 1)
+                else:
+                    raw_ref, raw_name = '', info
+
+                orders_map[ref] = {
+                    'name':               ref,
+                    'date_order':         datetime.strptime(line.date_order, '%d/%m/%Y %H:%M'),
+                    'customer_ref':       raw_ref,
+                    'customer_name':      raw_name,
+                    'resolved_partner_id': line.resolved_partner_id,
+                    'payments':           [],
+                    'lines':              [],
+                }
+                sessions_map[sk].append(ref)
+            else:
+                # Mettre à jour les infos client si disponibles sur cette ligne
+                if line.resolved_partner_id and not orders_map[ref]['resolved_partner_id']:
+                    orders_map[ref]['resolved_partner_id'] = line.resolved_partner_id
+                if line.customer_info and not orders_map[ref]['customer_name']:
+                    info = line.customer_info
+                    if ' / ' in info:
+                        raw_ref, raw_name = info.split(' / ', 1)
+                    else:
+                        raw_ref, raw_name = '', info
+                    orders_map[ref]['customer_ref']  = raw_ref
+                    orders_map[ref]['customer_name'] = raw_name
+
+            if line.line_type == 'payment':
+                orders_map[ref]['payments'].append({
+                    'method': line.payment_method,
+                    'amount': line.amount_paid,
+                    'resolved_payment_method_id': line.resolved_payment_method_id,
+                })
+            else:
+                orders_map[ref]['lines'].append({
+                    'resolved_product_id': line.resolved_product_id,
+                    'qty':        line.qty,
+                    'price_unit': line.price_unit,
+                    'discount':   line.discount,
+                    'note':       line.note,
+                })
+
+        return orders_map, sessions_map
+
+    # ══════════════════════════════════════════════════════════════════════
+    # LECTURE EXCEL
+    # ══════════════════════════════════════════════════════════════════════
+    def _read_excel_file(self):
+        file_data = base64.b64decode(self.import_file)
+        wb = openpyxl.load_workbook(io.BytesIO(file_data), data_only=True)
+
+        ws = None
+        for name in wb.sheetnames:
+            if 'import' in name.lower() or 'pos' in name.lower():
+                ws = wb[name]
+                break
+        ws = ws or wb.active
+
+        raw_headers = [
+            str(c.value).strip().lower().split('\n')[0].strip() if c.value else ''
+            for c in ws[1]
+        ]
+
+        KEYS = ['date_order','order_ref','customer_ref','customer_name',
+                'product_ref','product_name','qty','price_unit',
+                'discount','payment_method','amount_paid','note']
+
+        col_map = {}
+        for idx, raw in enumerate(raw_headers):
+            for key in KEYS:
+                if key in raw and key not in col_map:
+                    col_map[key] = idx
+                    break
+
+        missing = [k for k in ['date_order','product_ref','qty','price_unit'] if k not in col_map]
+        if missing:
+            raise UserError(_(
+                f"Colonnes obligatoires manquantes : {', '.join(missing)}.\n"
+                "Utilisez le template fourni."
+            ))
+
+        rows = []
+        for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), 2):
+            if not any(v for v in row if v not in (None, '', ' ')):
+                continue
+            d = {'_row': row_idx}
+            for key, col in col_map.items():
+                d[key] = row[col] if col < len(row) else None
+            rows.append(d)
+
+        if not rows:
+            raise UserError(_("Aucune donnée trouvée. Données à partir de la ligne 2."))
+        return rows
+
+    # ══════════════════════════════════════════════════════════════════════
+    # PARSING LIGNES → COMMANDES
+    # ══════════════════════════════════════════════════════════════════════
+    def _parse_rows_to_orders(self, rows, errors):
+        orders  = OrderedDict()
+        counter = 1
+
+        for row in rows:
+            rn = row['_row']
+            dt = self._parse_date(row.get('date_order'))
+            if not dt:
+                errors.append(f"Ligne {rn} : date invalide '{row.get('date_order')}'")
+                continue
+
+            pref      = self._clean_str(row.get('product_ref'))
+            pname     = self._clean_str(row.get('product_name'))
+            pm_name   = self._clean_str(row.get('payment_method'))
+            pm_amount = self._to_float(row.get('amount_paid'))
+
+            has_product = bool(pref or pname)
+            has_payment = bool(pm_name and pm_amount)
+
+            if not has_product and not has_payment:
+                errors.append(f"Ligne {rn} : ni produit ni paiement détecté.")
+                continue
+
+            ref = self._clean_str(row.get('order_ref'))
+            if not ref:
+                if has_product:
+                    # Générer un ref unique par jour pour regrouper les lignes sans order_ref
+                    ref = f"IMPORT-{dt.strftime('%Y%m%d')}-{counter:05d}"
+                    counter += 1
+                else:
+                    errors.append(f"Ligne {rn} : order_ref requis pour une ligne de paiement seule.")
+                    continue
+
+            if ref not in orders:
+                orders[ref] = {
+                    'name':          ref,
+                    'date_order':    dt,
+                    'customer_ref':  self._clean_str(row.get('customer_ref')),
+                    'customer_name': self._clean_str(row.get('customer_name')),
+                    'payments':      [],
+                    'lines':         [],
+                }
+            else:
+                # Enrichir les infos client si absentes sur les premières lignes
+                if not orders[ref]['customer_ref'] and row.get('customer_ref'):
+                    orders[ref]['customer_ref'] = self._clean_str(row['customer_ref'])
+                if not orders[ref]['customer_name'] and row.get('customer_name'):
+                    orders[ref]['customer_name'] = self._clean_str(row['customer_name'])
+
+            if has_product:
+                try:
+                    qty  = float(row.get('qty') or 1)
+                    price = float(row.get('price_unit') or 0)
+                    disc = float(row.get('discount') or 0)
+                except (ValueError, TypeError):
+                    errors.append(f"Ligne {rn} : valeurs numériques invalides.")
+                    continue
+                orders[ref]['lines'].append({
+                    'product_ref':  pref,
+                    'product_name': pname,
+                    'qty':          qty,
+                    'price_unit':   price,
+                    'discount':     disc,
+                    'note':         self._clean_str(row.get('note')),
+                    '_row':         rn,
+                })
+
+            if has_payment:
+                orders[ref]['payments'].append({
+                    'method': pm_name,
+                    'amount': pm_amount,
+                })
+
+        return list(orders.values())
+
+    def _group_by_session(self, orders_data):
+        sessions = defaultdict(list)
+        for order in orders_data:
+            key = order['date_order'].strftime('%Y-%m-%d' if self.grouping == 'day' else '%Y-%m')
+            sessions[key].append(order)
+        return dict(sorted(sessions.items()))
+
+    # ══════════════════════════════════════════════════════════════════════
+    # CRÉATION ENREGISTREMENTS
+    # ══════════════════════════════════════════════════════════════════════
+    def _create_session(self, session_key, orders):
+        PosSession   = self.env['pos.session']
+        session_name = f"[IMPORT] {session_key}"
+
+        existing = PosSession.search([
+            ('name', '=', session_name),
+            ('config_id', '=', self.pos_config_id.id),
+        ], limit=1)
+        if existing:
+            return existing
+
+        dates    = [o['date_order'] for o in orders]
+        start_dt = min(dates).replace(hour=0,  minute=0,  second=0,  microsecond=0)
+        stop_dt  = max(dates).replace(hour=23, minute=59, second=59, microsecond=0)
+        ctx      = {'tracking_disable': True, 'mail_notrack': True, 'no_recompute': True}
+
+        session = PosSession.with_context(**ctx).sudo().create({
+            'name': session_name, 'config_id': self.pos_config_id.id, 'start_at': start_dt,
+        })
+        session.with_context(**ctx).sudo().write({'state': 'closed', 'stop_at': stop_dt})
+        return session
+
+    def _create_order(self, session, order_data):
+        ctx = {'tracking_disable': True, 'mail_notrack': True}
+
+        partner_id = order_data.get('resolved_partner_id', 0)
+        if not partner_id:
+            partner    = self._find_or_create_partner(
+                order_data.get('customer_ref', ''),
+                order_data.get('customer_name', ''),
+            )
+            partner_id = partner.id if partner else False
+
+        lines_vals   = []
+        amount_total = amount_tax = 0.0
+
+        for line_data in order_data['lines']:
+            pid     = line_data.get('resolved_product_id', 0)
+            product = self.env['product.product'].browse(pid) if pid else \
+                      self._find_product(line_data.get('product_ref',''), line_data.get('product_name',''))
+            if not product:
+                raise UserError(_("Produit non trouvé."))
+
+            qty   = line_data['qty']
+            price = line_data['price_unit']
+            disc  = line_data.get('discount', 0.0)
+            taxes = product.taxes_id.filtered(lambda t: t.company_id == self.env.company)
+            base  = price * (1 - disc / 100.0)
+
+            if taxes:
+                tr   = taxes.compute_all(base, currency=self.env.company.currency_id, quantity=qty, product=product)
+                sub  = tr['total_excluded']
+                subi = tr['total_included']
+            else:
+                sub  = base * qty
+                subi = base * qty
+
+            amount_total += subi
+            amount_tax   += (subi - sub)
+
+            lv = {
+                'product_id': product.id, 'qty': qty, 'price_unit': price, 'discount': disc,
+                'tax_ids': [(6, 0, taxes.ids)] if taxes else [(5,)],
+                'price_subtotal': sub, 'price_subtotal_incl': subi,
+            }
+            if line_data.get('note'):
+                lv['note'] = line_data['note']
+            lines_vals.append((0, 0, lv))
+
+        # Calcul du montant payé depuis la liste des paiements
+        payments_data = order_data.get('payments', [])
+        amount_paid   = sum(p['amount'] for p in payments_data) if payments_data else amount_total
+        amount_return = max(0.0, amount_paid - amount_total)
+
+        order = self.env['pos.order'].with_context(**ctx).sudo().create({
+            'name': order_data['name'], 'date_order': order_data['date_order'],
+            'session_id': session.id, 'config_id': self.pos_config_id.id,
+            'partner_id': partner_id or False, 'state': 'done', 'lines': lines_vals,
+            'amount_total': amount_total, 'amount_tax': amount_tax,
+            'amount_paid': amount_paid, 'amount_return': amount_return,
+        })
+
+        if payments_data:
+            # Créer un pos.payment par mode de paiement
+            for pay_data in payments_data:
+                pm_id = pay_data.get('resolved_payment_method_id', 0)
+                if not pm_id:
+                    pm    = self._find_payment_method(pay_data.get('method', ''))
+                    pm_id = pm.id if pm else 0
+                if pm_id:
+                    self.env['pos.payment'].with_context(**ctx).sudo().create({
+                        'pos_order_id': order.id, 'payment_method_id': pm_id,
+                        'amount': pay_data['amount'], 'session_id': session.id,
+                    })
+        else:
+            # Fallback : paiement unique sur le 1er mode du POS
+            pm = self.pos_config_id.payment_method_ids[:1]
+            if pm:
+                self.env['pos.payment'].with_context(**ctx).sudo().create({
+                    'pos_order_id': order.id, 'payment_method_id': pm.id,
+                    'amount': amount_paid, 'session_id': session.id,
+                })
+
+        return order, len(order_data['lines'])
+
+    # ══════════════════════════════════════════════════════════════════════
+    # HELPERS RECHERCHE
+    # ══════════════════════════════════════════════════════════════════════
+    def _find_or_create_partner(self, ref, name):
+        P = self.env['res.partner']
+        if ref:
+            p = P.search([('ref', '=', ref)], limit=1)
+            if p:
+                return p
+        if name:
+            p = P.search([('name', 'ilike', name)], limit=1)
+            if p:
+                return p
+            return P.sudo().create({'name': name, 'customer_rank': 1})
+        return P
+
+    def _find_product(self, ref, name):
+        P = self.env['product.product']
+        if ref:
+            p = P.search([('default_code', '=', ref)], limit=1)
+            if p:
+                return p
+        if name:
+            p = P.search([('name', 'ilike', name)], limit=1)
+            if p:
+                return p
+        return None
+
+    def _find_payment_method(self, name):
+        methods = self.pos_config_id.payment_method_ids
+        if not name:
+            return methods[:1]
+        pm = methods.filtered(lambda m: m.name.lower() == name.lower())[:1]
+        if pm:
+            return pm
+        pm = methods.filtered(lambda m: name.lower() in m.name.lower())[:1]
+        if pm:
+            return pm
+        pm = self.env['pos.payment.method'].search([('name', 'ilike', name)], limit=1)
+        return pm or methods[:1]
+
+    # ══════════════════════════════════════════════════════════════════════
+    # HELPERS UTILITAIRES
+    # ══════════════════════════════════════════════════════════════════════
+    def _parse_date(self, value):
+        if not value:
+            return None
+        if isinstance(value, datetime):
+            return value
+        if isinstance(value, date):
+            return datetime(value.year, value.month, value.day, 9, 0, 0)
+        s = str(value).strip()
+        for fmt in ('%d/%m/%Y %H:%M:%S','%d/%m/%Y %H:%M','%d/%m/%Y',
+                    '%Y-%m-%d %H:%M:%S','%Y-%m-%d %H:%M','%Y-%m-%d',
+                    '%d-%m-%Y %H:%M','%d-%m-%Y'):
+            try:
+                return datetime.strptime(s, fmt)
+            except ValueError:
+                pass
+        return None
+
+    @staticmethod
+    def _clean_str(v):
+        if v is None:
+            return ''
+        s = str(v).strip()
+        return '' if s.lower() in ('none','false','nan') else s
+
+    @staticmethod
+    def _to_float(v):
+        try:
+            return float(v or 0)
+        except (ValueError, TypeError):
+            return 0.0
+
+    @staticmethod
+    def _fmt_customer(ref, name):
+        parts = [p for p in [ref, name] if p]
+        return ' / '.join(parts) if parts else ''
+
+    def _build_log_html(self, logs, errors, sessions, orders, lines):
+        ok  = "#1F4E79"
+        err = "#C00000"
+        alt = "#EBF3FB"
+
+        html  = "<div style='font-family:Arial,sans-serif;font-size:13px;'>" + "".join(logs)
+        if errors:
+            html += f"<br/><p style='color:{err};'><b>⚠️ {len(errors)} erreur(s) :</b></p><ul>"
+            for e in errors[:100]:
+                html += f"<li style='color:{err};margin-bottom:4px;'>{e}</li>"
+            if len(errors) > 100:
+                html += f"<li>… et {len(errors)-100} autre(s). Voir logs serveur.</li>"
+            html += "</ul>"
+
+        rows_data = [
+            ("Sessions créées",  sessions,    ok),
+            ("Commandes créées", orders,      ok),
+            ("Lignes créées",    lines,       ok),
+            ("Erreurs",          len(errors), err if errors else ok),
+        ]
+        html += "<br/><table style='border-collapse:collapse;min-width:320px;margin-top:12px;'>"
+        html += f"<tr style='background:#1F4E79;color:#fff;'><th style='padding:10px 16px;text-align:left;'>Indicateur</th><th style='padding:10px 16px;text-align:center;'>Valeur</th></tr>"
+        for i,(label,value,color) in enumerate(rows_data):
+            bg = alt if i % 2 == 0 else "#FFFFFF"
+            html += (f"<tr style='background:{bg};'><td style='padding:8px 16px;border-bottom:1px solid #DDD;'>{label}</td>"
+                     f"<td style='padding:8px 16px;text-align:center;border-bottom:1px solid #DDD;'><b style='color:{color};'>{value}</b></td></tr>")
+        html += "</table></div>"
+        return html

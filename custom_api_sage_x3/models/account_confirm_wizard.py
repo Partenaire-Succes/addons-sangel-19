@@ -86,6 +86,7 @@ class SageX3SendWizard(models.TransientModel):
             wizard.count_pos_sessions = self.env['pos.session'].search_count([
                 ('company_id', 'in', company_ids),
                 ('state',      '=',  'closed'),
+                ('cash_register_balance_end', '>', 0),
                 ('sage_x3_sent', '=',  False),
                 ('start_at',   '>=', wizard.date_from),
                 ('start_at',   '<=', wizard.date_to),

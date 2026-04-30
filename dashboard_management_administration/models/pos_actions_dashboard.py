@@ -155,6 +155,7 @@ class PosActionsDashboard(models.Model):
                 ('company_id',   '=', company_id),
                 ('sage_x3_sent', '=',  False),
                 ('state',        '=', 'closed'),
+                ('cash_register_balance_end', '>', 0),
             ]),
             
 

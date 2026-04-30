@@ -169,8 +169,20 @@ class ProductTemplateImport(models.Model):
         """Supprime toutes les taxes AIRSI de tous les produits pour reprendre l'import."""
         _logger.info("🚀 Début suppression taxes AIRSI sur tous les produits")
 
+        # ✅ Étape 1 : Trouver les taxes AIRSI
+        airsi_taxes = self.env['account.tax'].with_context(active_test=False).search([
+            ('name', 'ilike', 'AIRSI')
+        ])
+
+        if not airsi_taxes:
+            _logger.warning("⚠️ Aucune taxe AIRSI trouvée dans le système")
+            return
+
+        _logger.info("🔎 %s taxe(s) AIRSI trouvée(s) : %s", len(airsi_taxes), airsi_taxes.mapped('name'))
+
+        # ✅ Étape 2 : Filtrer les produits via 'in' sur les IDs — fonctionne sur les M2M
         products = self.env['product.template'].with_context(active_test=False).search([
-            ('airsi_taxes_id', '!=', False)
+            ('airsi_taxes_id', 'in', airsi_taxes.ids)
         ])
 
         total = len(products)
@@ -182,7 +194,6 @@ class ProductTemplateImport(models.Model):
             except Exception as e:
                 _logger.error("❌ Erreur produit %s : %s", product.default_code, str(e))
 
-            # Commit tous les 200 produits
             if (idx + 1) % 200 == 0:
                 self.env.cr.commit()
                 _logger.info("💾 %s / %s traités", idx + 1, total)
