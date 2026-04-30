@@ -159,7 +159,7 @@ class CumulInventaryReportWizard(models.TransientModel):
                     line.id,
                     line.create_date.strftime('%d/%m/%Y') if line.create_date else '',
                     line.qty_diff or 0.0,
-                    line.standard_price or 0.0,
+                    line.price or 0.0,
                     line.valorisation or 0.0,
                 ])
                 r = ws.max_row

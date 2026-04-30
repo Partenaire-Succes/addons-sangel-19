@@ -11,7 +11,11 @@
                     <header>
                         <button name="action_start" type="object" string="Soumettre pour validation"
                                 class="btn-primary" invisible="state != 'draft'"/>
-                        <button name="action_done"
+
+                        <button name="update_price" type="object" string="Mise a Jours"
+                                class="btn-primary"/>
+
+                        <button name="action_done" 
                                 type="object"
                                 string="Valider l'inventaire"
                                 class="btn-primary"
@@ -107,10 +111,11 @@
                                         <field name="qty_diff" string="Difference" invisible="state == 'draft'"
                                                decoration-muted="qty_diff == 0" decoration-danger="qty_diff &lt; 0"
                                                decoration-success="qty_diff &gt; 0" decoration-bf="qty_diff != 0"/>
-                                        <field name="standard_price" string="Prix unitaire (PMP)"
+                                        <field name="price" string="Prix unitaire (PMP)"
                                                invisible="state == 'draft'"/>
                                         <field name="valorisation" string="Valorisation" invisible="state == 'draft'"/>
                                         <field name="active" column_invisible="1"/>
+                                        <field name="standard_price" column_invisible="1"/>
                                         <field name="needs_verification" column_invisible="False"/>
                                         <field name="verified_by_id" string="Vérifié par" options="{'no_create': True}"/>
 

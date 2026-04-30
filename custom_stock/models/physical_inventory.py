@@ -171,12 +171,17 @@ class PhysicalInventory(models.Model):
         for rec in self:
             if rec.inventory_mode == 'libre':
                 for line in rec.physical_line_ids:
-                    # Mise à jour groupée par enregistrement
-                    line.write({'quantity': line.qty})
+                    line.quantity = line.qty
+                    line.price = line.standard_price
             else:
                 continue
         self.mark_check()
         self.write({'state': 'in_progress'})
+
+    def update_price(self):
+        lines = self.env['physical.inventory.line'].search([])
+        for line in lines:
+            line.price = line.standard_price
 
 
     def mark_check(self):
@@ -277,6 +282,7 @@ class PhysicalInventory(models.Model):
                 if line.code_category_id:
                     self.code_inventory_id = [(4, line.code_category_id.id)]
                     line.quantity = line.qty
+                    line.price = line.standard_price
             return
 
         self.physical_line_ids.unlink()
@@ -291,6 +297,7 @@ class PhysicalInventory(models.Model):
                     'product_id' : stck.product_id.id,
                     'location_id' : stck.location_id.id,
                     'quantity' : stck.quantity,
+                    'line.price': stck.product_tmpl_id.standard_price,
                     'lot_id': stck.lot_id.id if stck.lot_id else False,
                     'product_uom_id': stck.product_uom_id.id,
                     'code_category_id': self.code_category_id.id,
@@ -307,6 +314,7 @@ class PhysicalInventory(models.Model):
                     'product_id': archive.product_id.id,
                     'location_id': archive.location_id.id,
                     'quantity': archive.quantity,
+                    'price': archive.standard_price,
                     'lot_id': archive.lot_id.id if archive.lot_id else False,
                     'product_uom_id': archive.product_uom_id.id,
                     'code_category_id': archive.code_category_id.id,
@@ -444,6 +452,7 @@ class PhysicalInventoryLine(models.Model):
 
     physical_qty = fields.Float('Qte compté', default=0)
     standard_price = fields.Float('Prix standard', related='product_tmpl_id.standard_price')
+    price = fields.Float('Prix standard')
     qty = fields.Float('Stock', related='product_tmpl_id.qty_available')
     quantity = fields.Float('Stock')
 
@@ -463,12 +472,12 @@ class PhysicalInventoryLine(models.Model):
     code_article = fields.Char(string='Code Article', related='product_tmpl_id.code_article')
                 
 
-    @api.depends('physical_qty', 'quantity', 'standard_price')
+    @api.depends('physical_qty', 'quantity', 'standard_price', 'price')
     def compute_qty_dif(self):
         for line in self:
             # Utiliser `quantity` (stock du quant) et non `qty` (qty_available)
             line.qty_diff    = line.physical_qty - line.quantity
-            line.valorisation = line.standard_price * line.qty_diff
+            line.valorisation = line.price * line.qty_diff
 
 
     @api.depends('product_tmpl_id')
@@ -513,7 +522,7 @@ class PhysicalInventoryLine(models.Model):
             'physical_qty': self.physical_qty,
             'qty_diff': self.qty_diff,
             'valorisation': self.valorisation,
-            'standard_price': self.standard_price,
+            'standard_price': self.price,
             'inventory_physical_id': self.inventory_physical_id.id,
             'code_category_id': self.code_category_id.id,
             'lot_id': self.lot_id.id if self.lot_id else False,
