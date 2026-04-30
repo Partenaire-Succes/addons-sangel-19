@@ -310,8 +310,7 @@
                             <list
                                 decoration-danger="line_state == 'error'"
                                 decoration-warning="line_state == 'warning'"
-                                decoration-success="line_state == 'ok' and line_type == 'product'"
-                                decoration-info="line_type == 'payment'"
+                                decoration-success="line_state == 'ok'"
                                 create="false" delete="false" edit="false"
                                 limit="500"
                                 string="Lignes à importer"
@@ -323,11 +322,6 @@
                                        decoration-danger="line_state == 'error'"
                                        string="Statut"
                                        optional="show"/>
-                                <field name="line_type"
-                                       widget="badge"
-                                       decoration-info="line_type == 'payment'"
-                                       string="Type"
-                                       optional="show"/>
                                 <field name="session_key"    string="Session"          optional="show"/>
                                 <field name="date_order"     string="Date"             optional="show"/>
                                 <field name="order_ref"      string="Réf. commande"    optional="show"/>
@@ -337,11 +331,6 @@
                                 <field name="qty"            string="Qté"
                                        digits="[12,2]"                                 optional="show"/>
                                 <field name="price_unit"     string="Prix unit."
-                                       digits="[12,2]"                                 optional="show"/>
-                                <field name="discount"       string="Remise %"
-                                       digits="[5,2]"                                  optional="show"/>
-                                <field name="payment_method" string="Mode paiement"    optional="show"/>
-                                <field name="amount_paid"    string="Montant payé"
                                        digits="[12,2]"                                 optional="show"/>
                                 <field name="note"           string="Note"             optional="hide"/>
                                 <field name="message"        string="Message"          optional="show"/>

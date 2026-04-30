@@ -19,31 +19,49 @@ except ImportError:
     _logger.warning("openpyxl non installé. pip install openpyxl")
 
 
+# Correspondance entre les clés internes et les en-têtes Excel acceptés (normalisés en minuscules)
+COL_ALIASES = {
+    'date_order':    ['date_order', 'date'],
+    'order_ref':     ['order_ref', 'commande', 'order', 'ref_commande', 'num_commande'],
+    'customer_ref':  ['customer_ref', 'id client', 'id_client', 'customer_id',
+                      'client_id', 'id_clt', 'ref_client'],
+    'customer_name': ['customer_name', 'nom', 'name', 'client', 'nom_client'],
+    'product_ref':   ['product_ref', 'code article', 'code_article', 'code art',
+                      'default_code', 'ref_produit', 'code_produit'],
+    'product_name':  ['product_name', 'produit', 'designation', 'libelle',
+                      'article', 'nom_produit'],
+    'qty':           ['qty', 'quantite', 'qte', 'quantity', 'qté'],
+    'price_ht':      ['prix_ht', 'prix ht', 'price_ht', 'ht', 'montant_ht'],
+    'price_unit':    ['price_unit', 'prix_ttc', 'prix ttc', 'ttc', 'prix_unit',
+                      'price', 'montant_ttc'],
+    'discount':      ['discount', 'remise', 'remise_pct'],
+    'note':          ['note', 'notes', 'commentaire', 'remarque'],
+}
+REQUIRED_COLS = ['date_order', 'qty', 'price_unit']
+
+
 class PosHistoryImportWizard(models.TransientModel):
     _name = 'pos.history.import.wizard'
     _description = 'Assistant Import Historique POS'
 
-    # ── Configuration ─────────────────────────────────────────────────────
+    # ── Configuration ──────────────────────────────────────────────────────
     pos_config_id = fields.Many2one(
         comodel_name='pos.config',
         string='Point de Vente',
         required=True,
     )
-    grouping = fields.Selection(
-        selection=[
-            ('day',   'Par Jour  (1 session / jour)'),
-            ('month', 'Par Mois  (1 session / mois)'),
-        ],
-        string='Regroupement des sessions',
-        default='day',
+    payment_method_id = fields.Many2one(
+        comodel_name='pos.payment.method',
+        string='Mode de paiement',
         required=True,
+        help="Mode de paiement appliqué à toutes les commandes importées.",
     )
 
-    # ── Fichier ───────────────────────────────────────────────────────────
+    # ── Fichier ────────────────────────────────────────────────────────────
     import_file     = fields.Binary(string='Fichier Excel (.xlsx)', attachment=False)
     import_filename = fields.Char(string='Nom du fichier')
 
-    # ── État ──────────────────────────────────────────────────────────────
+    # ── État ───────────────────────────────────────────────────────────────
     state = fields.Selection(
         selection=[
             ('draft',   'Configuration'),
@@ -104,18 +122,16 @@ class PosHistoryImportWizard(models.TransientModel):
         ws.title = "Import POS"
 
         COLUMNS = [
-            ('date_order',     'date_order\n(JJ/MM/AAAA HH:MM)',      True,  22),
-            ('order_ref',      'order_ref\n(optionnel)',               False, 20),
-            ('customer_ref',   'customer_ref\n(réf. Odoo)',            False, 18),
-            ('customer_name',  'customer_name\n(nom)',                 False, 22),
-            ('product_ref',    'product_ref *\n(réf. interne Odoo)',   True,  18),
-            ('product_name',   'product_name\n(fallback)',             False, 22),
-            ('qty',            'qty *',                                True,  10),
-            ('price_unit',     'price_unit *\n(TTC)',                  True,  16),
-            ('discount',       'discount\n(%)',                        False, 12),
-            ('payment_method', 'payment_method *\n(1ère ligne ordre)', True,  20),
-            ('amount_paid',    'amount_paid *\n(1ère ligne ordre)',    True,  16),
-            ('note',           'note\n(optionnel)',                    False, 22),
+            ('date_order',    'Date\n(JJ/MM/AAAA)',            True,  16),
+            ('order_ref',     'Commande\n(réf. unique)',        True,  18),
+            ('customer_ref',  'Id client\n(réf. client)',       False, 16),
+            ('customer_name', 'Nom\n(nom client)',              False, 22),
+            ('product_ref',   'Code article *\n(réf. interne)', True,  16),
+            ('product_name',  'Produit\n(nom fallback)',        False, 28),
+            ('qty',           'Qty *\n(négatif = retour)',      True,  12),
+            ('price_ht',      'Prix_ht *\n(HT unité)',          True,  14),
+            ('price_unit',    'Prix_ttc *\n(TTC unité)',        True,  14),
+            ('note',          'Note\n(optionnel)',               False, 20),
         ]
 
         fill_req = PatternFill("solid", fgColor="1F4E79")
@@ -137,12 +153,15 @@ class PosHistoryImportWizard(models.TransientModel):
             ws.column_dimensions[openpyxl.utils.get_column_letter(c)].width = width
 
         examples = [
-            # CMD-001 : 2 produits + 2 paiements (Cash + Card)
-            ['15/01/2024 09:30','CMD-001','CLI-001','Jean Dupont', 'CAFE-001','Café Espresso',2,1500, 0,'Cash',2000,''],
-            ['15/01/2024 09:30','CMD-001','',       '',            'CROI-001','Croissant',    1, 800, 0,'',   '',  ''],
-            ['15/01/2024 09:30','CMD-001','',       '',            '',        '',             '','',  '','Card', 300,''],
-            # CMD-002 : 1 produit + 1 paiement
-            ['15/01/2024 10:15','CMD-002','',       'Marie Martin','SAND-001','Sandwich',     1,2500,10,'Card',2250,'Sans tomate'],
+            # Commande 2 lignes
+            ['01/01/2026', '01-1-53026', None,    None,          '3253', 'SAUCISSE POULET 10X34G', 1,    975,  1150, ''],
+            ['01/01/2026', '01-1-53026', None,    None,          '4657', 'PONDEUSE',               3.82, 10514, 11460, ''],
+            # Commande 1 ligne avec client
+            ['01/01/2026', '01-1-53027', 'C-001', 'Jean Dupont', '4657', 'PONDEUSE',               4.02, 11065, 12060, ''],
+            # Retour (qty négative)
+            ['01/01/2026', '01-1-53031', None,    None,          '4044', 'LANGUE DE BOEUF',        -1.115, -2604, -2604, 'Retour'],
+            # Jour 2
+            ['02/01/2026', '01-2-53100', None,    None,          '2676', 'POULET EFFILE',           1.116, 3069, 3069, ''],
         ]
         for r, row in enumerate(examples, 2):
             ws.row_dimensions[r].height = 20
@@ -157,7 +176,7 @@ class PosHistoryImportWizard(models.TransientModel):
         wb.save(output)
         output.seek(0)
         att = self.env['ir.attachment'].create({
-            'name':      'template_import_pos_odoo19.xlsx',
+            'name':      'template_import_pos_historique.xlsx',
             'type':      'binary',
             'datas':     base64.b64encode(output.read()),
             'mimetype':  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -178,6 +197,8 @@ class PosHistoryImportWizard(models.TransientModel):
             raise UserError(_("Veuillez sélectionner un fichier Excel."))
         if not self.pos_config_id:
             raise UserError(_("Veuillez sélectionner un Point de Vente."))
+        if not self.payment_method_id:
+            raise UserError(_("Veuillez sélectionner un mode de paiement."))
 
         self.preview_line_ids.unlink()
 
@@ -194,9 +215,7 @@ class PosHistoryImportWizard(models.TransientModel):
 
         for session_key, s_orders in sessions_map.items():
             for order_data in s_orders:
-                is_first_product = True
-
-                # ── Lignes produit ────────────────────────────────────────
+                is_first = True
                 for line_data in order_data['lines']:
                     seq += 10
                     state, msg, prod_id, partner_id = self._validate_product_line(order_data, line_data)
@@ -205,61 +224,24 @@ class PosHistoryImportWizard(models.TransientModel):
                         'wizard_id':    self.id,
                         'sequence':     seq,
                         'session_key':  session_key,
-                        'date_order':   order_data['date_order'].strftime('%d/%m/%Y %H:%M'),
+                        'date_order':   order_data['date_order'].strftime('%d/%m/%Y'),
                         'order_ref':    order_data['name'],
                         'customer_info': self._fmt_customer(
                             order_data.get('customer_ref'),
                             order_data.get('customer_name'),
-                        ) if is_first_product else '',
+                        ) if is_first else '',
                         'product_ref':  line_data.get('product_ref', ''),
                         'product_name': line_data.get('product_name', ''),
                         'qty':          line_data['qty'],
+                        'price_ht':     line_data.get('price_ht', 0.0),
                         'price_unit':   line_data['price_unit'],
-                        'discount':     line_data.get('discount', 0.0),
-                        'payment_method': '',
-                        'amount_paid':    0.0,
                         'note':         line_data.get('note', ''),
                         'line_state':   state,
                         'message':      msg,
-                        'resolved_product_id':        prod_id,
-                        'resolved_partner_id':        partner_id if is_first_product else 0,
-                        'resolved_payment_method_id': 0,
-                        'line_type':    'product',
+                        'resolved_product_id': prod_id,
+                        'resolved_partner_id': partner_id if is_first else 0,
                     })
-                    is_first_product = False
-
-                # ── Lignes paiement ───────────────────────────────────────
-                for pay_data in order_data.get('payments', []):
-                    seq += 10
-                    pm = self._find_payment_method(pay_data['method'])
-                    if pm:
-                        p_state, p_msg = 'ok', '✅ Prêt'
-                    else:
-                        p_state = 'warning'
-                        p_msg   = f"Mode paiement '{pay_data['method']}' non trouvé → 1er mode POS utilisé."
-
-                    preview_vals.append({
-                        'wizard_id':    self.id,
-                        'sequence':     seq,
-                        'session_key':  session_key,
-                        'date_order':   order_data['date_order'].strftime('%d/%m/%Y %H:%M'),
-                        'order_ref':    order_data['name'],
-                        'customer_info': '',
-                        'product_ref':  '',
-                        'product_name': '',
-                        'qty':          0.0,
-                        'price_unit':   0.0,
-                        'discount':     0.0,
-                        'payment_method': pay_data['method'],
-                        'amount_paid':    pay_data['amount'],
-                        'note':         '',
-                        'line_state':   p_state,
-                        'message':      p_msg,
-                        'resolved_product_id':        0,
-                        'resolved_partner_id':        0,
-                        'resolved_payment_method_id': pm.id if pm else 0,
-                        'line_type':    'payment',
-                    })
+                    is_first = False
 
         if preview_vals:
             self.env['pos.import.preview.line'].create(preview_vals)
@@ -271,8 +253,8 @@ class PosHistoryImportWizard(models.TransientModel):
         }
 
     def _validate_product_line(self, order_data, line_data):
-        """Valide une ligne produit et résout les IDs. Retourne (state, message, prod_id, partner_id)."""
-        msgs = []
+        """Valide une ligne produit. Retourne (state, message, prod_id, partner_id)."""
+        msgs  = []
         state = 'ok'
         prod_id = partner_id = 0
 
@@ -282,10 +264,14 @@ class PosHistoryImportWizard(models.TransientModel):
             prod_id = product.id
         else:
             state = 'error'
-            msgs.append(f"Produit introuvable (réf: '{line_data.get('product_ref')}' / nom: '{line_data.get('product_name')}')")
+            msgs.append(
+                f"Produit introuvable "
+                f"(réf: '{line_data.get('product_ref')}' / nom: '{line_data.get('product_name')}')"
+            )
 
-        # Client
-        cref, cname = order_data.get('customer_ref', ''), order_data.get('customer_name', '')
+        # Client (optionnel)
+        cref  = order_data.get('customer_ref', '')
+        cname = order_data.get('customer_name', '')
         if cref or cname:
             partner = self._find_partner_no_create(cref, cname)
             if partner:
@@ -395,7 +381,7 @@ class PosHistoryImportWizard(models.TransientModel):
             sk  = line.session_key
 
             if ref not in orders_map:
-                # Extraire ref et nom bruts depuis customer_info ("ref / nom" ou juste "nom")
+                # Reconstituer ref/nom bruts depuis customer_info ("ref / nom")
                 info = line.customer_info or ''
                 if ' / ' in info:
                     raw_ref, raw_name = info.split(' / ', 1)
@@ -404,41 +390,25 @@ class PosHistoryImportWizard(models.TransientModel):
 
                 orders_map[ref] = {
                     'name':               ref,
-                    'date_order':         datetime.strptime(line.date_order, '%d/%m/%Y %H:%M'),
+                    'date_order':         datetime.strptime(line.date_order, '%d/%m/%Y'),
                     'customer_ref':       raw_ref,
                     'customer_name':      raw_name,
                     'resolved_partner_id': line.resolved_partner_id,
-                    'payments':           [],
                     'lines':              [],
                 }
                 sessions_map[sk].append(ref)
             else:
-                # Mettre à jour les infos client si disponibles sur cette ligne
+                # Enrichir les infos client si absentes sur la 1ère ligne
                 if line.resolved_partner_id and not orders_map[ref]['resolved_partner_id']:
                     orders_map[ref]['resolved_partner_id'] = line.resolved_partner_id
-                if line.customer_info and not orders_map[ref]['customer_name']:
-                    info = line.customer_info
-                    if ' / ' in info:
-                        raw_ref, raw_name = info.split(' / ', 1)
-                    else:
-                        raw_ref, raw_name = '', info
-                    orders_map[ref]['customer_ref']  = raw_ref
-                    orders_map[ref]['customer_name'] = raw_name
 
-            if line.line_type == 'payment':
-                orders_map[ref]['payments'].append({
-                    'method': line.payment_method,
-                    'amount': line.amount_paid,
-                    'resolved_payment_method_id': line.resolved_payment_method_id,
-                })
-            else:
-                orders_map[ref]['lines'].append({
-                    'resolved_product_id': line.resolved_product_id,
-                    'qty':        line.qty,
-                    'price_unit': line.price_unit,
-                    'discount':   line.discount,
-                    'note':       line.note,
-                })
+            orders_map[ref]['lines'].append({
+                'resolved_product_id': line.resolved_product_id,
+                'qty':       line.qty,
+                'price_ht':  line.price_ht,
+                'price_unit': line.price_unit,
+                'note':      line.note,
+            })
 
         return orders_map, sessions_map
 
@@ -451,32 +421,41 @@ class PosHistoryImportWizard(models.TransientModel):
 
         ws = None
         for name in wb.sheetnames:
-            if 'import' in name.lower() or 'pos' in name.lower():
+            nl = name.lower()
+            if 'import' in nl or 'pos' in nl or 'vente' in nl or 'passage' in nl:
                 ws = wb[name]
                 break
         ws = ws or wb.active
 
+        # Normaliser les en-têtes
         raw_headers = [
             str(c.value).strip().lower().split('\n')[0].strip() if c.value else ''
             for c in ws[1]
         ]
 
-        KEYS = ['date_order','order_ref','customer_ref','customer_name',
-                'product_ref','product_name','qty','price_unit',
-                'discount','payment_method','amount_paid','note']
-
         col_map = {}
         for idx, raw in enumerate(raw_headers):
-            for key in KEYS:
-                if key in raw and key not in col_map:
-                    col_map[key] = idx
-                    break
+            for key, aliases in COL_ALIASES.items():
+                if key not in col_map:
+                    for alias in aliases:
+                        if alias == raw or alias in raw:
+                            col_map[key] = idx
+                            break
 
-        missing = [k for k in ['date_order','product_ref','qty','price_unit'] if k not in col_map]
+        missing = [k for k in REQUIRED_COLS if k not in col_map]
         if missing:
             raise UserError(_(
                 f"Colonnes obligatoires manquantes : {', '.join(missing)}.\n"
-                "Utilisez le template fourni."
+                f"En-têtes détectés : {[h for h in raw_headers if h]}\n"
+                "Colonnes requises : date_order (ou Date), qty (ou Qty), "
+                "price_unit (ou Prix_ttc)."
+            ))
+
+        # Vérifier qu'on a au moins product_ref ou product_name
+        if 'product_ref' not in col_map and 'product_name' not in col_map:
+            raise UserError(_(
+                "Colonne produit manquante : 'Code article' (ou product_ref) "
+                "ou 'Produit' (ou product_name) requis."
             ))
 
         rows = []
@@ -489,7 +468,7 @@ class PosHistoryImportWizard(models.TransientModel):
             rows.append(d)
 
         if not rows:
-            raise UserError(_("Aucune donnée trouvée. Données à partir de la ligne 2."))
+            raise UserError(_("Aucune donnée trouvée. Données attendues à partir de la ligne 2."))
         return rows
 
     # ══════════════════════════════════════════════════════════════════════
@@ -506,27 +485,25 @@ class PosHistoryImportWizard(models.TransientModel):
                 errors.append(f"Ligne {rn} : date invalide '{row.get('date_order')}'")
                 continue
 
-            pref      = self._clean_str(row.get('product_ref'))
-            pname     = self._clean_str(row.get('product_name'))
-            pm_name   = self._clean_str(row.get('payment_method'))
-            pm_amount = self._to_float(row.get('amount_paid'))
+            pref  = self._clean_str(row.get('product_ref'))
+            pname = self._clean_str(row.get('product_name'))
+            if not pref and not pname:
+                errors.append(f"Ligne {rn} : code article et nom produit vides.")
+                continue
 
-            has_product = bool(pref or pname)
-            has_payment = bool(pm_name and pm_amount)
-
-            if not has_product and not has_payment:
-                errors.append(f"Ligne {rn} : ni produit ni paiement détecté.")
+            try:
+                qty       = float(row.get('qty') or 0)
+                price_ttc = float(row.get('price_unit') or 0)
+                price_ht  = float(row.get('price_ht') or price_ttc)
+                disc      = float(row.get('discount') or 0)
+            except (ValueError, TypeError):
+                errors.append(f"Ligne {rn} : valeurs numériques invalides.")
                 continue
 
             ref = self._clean_str(row.get('order_ref'))
             if not ref:
-                if has_product:
-                    # Générer un ref unique par jour pour regrouper les lignes sans order_ref
-                    ref = f"IMPORT-{dt.strftime('%Y%m%d')}-{counter:05d}"
-                    counter += 1
-                else:
-                    errors.append(f"Ligne {rn} : order_ref requis pour une ligne de paiement seule.")
-                    continue
+                ref = f"IMPORT-{dt.strftime('%Y%m%d')}-{counter:05d}"
+                counter += 1
 
             if ref not in orders:
                 orders[ref] = {
@@ -534,46 +511,33 @@ class PosHistoryImportWizard(models.TransientModel):
                     'date_order':    dt,
                     'customer_ref':  self._clean_str(row.get('customer_ref')),
                     'customer_name': self._clean_str(row.get('customer_name')),
-                    'payments':      [],
                     'lines':         [],
                 }
             else:
-                # Enrichir les infos client si absentes sur les premières lignes
+                # Enrichir le client si absent sur les premières lignes
                 if not orders[ref]['customer_ref'] and row.get('customer_ref'):
                     orders[ref]['customer_ref'] = self._clean_str(row['customer_ref'])
                 if not orders[ref]['customer_name'] and row.get('customer_name'):
                     orders[ref]['customer_name'] = self._clean_str(row['customer_name'])
 
-            if has_product:
-                try:
-                    qty  = float(row.get('qty') or 1)
-                    price = float(row.get('price_unit') or 0)
-                    disc = float(row.get('discount') or 0)
-                except (ValueError, TypeError):
-                    errors.append(f"Ligne {rn} : valeurs numériques invalides.")
-                    continue
-                orders[ref]['lines'].append({
-                    'product_ref':  pref,
-                    'product_name': pname,
-                    'qty':          qty,
-                    'price_unit':   price,
-                    'discount':     disc,
-                    'note':         self._clean_str(row.get('note')),
-                    '_row':         rn,
-                })
-
-            if has_payment:
-                orders[ref]['payments'].append({
-                    'method': pm_name,
-                    'amount': pm_amount,
-                })
+            orders[ref]['lines'].append({
+                'product_ref':  pref,
+                'product_name': pname,
+                'qty':          qty,
+                'price_ht':     price_ht,
+                'price_unit':   price_ttc,
+                'discount':     disc,
+                'note':         self._clean_str(row.get('note')),
+                '_row':         rn,
+            })
 
         return list(orders.values())
 
     def _group_by_session(self, orders_data):
+        """1 session par jour."""
         sessions = defaultdict(list)
         for order in orders_data:
-            key = order['date_order'].strftime('%Y-%m-%d' if self.grouping == 'day' else '%Y-%m')
+            key = order['date_order'].strftime('%Y-%m-%d')
             sessions[key].append(order)
         return dict(sorted(sessions.items()))
 
@@ -619,69 +583,58 @@ class PosHistoryImportWizard(models.TransientModel):
         for line_data in order_data['lines']:
             pid     = line_data.get('resolved_product_id', 0)
             product = self.env['product.product'].browse(pid) if pid else \
-                      self._find_product(line_data.get('product_ref',''), line_data.get('product_name',''))
+                      self._find_product(line_data.get('product_ref', ''), line_data.get('product_name', ''))
             if not product:
                 raise UserError(_("Produit non trouvé."))
 
-            qty   = line_data['qty']
-            price = line_data['price_unit']
-            disc  = line_data.get('discount', 0.0)
-            taxes = product.taxes_id.filtered(lambda t: t.company_id == self.env.company)
-            base  = price * (1 - disc / 100.0)
+            qty       = line_data['qty']
+            price_ttc = line_data['price_unit']
+            price_ht  = line_data.get('price_ht', price_ttc)
 
-            if taxes:
-                tr   = taxes.compute_all(base, currency=self.env.company.currency_id, quantity=qty, product=product)
-                sub  = tr['total_excluded']
-                subi = tr['total_included']
-            else:
-                sub  = base * qty
-                subi = base * qty
+            # Utiliser les montants exacts du fichier source
+            sub  = price_ht  * qty  # HT
+            subi = price_ttc * qty  # TTC
 
             amount_total += subi
             amount_tax   += (subi - sub)
 
+            taxes = product.taxes_id.filtered(lambda t: t.company_id == self.env.company)
             lv = {
-                'product_id': product.id, 'qty': qty, 'price_unit': price, 'discount': disc,
-                'tax_ids': [(6, 0, taxes.ids)] if taxes else [(5,)],
-                'price_subtotal': sub, 'price_subtotal_incl': subi,
+                'product_id':          product.id,
+                'qty':                 qty,
+                'price_unit':          price_ttc,
+                'discount':            line_data.get('discount', 0.0),
+                'tax_ids':             [(6, 0, taxes.ids)] if taxes else [(5,)],
+                'price_subtotal':      sub,
+                'price_subtotal_incl': subi,
             }
             if line_data.get('note'):
                 lv['note'] = line_data['note']
             lines_vals.append((0, 0, lv))
 
-        # Calcul du montant payé depuis la liste des paiements
-        payments_data = order_data.get('payments', [])
-        amount_paid   = sum(p['amount'] for p in payments_data) if payments_data else amount_total
-        amount_return = max(0.0, amount_paid - amount_total)
+        amount_paid   = amount_total
+        amount_return = 0.0
 
         order = self.env['pos.order'].with_context(**ctx).sudo().create({
-            'name': order_data['name'], 'date_order': order_data['date_order'],
-            'session_id': session.id, 'config_id': self.pos_config_id.id,
-            'partner_id': partner_id or False, 'state': 'done', 'lines': lines_vals,
-            'amount_total': amount_total, 'amount_tax': amount_tax,
-            'amount_paid': amount_paid, 'amount_return': amount_return,
+            'name':          order_data['name'],
+            'date_order':    order_data['date_order'],
+            'session_id':    session.id,
+            'config_id':     self.pos_config_id.id,
+            'partner_id':    partner_id or False,
+            'state':         'done',
+            'lines':         lines_vals,
+            'amount_total':  amount_total,
+            'amount_tax':    amount_tax,
+            'amount_paid':   amount_paid,
+            'amount_return': amount_return,
         })
 
-        if payments_data:
-            # Créer un pos.payment par mode de paiement
-            for pay_data in payments_data:
-                pm_id = pay_data.get('resolved_payment_method_id', 0)
-                if not pm_id:
-                    pm    = self._find_payment_method(pay_data.get('method', ''))
-                    pm_id = pm.id if pm else 0
-                if pm_id:
-                    self.env['pos.payment'].with_context(**ctx).sudo().create({
-                        'pos_order_id': order.id, 'payment_method_id': pm_id,
-                        'amount': pay_data['amount'], 'session_id': session.id,
-                    })
-        else:
-            # Fallback : paiement unique sur le 1er mode du POS
-            pm = self.pos_config_id.payment_method_ids[:1]
-            if pm:
-                self.env['pos.payment'].with_context(**ctx).sudo().create({
-                    'pos_order_id': order.id, 'payment_method_id': pm.id,
-                    'amount': amount_paid, 'session_id': session.id,
-                })
+        self.env['pos.payment'].with_context(**ctx).sudo().create({
+            'pos_order_id':      order.id,
+            'payment_method_id': self.payment_method_id.id,
+            'amount':            amount_paid,
+            'session_id':        session.id,
+        })
 
         return order, len(order_data['lines'])
 
@@ -713,19 +666,6 @@ class PosHistoryImportWizard(models.TransientModel):
                 return p
         return None
 
-    def _find_payment_method(self, name):
-        methods = self.pos_config_id.payment_method_ids
-        if not name:
-            return methods[:1]
-        pm = methods.filtered(lambda m: m.name.lower() == name.lower())[:1]
-        if pm:
-            return pm
-        pm = methods.filtered(lambda m: name.lower() in m.name.lower())[:1]
-        if pm:
-            return pm
-        pm = self.env['pos.payment.method'].search([('name', 'ilike', name)], limit=1)
-        return pm or methods[:1]
-
     # ══════════════════════════════════════════════════════════════════════
     # HELPERS UTILITAIRES
     # ══════════════════════════════════════════════════════════════════════
@@ -737,9 +677,9 @@ class PosHistoryImportWizard(models.TransientModel):
         if isinstance(value, date):
             return datetime(value.year, value.month, value.day, 9, 0, 0)
         s = str(value).strip()
-        for fmt in ('%d/%m/%Y %H:%M:%S','%d/%m/%Y %H:%M','%d/%m/%Y',
-                    '%Y-%m-%d %H:%M:%S','%Y-%m-%d %H:%M','%Y-%m-%d',
-                    '%d-%m-%Y %H:%M','%d-%m-%Y'):
+        for fmt in ('%d/%m/%Y %H:%M:%S', '%d/%m/%Y %H:%M', '%d/%m/%Y',
+                    '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%d',
+                    '%d-%m-%Y %H:%M', '%d-%m-%Y'):
             try:
                 return datetime.strptime(s, fmt)
             except ValueError:
@@ -751,7 +691,7 @@ class PosHistoryImportWizard(models.TransientModel):
         if v is None:
             return ''
         s = str(v).strip()
-        return '' if s.lower() in ('none','false','nan') else s
+        return '' if s.lower() in ('none', 'false', 'nan') else s
 
     @staticmethod
     def _to_float(v):
@@ -766,30 +706,36 @@ class PosHistoryImportWizard(models.TransientModel):
         return ' / '.join(parts) if parts else ''
 
     def _build_log_html(self, logs, errors, sessions, orders, lines):
-        ok  = "#1F4E79"
-        err = "#C00000"
-        alt = "#EBF3FB"
+        err_color = "#C00000"
+        ok_color  = "#1F4E79"
+        alt       = "#EBF3FB"
 
         html  = "<div style='font-family:Arial,sans-serif;font-size:13px;'>" + "".join(logs)
         if errors:
-            html += f"<br/><p style='color:{err};'><b>⚠️ {len(errors)} erreur(s) :</b></p><ul>"
+            html += f"<br/><p style='color:{err_color};'><b>⚠️ {len(errors)} erreur(s) :</b></p><ul>"
             for e in errors[:100]:
-                html += f"<li style='color:{err};margin-bottom:4px;'>{e}</li>"
+                html += f"<li style='color:{err_color};margin-bottom:4px;'>{e}</li>"
             if len(errors) > 100:
                 html += f"<li>… et {len(errors)-100} autre(s). Voir logs serveur.</li>"
             html += "</ul>"
 
         rows_data = [
-            ("Sessions créées",  sessions,    ok),
-            ("Commandes créées", orders,      ok),
-            ("Lignes créées",    lines,       ok),
-            ("Erreurs",          len(errors), err if errors else ok),
+            ("Sessions créées",  sessions,    ok_color),
+            ("Commandes créées", orders,      ok_color),
+            ("Lignes créées",    lines,       ok_color),
+            ("Erreurs",          len(errors), err_color if errors else ok_color),
         ]
         html += "<br/><table style='border-collapse:collapse;min-width:320px;margin-top:12px;'>"
-        html += f"<tr style='background:#1F4E79;color:#fff;'><th style='padding:10px 16px;text-align:left;'>Indicateur</th><th style='padding:10px 16px;text-align:center;'>Valeur</th></tr>"
-        for i,(label,value,color) in enumerate(rows_data):
+        html += (f"<tr style='background:{ok_color};color:#fff;'>"
+                 f"<th style='padding:10px 16px;text-align:left;'>Indicateur</th>"
+                 f"<th style='padding:10px 16px;text-align:center;'>Valeur</th></tr>")
+        for i, (label, value, color) in enumerate(rows_data):
             bg = alt if i % 2 == 0 else "#FFFFFF"
-            html += (f"<tr style='background:{bg};'><td style='padding:8px 16px;border-bottom:1px solid #DDD;'>{label}</td>"
-                     f"<td style='padding:8px 16px;text-align:center;border-bottom:1px solid #DDD;'><b style='color:{color};'>{value}</b></td></tr>")
+            html += (
+                f"<tr style='background:{bg};'>"
+                f"<td style='padding:8px 16px;border-bottom:1px solid #DDD;'>{label}</td>"
+                f"<td style='padding:8px 16px;text-align:center;border-bottom:1px solid #DDD;'>"
+                f"<b style='color:{color};'>{value}</b></td></tr>"
+            )
         html += "</table></div>"
         return html
