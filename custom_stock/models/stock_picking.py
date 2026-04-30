@@ -34,7 +34,13 @@ class StockPicking(models.Model):
 
 
     def button_validate(self):
-        """Override: price validation + pack/unit sync."""
+        """Override: price validation uniquement.
+
+        Le sync pack/unité a été retiré de button_validate pour éviter la
+        double-décrémentation des SVL (stock.valuation.layer) qui corrompait
+        l'AVCO. L'éclatement carton→unité se fait via le bouton dédié
+        'Éclater en unités' après validation de la réception.
+        """
 
         # ── 1. Pre-validation checks (before calling super) ──────────────────
         errors = []
@@ -42,8 +48,6 @@ class StockPicking(models.Model):
             if picking.picking_type_id.code == 'incoming':
                 for move in picking.move_ids:
                     product_name = move.product_id.display_name
-
-                    # 🔴 Block validation if price is 0
                     if move.price_unit == 0:
                         errors.append(f"{product_name} (Prix = 0)")
 
@@ -53,59 +57,117 @@ class StockPicking(models.Model):
                 "On ne réceptionne pas des articles gratuits comme ça 👀.\n"
                 "Même les cadeaux ont une valeur sentimentale 😂.\n\n"
                 "👉 Donne-moi un prix avant de valider la réception.\n"
-                "👉 Sinon, mets la quantité à 0 si tu ne l’as pas reçu.\n\n"
+                "👉 Sinon, mets la quantité à 0 si tu ne l'as pas reçu.\n\n"
                 "📦 Articles concernés :\n- " + "\n- ".join(errors)
             ))
 
-        # ── 2. Standard Odoo validation ───────────────────────────────────────
-        res = super().button_validate()
+        return super().button_validate()
 
-        # ── 3. Post-validation: pack/unit synchronisation ─────────────────────
-        # Réceptions → explosion cartons en unités
-        if self.picking_type_code == "incoming":
-            self._process_pack_explosion()
-
-        # Livraisons → synchronisation unités vers cartons
-        elif self.picking_type_code == "outgoing":
-            self._process_unit_to_pack_sync()
-            for move in self.move_ids.filtered(
-                lambda m: m.state == "done" and m.product_id
-            ):
-                pack_template = self._get_pack_template_for_move(move)
-                if pack_template:
-                    # 👉 décrémenter les unités correspondant aux cartons vendus
-                    self._decrement_units_for_sold_cartons(move, pack_template)
-
-        return res
-
-    def _process_pack_explosion(self):
+    def action_eclater_cartons_en_unites(self):
         """
-        Traite l'explosion pack → unités selon le pattern Odoo core
-        Utilise la même logique que les ajustements d'inventaire
+        Bouton manuel 'Éclater en unités' — à appeler après validation d'une réception.
+
+        Crée un transfert interne (carton_location → unit_location) via des
+        stock.move propres pour chaque article pack reçu. Le price_unit est
+        calculé depuis le mouvement de réception original (prix carton / pack_qty)
+        de façon à préserver l'AVCO de l'article unité.
         """
-        for move in self.move_ids.filtered(lambda m: m.state == "done" and m.quantity > 0):
+        self.ensure_one()
+        if self.state != 'done':
+            raise UserError(_("La réception doit d'abord être validée."))
+        if self.picking_type_id.code != 'incoming':
+            raise UserError(_("L'éclatement ne s'applique qu'aux réceptions."))
+
+        pack_moves = []
+        for move in self.move_ids.filtered(lambda m: m.state == 'done' and m.quantity > 0):
             pack_template = self._get_pack_template_for_move(move)
             if not pack_template:
                 continue
+            pack_moves.append((move, pack_template))
 
-            # Créer ajustement d'inventaire pour les unités (pattern Odoo standard)
-            self._create_inventory_adjustment_for_units(move, pack_template)
+        if not pack_moves:
+            raise UserError(_("Aucun article pack (carton) trouvé dans cette réception."))
 
-    def _process_unit_to_pack_sync(self):
-        """
-        Traite la synchronisation unités → cartons avec cumul
-        Pattern similaire aux kits/bundles d'Odoo
-        """
-        processed_templates = set()
+        # Emplacement virtuel "Explosions pack" (production) comme source intermédiaire
+        production_loc = self.env.ref('stock.location_production', raise_if_not_found=False)
+        if not production_loc:
+            raise UserError(_("Emplacement de production introuvable."))
 
-        for move in self.move_ids.filtered(lambda m: m.state == "done" and m.quantity > 0):
-            pack_template = self._get_unit_pack_template(move.product_id)
-            if not pack_template or pack_template.id in processed_templates:
-                continue
+        internal_type = self.env['stock.picking.type'].search([
+            ('code', '=', 'internal'),
+            ('company_id', '=', self.company_id.id),
+            ('warehouse_id', '!=', False),
+        ], limit=1)
+        if not internal_type:
+            raise UserError(_("Aucun type 'Transfert interne' trouvé."))
 
-            # Traiter toutes les unités de ce pack d'un coup
-            self._process_template_unit_sync(pack_template)
-            processed_templates.add(pack_template.id)
+        dest_location = self.location_dest_id
+        picking_vals = {
+            'picking_type_id': internal_type.id,
+            'location_id': production_loc.id,     # source virtuelle (Production)
+            'location_dest_id': dest_location.id,  # destination = entrepôt réception
+            'origin': 'Eclatement cartons — %s' % self.name,
+            'company_id': self.company_id.id,
+        }
+        explosion_picking = self.env['stock.picking'].create(picking_vals)
+
+        for move, pack_template in pack_moves:
+            child_product = pack_template.pack_child_product_id
+            units_qty = move.quantity * pack_template.pack_qty
+            unit_price = (
+                move.price_unit / pack_template.pack_qty
+                if pack_template.pack_qty else child_product.standard_price
+            )
+            self.env['stock.move'].create({
+                'picking_id': explosion_picking.id,
+                'product_id': child_product.id,
+                'product_uom_qty': units_qty,
+                'product_uom': child_product.uom_id.id,
+                'location_id': production_loc.id,
+                'location_dest_id': dest_location.id,
+                'price_unit': unit_price,
+                'name': 'Eclatement %s -> %s' % (pack_template.name, child_product.display_name),
+                'origin': self.name,
+                'company_id': self.company_id.id,
+            })
+
+        explosion_picking.action_confirm()
+
+        # Pour les sources virtuelles (Production), action_assign ne cree pas
+        # de move lines. On les cree explicitement puis on valide.
+        for sm in explosion_picking.move_ids.filtered(lambda m: m.state not in ('done', 'cancel')):
+            if not sm.move_line_ids:
+                self.env['stock.move.line'].create({
+                    'move_id': sm.id,
+                    'picking_id': explosion_picking.id,
+                    'product_id': sm.product_id.id,
+                    'product_uom_id': sm.product_uom.id,
+                    'quantity': sm.product_uom_qty,
+                    'location_id': sm.location_id.id,
+                    'location_dest_id': sm.location_dest_id.id,
+                })
+            else:
+                for ml in sm.move_line_ids:
+                    ml.quantity = sm.product_uom_qty
+
+        explosion_picking.with_context(skip_backorder=True, skip_immediate=True).button_validate()
+
+        self.message_post(
+            body=_('Éclatement cartons effectué → transfert <b>%s</b> créé.') % explosion_picking.name,
+            message_type='notification',
+        )
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Éclatement cartons'),
+            'res_model': 'stock.picking',
+            'res_id': explosion_picking.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
+
+    # _process_pack_explosion et _process_unit_to_pack_sync supprimés :
+    # ils créaient des ajustements d'inventaire sur du stock déjà modifié
+    # par le picking → double-décrémentation → corruption AVCO.
 
     def _get_pack_template_for_move(self, move):
         """Récupère le template pack pour un mouvement de carton"""
@@ -125,146 +187,11 @@ class StockPicking(models.Model):
             ("company_id", "in", [False, self.company_id.id]),
         ], limit=1)
 
-    def _create_inventory_adjustment_for_units(self, carton_move, pack_template):
-        """
-        Crée un ajustement d'inventaire pour les unités
-        Pattern identique au wizard stock.change.product.qty d'Odoo
-        """
-        child_product = pack_template.pack_child_product_id
-        units_qty = carton_move.quantity * pack_template.pack_qty
-
-        try:
-            # Utiliser le wizard standard d'Odoo pour l'ajustement
-            wizard_vals = {
-                'product_id': child_product.id,
-                'location_id': carton_move.location_dest_id.id,
-                'new_quantity': self._get_current_qty(child_product, carton_move.location_dest_id) + units_qty,
-                'product_tmpl_id': child_product.product_tmpl_id.id,
-            }
-
-            wizard = self.env['stock.change.product.qty'].create(wizard_vals)
-            wizard.change_product_qty()
-
-            _logger.info(f"[PACK_EXPLOSION] {carton_move.quantity} cartons → "
-                         f"+{units_qty} unités {child_product.display_name}")
-
-        except Exception as e:
-            _logger.error(f"[PACK_EXPLOSION] Erreur ajustement: {str(e)}")
-            # Fallback sur méthode directe
-            self._direct_inventory_adjustment(child_product, carton_move.location_dest_id, units_qty)
-
-    def _process_template_unit_sync(self, pack_template):
-        """
-        Traite la synchronisation pour un template pack donné
-        Cumule toutes les unités livrées dans ce picking
-        """
-        child_product = pack_template.pack_child_product_id
-        pack_product = pack_template.product_variant_id
-
-        if not pack_product:
-            _logger.error(f"[UNIT_SYNC] Pas de variante pour {pack_template.name}")
-            return
-
-        # Calculer total unités livrées pour ce produit enfant
-        total_units = sum(
-            move.quantity for move in self.move_ids
-            if move.product_id == child_product and move.state == "done"
-        )
-
-        if total_units <= 0:
-            return
-
-        # Mettre à jour compteur et traiter cartons complets
-        self._update_template_counter_and_process(pack_template, pack_product, total_units)
-
-    def _update_template_counter_and_process(self, pack_template, pack_product, delivered_units):
-        """
-        Met à jour le compteur d'unités en attente et traite les cartons complets
-        """
-        current_pending = pack_template.pending_units
-        new_pending = current_pending + delivered_units
-
-        # Calculer cartons complets
-        full_cartons = int(new_pending // pack_template.pack_qty)
-        remaining_units = new_pending % pack_template.pack_qty
-
-        if full_cartons > 0:
-            # Ajustement d'inventaire pour les cartons (pattern standard Odoo)
-            self._create_inventory_adjustment_for_cartons(pack_product, -full_cartons)
-
-        # Mettre à jour le compteur
-        pack_template.write({'pending_units': remaining_units})
-
-        _logger.info(f"[UNIT_SYNC] {delivered_units} unités → "
-                     f"{full_cartons} cartons décrémentés, "
-                     f"{remaining_units} unités en attente")
-
-    def _create_inventory_adjustment_for_cartons(self, pack_product, carton_adjustment):
-        """
-        Crée un ajustement d'inventaire pour les cartons
-        Utilise le pattern standard d'Odoo (même que Update Qty on Hand)
-        """
-        try:
-            # Obtenir la localisation stock
-            stock_location = self._get_main_stock_location()
-            if not stock_location:
-                raise UserError(_("Impossible de trouver l'emplacement de stock principal"))
-
-            current_qty = self._get_current_qty(pack_product, stock_location)
-            new_qty = max(0, current_qty + carton_adjustment)  # Éviter les négatifs
-
-            # Utiliser le wizard standard d'ajustement d'Odoo
-            wizard_vals = {
-                'product_id': pack_product.id,
-                'location_id': stock_location.id,
-                'new_quantity': new_qty,
-                'product_tmpl_id': pack_product.product_tmpl_id.id,
-            }
-
-            wizard = self.env['stock.change.product.qty'].create(wizard_vals)
-            wizard.change_product_qty()
-
-            _logger.info(f"[UNIT_SYNC] Ajustement cartons: {carton_adjustment} pour {pack_product.display_name}")
-
-        except Exception as e:
-            _logger.error(f"[UNIT_SYNC] Erreur ajustement cartons: {str(e)}")
-            # Fallback sur méthode directe
-            self._direct_inventory_adjustment(pack_product, stock_location, carton_adjustment)
-
-    def _decrement_units_for_sold_cartons(self, carton_move, pack_template):
-        """
-        Décrémente les unités correspondantes lors de la vente de cartons
-        """
-        child_product = pack_template.pack_child_product_id
-        units_to_remove = carton_move.quantity * pack_template.pack_qty
-
-        try:
-            # Obtenir la localisation stock
-            stock_location = self._get_main_stock_location()
-            if not stock_location:
-                raise UserError(_("Impossible de trouver l'emplacement de stock principal"))
-
-            current_units = self._get_current_qty(child_product, stock_location)
-            new_units = max(0, current_units - units_to_remove)  # Éviter les négatifs
-
-            # Utiliser le wizard standard d'ajustement d'Odoo
-            wizard_vals = {
-                'product_id': child_product.id,
-                'location_id': stock_location.id,
-                'new_quantity': new_units,
-                'product_tmpl_id': child_product.product_tmpl_id.id,
-            }
-
-            wizard = self.env['stock.change.product.qty'].create(wizard_vals)
-            wizard.change_product_qty()
-
-            _logger.info(f"[PACK_SALE] {carton_move.quantity} cartons vendus → "
-                         f"-{units_to_remove} unités {child_product.display_name}")
-
-        except Exception as e:
-            _logger.error(f"[PACK_SALE] Erreur ajustement unités: {str(e)}")
-            # Fallback sur méthode directe
-            self._direct_inventory_adjustment(child_product, stock_location, -units_to_remove)
+    # Méthodes supprimées (corrompaient l'AVCO par double-décrémentation SVL) :
+    # _create_inventory_adjustment_for_units, _process_template_unit_sync,
+    # _update_template_counter_and_process, _create_inventory_adjustment_for_cartons,
+    # _decrement_units_for_sold_cartons
+    # → remplacées par action_eclater_cartons_en_unites (transfert interne propre).
 
     def _get_current_qty(self, product, location):
         """Récupère la quantité actuelle d'un produit dans un emplacement"""
@@ -293,92 +220,6 @@ class StockPicking(models.Model):
                 ('company_id', '=', self.company_id.id)
             ], limit=1)
 
-    def _direct_inventory_adjustment(self, product, location, qty_adjustment):
-        """
-        Méthode de fallback pour ajustement direct via stock.quant
-        Utilise la méthode core _update_available_quantity
-        """
-        try:
-            self.env['stock.quant']._update_available_quantity(
-                product,
-                location,
-                qty_adjustment,
-                package_id=False,
-                lot_id=False,
-                owner_id=False
-            )
-
-            # Invalider le cache
-            product.invalidate_recordset(['qty_available'])
-
-            _logger.info(f"[DIRECT_ADJUST] Ajustement direct: {qty_adjustment} pour {product.display_name}")
-
-        except Exception as e:
-            _logger.error(f"[DIRECT_ADJUST] Échec ajustement direct: {str(e)}")
-
-    def _create_unit_decrement_move(self, unit_product, location, qty_to_remove):
-        """
-        Crée un mouvement de stock interne pour décrémenter les unités
-        """
-        # Utiliser l'emplacement d'inventaire pour les ajustements
-        inventory_loss_location = self.env.ref('stock.stock_location_inventory', raise_if_not_found=False)
-        if not inventory_loss_location:
-            # Créer un emplacement virtuel si nécessaire
-            inventory_loss_location = self.env['stock.location'].search([
-                ('usage', '=', 'inventory'),
-                ('company_id', '=', self.company_id.id)
-            ], limit=1)
-
-        if not inventory_loss_location:
-            raise UserError(_("Impossible de trouver un emplacement d'inventaire"))
-
-        # Créer le mouvement de stock
-        move_vals = {
-            'name': f'Sync Pack: Décrement unités pour vente carton',
-            'product_id': unit_product.id,
-            'product_uom_qty': qty_to_remove,
-            'product_uom': unit_product.uom_id.id,
-            'location_id': location.id,
-            'location_dest_id': inventory_loss_location.id,
-            'move_type': 'direct',
-            'origin': f'Pack sync - {self.name}',
-            'company_id': self.company_id.id,
-        }
-
-        move = self.env['stock.move'].create(move_vals)
-        move._action_confirm()
-        move._action_assign()
-        move.move_line_ids.write({'qty_done': qty_to_remove})
-        move._action_done()
-
-        _logger.info(f"[UNIT_MOVE] Mouvement créé: -{qty_to_remove} {unit_product.name}")
-
-    def _force_unit_adjustment(self, unit_product, qty_adjustment):
-        """
-        Force un ajustement d'inventaire direct
-        """
-        try:
-            stock_location = self._get_main_stock_location()
-            current_qty = self._get_current_qty(unit_product, stock_location)
-            new_qty = max(0, current_qty + qty_adjustment)
-
-            # Forcer via stock.quant directement
-            quant = self.env['stock.quant'].search([
-                ('product_id', '=', unit_product.id),
-                ('location_id', '=', stock_location.id)
-            ], limit=1)
-
-            if quant:
-                quant.quantity = new_qty
-            else:
-                # Créer un nouveau quant si nécessaire
-                self.env['stock.quant'].create({
-                    'product_id': unit_product.id,
-                    'location_id': stock_location.id,
-                    'quantity': new_qty,
-                })
-
-            _logger.info(f"[FORCE_ADJUST] Ajustement forcé: {qty_adjustment} pour {unit_product.name}")
-
-        except Exception as e:
-            _logger.error(f"[FORCE_ADJUST] Échec ajustement forcé: {str(e)}")
+    # _direct_inventory_adjustment, _create_unit_decrement_move et _force_unit_adjustment
+    # supprimés : écrire directement sur stock.quant.quantity bypasse le SVL et
+    # corrompt l'AVCO de façon irréversible. Aucun fallback silencieux accepté.

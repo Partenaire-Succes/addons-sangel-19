@@ -251,7 +251,7 @@ class ImportLoyaltyPointsLine(models.TransientModel):
     partner_id = fields.Many2one('res.partner', string='Partenaire', readonly=True)
     program_id = fields.Many2one('loyalty.program', string='Programme', readonly=True)
     points_old = fields.Float(string='Solde actuel', readonly=True)
-    points_new = fields.Float(string='Nouveau solde', readonly=True)
+    points_new = fields.Float(string='Solde cumulé', readonly=True)
     status = fields.Selection([
         ('ok', 'Prêt'),
         ('card_not_found', 'Carte non trouvée'),

@@ -19,7 +19,7 @@
                     <div class="pos-receipt-food-credit-balance text-start pt-2"
                          style="font-size: 90%; border-top: 1px dashed #777; margin-top: 8px; padding-top: 8px;">
                         <div class="fw-bold mb-1" style="font-size: 102%;">
-                            &#9651; Crédit alimentaire
+                            Crédit alimentaire
                         </div>
 
                         <!-- Montant utilisé dans cette vente (si > 0) -->
