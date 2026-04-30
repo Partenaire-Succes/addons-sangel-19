@@ -279,7 +279,7 @@ class PosHistoryImportWizard(models.TransientModel):
             else:
                 if state != 'error':
                     state = 'warning'
-                msgs.append(f"Client '{cname or cref}' non trouvé → sera créé à l'import.")
+                msgs.append(f"Client '{cname or cref}' non trouvé → le client sera ignoré.")
 
         msg = ' | '.join(msgs) if msgs else ('✅ Prêt' if state == 'ok' else '')
         return state, msg, prod_id, partner_id
@@ -615,13 +615,14 @@ class PosHistoryImportWizard(models.TransientModel):
         amount_paid   = amount_total
         amount_return = 0.0
 
+        # Créer en draft d'abord — Odoo 19 bloque pos.payment sur une commande 'done'
         order = self.env['pos.order'].with_context(**ctx).sudo().create({
             'name':          order_data['name'],
             'date_order':    order_data['date_order'],
             'session_id':    session.id,
             'config_id':     self.pos_config_id.id,
             'partner_id':    partner_id or False,
-            'state':         'done',
+            'state':         'draft',
             'lines':         lines_vals,
             'amount_total':  amount_total,
             'amount_tax':    amount_tax,
@@ -629,12 +630,16 @@ class PosHistoryImportWizard(models.TransientModel):
             'amount_return': amount_return,
         })
 
+        # Créer le paiement pendant que la commande est encore en draft
         self.env['pos.payment'].with_context(**ctx).sudo().create({
             'pos_order_id':      order.id,
             'payment_method_id': self.payment_method_id.id,
             'amount':            amount_paid,
             'session_id':        session.id,
         })
+
+        # Passer en done une fois le paiement attaché
+        order.with_context(**ctx).sudo().write({'state': 'done'})
 
         return order, len(order_data['lines'])
 
