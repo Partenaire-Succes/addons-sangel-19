@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!--
+            Garde-fou AVCO : détecte chaque nuit les produits dont le coût standard
+            est aberrant (négatif ou supérieur au seuil configuré) et envoie
+            un email d'alerte à l'administrateur.
+        -->
+        <record id="ir_cron_avco_guard" model="ir.cron">
+            <field name="name">Garde-fou AVCO — Détection coûts aberrants</field>
+            <field name="model_id" ref="stock_account.model_product_product"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_check_avco_sanity()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="active">True</field>
+            <field name="user_id" ref="base.user_root"/>
+        </record>
+    </data>
+</odoo>

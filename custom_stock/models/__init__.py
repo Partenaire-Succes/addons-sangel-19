@@ -30,4 +30,6 @@ from . import (
     account,
     company_state,
     physical_inventory_retour,
+    avco_guard,
+    stock_avco_report_override,
 )

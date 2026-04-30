@@ -20,6 +20,7 @@
     'depends': [
         'base',
         'stock',
+        'stock_account',
         'product',
         'sale',
         'purchase',
@@ -30,6 +31,7 @@
     ],
     'data': [
         'security/ir.model.access.csv',
+        'data/avco_guard_cron.xml',
         'security/product_security.xml',
         'security/stock_picking_inter_security.xml',
         'data/code_category_inventory_data.xml',
