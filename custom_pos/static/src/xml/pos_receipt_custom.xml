@@ -28,6 +28,11 @@
             <div style="border-bottom:1px solid #000; margin:2px 0 4px 0;"/>
         </xpath>
 
+        <!-- Traduire "Subtotal" → "Sous-total" -->
+        <xpath expr="//span[hasclass('text-nowrap') and hasclass('mw-100')]" position="replace">
+            <span class="text-nowrap mw-100">Sous-total</span>
+        </xpath>
+
         <!-- Remplacer "Total" par "Net à Payer" avec double bordure -->
         <xpath expr="//div[hasclass('receipt-total')]" position="replace">
             <div class="pos-receipt-amount receipt-total fw-bolder"
@@ -36,6 +41,16 @@
                 <span t-out="formatCurrency(taxTotals.order_sign * taxTotals.order_total)"
                       class="pos-receipt-right-align font-monospace"/>
             </div>
+        </xpath>
+
+        <!-- Traduire "Change" → "Monnaie rendue" -->
+        <xpath expr="//span[hasclass('label-change')]" position="replace">
+            <span class="label-change">Monnaie rendue</span>
+        </xpath>
+
+        <!-- Traduire "Discounts" → "Remises accordées" -->
+        <xpath expr="//span[hasclass('label-discount')]" position="replace">
+            <span class="label-discount">Remises accordées</span>
         </xpath>
 
     </t>

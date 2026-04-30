@@ -1,32 +1,113 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates id="template" xml:space="preserve">
-    <t t-name="custom_loyalty.OrderReceiptLoyaltyBalance" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
+    <t t-name="custom_loyalty.OrderReceiptLoyaltyBalance"
+       t-inherit="point_of_sale.OrderReceipt"
+       t-inherit-mode="extension">
+
+        <!--
+            Section fidélité en français, avant before-footer.
+            La section native Odoo en anglais (div.loyalty) est masquée via CSS
+            dans receipt_custom.css — approche plus robuste qu'un xpath sur
+            un élément injecté par un autre module.
+        -->
+        <!--
+            Injecter notre section Fidélité en français, avant before-footer.
+               Utilise getLoyaltyPoints() pour obtenir les points gagnés corrects
+               (ancien solde, points gagnés, points utilisés, nouveau solde réel).
+               Fallback sur la carte directe si getLoyaltyPoints n'a pas de données.
+        -->
         <xpath expr="//div[hasclass('before-footer')]" position="before">
             <t t-if="order.partner_id">
-                <t t-set="loyaltyCards" t-value="order.models and order.models['loyalty.card']"/>
-                <t t-set="partnerLoyaltyCard" t-value="loyaltyCards and loyaltyCards.find(card => card.partner_id?.id === order.partner_id.id || card.partner_id === order.partner_id.id)"/>
-                <t t-if="partnerLoyaltyCard">
-                    <t t-set="loyaltyPayment" t-value="paymentLines.find(line => line.payment_method_id.is_loyalty)"/>
-                    <t t-set="loyaltySpent" t-value="loyaltyPayment ? loyaltyPayment.getAmount() : 0"/>
-                    <t t-set="ancienSolde" t-value="partnerLoyaltyCard.points || 0"/>
-                    <t t-set="nouveauSolde" t-value="ancienSolde - loyaltySpent"/>
 
-                    <div class="pos-receipt-loyalty-balance text-start pt-2" style="font-size: 85%; border-top: 1px dashed #ccc; margin-top: 8px; padding-top: 8px;">
-                        <div class="fw-bold mb-1" style="font-size: 95%;">Fidélité</div>
+                <!-- Récupère les stats de fidélité calculées par le moteur loyalty -->
+                <t t-set="loyaltyStats"
+                   t-value="(order.getLoyaltyPoints and order.getLoyaltyPoints()) or []"/>
+                <t t-set="loyaltyStat"
+                   t-value="loyaltyStats.find(s => s.program and s.program.program_type === 'loyalty')"/>
+
+                <t t-if="loyaltyStat">
+                    <!-- Section principale : données depuis getLoyaltyPoints() -->
+                    <div class="pos-receipt-loyalty-balance text-start pt-2"
+                         style="font-size: 90%; border-top: 1px dashed #777; margin-top: 8px; padding-top: 8px;">
+
+                        <div class="fw-bold mb-1" style="font-size: 102%; letter-spacing: 0.02em;">
+                            &#9733; Fidélité
+                        </div>
+
+                        <!-- Ancien solde -->
                         <div class="d-flex justify-content-between">
-                            <span>Ancien solde:</span>
-                            <span t-out="formatCurrency(ancienSolde)" class="font-monospace"/>
+                            <span>Ancien solde :</span>
+                            <span class="font-monospace">
+                                <t t-esc="loyaltyStat.points.balance"/>
+                                <t t-esc="' ' + loyaltyStat.points.name"/>
+                            </span>
                         </div>
-                        <div class="d-flex justify-content-between text-danger">
-                            <span>Dépensé:</span>
-                            <span t-out="formatCurrency(loyaltySpent)" class="font-monospace"/>
+
+                        <!-- Points gagnés sur cette vente (affiché seulement si > 0) -->
+                        <t t-if="loyaltyStat.points.won > 0">
+                            <div class="d-flex justify-content-between" style="color: #1a7a1a;">
+                                <span>Points gagnés :</span>
+                                <span class="font-monospace fw-bold">
+                                    +<t t-esc="loyaltyStat.points.won"/>
+                                    <t t-esc="' ' + loyaltyStat.points.name"/>
+                                </span>
+                            </div>
+                        </t>
+
+                        <!-- Points utilisés (affiché seulement si > 0) -->
+                        <t t-if="loyaltyStat.points.spent > 0">
+                            <div class="d-flex justify-content-between text-danger">
+                                <span>Points utilisés :</span>
+                                <span class="font-monospace">
+                                    -<t t-esc="loyaltyStat.points.spent"/>
+                                    <t t-esc="' ' + loyaltyStat.points.name"/>
+                                </span>
+                            </div>
+                        </t>
+
+                        <!-- Nouveau solde = ancien + gagné - utilisé -->
+                        <div class="d-flex justify-content-between fw-bold"
+                             style="border-top: 1px solid #aaa; padding-top: 4px; margin-top: 4px;">
+                            <span>Nouveau solde :</span>
+                            <span class="font-monospace">
+                                <t t-esc="loyaltyStat.points.total"/>
+                                <t t-esc="' ' + loyaltyStat.points.name"/>
+                            </span>
                         </div>
-                        <div class="d-flex justify-content-between fw-bold" style="border-top: 1px solid #ccc; padding-top: 4px; margin-top: 4px;">
-                            <span>Nouveau solde:</span>
-                            <span t-out="formatCurrency(nouveauSolde)" class="font-monospace"/>
-                        </div>
+
                     </div>
                 </t>
+
+                <t t-else="">
+                    <!--
+                        Fallback : carte directe si getLoyaltyPoints n'a pas retourné
+                        de programme loyalty (ex: programme non configuré pour ce POS).
+                    -->
+                    <t t-set="loyaltyCards"
+                       t-value="order.models and order.models['loyalty.card']"/>
+                    <t t-set="partnerLoyaltyCard"
+                       t-value="loyaltyCards and loyaltyCards.find(
+                           card => card.partner_id and (
+                               card.partner_id.id === order.partner_id.id or
+                               card.partner_id === order.partner_id.id
+                           )
+                       )"/>
+                    <t t-if="partnerLoyaltyCard">
+                        <div class="pos-receipt-loyalty-balance text-start pt-2"
+                             style="font-size: 90%; border-top: 1px dashed #777; margin-top: 8px; padding-top: 8px;">
+                            <div class="fw-bold mb-1" style="font-size: 102%;">
+                                &#9733; Fidélité
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Solde :</span>
+                                <span class="font-monospace fw-bold">
+                                    <t t-esc="partnerLoyaltyCard.points || 0"/> pts
+                                </span>
+                            </div>
+                        </div>
+                    </t>
+                </t>
+
             </t>
         </xpath>
     </t>

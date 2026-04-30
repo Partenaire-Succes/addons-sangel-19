@@ -90,25 +90,30 @@ function applyGlobalDiscountToLine(line, partner) {
         return false;
     }
 
+    // La promo prime sur tout : si une remise promotionnelle est active sur cette ligne,
+    // la remise globale partenaire ne s'applique jamais, quelle que soit sa valeur.
+    if (line._promoDiscountApplied) {
+        return false;
+    }
+
     const product = line.product_id;
-    
+
     if (shouldApplyGlobalDiscount(partner, product)) {
         const discountPercentage = getGlobalDiscountPercentage(partner);
-        const currentDiscount = line.getDiscount() || 0;
-        
-        // Apply global only if: no manual/promo discount blocks it, or global is strictly higher
-        if ((!line._manualDiscountApplied && !line._promoDiscountApplied) || currentDiscount < discountPercentage) {
+
+        // Applique la remise globale seulement si pas de remise manuelle caissière
+        if (!line._manualDiscountApplied) {
             line.setDiscount(discountPercentage);
             line._globalDiscountApplied = true;
             return true;
         }
-    } else if (line._globalDiscountApplied && !line._promoDiscountApplied) {
-        // Remove auto-applied global discount only if no promo is active on this line
+    } else if (line._globalDiscountApplied) {
+        // Retire la remise globale si les conditions ne sont plus remplies
         line.setDiscount(0);
         line._globalDiscountApplied = false;
         return true;
     }
-    
+
     return false;
 }
 
