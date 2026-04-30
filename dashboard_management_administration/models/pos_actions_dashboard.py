@@ -121,7 +121,7 @@ class PosActionsDashboard(models.Model):
                 ('company_id', '=', company_id),
                 ('sage_x3_sent', '=', False),
                 ('state', '=', 'closed'),
-            ]),
+            ])
         return {
             # Produits accessibles à cette société
             'product_count': self.env['product.template'].search_count([
