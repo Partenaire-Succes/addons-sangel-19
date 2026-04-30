@@ -24,7 +24,7 @@
                                         <list string="Stock Valorisé">
                                             <field name="code_article"/>
                                             <field name="display_name" string="Article"/>
-                                            <field name="categ_id" string="Categorie"/>
+                                            <field name="cat_gestion_id" string="Niveau 5"/>
                                             <field name="qty_available" string="STOCK"/>
                                             <field name="avg_cost" widget="monetary" string="PAMP" options="{'currency_field': 'currency_id'}"/>
                                             <field name="total_value" widget="monetary"

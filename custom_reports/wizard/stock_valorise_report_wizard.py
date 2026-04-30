@@ -28,6 +28,11 @@ class StockValoriseReport(models.TransientModel):
         string='Catégories'
     )
 
+    cat_gestion_ids = fields.Many2many(
+        'product.category.x3',
+        string='Niveau 5'
+    )
+
     product_ids = fields.Many2many(
         'product.product',
         string='Produits',
@@ -41,15 +46,15 @@ class StockValoriseReport(models.TransientModel):
     )
 
 
-    @api.depends('company_id', 'category_ids')
+    @api.depends('company_id', 'cat_gestion_ids')
     def _compute_product_ids(self):
         """Détermine les produits concernés par la société et les catégories choisies."""
         for record in self:
             domain = [
                 ('allowed_company_ids', 'in', [record.company_id.id]),
             ]
-            if record.category_ids:
-                domain.append(('categ_id', 'in', record.category_ids.ids))
+            if record.cat_gestion_ids:
+                domain.append(('cat_gestion_id', 'in', record.cat_gestion_ids.ids))
 
             record.product_ids = self.env['product.product'].search(domain)
 
@@ -95,8 +100,8 @@ class StockValoriseReport(models.TransientModel):
         total_valorisation = 0.0
 
         for product in self.product_ids:
-            categ = product.categ_id
-            categ_id = categ.id
+            categ = product.cat_gestion_id
+            cat_gestion_id = categ.id
 
             # 🧠 Code article géré proprement
             code_article = product.code_article or product.product_tmpl_id.code_article or ''
@@ -109,25 +114,25 @@ class StockValoriseReport(models.TransientModel):
             pamp = product.standard_price or 0.0
             valorisation = float_round(qty * pamp, 2)
 
-            if categ_id not in categories:
-                categories[categ_id] = {
+            if cat_gestion_id not in categories:
+                categories[cat_gestion_id] = {
                     'category': categ.name,
-                    'category_code': categ.complete_name or categ.name,
+                    'category_code': categ.description or categ.name,
                     'products': [],
                     'total': 0.0,
                 }
 
-            categories[categ_id]['products'].append({
+            categories[cat_gestion_id]['products'].append({
                 'code_article': code_article,
                 'default_code': product.default_code or '',
                 'name': product.name,
-                'category_code': categ.name,
+                'category_code': categ.description,
                 'qty': float_round(qty, 2),
                 'pamp': float_round(pamp, 2),
                 'valorisation': valorisation,
             })
 
-            categories[categ_id]['total'] += valorisation
+            categories[cat_gestion_id]['total'] += valorisation
             total_articles += 1
             total_qty += qty
             total_valorisation += valorisation
