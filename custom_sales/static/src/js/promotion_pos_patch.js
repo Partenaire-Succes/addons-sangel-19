@@ -158,18 +158,13 @@ patch(PosStore.prototype, {
                 const promoDiscount = getPromotionDiscount(this.models, productId);
 
                 if (promoDiscount > 0) {
-                    const currentDiscount = selectedLine.getDiscount() || 0;
-
-                    // Applique uniquement si la remise promo est plus haute
-                    if (promoDiscount > currentDiscount) {
-                        selectedLine.setDiscount(promoDiscount);
-                        selectedLine._promoDiscountApplied = true;
-                        // Si la remise globale était appliquée et est plus faible, on la remplace
-                        if (selectedLine._globalDiscountApplied) {
-                            selectedLine._globalDiscountApplied = false;
-                        }
-                        order.recomputeOrderData();
-                    }
+                    // La promo prime sur tout : on applique toujours la remise promo
+                    // dès qu'elle existe, sans comparer avec le discount en cours.
+                    // Cela écrase toute remise globale partenaire ou autre.
+                    selectedLine.setDiscount(promoDiscount);
+                    selectedLine._promoDiscountApplied = true;
+                    selectedLine._globalDiscountApplied = false;
+                    order.recomputeOrderData();
                 }
             }
         }

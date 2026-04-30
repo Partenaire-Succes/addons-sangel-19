@@ -47,6 +47,8 @@
     
     "assets": {
         "point_of_sale._assets_pos": [
+            # Ticket readability — CSS overrides (load first)
+            "/custom_pos/static/src/css/receipt_custom.css",
             # Currency conversion feature - popup must load before patch
             "/custom_pos/static/src/js/CurrencyConversionPopup.js",
             "/custom_pos/static/src/xml/currency_conversion_popup.xml",

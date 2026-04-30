@@ -1,0 +1,35 @@
+/* =====================================================================
+   SANgel — Uniformisation du ticket de caisse
+   Correction des tailles natives Odoo (trop petites à 75%)
+   ===================================================================== */
+
+/* En-tête : caissière, nom caisse, texte header config */
+.pos-receipt .pos-receipt-contact,
+.pos-receipt-print .pos-receipt-contact {
+    font-size: 90% !important;
+    text-align: center;
+}
+
+/* Nom du client : légèrement plus grand et semi-gras */
+.pos-receipt .pos-receipt-customer,
+.pos-receipt-print .pos-receipt-customer {
+    font-size: 95% !important;
+    font-weight: 600 !important;
+    text-align: center;
+}
+
+/* N° ticket et date : inline style 75% → on remonte via les enfants directs.
+   1.2em × parent 75% ≈ 90% du corps du ticket. */
+.pos-receipt .pos-receipt-vat,
+.pos-receipt #order-date,
+.pos-receipt-print .pos-receipt-vat,
+.pos-receipt-print #order-date {
+    font-size: 1.2em !important;
+}
+
+/* Masque la section fidélité native Odoo en anglais (Won / Balance).
+   Remplacée par notre section française dans receipt_loyalty_balance.xml. */
+.pos-receipt div.loyalty,
+.pos-receipt-print div.loyalty {
+    display: none !important;
+}

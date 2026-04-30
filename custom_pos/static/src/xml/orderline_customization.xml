@@ -123,6 +123,16 @@
             </attribute>
         </xpath>
 
+        <!-- Traduire "discount off on" → "de remise sur" sur le ticket -->
+        <xpath expr="//li[@t-if='line.discount']" position="replace">
+            <li t-if="line.discount" class="price-per-unit">
+                <t t-set="discount" t-value="line.getDiscountStr()" />
+                <t t-if="!props.basic_receipt and discount and discount !== '0' and !line.combo_parent_id">
+                    <i class="fa fa-tag pe-1"/><em><t t-esc="discount"/>% de remise sur </em><t t-esc="line.computePriceWithTaxBeforeDiscount()"/>
+                </t>
+            </li>
+        </xpath>
+
     </t>
 
 </templates>
