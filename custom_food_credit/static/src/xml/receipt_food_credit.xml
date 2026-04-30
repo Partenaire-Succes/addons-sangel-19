@@ -9,19 +9,35 @@
                    t-value="paymentLines.find(line => line.payment_method_id.is_food)"/>
                 <t t-set="foodCreditPaid"
                    t-value="foodCreditPayment ? foodCreditPayment.getAmount() : 0"/>
+                <t t-set="foodCreditBalance"
+                   t-value="order.partner_id.food_credit_balance || 0"/>
                 <t t-set="remainingBalance"
-                   t-value="(order.partner_id.food_credit_balance || 0) - foodCreditPaid"/>
-                <div class="pos-receipt-food-credit-balance text-start pt-2"
-                     style="font-size: 90%; border-top: 1px dashed #777; margin-top: 8px; padding-top: 8px;">
-                    <div class="fw-bold mb-1" style="font-size: 102%;">
-                        &#9651; Crédit alimentaire
+                   t-value="foodCreditBalance - foodCreditPaid"/>
+
+                <!-- Affiche uniquement si le client a un solde crédit ou a utilisé du crédit -->
+                <t t-if="foodCreditBalance > 0 or foodCreditPaid > 0">
+                    <div class="pos-receipt-food-credit-balance text-start pt-2"
+                         style="font-size: 90%; border-top: 1px dashed #777; margin-top: 8px; padding-top: 8px;">
+                        <div class="fw-bold mb-1" style="font-size: 102%;">
+                            &#9651; Crédit alimentaire
+                        </div>
+
+                        <!-- Montant utilisé dans cette vente (si > 0) -->
+                        <t t-if="foodCreditPaid > 0">
+                            <div class="d-flex justify-content-between text-danger">
+                                <span>Utilisé :</span>
+                                <span t-out="formatCurrency(foodCreditPaid)"
+                                      class="font-monospace"/>
+                            </div>
+                        </t>
+
+                        <div class="d-flex justify-content-between fw-bold">
+                            <span>Solde restant :</span>
+                            <span t-out="formatCurrency(remainingBalance)"
+                                  class="font-monospace"/>
+                        </div>
                     </div>
-                    <div class="d-flex justify-content-between">
-                        <span>Solde restant :</span>
-                        <span t-out="formatCurrency(remainingBalance)"
-                              class="font-monospace fw-bold"/>
-                    </div>
-                </div>
+                </t>
             </t>
         </xpath>
     </t>
