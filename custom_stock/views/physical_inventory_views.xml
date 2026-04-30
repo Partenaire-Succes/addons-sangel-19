@@ -13,7 +13,7 @@
                                 class="btn-primary" invisible="state != 'draft'"/>
 
                         <button name="update_price" type="object" string="Mise a Jours"
-                                class="btn-primary"/>
+                                class="btn-primary" invisible="1"/>
 
                         <button name="action_done" 
                                 type="object"

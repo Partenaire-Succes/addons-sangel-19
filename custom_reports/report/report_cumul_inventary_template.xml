@@ -74,10 +74,10 @@
                                                       t-options='{"widget": "float", "precision": 2}'/>
                                             </td>
                                             <td class="text-end">
-                                                <span t-field="line.standard_price"/>
+                                                <span t-field="line.price"/>
                                             </td>
                                             <td class="text-end">
-                                                <span t-field="line.valorisation"/>
+                                                <span t-esc="'%.2f' % ((line.qty_diff or 0.0) * (line.price or 0.0))"/>
                                             </td>
                                         </tr>
                                     </t>

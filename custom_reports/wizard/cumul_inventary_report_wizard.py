@@ -73,7 +73,7 @@ class CumulInventaryReportWizard(models.TransientModel):
 
                 grouped[key]['lines'].append(line)
                 grouped[key]['total_ecart'] += line.qty_diff or 0.0
-                grouped[key]['total_montant'] += line.valorisation or 0.0
+                grouped[key]['total_montant'] += (line.qty_diff or 0.0) * (line.price or 0.0)
 
             record.grouped_data = str(grouped)
 
@@ -100,7 +100,7 @@ class CumulInventaryReportWizard(models.TransientModel):
 
             grouped[key]['lines'].append(line)
             grouped[key]['total_ecart'] += line.qty_diff or 0.0
-            grouped[key]['total_montant'] += line.valorisation or 0.0
+            grouped[key]['total_montant'] += (line.qty_diff or 0.0) * (line.price or 0.0)
 
         # Convertir en liste et trier par code article
         result = sorted(grouped.values(), key=lambda x: x['code_article'])
@@ -160,7 +160,7 @@ class CumulInventaryReportWizard(models.TransientModel):
                     line.create_date.strftime('%d/%m/%Y') if line.create_date else '',
                     line.qty_diff or 0.0,
                     line.price or 0.0,
-                    line.valorisation or 0.0,
+                    (line.qty_diff or 0.0) * (line.price or 0.0),
                 ])
                 r = ws.max_row
                 for col in range(1, 8):
