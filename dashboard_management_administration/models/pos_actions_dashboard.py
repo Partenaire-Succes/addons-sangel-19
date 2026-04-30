@@ -116,6 +116,12 @@ class PosActionsDashboard(models.Model):
 
     def _get_statistics(self, company_id):
         """Retourne les compteurs affichés sur le dashboard."""
+
+        sessions = self.env['pos.session'].search([
+                ('company_id', '=', company_id),
+                ('sage_x3_sent', '=', False),
+                ('state', '=', 'closed'),
+            ]),
         return {
             # Produits accessibles à cette société
             'product_count': self.env['product.template'].search_count([
@@ -141,22 +147,9 @@ class PosActionsDashboard(models.Model):
                 ('type_supplier',     '!=', 'local'),
             ]),
 
-            # FIX : utilise sage_x3_sent (pas sage_x3_submitted qui n'existe pas sur account.move)
-            # Ne compte que les factures clients hors POS non encore envoyées
-            # 'invoices_to_send': self.env['account.move'].search_count([
-            #     ('company_id',     '=',  company_id),
-            #     ('move_type',     'in', ['out_invoice', 'out_refund']),
-            #     ('state',          '=',  'posted'),
-            #     ('sage_x3_sent',   '=',  False),
-            #     ('pos_order_ids',  '=',  False),
-            # ]),
-
-            'invoices_to_send': self.env['pos.session'].search_count([
-                ('company_id',   '=', company_id),
-                ('sage_x3_sent', '=',  False),
-                ('state',        '=', 'closed'),
-                ('cash_register_balance_end', '>', 0),
-            ]),
+            'invoices_to_send': len(
+                sessions.filtered(lambda s: s.cash_register_balance_end > 0)
+            ),
             
 
             # Commandes validées par SAGE X3 mais livraison non encore reçue

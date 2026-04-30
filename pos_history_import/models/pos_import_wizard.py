@@ -651,7 +651,7 @@ class PosHistoryImportWizard(models.TransientModel):
             p = P.search([('name', 'ilike', name)], limit=1)
             if p:
                 return p
-            return P.sudo().create({'name': name, 'customer_rank': 1})
+            # return P.sudo().create({'name': name, 'customer_rank': 1})
         return P
 
     def _find_product(self, ref, name):

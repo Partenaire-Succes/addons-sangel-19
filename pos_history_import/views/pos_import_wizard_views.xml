@@ -38,13 +38,6 @@
                 <field name="price_unit"     string="Prix unit. TTC"
                        widget="monetary" options="{'currency_field': 'currency_id'}"
                        optional="show"/>
-                <field name="discount"       string="Remise %"        optional="show"/>
-
-                <!-- Paiement (1ère ligne de chaque commande) -->
-                <field name="payment_method" string="Mode paiement"   optional="show"/>
-                <field name="amount_paid"    string="Montant payé"
-                       widget="monetary" options="{'currency_field': 'currency_id'}"
-                       optional="show"/>
 
                 <!-- Note -->
                 <field name="note"           string="Note"            optional="hide"/>
@@ -164,7 +157,9 @@
                                 <field name="pos_config_id"
                                        options="{'no_create': True}"
                                        placeholder="Sélectionnez votre POS..."/>
-                                <field name="grouping" widget="radio"/>
+                                <field name="payment_method_id"
+                                        options="{'no_create': True}" 
+                                        domain="[('config_ids', 'in', [pos_config_id])]"/>
                             </group>
                             <group string="Fichier Excel">
                                 <field name="import_file"

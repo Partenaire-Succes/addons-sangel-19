@@ -259,13 +259,14 @@ class AccountMoveSageX3(models.Model):
         dt_min = datetime.combine(target_date, datetime.min.time())
         dt_max = datetime.combine(target_date, datetime.max.time())
 
-        pos_sessions = self.env['pos.session'].search([
+        sessions = self.env['pos.session'].search([
             ('company_id', '=', company.id),
             ('sage_x3_sent', '=',  False),
-            ('cash_register_balance_end', '>', 0),
             ('start_at',   '>=', dt_min),
             ('start_at',   '<=', dt_max),
         ])
+
+        pos_sessions = sessions.filtered(lambda s: s.cash_register_balance_end > 0)
 
         account_payments = self.env['account.payment'].search([
             ('company_id',   '=',  company.id),
