@@ -181,7 +181,10 @@ class PhysicalInventory(models.Model):
     def update_price(self):
         lines = self.env['physical.inventory.line'].search([])
         for line in lines:
-            line.price = line.standard_price
+            if line.qty_diff:
+                line.price = line.valorisation / line.qty_diff
+            else:
+                line.price = line.standard_price
 
 
     def mark_check(self):
