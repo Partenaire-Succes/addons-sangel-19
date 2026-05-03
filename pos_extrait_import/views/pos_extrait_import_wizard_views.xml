@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         VUE FORMULAIRE DU WIZARD — 3 étapes
+    ═══════════════════════════════════════════════════════════════════ -->
+    <record id="view_pos_extrait_import_wizard_form" model="ir.ui.view">
+        <field name="name">pos.extrait.import.wizard.form</field>
+        <field name="model">pos.extrait.import.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Import Extrait POS">
+                <sheet>
+
+                    <!-- ── Barre de progression des étapes ──────────────── -->
+                    <div style="
+                        display: flex; align-items: center; gap: 0;
+                        margin-bottom: 24px; background: #F8F9FA;
+                        border: 1px solid #DEE2E6; border-radius: 8px;
+                        padding: 12px 20px; font-size: 13px;
+                    ">
+                        <!-- Étape 1 -->
+                        <div style="display:flex;align-items:center;gap:8px;flex:1;">
+                            <span style="
+                                width:28px;height:28px;border-radius:50%;
+                                display:flex;align-items:center;justify-content:center;
+                                font-weight:bold;font-size:13px;
+                                background: #1F4E79; color: white;
+                            " invisible="state != 'draft'">1</span>
+                            <span style="
+                                width:28px;height:28px;border-radius:50%;
+                                display:flex;align-items:center;justify-content:center;
+                                font-weight:bold;font-size:13px;
+                                background: #28a745; color: white;
+                            " invisible="state == 'draft'">✓</span>
+                            <span style="font-weight:600;color:#1F4E79;"
+                                  invisible="state != 'draft'">⚙️ Configuration</span>
+                            <span style="color:#6C757D;"
+                                  invisible="state == 'draft'">⚙️ Configuration</span>
+                        </div>
+
+                        <div style="flex:0 0 40px;height:2px;background:#DEE2E6;"></div>
+
+                        <!-- Étape 2 -->
+                        <div style="display:flex;align-items:center;gap:8px;flex:1;">
+                            <span style="
+                                width:28px;height:28px;border-radius:50%;
+                                display:flex;align-items:center;justify-content:center;
+                                font-weight:bold;font-size:13px;
+                                background:#CED4DA;color:white;
+                            " invisible="state != 'draft'">2</span>
+                            <span style="
+                                width:28px;height:28px;border-radius:50%;
+                                display:flex;align-items:center;justify-content:center;
+                                font-weight:bold;font-size:13px;
+                                background:#1F4E79;color:white;
+                            " invisible="state != 'preview'">2</span>
+                            <span style="
+                                width:28px;height:28px;border-radius:50%;
+                                display:flex;align-items:center;justify-content:center;
+                                font-weight:bold;font-size:13px;
+                                background:#28a745;color:white;
+                            " invisible="state not in ['done','error']">✓</span>
+                            <span style="color:#6C757D;"
+                                  invisible="state == 'preview'">👁️ Prévisualisation</span>
+                            <span style="font-weight:600;color:#1F4E79;"
+                                  invisible="state != 'preview'">👁️ Prévisualisation</span>
+                        </div>
+
+                        <div style="flex:0 0 40px;height:2px;background:#DEE2E6;"></div>
+
+                        <!-- Étape 3 -->
+                        <div style="display:flex;align-items:center;gap:8px;flex:1;">
+                            <span style="
+                                width:28px;height:28px;border-radius:50%;
+                                display:flex;align-items:center;justify-content:center;
+                                font-weight:bold;font-size:13px;
+                                background:#CED4DA;color:white;
+                            " invisible="state in ['done','error']">3</span>
+                            <span style="
+                                width:28px;height:28px;border-radius:50%;
+                                display:flex;align-items:center;justify-content:center;
+                                font-weight:bold;font-size:13px;
+                                background:#28a745;color:white;
+                            " invisible="state not in ['done','error']">✓</span>
+                            <span style="color:#6C757D;"
+                                  invisible="state in ['done','error']">🚀 Import</span>
+                            <span style="font-weight:600;color:#1F4E79;"
+                                  invisible="state not in ['done','error']">🚀 Import</span>
+                        </div>
+                    </div>
+
+                    <!-- ════════════════════════════════════════════════════
+                         ÉTAPE 1 — CONFIGURATION
+                    ════════════════════════════════════════════════════ -->
+                    <div invisible="state != 'draft'">
+                        <div class="oe_title" style="margin-bottom:16px;">
+                            <h2 style="color:#1F4E79;">⚙️ Configuration de l'import</h2>
+                            <p class="text-muted">
+                                Sélectionnez votre POS et le mode de paiement,
+                                puis chargez votre fichier Excel au format extrait.
+                            </p>
+                        </div>
+
+                        <group>
+                            <group string="Point de Vente">
+                                <field name="pos_config_id"
+                                       options="{'no_create': True}"
+                                       placeholder="Sélectionnez votre POS..."/>
+                                <field name="payment_method_id"
+                                       options="{'no_create': True}"
+                                       domain="[('config_ids', 'in', [pos_config_id])]"/>
+                            </group>
+                            <group string="Fichier Excel">
+                                <field name="import_file"
+                                       widget="binary"
+                                       filename="import_filename"/>
+                                <field name="import_filename" invisible="1"/>
+                                <div class="text-muted" style="font-size:12px;margin-top:6px;">
+                                    Format attendu : <code>DATE | SESSION | COMMANDE | CODE | QTY | PRIX UNIT HT | PRIX UNIT TTC</code>
+                                </div>
+                            </group>
+                        </group>
+
+                        <div style="
+                            background:#EBF3FB;border-left:4px solid #1F4E79;
+                            padding:12px 16px;border-radius:4px;margin-top:12px;font-size:12px;
+                        ">
+                            <b>💡 Format :</b> La colonne <b>SESSION</b> définit le nom de la session POS créée
+                            (ex : <code>IMPORT-JANV</code>). La colonne <b>MARGE</b> est ignorée si présente.
+                            Téléchargez le template pour voir le format exact.
+                        </div>
+                    </div>
+
+
+                    <!-- ════════════════════════════════════════════════════
+                         ÉTAPE 2 — PRÉVISUALISATION
+                    ════════════════════════════════════════════════════ -->
+                    <div invisible="state != 'preview'">
+                        <div class="oe_title" style="margin-bottom:16px;">
+                            <h2 style="color:#1F4E79;">👁️ Prévisualisation des données</h2>
+                            <p class="text-muted">
+                                Vérifiez vos données avant de valider l'import.
+                                Corrigez les éventuelles erreurs dans votre fichier Excel
+                                et relancez la prévisualisation si nécessaire.
+                            </p>
+                        </div>
+
+                        <!-- Tableau de bord des statuts -->
+                        <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+                            <div style="flex:1;min-width:120px;background:#EBF3FB;border:1px solid #BDD7EE;border-radius:6px;padding:12px 16px;text-align:center;">
+                                <div style="font-size:22px;font-weight:bold;color:#1F4E79;">
+                                    <field name="preview_sessions" readonly="1" nolabel="1"/>
+                                </div>
+                                <div style="font-size:12px;color:#555;">Sessions</div>
+                            </div>
+                            <div style="flex:1;min-width:120px;background:#EBF3FB;border:1px solid #BDD7EE;border-radius:6px;padding:12px 16px;text-align:center;">
+                                <div style="font-size:22px;font-weight:bold;color:#1F4E79;">
+                                    <field name="preview_orders" readonly="1" nolabel="1"/>
+                                </div>
+                                <div style="font-size:12px;color:#555;">Commandes</div>
+                            </div>
+                            <div style="flex:1;min-width:120px;background:#EBF3FB;border:1px solid #BDD7EE;border-radius:6px;padding:12px 16px;text-align:center;">
+                                <div style="font-size:22px;font-weight:bold;color:#1F4E79;">
+                                    <field name="preview_total" readonly="1" nolabel="1"/>
+                                </div>
+                                <div style="font-size:12px;color:#555;">Lignes</div>
+                            </div>
+                            <div style="flex:1;min-width:120px;background:#D4EDDA;border:1px solid #C3E6CB;border-radius:6px;padding:12px 16px;text-align:center;">
+                                <div style="font-size:22px;font-weight:bold;color:#155724;">
+                                    <field name="preview_ok" readonly="1" nolabel="1"/>
+                                </div>
+                                <div style="font-size:12px;color:#155724;">✅ OK</div>
+                            </div>
+                            <div style="flex:1;min-width:120px;background:#F8D7DA;border:1px solid #F5C6CB;border-radius:6px;padding:12px 16px;text-align:center;">
+                                <div style="font-size:22px;font-weight:bold;color:#721C24;">
+                                    <field name="preview_errors" readonly="1" nolabel="1"/>
+                                </div>
+                                <div style="font-size:12px;color:#721C24;">❌ Erreurs</div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-danger"
+                             invisible="preview_errors == 0"
+                             style="border-left:4px solid #C00000;">
+                            <b>❌ Import bloqué :</b> des produits sont introuvables (lignes en rouge).
+                            Vérifiez les codes articles dans votre fichier et relancez la prévisualisation.
+                        </div>
+
+                        <div class="alert alert-success"
+                             invisible="preview_ok != preview_total or preview_total == 0"
+                             style="border-left:4px solid #28A745;">
+                            <b>✅ Toutes les lignes sont valides.</b>
+                            Vous pouvez valider l'import.
+                        </div>
+
+                        <!-- TABLE DE PRÉVISUALISATION -->
+                        <field name="preview_line_ids"
+                               widget="one2many_list"
+                               mode="list"
+                               nolabel="1"
+                               readonly="1">
+                            <list
+                                decoration-danger="line_state == 'error'"
+                                decoration-success="line_state == 'ok'"
+                                create="false" delete="false" edit="false"
+                                limit="500"
+                                string="Lignes à importer"
+                            >
+                                <field name="line_state"
+                                       widget="badge"
+                                       decoration-success="line_state == 'ok'"
+                                       decoration-danger="line_state == 'error'"
+                                       string="Statut"
+                                       optional="show"/>
+                                <field name="session_key"  string="Session"        optional="show"/>
+                                <field name="date_order"   string="Date"           optional="show"/>
+                                <field name="order_ref"    string="Commande"       optional="show"/>
+                                <field name="product_ref"  string="Code article"   optional="show"/>
+                                <field name="product_name" string="Produit"        optional="show"/>
+                                <field name="qty"          string="Qté"
+                                       digits="[12,3]"                             optional="show"/>
+                                <field name="price_ht"     string="Prix unit. HT"
+                                       digits="[12,2]"                             optional="show"/>
+                                <field name="price_unit"   string="Prix unit. TTC"
+                                       digits="[12,2]"                             optional="show"/>
+                                <field name="margin"       string="Marge"
+                                       digits="[12,2]"                             optional="show"/>
+                                <field name="message"      string="Message"        optional="show"/>
+                            </list>
+                        </field>
+
+                        <div class="text-muted" style="font-size:11px;margin-top:8px;">
+                            💡 Utilisez les icônes ⚙️ en haut à droite du tableau pour afficher/masquer les colonnes.
+                        </div>
+                    </div>
+
+
+                    <!-- ════════════════════════════════════════════════════
+                         ÉTAPE 3 — RÉSULTATS
+                    ════════════════════════════════════════════════════ -->
+                    <div invisible="state not in ['done', 'error']">
+
+                        <div class="alert alert-success"
+                             invisible="state != 'done'"
+                             style="border-left:4px solid #28A745;">
+                            <b>✅ Import terminé avec succès !</b>
+                            Vos données sont maintenant dans le POS.
+                        </div>
+                        <div class="alert alert-warning"
+                             invisible="state != 'error'"
+                             style="border-left:4px solid #C00000;">
+                            <b>⚠️ Import terminé avec des erreurs.</b>
+                            Consultez le journal ci-dessous.
+                        </div>
+
+                        <group string="📊 Résultats">
+                            <group>
+                                <field name="sessions_created" string="Sessions POS créées"/>
+                                <field name="orders_created"   string="Commandes créées"/>
+                            </group>
+                            <group>
+                                <field name="lines_created"    string="Lignes de commande créées"/>
+                                <field name="errors_count"     string="Erreurs rencontrées"/>
+                            </group>
+                        </group>
+
+                        <notebook>
+                            <page string="📋 Journal d'import">
+                                <field name="import_log" widget="html" readonly="1"
+                                       style="min-height:200px;"/>
+                            </page>
+                        </notebook>
+                    </div>
+
+                    <!-- Champs techniques -->
+                    <field name="state"      invisible="1"/>
+                    <field name="can_import" invisible="1"/>
+
+                </sheet>
+
+                <!-- ════════════════════════════════════════════════════════
+                     FOOTER
+                ════════════════════════════════════════════════════════ -->
+                <footer>
+
+                    <button name="action_preview"
+                            string="👁️  Prévisualiser"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state != 'draft'"/>
+
+                    <button name="action_import"
+                            string="✅  Valider l'import"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state != 'preview' or not can_import"
+                            confirm="Vous allez créer les sessions, commandes et paiements en base de données. Cette action est irréversible. Continuer ?"/>
+
+                    <button name="action_back_to_draft"
+                            string="⬅️  Modifier le fichier"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="state != 'preview'"/>
+
+                    <button name="action_download_template"
+                            string="📥  Template Excel"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="state not in ['draft', 'preview']"/>
+
+                    <button string="Fermer"
+                            class="btn-secondary"
+                            special="cancel"/>
+
+                </footer>
+
+            </form>
+        </field>
+    </record>
+
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         ACTION WINDOW
+    ═══════════════════════════════════════════════════════════════════ -->
+    <record id="action_pos_extrait_import_wizard" model="ir.actions.act_window">
+        <field name="name">Import Extrait POS</field>
+        <field name="res_model">pos.extrait.import.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_pos_extrait_import_wizard_form"/>
+        <field name="target">new</field>
+    </record>
+
+</odoo>
