@@ -584,7 +584,6 @@ class ProductTemplateImport(models.Model):
             "is_bassam":         self._verify_boolean(item.get("yafbsM_0")),
             "is_koumassi":       self._verify_boolean(item.get("yafkouM_0")),
             "allowed_company_ids": self._get_allowed_company_ids(item),
-            "code_inventory_id": self._get_code_inventory_id(item.get("yG5EMPLC_0")),
             "family_categ_id":   self._get_family_id(item.get("yG5FAM_0")),
             "categ_id":          self._get_family_id(item.get("yG5FAM_0")),
             "s_family_id":       self._get_sub_family_id(item.get("yG5SFAM_0")),
@@ -606,6 +605,10 @@ class ProductTemplateImport(models.Model):
         uom_ids = self._get_uom_ids(item.get("ypcB1_0"), item.get("saU_0"))
         if uom_ids is not None:
             vals["uom_ids"] = uom_ids
+
+        code_inventory_id = self._get_code_inventory_id(item.get("yG5EMPLC_0"))
+        if code_inventory_id:
+            vals["code_inventory_id"] = code_inventory_id
 
         return vals
 
@@ -860,9 +863,8 @@ class ProductTemplateImport(models.Model):
 
     def _get_code_inventory_id(self, name):
         if not name:
-            default = self.env["code.inventory"].search([], limit=1)
-            return default.id or self.env["code.inventory"].create({"name": "Non défini"}).id
-        rec = self.env["code.inventory"].search([("name", "ilike", name)], limit=1)
+            return False
+        rec = self.env["code.inventory"].search([("name", "=", name)], limit=1)
         return rec.id or self.env["code.inventory"].create({"name": name}).id
 
     def _get_family_id(self, name):
@@ -878,43 +880,43 @@ class ProductTemplateImport(models.Model):
     def _get_sub_family_id(self, name):
         if not name:
             return False
-        rec = self.env["sub.family.inventory"].search([("name", "ilike", name)], limit=1)
+        rec = self.env["sub.family.inventory"].search([("name", "=", name)], limit=1)
         return rec.id or self.env["sub.family.inventory"].create({"name": name}).id
 
     def _get_radius_id(self, name):
         if not name:
             return False
-        rec = self.env["radius.inventory"].search([("name", "ilike", name)], limit=1)
+        rec = self.env["radius.inventory"].search([("name", "=", name)], limit=1)
         return rec.id or self.env["radius.inventory"].create({"name": name}).id
 
     def _get_sub_radius_id(self, name):
         if not name:
             return False
-        rec = self.env["sub.radius.inventory"].search([("name", "ilike", name)], limit=1)
+        rec = self.env["sub.radius.inventory"].search([("name", "=", name)], limit=1)
         return rec.id or self.env["sub.radius.inventory"].create({"name": name}).id
 
     def _get_prod_gestion_id(self, name):
         if not name:
             return False
-        rec = self.env["product.category.x3"].search([("name", "ilike", name)], limit=1)
+        rec = self.env["product.category.x3"].search([("name", "=", name)], limit=1)
         return rec.id or self.env["product.category.x3"].create({"name": name}).id
 
     def _get_prod_family_id(self, name):
         if not name:
             return False
-        rec = self.env["product.family.x3"].search([("name", "ilike", name)], limit=1)
+        rec = self.env["product.family.x3"].search([("name", "=", name)], limit=1)
         return rec.id or self.env["product.family.x3"].create({"name": name}).id
 
     def _get_prod_type_id(self, name):
         if not name:
             return False
-        rec = self.env["product.type.x3"].search([("name", "ilike", name)], limit=1)
+        rec = self.env["product.type.x3"].search([("name", "=", name)], limit=1)
         return rec.id or self.env["product.type.x3"].create({"name": name}).id
 
     def _get_prod_status_id(self, name):
         if not name:
             return False
-        rec = self.env["product.status.sage"].search([("name", "ilike", name)], limit=1)
+        rec = self.env["product.status.sage"].search([("name", "=", name)], limit=1)
         return rec.id or self.env["product.status.sage"].create({"name": name}).id
 
     def _get_allowed_company_ids(self, item):
