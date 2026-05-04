@@ -300,7 +300,7 @@ class PhysicalInventory(models.Model):
                     'product_id' : stck.product_id.id,
                     'location_id' : stck.location_id.id,
                     'quantity' : stck.quantity,
-                    'line.price': stck.product_tmpl_id.standard_price,
+                    'price': stck.product_tmpl_id.standard_price,
                     'lot_id': stck.lot_id.id if stck.lot_id else False,
                     'product_uom_id': stck.product_uom_id.id,
                     'code_category_id': self.code_category_id.id,

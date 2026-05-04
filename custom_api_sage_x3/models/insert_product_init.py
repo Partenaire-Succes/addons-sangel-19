@@ -227,10 +227,11 @@ class ProductTemplateImport(models.Model):
     def action_import_products_external_source(self):
         """
         Importe les produits depuis l'API SAGE X3.
-        • Pagination automatique
+        • Récupération et traitement page par page (pas d'accumulation mémoire)
         • Commit tous les COMMIT_STEP produits
         • Rollback par produit en cas d'erreur isolée
-        • Arrêt automatique après MAX_DURATION secondes
+        • Arrêt automatique après MAX_DURATION secondes (récupération ET traitement)
+        • Cache des taxes partagé sur tout l'import
         """
         try:
             token = self._authenticate_sage_x3()
@@ -242,14 +243,14 @@ class ProductTemplateImport(models.Model):
                 base_url = config.get('base_url') or config.get(0)
             else:
                 base_url = config[0]
-            items_url      = f"{base_url}/api/Items"
-            headers        = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+            items_url = f"{base_url}/api/Items"
+            headers   = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
 
-            # -----------------------------------------------------------------
-            # 1. Récupération paginée
-            # -----------------------------------------------------------------
-            all_items  = []
+            created = updated = skipped = errors = price_updated = suppliers_added = 0
+            tmpl_model = self.env['product.template']
+            tax_cache  = {}   # {(amount, is_airsi): [tax_ids]} — évite les appels BDD répétés
             page       = 1
+            idx        = 0
             start_time = time.time()
 
             while page <= MAX_PAGES:
@@ -260,91 +261,92 @@ class ProductTemplateImport(models.Model):
                 params   = {"pageNumber": page, "pageSize": PAGE_SIZE}
                 response = self._safe_get_paged(items_url, headers, params)
                 data     = response.json()
-                items    = data.get("items", [])
-                all_items.extend(items)
-                _logger.info("📦 Page %s récupérée (%s produits)", page, len(items))
+                page_items = data.get("items", [])
+                _logger.info("📦 Page %s récupérée (%s produits)", page, len(page_items))
+
+                for item in page_items:
+                    idx += 1
+
+                    if time.time() - start_time > MAX_DURATION:
+                        _logger.warning("⏱️ Traitement interrompu : durée maximale atteinte (%ss)", MAX_DURATION)
+                        break
+
+                    try:
+                        vals = tmpl_model.prepare_product_values(item, tax_cache)
+
+                        if not vals.get("default_code"):
+                            _logger.warning("⚠️ Produit ignoré sans default_code : %s", vals.get("name"))
+                            skipped += 1
+                            continue
+
+                        if "SF" in str(vals.get("default_code", "")).upper():
+                            _logger.info("⏭️ Produit ignoré (code SF) : %s", vals.get("default_code"))
+                            skipped += 1
+                            continue
+
+                        if not any([
+                            vals.get("is_yop_demi_gros"),
+                            vals.get("is_yop_detail"),
+                            vals.get("is_synacass_ci"),
+                            vals.get("is_square"),
+                            vals.get("is_koumassi"),
+                            vals.get("is_bassam"),
+                        ]):
+                            _logger.warning("⚠️ Produit ignoré aucune societe associée : %s", vals.get("name"))
+                            skipped += 1
+                            continue
+
+                        existing = tmpl_model.search(
+                            [("default_code", "=", vals["default_code"])], limit=1
+                        )
+
+                        if existing:
+                            new_price = vals.get("list_price", 0)
+                            old_price = existing.list_price
+
+                            existing.write(vals)
+
+                            if old_price != new_price:
+                                _logger.info("💰 Prix mis à jour %s : %.2f → %.2f",
+                                            existing.default_code, old_price, new_price)
+                                price_updated += 1
+
+                            tmpl_model._create_pricelist_items(existing, item)
+                            tmpl_model._update_product_barcode(existing, item)
+                            n = tmpl_model._update_product_suppliers(existing, item)
+                            suppliers_added += n
+                            updated += 1
+                        else:
+                            product = tmpl_model.create(vals)
+                            _logger.info("✅ Créé : %s (%s)", product.name, product.default_code)
+                            tmpl_model._create_pricelist_items(product, item)
+                            tmpl_model._update_product_barcode(product, item)
+                            n = tmpl_model._update_product_suppliers(product, item)
+                            suppliers_added += n
+                            created += 1
+
+                        if idx % COMMIT_STEP == 0:
+                            self.env.cr.commit()
+                            gc.collect()
+                            _logger.info("💾 Commit après %s produits", idx)
+
+                    except Exception as e:
+                        errors += 1
+                        _logger.exception("❌ Erreur produit %s : %s", item.get("itmdeS1_0"), str(e))
+                        try:
+                            if not self.env.cr.closed:
+                                self.env.cr.rollback()
+                                self.env.invalidate_all()
+                            else:
+                                _logger.warning("⚠️ Curseur déjà fermé, rollback impossible")
+                            tmpl_model = self.env['product.template']
+                            tax_cache  = {}  # réinitialiser après rollback (IDs potentiellement invalides)
+                        except Exception as rollback_err:
+                            _logger.warning("⚠️ Rollback échoué : %s", str(rollback_err))
 
                 if not data.get("hasNextPage", False):
                     break
                 page += 1
-
-            # -----------------------------------------------------------------
-            # 2. Traitement produit par produit
-            # -----------------------------------------------------------------
-            created = updated = skipped = errors = price_updated = suppliers_added = 0
-            # Référence stable au modèle (résistante aux rollbacks)
-            tmpl_model = self.env['product.template']
-
-            for idx, item in enumerate(all_items, start=1):
-                try:
-                    vals = tmpl_model.prepare_product_values(item)
-
-                    if not vals.get("default_code"):
-                        _logger.warning("⚠️ Produit ignoré sans default_code : %s", vals.get("name"))
-                        skipped += 1
-                        continue
-
-                    if "SF" in str(vals.get("default_code", "")).upper():
-                        _logger.info("⏭️ Produit ignoré (code SF) : %s", vals.get("default_code"))
-                        skipped += 1
-                        continue
-                    if not any([
-                        vals.get("is_yop_demi_gros"),
-                        vals.get("is_yop_detail"),
-                        vals.get("is_synacass_ci"),
-                        vals.get("is_square"),
-                        vals.get("is_koumassi"),
-                        vals.get("is_bassam"),
-                    ]):
-                        _logger.warning("⚠️ Produit ignoré aucune societe associée : %s", vals.get("name"))
-                        skipped += 1
-                        continue
-
-                    existing = tmpl_model.search(
-                        [("default_code", "=", vals["default_code"])], limit=1
-                    )
-
-                    if existing:
-                        new_price = vals.get("list_price", 0)
-                        old_price = existing.list_price        # ✅ sauvegarder AVANT l'écriture
-
-                        existing.write(vals)                   # ✅ écrire sur existing
-
-                        if old_price != new_price:             # ✅ comparer ancien vs nouveau
-                            _logger.info("💰 Prix mis à jour %s : %.2f → %.2f",
-                                        existing.default_code, old_price, new_price)
-                            price_updated += 1
-
-                        tmpl_model._create_pricelist_items(existing, item)
-                        n = tmpl_model._update_product_suppliers(existing, item)
-                        suppliers_added += n
-                        updated += 1
-                    else:
-                        product = tmpl_model.create(vals)
-                        _logger.info("✅ Créé : %s (%s)", product.name, product.default_code)
-                        tmpl_model._create_pricelist_items(product, item)
-                        n = tmpl_model._update_product_suppliers(product, item)
-                        suppliers_added += n
-                        created += 1
-
-                    if idx % COMMIT_STEP == 0:
-                        self.env.cr.commit()
-                        gc.collect()
-                        _logger.info("💾 Commit après %s produits", idx)
-
-                except Exception as e:
-                    errors += 1
-                    _logger.exception("❌ Erreur produit %s : %s", item.get("itmdeS1_0"), str(e))
-                    try:
-                        if not self.env.cr.closed:
-                            self.env.cr.rollback()
-                            self.env.invalidate_all()
-                        else:
-                            _logger.warning("⚠️ Curseur déjà fermé, rollback impossible")
-                        # Rafraîchir la référence au modèle après rollback
-                        tmpl_model = self.env['product.template']
-                    except Exception as rollback_err:
-                        _logger.warning("⚠️ Rollback échoué : %s", str(rollback_err))
 
             self.env.cr.commit()
 
@@ -492,51 +494,58 @@ class ProductTemplateImport(models.Model):
             "is_airsi": actif,
         })
 
-    def _get_taxes_id(self, tax_code):
+    def _get_taxes_id(self, tax_code, tax_cache=None):
         """
-        Retourne les taxes à appliquer au produit.
+        Retourne les taxes pour toutes les sociétés.
         - Si taxe = 0% => supprime toutes les taxes
-        - Sinon => applique la taxe correcte
+        - Sinon => crée/récupère la taxe pour chaque société et retourne tous les IDs
+        - tax_cache : dict partagé {(amount, is_airsi): [ids]} pour éviter les appels BDD répétés
         """
         amount = self._extract_tax_amount(tax_code)
 
-        # ✅ CAS CRITIQUE : PAS DE TAXE
-        if not amount or amount == 0.0:
-            return [(6, 0, [])]  # 🔥 supprime toutes les taxes
-
-        current_company = self.env.company
-
-        # S'assurer que la taxe existe dans toutes les sociétés
-        for company in self.env['res.company'].sudo().search([]):
-            self._get_or_create_tax(f"TVA {amount}%", amount, company, False)
-
-        # Appliquer uniquement la taxe de la société courante
-        current_tax = self._get_or_create_tax(f"TVA {amount}%", amount, current_company, False)
-
-        return [(6, 0, [current_tax.id])]
-
-    def _get_airsi_taxes_id(self, tax_code):
-        amount = self._extract_tax_amount(tax_code)
-
-        # ✅ PAS DE TAXE
         if not amount or amount == 0.0:
             return [(6, 0, [])]
 
-        current_company = self.env.company
+        cache_key = (amount, False)
+        if tax_cache is not None and cache_key in tax_cache:
+            return [(6, 0, tax_cache[cache_key])]
 
+        all_tax_ids = []
         for company in self.env['res.company'].sudo().search([]):
-            self._get_or_create_tax(f"TVA AIRSI {amount}%", amount, company, True)
+            tax = self._get_or_create_tax(f"TVA {amount}%", amount, company, False)
+            all_tax_ids.append(tax.id)
 
-        current_tax = self._get_or_create_tax(f"TVA AIRSI {amount}%", amount, current_company, True)
+        if tax_cache is not None:
+            tax_cache[cache_key] = all_tax_ids
 
-        return [(6, 0, [current_tax.id])]
+        return [(6, 0, all_tax_ids)]
+
+    def _get_airsi_taxes_id(self, tax_code, tax_cache=None):
+        amount = self._extract_tax_amount(tax_code)
+
+        if not amount or amount == 0.0:
+            return [(6, 0, [])]
+
+        cache_key = (amount, True)
+        if tax_cache is not None and cache_key in tax_cache:
+            return [(6, 0, tax_cache[cache_key])]
+
+        all_tax_ids = []
+        for company in self.env['res.company'].sudo().search([]):
+            tax = self._get_or_create_tax(f"TVA AIRSI {amount}%", amount, company, True)
+            all_tax_ids.append(tax.id)
+
+        if tax_cache is not None:
+            tax_cache[cache_key] = all_tax_ids
+
+        return [(6, 0, all_tax_ids)]
     
 
     # =========================================================================
     # PRÉPARATION DES VALEURS PRODUIT
     # =========================================================================
 
-    def prepare_product_values(self, item):
+    def prepare_product_values(self, item, tax_cache=None):
         """Construit le dict de valeurs pour create/write d'un product.template."""
         barcode          = item.get("saN_CB_0", "").strip()
         invalid_barcodes = {"", "0", "00", "000", "0000", "00000"}
@@ -556,7 +565,9 @@ class ProductTemplateImport(models.Model):
                                     barcode, existing.default_code)
                     barcode = False
 
-        tax_code = item.get("vacitM_0")
+        tax_code       = item.get("vacitM_0")
+        family_id      = self._get_family_id(item.get("yG5FAM_0"))
+        base_price_ttc = self._safe_float(item.get("basprI_0"))
 
         vals = {
             "name":              item.get("itmdeS1_0") or "Produit sans nom",
@@ -564,7 +575,7 @@ class ProductTemplateImport(models.Model):
             "barcode":           barcode,
             "description":       item.get("itmdeS2_0", ""),
             "list_price":        self._get_ht_price(item.get("ypV_SAN_0"), tax_code),
-            "taxes_id":          self._get_taxes_id(tax_code),
+            "taxes_id":          self._get_taxes_id(tax_code, tax_cache),
             "supplier_taxes_id": False,
             "price_unit_ttc":    self._safe_float(item.get("ypV_SAN_0")),
             "uom_id":            self._get_uom_id(item.get("saU_0")),
@@ -572,11 +583,14 @@ class ProductTemplateImport(models.Model):
             "weight":            self._safe_float(item.get("itmweI_0")),
             "marque":            item.get("ymarK_0", ""),
             "discount_ligne":    item.get("yappremL_0", False),
-            "airsi_taxes_id":    self._get_airsi_taxes_id(item.get("yairsI_0")),
-            "price_catalog":     self._safe_float(item.get("basprI_0")),
+            "airsi_taxes_id":    self._get_airsi_taxes_id(item.get("yairsI_0"), tax_cache),
+            "price_catalog":     base_price_ttc,
             "price_carton":      self._safe_float(item.get("ypxcA_0")),
             "price_negoce":      self._safe_float(item.get("ypxneG_0")),
             "price_ecom":        self._safe_float(item.get("yglovttC_0")),
+            "price_gm":          round(base_price_ttc * 1.05, 2),
+            "price_rh":          round(base_price_ttc * 1.02, 2),
+            "price_st":          round(base_price_ttc * 1.01, 2),
             "is_yop_demi_gros":  self._verify_boolean(item.get("yafdM_0")),
             "is_yop_detail":     self._verify_boolean(item.get("yafdeT_0")),
             "is_synacass_ci":    self._verify_boolean(item.get("yafsyN_0")),
@@ -584,15 +598,8 @@ class ProductTemplateImport(models.Model):
             "is_bassam":         self._verify_boolean(item.get("yafbsM_0")),
             "is_koumassi":       self._verify_boolean(item.get("yafkouM_0")),
             "allowed_company_ids": self._get_allowed_company_ids(item),
-            "family_categ_id":   self._get_family_id(item.get("yG5FAM_0")),
-            "categ_id":          self._get_family_id(item.get("yG5FAM_0")),
-            "s_family_id":       self._get_sub_family_id(item.get("yG5SFAM_0")),
-            "radius_id":         self._get_radius_id(item.get("yG5RAY_0")),
-            "s_radius_id":       self._get_sub_radius_id(item.get("yG5SRAY_0")),
-            "cat_gestion_id":    self._get_prod_gestion_id(item.get("tclcoD_0")),
-            "prod_family_x3_id": self._get_prod_family_id(item.get("tsicoD_0")),
-            "prod_type_x3_id":   self._get_prod_type_id(item.get("yG5TYPE_0")),
-            "prod_status_x3_id": self._get_prod_status_id(item.get("yG5STAT_0")),
+            "family_categ_id":   family_id,
+            "categ_id":          family_id,
             "actif_x3":          self._safe_string(item.get("itmstA_0")),
             "type":              "consu",
             "active":            True,
@@ -606,9 +613,19 @@ class ProductTemplateImport(models.Model):
         if uom_ids is not None:
             vals["uom_ids"] = uom_ids
 
-        code_inventory_id = self._get_code_inventory_id(item.get("yG5EMPLC_0"))
-        if code_inventory_id:
-            vals["code_inventory_id"] = code_inventory_id
+        # Champs Many2one optionnels — non inclus si vide pour ne pas écraser la valeur existante
+        for field, value in [
+            ("code_inventory_id", self._get_code_inventory_id(item.get("yG5EMPLC_0"))),
+            ("s_family_id",       self._get_sub_family_id(item.get("yG5SFAM_0"))),
+            ("radius_id",         self._get_radius_id(item.get("yG5RAY_0"))),
+            ("s_radius_id",       self._get_sub_radius_id(item.get("yG5SRAY_0"))),
+            ("cat_gestion_id",    self._get_prod_gestion_id(item.get("tclcoD_0"))),
+            ("prod_family_x3_id", self._get_prod_family_id(item.get("tsicoD_0"))),
+            ("prod_type_x3_id",   self._get_prod_type_id(item.get("yG5TYPE_0"))),
+            ("prod_status_x3_id", self._get_prod_status_id(item.get("yG5STAT_0"))),
+        ]:
+            if value:
+                vals[field] = value
 
         return vals
 
@@ -617,28 +634,29 @@ class ProductTemplateImport(models.Model):
     # =========================================================================
 
     def _update_product_barcode(self, product, item):
-        """Met à jour le code-barres du produit en s'assurant de sa validité et unicité."""
+        """Ajoute le barcode secondaire (yG5BC_0) dans product.multiple.barcodes si absent."""
         barcode = self._safe_string(item.get("yG5BC_0"))
         if not barcode or barcode in {"0", "00", "000", "0000", "00000"}:
             return False
         try:
             multi_code = self.env['product.multiple.barcodes']
-            codes = multi_code.search([
-                '|', 
-                ('product_id', '=', product.product_variant_id.id), 
-                ('product_multi_barcode', '=', barcode)]).ids
-            if codes:
+            already = multi_code.search([
+                '|',
+                ('product_id', '=', product.product_variant_id.id),
+                ('product_multi_barcode', '=', barcode)
+            ], limit=1)
+            if already:
                 return 0
 
             multi_code.create({
                 'product_multi_barcode': barcode,
-                'product_id': product.id,
-                'product_tmpl_id': product.product_variant_id.id
+                'product_id':            product.product_variant_id.id,
+                'product_tmpl_id':       product.id,
             })
-            _logger.info("🏭  %s : %s",
-                         product.default_code, codes.name)
+            _logger.info("🏭 Barcode secondaire %s ajouté au produit %s", barcode, product.default_code)
             return 1
-        except UserError:
+        except Exception as e:
+            _logger.warning("⚠️ Barcode secondaire %s ignoré (%s) : %s", barcode, product.default_code, e)
             return False
 
     def _update_product_suppliers(self, product, item):
@@ -715,30 +733,6 @@ class ProductTemplateImport(models.Model):
             ('custom_stock.rh_sale_price',         'basprI_0',    'TARIF RHF',                 1.02),
             ('custom_stock.st_sale_price',         'basprI_0',    'TARIF STATION',             1.01),
         ]
-
-        base_price_ttc = self._safe_float(item.get("basprI_0"))
-
-        product.write({
-            "list_price":       self._get_ht_price(item.get("ypV_SAN_0"), tax_code),
-            "taxes_id":         self._get_taxes_id(tax_code),
-            "price_unit_ttc":   self._safe_float(item.get("ypV_SAN_0")),
-            "price_catalog":    self._safe_float(item.get("basprI_0")),
-            "price_carton":     self._safe_float(item.get("ypxcA_0")),
-            "price_negoce":     self._safe_float(item.get("ypxneG_0")),
-            "price_ecom":       self._safe_float(item.get("yglovttC_0")),
-            "price_gm":         round(base_price_ttc * 1.05, 2),
-            "price_rh":         round(base_price_ttc * 1.02, 2),
-            "price_st":         round(base_price_ttc * 1.01, 2),
-            "is_yop_demi_gros": self._verify_boolean(item.get("yafdM_0")),
-            "is_yop_detail":    self._verify_boolean(item.get("yafdeT_0")),
-            "is_synacass_ci":   self._verify_boolean(item.get("yafsyN_0")),
-            "is_square":        self._verify_boolean(item.get("yafsQ_0")),
-            "is_bassam":        self._verify_boolean(item.get("yafbsM_0")),
-            "is_koumassi":      self._verify_boolean(item.get("yafkouM_0")),
-            "allowed_company_ids": self._get_allowed_company_ids(item),
-            "actif_x3":          self._safe_string(item.get("itmstA_0")),
-            "supplier_taxes_id": False,
-        })
 
         for xml_id, api_field, display_name, multiplier in pricelist_mappings:
             price_ttc = self._safe_float(item.get(api_field))
@@ -838,7 +832,7 @@ class ProductTemplateImport(models.Model):
     def _get_uom_id(self, unit_name):
         if not unit_name:
             return self.env.ref("uom.product_uom_unit").id
-        uom = self.env["uom.uom"].search([("name", "ilike", unit_name)], limit=1)
+        uom = self.env["uom.uom"].search([("name", "=", unit_name)], limit=1)
         return uom.id if uom else self.env["uom.uom"].create({
             "name": unit_name, "relative_factor": 1.0
         }).id
@@ -852,7 +846,7 @@ class ProductTemplateImport(models.Model):
         unit_id = self._get_uom_id(unit)
         name    = f"cond {cond}"
         uom     = self.env["uom.uom"].search([
-            ("name", "ilike", name), ("relative_uom_id", "=", unit_id)
+            ("name", "=", name), ("relative_uom_id", "=", unit_id)
         ], limit=1)
         if uom:
             return [(6, 0, [uom.id])]
@@ -874,7 +868,7 @@ class ProductTemplateImport(models.Model):
             except ValueError:
                 cat = self.env["product.category"].search([], limit=1)
                 return cat.id or self.env["product.category"].create({"name": "Catégorie par défaut"}).id
-        rec = self.env["product.category"].search([("code", "ilike", name)], limit=1)
+        rec = self.env["product.category"].search([("code", "=", name)], limit=1)
         return rec.id or self.env["product.category"].create({"name": name, "code": name}).id
 
     def _get_sub_family_id(self, name):
@@ -932,7 +926,7 @@ class ProductTemplateImport(models.Model):
         active_codes = [code for code, flag in company_map.items()
                         if self._verify_boolean(flag)]
         if not active_codes:
-            return None
+            return [(6, 0, [])]
         ids = self.env['res.company'].search(
             [('code_company', 'in', active_codes)]
         ).ids
