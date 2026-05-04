@@ -8,6 +8,28 @@ from odoo.tools import format_amount
 _logger = logging.getLogger(__name__)
 
 
+class ProductTemplateStockLocationFix(models.Model):
+    """Corrige le conflit entre le champ custom allowed_company_ids (custom_sales)
+    et la variable de contexte allowed_company_ids utilisée dans le domaine natif
+    de property_stock_production / property_stock_inventory.
+    Sans ce override, OWL lit le champ Many2many à la place de la variable session
+    → domaine invalide → InvalidDomainError à l'autocomplétion."""
+    _inherit = 'product.template'
+
+    property_stock_production = fields.Many2one(
+        'stock.location',
+        company_dependent=True,
+        check_company=False,
+        domain="[('usage', '=', 'production')]",
+    )
+    property_stock_inventory = fields.Many2one(
+        'stock.location',
+        company_dependent=True,
+        check_company=False,
+        domain="[('usage', '=', 'inventory')]",
+    )
+
+
 class ProductTemplateInherit(models.Model):
     _inherit = 'product.template'
     _rec_name = 'default_code'

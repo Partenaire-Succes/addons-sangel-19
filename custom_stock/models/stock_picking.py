@@ -164,10 +164,20 @@ class StockPicking(models.Model):
         if not pack_moves:
             raise UserError(_("Aucun article pack (carton) trouvé dans cette réception."))
 
-        # Emplacement virtuel "Explosions pack" (production) comme source intermédiaire
-        production_loc = self.env.ref('stock.location_production', raise_if_not_found=False)
+        # En Odoo 19, l'emplacement Production est par société (pas d'XML ID global).
+        # Récupération via ir.default (méthode officielle Odoo 19), avec fallback recherche.
+        production_loc_id = self.env['ir.default']._get(
+            'product.template', 'property_stock_production',
+            company_id=self.company_id.id,
+        )
+        production_loc = self.env['stock.location'].browse(production_loc_id) if production_loc_id else False
         if not production_loc:
-            raise UserError(_("Emplacement de production introuvable."))
+            production_loc = self.env['stock.location'].search([
+                ('usage', '=', 'production'),
+                ('company_id', '=', self.company_id.id),
+            ], limit=1)
+        if not production_loc:
+            raise UserError(_("Emplacement de production introuvable. Vérifiez la configuration des emplacements virtuels (Inventaire → Configuration → Entrepôts)."))
 
         internal_type = self.env['stock.picking.type'].search([
             ('code', '=', 'internal'),
@@ -202,7 +212,7 @@ class StockPicking(models.Model):
                 'location_id': production_loc.id,
                 'location_dest_id': dest_location.id,
                 'price_unit': unit_price,
-                'name': 'Eclatement %s -> %s' % (pack_template.name, child_product.display_name),
+                # 'name': 'Eclatement %s -> %s' % (pack_template.name, child_product.display_name),
                 'origin': self.name,
                 'company_id': self.company_id.id,
             })
