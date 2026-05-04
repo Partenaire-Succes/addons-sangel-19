@@ -108,15 +108,6 @@ class PurchaseOrderSageX3Optimized(models.Model):
                     "Veuillez renseigner un prix avant de confirmer."
                 ) % names)
         res = super().button_confirm()
-        # Créer la facture brouillon dès la confirmation du BC.
-        # Elle sera supprimée et recréée avec les vraies quantités à la validation
-        # de la réception. Le try/except protège le cas où Odoo refuse de créer
-        # une facture avant réception (politique "sur qtés reçues").
-        for order in self:
-            try:
-                order.action_create_invoice()
-            except Exception:
-                pass
         return res
 
     def button_draft(self):

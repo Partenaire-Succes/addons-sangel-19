@@ -16,26 +16,28 @@ class StockReturnPickingLineCustom(models.TransientModel):
         vals['price_unit'] = self.price_unit
         return vals
 
-    def _process_line(self, new_picking):
-        """Surcharge : après création du move retour, force le price_unit
-        même si copy=False l'a remis à zéro."""
-        result = super()._process_line(new_picking)
-        if result and self.price_unit:
-            return_move = new_picking.move_ids.filtered(
-                lambda m: m.origin_returned_move_id == self.move_id
-                          and m.product_id == self.product_id
-            )
-            if return_move:
-                return_move[-1:].write({'price_unit': self.price_unit})
-        return result
-
 
 class StockReturnPickingCustom(models.TransientModel):
     _inherit = 'stock.return.picking'
 
     def _prepare_stock_return_picking_line_vals_from_move(self, stock_move):
-        """Ajoute le prix unitaire du move d'origine dans les valeurs
-        de la ligne de retour."""
         vals = super()._prepare_stock_return_picking_line_vals_from_move(stock_move)
         vals['price_unit'] = stock_move.price_unit
         return vals
+
+    def _create_return(self):
+        new_picking = super()._create_return()
+        # price_unit a copy=False sur stock.move et est susceptible d'être
+        # remis à zéro par action_confirm() / _merge_moves().
+        # On force la valeur sur les moves retour APRÈS que tout est confirmé.
+        price_map = {
+            line.move_id.id: line.price_unit
+            for line in self.product_return_moves
+            if line.move_id and line.price_unit
+        }
+        if price_map:
+            for move in new_picking.move_ids:
+                orig_id = move.origin_returned_move_id.id
+                if orig_id in price_map:
+                    move.price_unit = price_map[orig_id]
+        return new_picking

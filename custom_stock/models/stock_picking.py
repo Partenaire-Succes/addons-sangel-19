@@ -133,6 +133,7 @@ class StockPicking(models.Model):
             )
             return
 
+        invoice.invoice_date = fields.Date.today()
         invoice.action_post()
         _logger.info(
             "[SYNC_INVOICE] Facture %s validée — réception %s / commande %s",
