@@ -13,6 +13,21 @@ class PurchaseOrderLineCustom(models.Model):
             if std:
                 self.price_unit = std
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        # récupérer tous les produits en une seule requête
+        product_ids = [vals.get('product_id') for vals in vals_list if vals.get('product_id')]
+        products = self.env['product.product'].browse(product_ids)
+        product_map = {p.id: p for p in products}
+
+        for vals in vals_list:
+            if vals.get('price_unit', 0) == 0:
+                product = product_map.get(vals.get('product_id'))
+                if product and product.standard_price:
+                    vals['price_unit'] = product.standard_price
+
+        return super().create(vals_list)
+
 
 class PurchaseOrderSageX3Optimized(models.Model):
     _inherit = "purchase.order"
@@ -63,13 +78,19 @@ class PurchaseOrderSageX3Optimized(models.Model):
     #         if messages:
     #             raise UserError("\n\n".join(messages))
 
+
     def action_verify_product(self):
         for order in self:
             products = order.order_line.mapped('product_id')
 
-            inactive_products = products.filtered(lambda p: p.actif_x3 != '1')
+            inactive_products = products.filtered(
+                lambda p: p.actif_x3 != '1'
+            )
             dormant_products = products.filtered(
                 lambda p: not p.current_company_status_id or p.current_company_status_id.code != 'C'
+            )
+            zero_lines = products.filtered(
+                lambda l: l.product_id and l.price_unit == 0
             )
 
             messages = []
@@ -77,12 +98,17 @@ class PurchaseOrderSageX3Optimized(models.Model):
             if inactive_products:
                 messages.append(_(
                     "Produits non actifs pour SAGE X3 :\n- %s"
-                ) % "\n- ".join(inactive_products.mapped('name')))
+                ) % "\n- ".join(inactive_products.mapped('display_name')))
 
             if dormant_products:
                 messages.append(_(
                     "Produits Dormants :\n- %s"
-                ) % "\n- ".join(dormant_products.mapped('name')))
+                ) % "\n- ".join(dormant_products.mapped('display_name')))
+
+            if zero_lines:
+                messages.append(_(
+                    "Produits Prix 0 :\n- %s"
+                ) % "\n- ".join(zero_lines.mapped('display_name')))
 
             if messages:
                 raise UserError("\n\n".join(messages))
@@ -92,10 +118,7 @@ class PurchaseOrderSageX3Optimized(models.Model):
         self.write({'state': 'sent'})
 
     def button_confirm_local(self):
-        self.button_confirm()
-
-
-    def button_confirm(self):
+        
         for order in self:
             zero_lines = order.order_line.filtered(
                 lambda l: l.product_id and l.price_unit == 0
