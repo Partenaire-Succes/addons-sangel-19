@@ -34,7 +34,7 @@ class StockPicking(models.Model):
 
 
     def button_validate(self):
-        """Override: price validation uniquement.
+        """Override: price validation + sync facture fournisseur après réception.
 
         Le sync pack/unité a été retiré de button_validate pour éviter la
         double-décrémentation des SVL (stock.valuation.layer) qui corrompait
@@ -61,7 +61,83 @@ class StockPicking(models.Model):
                 "📦 Articles concernés :\n- " + "\n- ".join(errors)
             ))
 
-        return super().button_validate()
+        # ── 2. Validation standard Odoo ───────────────────────────────────────
+        result = super().button_validate()
+
+        # ── 3. Sync facture fournisseur (après réception validée) ─────────────
+        for picking in self:
+            if (picking.picking_type_id.code == 'incoming'
+                    and picking.state == 'done'
+                    and picking.purchase_id):
+                picking._sync_invoice_from_reception()
+
+        return result
+
+    def _sync_invoice_from_reception(self):
+        """
+        Crée et valide automatiquement la facture fournisseur depuis la réception.
+
+        Appelé APRÈS super().button_validate() quand picking = done + lié à un BC.
+
+        Logique :
+          1. Supprimer toute facture brouillon existante liée au BC
+             (créée prématurément à la confirmation avec qty=0).
+          2. Laisser Odoo créer la facture via action_create_invoice()
+             — à ce stade qty_received > 0, donc les lignes sont correctes.
+          3. Si le prix de réception diffère du BC, l'appliquer sur les lignes.
+          4. Valider (poster) la facture.
+        """
+        self.ensure_one()
+        purchase = self.purchase_id
+
+        # ── 1. Nettoyer les factures brouillon existantes (qty=0) ─────────────
+        draft_invoices = purchase.invoice_ids.filtered(lambda i: i.state == 'draft')
+        if draft_invoices:
+            draft_invoices.unlink()
+
+        # ── 2. Créer la facture avec les quantités réellement reçues ──────────
+        # qty_received est maintenant > 0 → Odoo génère des lignes correctes.
+        purchase.action_create_invoice()
+
+        invoice = purchase.invoice_ids.filtered(lambda i: i.state == 'draft')
+        if not invoice:
+            _logger.warning(
+                "[SYNC_INVOICE] Aucune facture créée pour le bon de commande %s",
+                purchase.name,
+            )
+            return
+        invoice = invoice[0]
+
+        # ── 3. Corriger le prix unitaire si différent entre réception et BC ───
+        price_by_pol = {}
+        for move in self.move_ids.filtered(
+            lambda m: m.state == 'done' and m.purchase_line_id and m.price_unit
+        ):
+            pol_id = move.purchase_line_id.id
+            if move.price_unit != move.purchase_line_id.price_unit:
+                price_by_pol[pol_id] = move.price_unit
+
+        if price_by_pol:
+            for inv_line in invoice.invoice_line_ids.filtered(
+                lambda l: not l.display_type and l.purchase_line_id
+            ):
+                pol_id = inv_line.purchase_line_id.id
+                if pol_id in price_by_pol:
+                    inv_line.write({'price_unit': price_by_pol[pol_id]})
+
+        # ── 4. Valider la facture ─────────────────────────────────────────────
+        if invoice.amount_untaxed <= 0:
+            _logger.warning(
+                "[SYNC_INVOICE] Facture %s non postée : montant total = 0",
+                invoice.name,
+            )
+            return
+
+        invoice.action_post()
+        _logger.info(
+            "[SYNC_INVOICE] Facture %s validée — réception %s / commande %s",
+            invoice.name, self.name, purchase.name,
+        )
 
     def action_eclater_cartons_en_unites(self):
         """
