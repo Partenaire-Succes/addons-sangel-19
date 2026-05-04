@@ -341,11 +341,6 @@ class ProductTemplateInherit(models.Model):
             # Eviter référence à soi-même (via variantes)
             if template.pack_child_product_id.product_tmpl_id == template:
                 raise ValidationError(_("Le sous-article ne peut pas être le même que l'article pack."))
-            # UoM catégories compatibles
-            if template.uom_id.category_id != template.pack_child_product_id.uom_id.category_id:
-                raise ValidationError(
-                    _("Le carton et l'unité doivent appartenir à la même catégorie d'UdM.")
-                )
 
     def action_view_unit_product(self):
         """Action pour voir l'article unitaire"""
