@@ -57,6 +57,7 @@ class ReceptionFournisseurWizard(models.TransientModel):
             ('date_done', '>=', self.date_debut),
             ('date_done', '<=', self.date_fin),
             ('company_id', '=', self.company_id.id),
+            ('location_id.usage', '=', 'supplier'),  # exclut les retours fournisseurs
         ]
         if self.fournisseur_ids:
             domain.append(('partner_id', 'in', self.fournisseur_ids.ids))

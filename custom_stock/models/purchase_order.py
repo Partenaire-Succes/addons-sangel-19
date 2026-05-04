@@ -1,6 +1,19 @@
 from odoo import fields, models, api, _
 from odoo.exceptions import UserError
 
+
+class PurchaseOrderLineCustom(models.Model):
+    _inherit = 'purchase.order.line'
+
+    @api.onchange('product_id')
+    def _onchange_product_id_fill_standard_price(self):
+        """Si le prix reste à 0 après le onchange natif, prendre le standard_price."""
+        if self.product_id and not self.price_unit:
+            std = self.product_id.standard_price
+            if std:
+                self.price_unit = std
+
+
 class PurchaseOrderSageX3Optimized(models.Model):
     _inherit = "purchase.order"
 
@@ -83,8 +96,27 @@ class PurchaseOrderSageX3Optimized(models.Model):
 
 
     def button_confirm(self):
+        for order in self:
+            zero_lines = order.order_line.filtered(
+                lambda l: l.product_id and l.price_unit == 0
+            )
+            if zero_lines:
+                names = '\n- '.join(zero_lines.mapped('product_id.display_name'))
+                raise UserError(_(
+                    "Impossible de confirmer la commande.\n\n"
+                    "Ces articles ont un prix unitaire à 0 FCFA :\n- %s\n\n"
+                    "Veuillez renseigner un prix avant de confirmer."
+                ) % names)
         res = super().button_confirm()
-        moves = self.action_create_invoice()
+        # Créer la facture brouillon dès la confirmation du BC.
+        # Elle sera supprimée et recréée avec les vraies quantités à la validation
+        # de la réception. Le try/except protège le cas où Odoo refuse de créer
+        # une facture avant réception (politique "sur qtés reçues").
+        for order in self:
+            try:
+                order.action_create_invoice()
+            except Exception:
+                pass
         return res
 
     def button_draft(self):
