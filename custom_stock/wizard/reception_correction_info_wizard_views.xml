@@ -77,7 +77,7 @@
 
     <!-- ── WIZARD 2 : Correction des quantités de stock ──────────────────── -->
 
-    <record id="view_reception_correction_stock_wizard_form" model="ir.ui.view">
+    <!-- <record id="view_reception_correction_stock_wizard_form" model="ir.ui.view">
         <field name="name">reception.correction.stock.wizard.form</field>
         <field name="model">reception.correction.stock.wizard</field>
         <field name="arch" type="xml">
@@ -146,16 +146,16 @@
                 </footer>
             </form>
         </field>
-    </record>
+    </record> -->
 
-    <record id="action_reception_correction_stock_wizard" model="ir.actions.act_window">
+    <!-- <record id="action_reception_correction_stock_wizard" model="ir.actions.act_window">
         <field name="name">Corriger le stock</field>
         <field name="res_model">reception.correction.stock.wizard</field>
         <field name="view_mode">form</field>
         <field name="target">new</field>
         <field name="binding_model_id" ref="stock.model_stock_picking"/>
         <field name="binding_view_types">form</field>
-    </record>
+    </record> -->
 
 
     <!-- ── HÉRITAGE PICKING FORM — Bouton impression (toutes réceptions) ── -->
@@ -199,15 +199,6 @@
                         invisible="state != 'done'"
                         groups="custom_pos.group_superviseur,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
                         help="Modifier r&#233;f. Sage, fournisseur, date ou notes sans toucher au stock."/>
-
-                <!-- <button name="%(action_reception_correction_stock_wizard)d"
-                        string="Corriger le stock"
-                        type="action"
-                        class="oe_stat_button"
-                        icon="fa-wrench"
-                        invisible="state != 'done'"
-                        groups="custom_pos.group_superviseur,custom_pos.group_dsi_it"
-                        help="Corriger les quantit&#233;s re&#231;ues par pickings diff&#233;rentiels."/> -->
 
             </xpath>
         </field>
