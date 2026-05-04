@@ -32,4 +32,5 @@ from . import (
     physical_inventory_retour,
     avco_guard,
     stock_avco_report_override,
+    stock_picking_return,
 )

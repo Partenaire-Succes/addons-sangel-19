@@ -3,11 +3,6 @@ from odoo import fields, models
 
 
 class StockReturnPickingLineCustom(models.TransientModel):
-    """
-    Hérite stock.return.picking.line pour ajouter le prix unitaire.
-    Le prix est repris depuis le stock.move d'origine et retransmis
-    au nouveau move créé lors du retour.
-    """
     _inherit = 'stock.return.picking.line'
 
     price_unit = fields.Float(
@@ -17,33 +12,30 @@ class StockReturnPickingLineCustom(models.TransientModel):
     )
 
     def _prepare_move_default_values(self, new_picking):
-        """
-        Surcharge : injecte le prix unitaire dans les valeurs du move retour.
-        Le champ price_unit existe sur stock.move (utilisé pour valorisation).
-        """
         vals = super()._prepare_move_default_values(new_picking)
         vals['price_unit'] = self.price_unit
         return vals
 
+    def _process_line(self, new_picking):
+        """Surcharge : après création du move retour, force le price_unit
+        même si copy=False l'a remis à zéro."""
+        result = super()._process_line(new_picking)
+        if result and self.price_unit:
+            return_move = new_picking.move_ids.filtered(
+                lambda m: m.origin_returned_move_id == self.move_id
+                          and m.product_id == self.product_id
+            )
+            if return_move:
+                return_move[-1:].write({'price_unit': self.price_unit})
+        return result
+
 
 class StockReturnPickingCustom(models.TransientModel):
-    """
-    Hérite stock.return.picking pour alimenter le price_unit
-    sur chaque ligne de retour depuis le move d'origine.
-    """
     _inherit = 'stock.return.picking'
 
     def _prepare_stock_return_picking_line_vals_from_move(self, stock_move):
-        """
-        Surcharge : ajoute le prix unitaire du move d'origine
-        dans les valeurs de la ligne de retour.
-
-        Odoo remplit stock.move.price_unit depuis :
-          - la valorisation du mouvement (average cost, FIFO…)
-          - ou le prix d'achat de la ligne de bon de commande (purchase.order.line)
-        On prend directement stock_move.price_unit qui est toujours renseigné
-        sur un move 'done'.
-        """
+        """Ajoute le prix unitaire du move d'origine dans les valeurs
+        de la ligne de retour."""
         vals = super()._prepare_stock_return_picking_line_vals_from_move(stock_move)
         vals['price_unit'] = stock_move.price_unit
         return vals

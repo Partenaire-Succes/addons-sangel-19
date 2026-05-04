@@ -83,7 +83,7 @@ class SageX3SendWizard(models.TransientModel):
             company_ids = wizard.company_ids.ids
 
             # Sessions POS fermées avec paiements non envoyés
-            count_pos = self.env['pos.session'].search_count([
+            count_pos = self.env['pos.session'].search([
                 ('company_id', 'in', company_ids),
                 ('state',      '=',  'closed'),
                 ('sage_x3_sent', '=',  False),
@@ -91,7 +91,7 @@ class SageX3SendWizard(models.TransientModel):
                 ('start_at',   '<=', wizard.date_to),
             ])
 
-            wizard.count_pos_sessions = count_pos.filtered(lambda s: s.cash_register_balance_end > 0)
+            wizard.count_pos_sessions = len(count_pos.filtered(lambda s: s.cash_register_balance_end > 0))
 
             # Factures classiques hors POS
             wizard.count_invoices = self.env['account.move'].search_count([
