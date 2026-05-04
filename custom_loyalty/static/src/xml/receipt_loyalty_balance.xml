@@ -34,8 +34,14 @@
                     <!-- Recalcul de l'ancien solde : balance est déjà mis à jour -->
                     <t t-set="ancienSolde"
                        t-value="loyaltyStat.points.balance - loyaltyStat.points.won + loyaltyStat.points.spent"/>
+
+                    <!-- Points sur monnaie rendue (1 FCFA = 1 pt) — crédités côté serveur après paiement -->
+                    <t t-set="renduPts"
+                       t-value="Math.floor(order.get_rendu_monnaie ? order.get_rendu_monnaie() : 0)"/>
+
+                    <!-- Solde cumulé = balance Odoo + points sur rendu monnaie -->
                     <t t-set="nouveauSolde"
-                       t-value="loyaltyStat.points.balance"/>
+                       t-value="loyaltyStat.points.balance + renduPts"/>
 
                     <div class="pos-receipt-loyalty-balance text-start pt-2"
                          style="font-size: 90%; border-top: 1px dashed #777; margin-top: 8px; padding-top: 8px;">
@@ -67,6 +73,16 @@
                                 <span>Points utilisés :</span>
                                 <span class="font-monospace">
                                     -<t t-esc="loyaltyStat.points.spent"/> pts
+                                </span>
+                            </div>
+                        </t>
+
+                        <!-- Monnaie rendue → points (1 FCFA = 1 pt) : affiché seulement si > 0 -->
+                        <t t-if="renduPts > 0">
+                            <div class="d-flex justify-content-between" style="color: #1a5276;">
+                                <span>Monnaie rendue :</span>
+                                <span class="font-monospace fw-bold">
+                                    +<t t-esc="renduPts"/> pts
                                 </span>
                             </div>
                         </t>
