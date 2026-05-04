@@ -89,7 +89,7 @@ class PurchaseOrderSageX3Optimized(models.Model):
             dormant_products = products.filtered(
                 lambda p: not p.current_company_status_id or p.current_company_status_id.code != 'C'
             )
-            zero_lines = products.filtered(
+            zero_lines = order.order_line.filtered(
                 lambda l: l.product_id and l.price_unit == 0
             )
 
