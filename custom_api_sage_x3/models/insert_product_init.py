@@ -734,6 +734,30 @@ class ProductTemplateImport(models.Model):
             ('custom_stock.st_sale_price',         'basprI_0',    'TARIF STATION',             1.01),
         ]
 
+        base_price_ttc = self._safe_float(item.get("basprI_0"))
+
+        product.write({
+            "list_price":       self._get_ht_price(item.get("ypV_SAN_0"), tax_code),
+            "taxes_id":         self._get_taxes_id(tax_code),
+            "price_unit_ttc":   self._safe_float(item.get("ypV_SAN_0")),
+            "price_catalog":    self._safe_float(item.get("basprI_0")),
+            "price_carton":     self._safe_float(item.get("ypxcA_0")),
+            "price_negoce":     self._safe_float(item.get("ypxneG_0")),
+            "price_ecom":       self._safe_float(item.get("yglovttC_0")),
+            "price_gm":         round(base_price_ttc * 1.05, 2),
+            "price_rh":         round(base_price_ttc * 1.02, 2),
+            "price_st":         round(base_price_ttc * 1.01, 2),
+            "is_yop_demi_gros": self._verify_boolean(item.get("yafdM_0")),
+            "is_yop_detail":    self._verify_boolean(item.get("yafdeT_0")),
+            "is_synacass_ci":   self._verify_boolean(item.get("yafsyN_0")),
+            "is_square":        self._verify_boolean(item.get("yafsQ_0")),
+            "is_bassam":        self._verify_boolean(item.get("yafbsM_0")),
+            "is_koumassi":      self._verify_boolean(item.get("yafkouM_0")),
+            "allowed_company_ids": self._get_allowed_company_ids(item),
+            "actif_x3":          self._safe_string(item.get("itmstA_0")),
+            "supplier_taxes_id": False,
+        })
+
         for xml_id, api_field, display_name, multiplier in pricelist_mappings:
             price_ttc = self._safe_float(item.get(api_field))
             if not price_ttc or price_ttc <= 0:
