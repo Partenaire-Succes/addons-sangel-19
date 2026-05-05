@@ -9,7 +9,7 @@
 
         <record id="sage_x3_base_url" model="ir.config_parameter">
             <field name="key">sage_x3.base_url</field>
-            <field name="value">http://172.16.2.150:8040</field>
+            <field name="value">http://172.16.2.150:8030</field>
         </record>
 
         <record id="sage_x3_username" model="ir.config_parameter">
