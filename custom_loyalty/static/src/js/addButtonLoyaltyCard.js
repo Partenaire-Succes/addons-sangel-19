@@ -109,15 +109,53 @@ patch(PosOrder.prototype, {
     setup() {
         super.setup(...arguments);
         this.rendu_monnaie = this.rendu_monnaie || 0;
+        this.initial_loyalty_balance = this.initial_loyalty_balance ?? null;
+        this.initial_loyalty_spent = this.initial_loyalty_spent ?? null;
+        this.initial_loyalty_won = this.initial_loyalty_won ?? null;
     },
     export_as_JSON() {
         const json = super.export_as_JSON(...arguments);
         json.rendu_monnaie = this.rendu_monnaie;
+
+        // Capture loyalty state for JSON serialization (used for reprints).
+        // postProcessLoyalty sets initial_loyalty_spent/won on the order object (for immediate receipt).
+        // Here we also try to capture, with two passes:
+        //   1. If balance not yet captured → first export, capture everything.
+        //   2. If balance already captured → only update spent/won if getLoyaltyPoints shows > 0
+        //      (avoids overwriting a valid spent with 0 from a post-clearing export).
+        try {
+            const stats = this.getLoyaltyPoints?.() || [];
+            const stat = stats.find(s => s.program?.program_type === 'loyalty');
+            if (stat) {
+                if (this.initial_loyalty_balance === null || this.initial_loyalty_balance === undefined) {
+                    this.initial_loyalty_balance = stat.points.balance;
+                    this.initial_loyalty_spent  = stat.points.spent  ?? 0;
+                    this.initial_loyalty_won    = stat.points.won    ?? 0;
+                    console.log('[LOYALTY export] First capture → balance:', stat.points.balance,
+                        '| won:', stat.points.won, '| spent:', stat.points.spent);
+                } else if ((stat.points.spent ?? 0) > 0) {
+                    // Balance already set but reward was applied after first capture — update spent/won.
+                    this.initial_loyalty_spent = stat.points.spent;
+                    this.initial_loyalty_won   = stat.points.won ?? 0;
+                    console.log('[LOYALTY export] Updated spent:', stat.points.spent, '| won:', stat.points.won);
+                }
+            } else {
+                console.log('[LOYALTY export] aucune stat fidélité. Stats:', stats);
+            }
+        } catch (e) {
+            console.error('[LOYALTY export] Erreur:', e);
+        }
+        json.initial_loyalty_balance = this.initial_loyalty_balance ?? null;
+        json.initial_loyalty_spent   = this.initial_loyalty_spent   ?? 0;
+        json.initial_loyalty_won     = this.initial_loyalty_won     ?? 0;
         return json;
     },
     init_from_JSON(json) {
         super.init_from_JSON(...arguments);
-        this.rendu_monnaie = json.rendu_monnaie || 0;
+        this.rendu_monnaie          = json.rendu_monnaie           || 0;
+        this.initial_loyalty_balance = json.initial_loyalty_balance ?? null;
+        this.initial_loyalty_spent   = json.initial_loyalty_spent   ?? null;
+        this.initial_loyalty_won     = json.initial_loyalty_won     ?? null;
     },
     set_rendu_monnaie(amount) {
         this.rendu_monnaie = amount;

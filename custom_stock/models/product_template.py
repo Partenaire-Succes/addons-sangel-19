@@ -8,6 +8,28 @@ from odoo.tools import format_amount
 _logger = logging.getLogger(__name__)
 
 
+class ProductTemplateStockLocationFix(models.Model):
+    """Corrige le conflit entre le champ custom allowed_company_ids (custom_sales)
+    et la variable de contexte allowed_company_ids utilisée dans le domaine natif
+    de property_stock_production / property_stock_inventory.
+    Sans ce override, OWL lit le champ Many2many à la place de la variable session
+    → domaine invalide → InvalidDomainError à l'autocomplétion."""
+    _inherit = 'product.template'
+
+    property_stock_production = fields.Many2one(
+        'stock.location',
+        company_dependent=True,
+        check_company=False,
+        domain="[('usage', '=', 'production')]",
+    )
+    property_stock_inventory = fields.Many2one(
+        'stock.location',
+        company_dependent=True,
+        check_company=False,
+        domain="[('usage', '=', 'inventory')]",
+    )
+
+
 class ProductTemplateInherit(models.Model):
     _inherit = 'product.template'
     _rec_name = 'default_code'
@@ -107,7 +129,6 @@ class ProductTemplateInherit(models.Model):
         help="Nombre d'unités contenues dans un carton.",
     )
 
-    # Lecture pratique en équivalences (affichage)
     pack_equiv_cartons_available = fields.Float(
         string="Stock cartons (équiv.)",
         compute="_compute_pack_equivalences",
@@ -317,7 +338,7 @@ class ProductTemplateInherit(models.Model):
                     and tmpl.pack_qty > 0):
                 units = tmpl.pack_child_product_id.qty_available
                 tmpl.pack_equiv_units_available = units
-                tmpl.pack_equiv_cartons_available = units // tmpl.pack_qty
+                tmpl.pack_equiv_cartons_available = units / tmpl.pack_qty
 
     @api.depends('standard_price', 'purchase_new_price')
     def _compute_effective_cost(self):
