@@ -1,4 +1,5 @@
 import logging
+from datetime import timedelta
 
 from odoo import fields, models, api
 from odoo.exceptions import ValidationError
@@ -43,12 +44,8 @@ class SageX3SendWizard(models.TransientModel):
         string  = "Sessions POS du Jours",
         compute = "_compute_counts",
     )
-    count_invoices = fields.Integer(
-        string  = "Factures: FACLI",
-        compute = "_compute_counts",
-    )
     count_refunds = fields.Integer(
-        string  = "Avoirs: AVCLI",
+        string  = "Avoirs POS is_limit: AVCLI",
         compute = "_compute_counts",
     )
     count_payments = fields.Integer(
@@ -75,7 +72,6 @@ class SageX3SendWizard(models.TransientModel):
         for wizard in self:
             if not wizard.date_from or not wizard.date_to or not wizard.company_ids:
                 wizard.count_pos_sessions = 0
-                wizard.count_invoices     = 0
                 wizard.count_refunds      = 0
                 wizard.count_payments     = 0
                 continue
@@ -83,37 +79,35 @@ class SageX3SendWizard(models.TransientModel):
             company_ids = wizard.company_ids.ids
 
             # Sessions POS fermées avec paiements non envoyés
-            count_pos = self.env['pos.session'].search([
-                ('company_id', 'in', company_ids),
-                ('state',      '=',  'closed'),
+            date_from_dt = fields.Datetime.to_datetime(wizard.date_from)
+            date_to_dt   = fields.Datetime.to_datetime(wizard.date_to) + timedelta(days=1)
+
+            pos_sessions = self.env['pos.session'].search([
+                ('company_id',   'in', company_ids),
+                ('state',        '=',  'closed'),
                 ('sage_x3_sent', '=',  False),
-                ('start_at',   '>=', wizard.date_from),
-                ('start_at',   '<=', wizard.date_to),
+                ('start_at',     '>=', date_from_dt),
+                ('start_at',     '<',  date_to_dt),
             ])
 
-            wizard.count_pos_sessions = len(count_pos.filtered(lambda s: s.cash_register_balance_end > 0))
+            wizard.count_pos_sessions = len(pos_sessions.filtered(lambda s: s.cash_register_balance_end > 0))
 
-            # Factures classiques hors POS
-            wizard.count_invoices = self.env['account.move'].search_count([
-                ('move_type',     '=',  'out_invoice'),
-                ('state',         '=',  'posted'),
-                ('sage_x3_sent',  '=',  False),
-                ('pos_order_ids', '=',  False),
-                ('company_id',    'in', company_ids),
-                ('invoice_date',  '>=', wizard.date_from),
-                ('invoice_date',  '<=', wizard.date_to),
+            # Avoirs POS avec mode de paiement is_limit
+            refund_candidates = self.env['account.move'].search([
+                ('move_type',    '=',  'out_refund'),
+                ('state',        '=',  'posted'),
+                ('sage_x3_sent', '=',  False),
+                ('company_id',   'in', company_ids),
+                ('invoice_date', '>=', wizard.date_from),
+                ('invoice_date', '<=', wizard.date_to),
             ])
-
-            # Avoirs classiques hors POS
-            wizard.count_refunds = self.env['account.move'].search_count([
-                ('move_type',     '=',  'out_refund'),
-                ('state',         '=',  'posted'),
-                ('sage_x3_sent',  '=',  False),
-                ('pos_order_ids', '=',  False),
-                ('company_id',    'in', company_ids),
-                ('invoice_date',  '>=', wizard.date_from),
-                ('invoice_date',  '<=', wizard.date_to),
-            ])
+            wizard.count_refunds = len(refund_candidates.filtered(
+                lambda m: any(
+                    p.payment_method_id.is_limit
+                    for o in m.pos_order_ids
+                    for p in o.payment_ids
+                )
+            ))
 
             # Règlements clients qui seront inclus dans l'ENCAI (info seulement)
             wizard.count_payments = self.env['account.payment'].search_count([

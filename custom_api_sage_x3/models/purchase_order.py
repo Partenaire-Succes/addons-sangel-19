@@ -1,20 +1,14 @@
-import time
 import json
 import logging
-import threading
 from datetime import datetime, timedelta
 from collections import defaultdict
-
-import requests
 
 from odoo import fields, models, api
 from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
-TIMEOUT    = 30
-MAX_RETRIES = 3
-BATCH_SIZE  = 100
+BATCH_SIZE = 100
 
 
 class PurchaseOrderSageX3(models.Model):
@@ -82,8 +76,8 @@ class PurchaseOrderSageX3(models.Model):
 
         message = (
             f"Traitement terminé sur {len(pending_orders)} commande(s) :\n\n"
-            f"✅ Envoyées avec succès : {ok}\n"
-            f"❌ Échecs              : {ko}"
+            f"✅ {ok} : Envoyées avec succès \n"
+            f"❌ {ko} : Échecs"
         )
         if errors:
             message += "\n\nDétail des erreurs :\n" + "\n".join(f"• {e}" for e in errors)
@@ -138,12 +132,8 @@ class PurchaseOrderSageX3(models.Model):
         if not token:
             raise UserError("Échec de l'authentification SAGE X3")
 
-        config = self._get_sage_x3_config()
-        if isinstance(config, dict):
-            base_url = config.get('base_url') or config.get(0)
-        else:
-            base_url = config[0]
-        orders_url     = f"{base_url}/api/Orders/batch"
+        config     = self._get_sage_x3_config()
+        orders_url = f"{config['base_url']}/api/Orders/batch"
         order_data     = self._prepare_order_for_sage_x3()
 
         headers = {
@@ -152,34 +142,31 @@ class PurchaseOrderSageX3(models.Model):
             "Accept":        "application/json",
         }
 
-        response = self._safe_post(orders_url, headers, order_data)
+        response_data = self._safe_post(orders_url, headers, order_data).json()
 
-        if response.status_code in (200, 201):
-            response_data = response.json()
+        if isinstance(response_data, list) and response_data:
+            result  = response_data[0]
+            success = result.get("success", False)
+            message = result.get("message", "")
 
-            if isinstance(response_data, list) and response_data:
-                result  = response_data[0]
-                success = result.get("success", False)
-                message = result.get("message", "")
+            self.write({
+                'sage_x3_submitted':        True,
+                'sage_x3_validated':        success,
+                'sage_x3_submitted_date':   fields.Datetime.now(),
+                'sage_x3_response_message': message if success else False,
+                'sage_x3_error':            False if success else message,
+            })
 
-                self.write({
-                    'sage_x3_submitted':      True,
-                    'sage_x3_validated':      success,
-                    'sage_x3_submitted_date': fields.Datetime.now(),
-                    'sage_x3_response_message': message if success else False,
-                    'sage_x3_error':          False if success else message,
-                })
+            self.message_post(
+                body=f"{'✅ Validée' if success else '❌ Rejetée'}\n{message}",
+                subject=f"{'✅' if success else '❌'} SAGE X3",
+            )
 
-                self.message_post(
-                    body=f"{'✅ Validée' if success else '❌ Rejetée'}\n{message}",
-                    subject=f"{'✅' if success else '❌'} SAGE X3",
-                )
+            if not success:
+                raise UserError(f"Commande rejetée par SAGE X3 : {message}")
+            return True
 
-                if not success:
-                    raise UserError(f"Commande rejetée par SAGE X3 : {message}")
-                return True
-
-        raise UserError(f"Erreur HTTP {response.status_code}: {response.text}")
+        raise UserError("Réponse inattendue de SAGE X3 (liste vide ou format invalide)")
 
     def _prepare_order_for_sage_x3(self):
         """Formate la commande pour l'API SAGE X3."""
@@ -254,8 +241,8 @@ class PurchaseOrderSageX3(models.Model):
         self.env.cr.commit()
         message = (
             f"Traitement terminé sur {len(purchases)} commande(s)\n\n"
-            f"✅ Succès : {success_count}\n"
-            f"❌ Erreurs : {error_count}"
+            f"✅ {success_count} : Succès\n"
+            f"❌ {error_count} : Erreurs"
         )
 
         if errors:
@@ -276,7 +263,6 @@ class PurchaseOrderSageX3(models.Model):
     # JOB PRINCIPAL D'IMPORT
     # =========================================================================
 
-    @api.model
     def _job_import_deliveries(self):
         """
         Job principal : récupère les livraisons SAGE X3, filtre par société,
@@ -290,19 +276,15 @@ class PurchaseOrderSageX3(models.Model):
             if not token:
                 raise UserError("Échec de l'authentification SAGE X3")
 
-            config = self._get_sage_x3_config()
-            if isinstance(config, dict):
-                base_url = config.get('base_url') or config.get(0)
-            else:
-                base_url = config[0]
-            receive_url    = f"{base_url}/api/Orders/deliveries"
+            config      = self._get_sage_x3_config()
+            receive_url = f"{config['base_url']}/api/Orders/deliveries"
             headers        = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
 
             last_import = self._get_last_import_date(current_company.id)
             params      = {'since': last_import.isoformat()} if last_import else None
 
             _logger.info("📡 Récupération des livraisons depuis %s", last_import or "début")
-            response = self._safe_get_single(receive_url, headers, params=params)
+            response = self._safe_get(receive_url, headers, params=params)
 
             if response.status_code != 200:
                 raise UserError(f"Erreur API : {response.status_code}")
@@ -330,7 +312,7 @@ class PurchaseOrderSageX3(models.Model):
                 deliveries_filtered, order_cache, product_cache, current_company.id
             )
 
-            # self._update_last_import_date(current_company.id)
+            self._update_last_import_date(current_company.id)
 
             duration = (datetime.now() - start_time).total_seconds()
             self._notify_import_completion(stats, duration, current_company.name)
@@ -341,30 +323,6 @@ class PurchaseOrderSageX3(models.Model):
             _logger.exception("❌ [JOB] Erreur fatale pour %s : %s", current_company.name, str(e))
             self._notify_import_error(str(e), current_company.name)
             raise
-
-    # =========================================================================
-    # HTTP — GET SIMPLE (une seule requête, avec retry)
-    # =========================================================================
-
-    def _safe_get_single(self, url, headers, params=None, timeout=TIMEOUT):
-        """GET avec retry pour une requête unique (pas de pagination)."""
-        last_exc = None
-        for attempt in range(MAX_RETRIES):
-            try:
-                response = requests.get(url, headers=headers, params=params, timeout=timeout)
-                if response.status_code == 200:
-                    return response
-                _logger.warning("⚠️ HTTP %s (tentative %s/%s)",
-                                response.status_code, attempt + 1, MAX_RETRIES)
-                last_exc = Exception(f"HTTP {response.status_code}")
-            except requests.exceptions.RequestException as e:
-                _logger.warning("⚠️ Erreur réseau (tentative %s/%s) : %s",
-                                attempt + 1, MAX_RETRIES, str(e))
-                last_exc = e
-            if attempt < MAX_RETRIES - 1:
-                time.sleep(2 * (attempt + 1))
-
-        raise last_exc or Exception("Échec GET après tous les retries")
 
     # =========================================================================
     # FILTRAGE ET PARSING
@@ -442,7 +400,7 @@ class PurchaseOrderSageX3(models.Model):
             ('sage_x3_submitted',         '=',   True),
             ('sage_x3_validated',         '=',   True),
             ('sage_x3_delivery_received', '=',   False),
-            ('state',                     'in',  ['purchase', 'to approve']),
+            ('state',                     'in',  ['purchase']),
         ])
         order_cache = {o.name: o.id for o in orders}
 
@@ -566,8 +524,11 @@ class PurchaseOrderSageX3(models.Model):
 
         for line_id, values in updates.items():
             line = self.env['purchase.order.line'].browse(line_id)
+            write_vals = {}
             if 'price_unit' in values:
-                line.write({'price_unit': values['price_unit']})
+                write_vals['price_unit'] = values['price_unit']
+            if write_vals:
+                line.write(write_vals)
             if 'quantity' in values:
                 self._update_quantity_received_picking(line, values['quantity'], ref_sage)
             lines_updated += 1
@@ -615,13 +576,14 @@ class PurchaseOrderSageX3(models.Model):
     # =========================================================================
 
     def _get_last_import_date(self, company_id):
-        config = self.env['ir.config_parameter'].sudo()
-        value  = config.get_param(f'sage_x3.last_import_date.company_{company_id}')
-        # if value:
-        #     try:
-        #         return datetime.fromisoformat(value)
-        #     except (ValueError, TypeError):
-        #         pass
+        value = self.env['ir.config_parameter'].sudo().get_param(
+            f'sage_x3.last_import_date.company_{company_id}'
+        )
+        if value:
+            try:
+                return datetime.fromisoformat(value)
+            except (ValueError, TypeError):
+                pass
         return datetime.now() - timedelta(days=7)
 
     def _update_last_import_date(self, company_id):

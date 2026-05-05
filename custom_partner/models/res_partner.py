@@ -115,22 +115,32 @@ class ResPartnerInherit(models.Model):
     #         else:
     #             partner.display_name = partner.name
 
+    def _propagate_barcode_to_all_companies(self, barcode_value):
+        """Écrit barcode sur toutes les sociétés actives (champ company_dependent)."""
+        if not barcode_value:
+            return
+        companies = self.env['res.company'].sudo().search([])
+        for partner in self:
+            for company in companies:
+                try:
+                    with self.env.cr.savepoint():
+                        partner.with_company(company).with_context(
+                            no_recompute=True,
+                            skip_barcode_propagation=True,
+                        ).write({'barcode': barcode_value})
+                except Exception as e:
+                    _logger.warning(
+                        "[BARCODE SYNC] Barcode '%s' → partenaire %s / société %s : %s",
+                        barcode_value, partner.id, company.id, str(e)
+                    )
+
     def _assign_barcode_from_customer_id(self, cid):
-        """Assigne barcode = customer_id si commence par '20' et barcode vide.
-        Utilise un savepoint pour éviter de corrompre la transaction principale
-        en cas d'erreur JSONB sur le champ barcode."""
-        if not cid or not cid.startswith('20'):
+        """Assigne barcode = customer_id si commence par '10' ou '20' et barcode vide."""
+        if not cid or not cid.startswith(('10', '20')):
             return
         for partner in self:
             if not partner.barcode:
-                try:
-                    with self.env.cr.savepoint():
-                        partner.with_context(no_recompute=True).write({'barcode': cid})
-                except Exception as e:
-                    _logger.warning(
-                        "[BARCODE SYNC] Impossible d'assigner le barcode '%s' au partenaire %s : %s",
-                        cid, partner.id, str(e)
-                    )
+                partner._propagate_barcode_to_all_companies(cid)
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -141,19 +151,24 @@ class ResPartnerInherit(models.Model):
         return partners
 
     def write(self, vals):
+        if self.env.context.get('skip_barcode_propagation'):
+            return super(ResPartnerInherit, self).write(vals)
         result = super(ResPartnerInherit, self).write(vals)
         if 'customer_id' in vals:
             cid = vals.get('customer_id') or ''
             self._assign_barcode_from_customer_id(cid)
+        elif 'barcode' in vals and vals.get('barcode'):
+            self._propagate_barcode_to_all_companies(vals['barcode'])
         return result
 
     def action_sync_barcode_from_customer_id(self):
         """Migration : assigne barcode = customer_id pour les partenaires existants
-        dont customer_id commence par '20' et dont le barcode est vide.
-        Commit tous les 500 enregistrements pour éviter les transactions trop longues."""
+        dont customer_id commence par '10' ou '20' et dont le barcode est vide."""
         BATCH_SIZE = 500
 
         partner_ids = self.env['res.partner'].search([
+            '|',
+            ('customer_id', 'like', '10%'),
             ('customer_id', 'like', '20%'),
             ('barcode', '=', False),
         ]).ids
@@ -166,12 +181,11 @@ class ResPartnerInherit(models.Model):
         for idx, pid in enumerate(partner_ids):
             partner = self.env['res.partner'].browse(pid)
             cid = partner.customer_id or ''
-            if not cid.startswith('20'):
+            if not cid.startswith(('10', '20')):
                 continue
             try:
-                with self.env.cr.savepoint():
-                    partner.with_context(no_recompute=True).write({'barcode': cid})
-                    updated += 1
+                partner._propagate_barcode_to_all_companies(cid)
+                updated += 1
             except Exception as e:
                 _logger.warning(
                     "[BARCODE SYNC] Échec partenaire %s (customer_id=%s) : %s",
@@ -179,7 +193,6 @@ class ResPartnerInherit(models.Model):
                 )
                 skipped += 1
 
-            # Commit intermédiaire + libération mémoire tous les BATCH_SIZE
             if (idx + 1) % BATCH_SIZE == 0:
                 self.env.cr.commit()
                 self.env.invalidate_all()
@@ -188,7 +201,6 @@ class ResPartnerInherit(models.Model):
                     idx + 1, total, updated, skipped
                 )
 
-        # Commit final
         self.env.cr.commit()
         _logger.info("[BARCODE SYNC] Terminé — %d mis à jour, %d ignorés sur %d.", updated, skipped, total)
 
@@ -199,6 +211,79 @@ class ResPartnerInherit(models.Model):
                 'title': _('Synchronisation terminée'),
                 'message': _(
                     '%(updated)d client(s) mis à jour. %(skipped)d ignoré(s) sur %(total)d.',
+                    updated=updated, skipped=skipped, total=total
+                ),
+                'type': 'success',
+                'sticky': True,
+            },
+        }
+
+    def action_fill_missing_company_barcodes(self):
+        """Propage le barcode (= customer_id) sur toutes les sociétés pour les partenaires
+        dont customer_id commence par '10' ou '20', qu'ils aient déjà un barcode partiel ou non."""
+        BATCH_SIZE = 500
+
+        partners = self.env['res.partner'].search([
+            '|',
+            ('customer_id', 'like', '10%'),
+            ('customer_id', 'like', '20%'),
+        ])
+
+        total = len(partners)
+        updated = 0
+        skipped = 0
+        companies = self.env['res.company'].sudo().search([])
+        _logger.info("[BARCODE FILL] Démarrage — %d partenaires / %d sociétés.", total, len(companies))
+
+        for idx, partner in enumerate(partners):
+            cid = partner.customer_id or ''
+            if not cid.startswith(('10', '20')):
+                continue
+
+            # Détecte les sociétés où le barcode est absent ou différent du customer_id
+            missing = []
+            for company in companies:
+                current = partner.with_company(company).barcode
+                if current != cid:
+                    missing.append(company)
+
+            if not missing:
+                continue
+
+            for company in missing:
+                try:
+                    with self.env.cr.savepoint():
+                        partner.with_company(company).with_context(
+                            no_recompute=True,
+                            skip_barcode_propagation=True,
+                        ).write({'barcode': cid})
+                except Exception as e:
+                    _logger.warning(
+                        "[BARCODE FILL] Barcode '%s' → partenaire %s / société %s : %s",
+                        cid, partner.id, company.id, str(e)
+                    )
+                    skipped += 1
+                    continue
+            updated += 1
+
+            if (idx + 1) % BATCH_SIZE == 0:
+                self.env.cr.commit()
+                self.env.invalidate_all()
+                _logger.info(
+                    "[BARCODE FILL] Commit %d/%d — %d ok, %d ignorés.",
+                    idx + 1, total, updated, skipped
+                )
+
+        self.env.cr.commit()
+        _logger.info("[BARCODE FILL] Terminé — %d mis à jour, %d ignorés sur %d.", updated, skipped, total)
+
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Synchronisation terminée'),
+                'message': _(
+                    '%(updated)d client(s) complétés. %(skipped)d ignoré(s) sur %(total)d.',
                     updated=updated, skipped=skipped, total=total
                 ),
                 'type': 'success',

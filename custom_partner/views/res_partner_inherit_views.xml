@@ -16,6 +16,11 @@
                         class="btn-secondary"
                         invisible="1"
                         confirm="Assigner barcode = ID client pour tous les partenaires dont l'ID commence par 10 et dont le code-barres est vide. Continuer ?"/>
+                    <button string="Sync. codes-barres (clients 10 - 20)"
+                        name="action_fill_missing_company_barcodes" type="object"
+                        class="btn-secondary"
+                        invisible="0"
+                        confirm="Assigner barcode = ID client pour tous les partenaires dont l'ID commence par 10 et 20 et dont le code-barres est vide. Continuer ?"/>
                 </xpath>
                 <xpath expr="//field[@name='category_id']" position="attributes">
                     <attribute name="string">Catégorie client</attribute>

@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Vue liste des logs -->
+    <record id="view_sage_x3_import_log_tree" model="ir.ui.view">
+        <field name="name">sage.x3.import.log.tree</field>
+        <field name="model">sage.x3.import.log</field>
+        <field name="arch" type="xml">
+            <list string="Logs Import Sage X3" decoration-success="status == 'Success'" decoration-danger="status == 'Error'" decoration-warning="status == 'Warning'">
+                <field name="sage_log_id" string="ID"/>
+                <field name="created_at" string="Date"/>
+                <field name="import_type" string="Type"/>
+                <field name="import_model" string="Modèle"/>
+                <field name="status" string="Statut" widget="badge"
+                    decoration-success="status == 'Success'"
+                    decoration-danger="status == 'Error'"
+                    decoration-warning="status == 'Warning'"/>
+                <field name="reference_document" string="Réf. Document"/>
+                <field name="x3_document_number" string="N° Doc X3"/>
+                <field name="duration_ms" string="Durée (ms)"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vue formulaire d'un log (détail) -->
+    <record id="view_sage_x3_import_log_form" model="ir.ui.view">
+        <field name="name">sage.x3.import.log.form</field>
+        <field name="model">sage.x3.import.log</field>
+        <field name="arch" type="xml">
+            <form string="Détail Log Import Sage X3">
+                <sheet>
+                    <group>
+                        <group string="Informations Générales">
+                            <field name="sage_log_id" string="ID Log"/>
+                            <field name="created_at" string="Date Création"/>
+                            <field name="import_type" string="Type Import"/>
+                            <field name="import_model" string="Modèle Import"/>
+                            <field name="status" string="Statut" widget="badge"
+                                decoration-success="status == 'Success'"
+                                decoration-danger="status == 'Error'"
+                                decoration-warning="status == 'Warning'"/>
+                            <field name="duration_ms" string="Durée (ms)"/>
+                        </group>
+                        <group string="Documents">
+                            <field name="reference_document" string="Référence Document"/>
+                            <field name="x3_document_number" string="N° Document X3"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Messages X3">
+                            <field name="x3_messages" widget="text" readonly="1"/>
+                        </page>
+                        <page string="Payload Requête">
+                            <field name="request_payload" widget="text" readonly="1"/>
+                        </page>
+                        <page string="Données SOAP Envoyées">
+                            <field name="soap_data_sent" widget="text" readonly="1"/>
+                        </page>
+                        <page string="Réponse SOAP Brute">
+                            <field name="soap_response_raw" widget="text" readonly="1"/>
+                        </page>
+                        <page string="Erreurs Validation" invisible="not validation_errors">
+                            <field name="validation_errors" widget="text" readonly="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vue formulaire du wizard de recherche -->
+    <record id="view_sage_x3_log_search_wizard_form" model="ir.ui.view">
+        <field name="name">sage.x3.log.search.wizard.form</field>
+        <field name="model">sage.x3.log.search.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Logs Import Sage X3">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>Logs Import Sage X3</h1>
+                    </div>
+                    <group string="Critères de Recherche">
+                        <group>
+                            <field name="reference_document" string="Référence Document"/>
+                            <field name="date_from" string="Date De"/>
+                            <field name="date_to" string="Date À"/>
+                        </group>
+                        <group>
+                            <field name="page" string="Page"/>
+                            <field name="page_size" string="Résultats par page"/>
+                            <field name="total_count" string="Total trouvé" readonly="1"/>
+                        </group>
+                    </group>
+                    <div class="o_row mb-3">
+                        <button name="action_search" type="object" string="Rechercher" class="btn btn-primary" icon="fa-search"/>
+                    </div>
+                    <field name="log_ids">
+                        <list string="Résultats"
+                            decoration-success="status == 'Success'"
+                            decoration-danger="status == 'Error'"
+                            decoration-warning="status == 'Warning'"
+                            delete="false"
+                            create="false">
+                            <field name="sage_log_id" string="ID"/>
+                            <field name="created_at" string="Date"/>
+                            <field name="import_type" string="Type"/>
+                            <field name="import_model" string="Modèle"/>
+                            <field name="status" string="Statut" widget="badge"
+                                decoration-success="status == 'Success'"
+                                decoration-danger="status == 'Error'"
+                                decoration-warning="status == 'Warning'"/>
+                            <field name="reference_document" string="Réf. Document"/>
+                            <field name="x3_document_number" string="N° Doc X3"/>
+                            <field name="duration_ms" string="Durée (ms)"/>
+                            <button name="action_view_detail" type="object" icon="fa-eye" title="Voir le détail"/>
+                        </list>
+                    </field>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action pour ouvrir le wizard -->
+    <record id="action_sage_x3_import_logs" model="ir.actions.act_window">
+        <field name="name">Logs Import Sage X3</field>
+        <field name="res_model">sage.x3.log.search.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">current</field>
+        <field name="context">{'default_page': 1, 'default_page_size': 50}</field>
+    </record>
+
+    <!-- Menu principal Sage X3 (si pas encore créé) -->
+    <menuitem id="menu_sage_x3_root"
+        name="Sage X3"
+        sequence="90"
+        groups="custom_pos.group_dsi_it"
+        web_icon="custom_api_sage_x3,static/description/logs.png"/>
+
+    <!-- Sous-menu Logs -->
+    <menuitem id="menu_sage_x3_import_logs"
+        name="Logs Import"
+        parent="menu_sage_x3_root"
+        action="action_sage_x3_import_logs"
+        groups="custom_pos.group_dsi_it"
+        sequence="10"/>
+
+</odoo>

@@ -11,35 +11,34 @@
         <field name="arch" type="xml">
             <form string="Envoi en masse à SAGE X3">
                 <group>
-                    <div class="alert alert-warning" style="margin: 10px;">
+                    <div class="alert alert-warning mb-3">
                         <h3>⚠️ Confirmer l'envoi en masse à SAGE X3</h3>
                         <p>
-                            Vous êtes sur le point d'envoyer de votre magasin des données comptables en masse vers SAGE X3.
-                            Assurez-vous que les données sont correctes et que vous avez sélectionné la bonne periode avant de confirmer l'envoi.
+                            Vous êtes sur le point d'envoyer de votre magasin des données comptables
+                            en masse vers SAGE X3. Assurez-vous que les données sont correctes et que
+                            vous avez sélectionné la bonne période avant de confirmer l'envoi.
                         </p>
                         <p><strong>Cette action est irréversible.</strong></p>
                     </div>
-                    
                 </group>
                 <group name="info" string="Informations sur l'envoi">
                     <group>
-                        <field name="company_ids" widget="many2many_tags" readonly="1"/>   
-                        <field name="date_from" readonly="0"/>
-                        <field name="date_to" readonly="0"/>
+                        <field name="company_ids" widget="many2many_tags" readonly="1"/>
+                        <field name="date_from"/>
+                        <field name="date_to"/>
                     </group>
                     <group>
-                        <field name="count_invoices"/>
-                        <field name="count_refunds"/>
-                        <field name="count_payments"/>
-                        <field name="count_pos_sessions"/>
-
+                        <field name="count_refunds"      readonly="1"/>
+                        <field name="count_payments"     readonly="1"/>
+                        <field name="count_pos_sessions" readonly="1"/>
                     </group>
                 </group>
                 <footer>
-                    <button name="action_confirm_send" 
-                            type="object" 
-                            string="Confirmer l'envoi" 
-                            class="btn-primary"/>
+                    <button name="action_confirm_send"
+                            type="object"
+                            string="Confirmer l'envoi"
+                            class="btn-primary"
+                            invisible="count_pos_sessions == 0 and count_refunds == 0 and count_payments == 0"/>
                     <button string="Annuler" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>

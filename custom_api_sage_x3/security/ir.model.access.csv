@@ -1,3 +1,5 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_sage_x3_send_wizard_manager,sage.x3.send.wizard.manager,model_sage_x3_send_wizard,account.group_account_manager,1,1,1,1
 access_sage_x3_send_wizard_user,sage.x3.send.wizard.user,model_sage_x3_send_wizard,account.group_account_invoice,1,1,1,0
+access_sage_x3_import_log_dsi,sage.x3.import.log.dsi,model_sage_x3_import_log,custom_pos.group_dsi_it,1,1,1,1
+access_sage_x3_log_search_wizard_dsi,sage.x3.log.search.wizard.dsi,model_sage_x3_log_search_wizard,custom_pos.group_dsi_it,1,1,1,1

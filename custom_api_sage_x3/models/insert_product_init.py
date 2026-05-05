@@ -582,7 +582,7 @@ class ProductTemplateImport(models.Model):
             "prod_cond":         item.get("ypcB1_0", ""),
             "weight":            self._safe_float(item.get("itmweI_0")),
             "marque":            item.get("ymarK_0", ""),
-            "discount_ligne":    item.get("yappremL_0", False),
+            "discount_ligne":    self._verify_boolean(item.get("yappremL_0")),
             "airsi_taxes_id":    self._get_airsi_taxes_id(item.get("yairsI_0"), tax_cache),
             "price_catalog":     base_price_ttc,
             "price_carton":      self._safe_float(item.get("ypxcA_0")),

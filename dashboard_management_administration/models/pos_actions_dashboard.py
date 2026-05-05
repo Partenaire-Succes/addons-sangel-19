@@ -277,18 +277,25 @@ class PosActionsDashboard(models.Model):
 
         company_id = self.env.company.id
 
-        # FIX : filtre sur sage_x3_sent=False (factures non encore envoyées uniquement)
-        pending_invoices = self.env['account.move'].search_count([
+        # Seuls les avoirs POS avec is_limit sont envoyés via ce wizard
+        refund_candidates = self.env['account.move'].search([
             ('company_id',   '=',  company_id),
-            ('move_type',    'in', ['out_invoice', 'out_refund']),
+            ('move_type',    '=',  'out_refund'),
             ('state',        '=',  'posted'),
             ('sage_x3_sent', '=',  False),
         ])
+        pending_invoices = refund_candidates.filtered(
+            lambda m: any(
+                p.payment_method_id.is_limit
+                for o in m.pos_order_ids
+                for p in o.payment_ids
+            )
+        )
 
         if not pending_invoices:
             return self._notify(
                 'Information',
-                'Aucune facture en attente d\'envoi à SAGE X3.',
+                'Aucun avoir POS en attente d\'envoi à SAGE X3.',
                 'warning',
             )
 

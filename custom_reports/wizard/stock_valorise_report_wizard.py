@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import io
 import base64
+from datetime import datetime as dt, time as t
 from odoo import models, fields, api
 from odoo.exceptions import UserError
 from odoo.tools import float_round
@@ -91,7 +92,7 @@ class StockValoriseReport(models.TransientModel):
     # LOGIQUE DU RAPPORT
     # -------------------------------------------------------------------------
     def _get_stock_by_category(self):
-        """Retourne les données de valorisation à partir de product_ids."""
+        """Retourne les données de valorisation à la date du rapport."""
         self.ensure_one()
         categories = {}
 
@@ -99,19 +100,25 @@ class StockValoriseReport(models.TransientModel):
         total_qty = 0.0
         total_valorisation = 0.0
 
+        # Fin de journée à la date filtrée : inclut tous les mouvements du jour
+        date_at = dt.combine(self.date_report, t(23, 59, 59))
+
         for product in self.product_ids:
             categ = product.cat_gestion_id
             cat_gestion_id = categ.id
 
-            # 🧠 Code article géré proprement
             code_article = product.code_article or product.product_tmpl_id.code_article or ''
 
-            # Stock réel dans l'emplacement
-            qty = product.with_context(location=self.location_id.id).qty_available
+            # Quantité dans l'emplacement à la date du rapport
+            qty = product.with_context(
+                location=self.location_id.id,
+                to_date=date_at,
+            ).qty_available
             if not qty or qty <= 0:
                 continue
 
-            pamp = product.standard_price or 0.0
+            # PAMP historique à la date du rapport, repli sur le prix actuel si absent
+            pamp = product.with_context(to_date=date_at).avg_cost or product.standard_price or 0.0
             valorisation = float_round(qty * pamp, 2)
 
             if cat_gestion_id not in categories:

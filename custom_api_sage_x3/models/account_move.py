@@ -2,7 +2,6 @@ import json
 import logging
 from datetime import datetime
 from collections import defaultdict
-from unittest import result
 
 from odoo import fields, models, api
 from odoo.exceptions import UserError
@@ -62,59 +61,6 @@ class AccountMoveSageX3(models.Model):
     # =========================================================================
 
     @api.model
-    # def _process_bulk_send_to_sage_x3(self, date_from, date_to, company_ids):
-    #     """
-    #     Envoi groupé par société et par jour.
-    #     Chaque journée produit jusqu'à 2 écritures : ENCAI et/ou DECAI.
-    #     Les account.payment du jour sont inclus dans l'ENCAI.
-    #     """
-    #     success_count = 0
-    #     error_count   = 0
-    #     errors        = []
-
-    #     for company_id in company_ids:
-    #         company = self.env['res.company'].browse(company_id)
-    #         if not company.exists():
-    #             _logger.error("❌ Société ID %s introuvable", company_id)
-    #             continue
-
-    #         current_date    = fields.Date.from_string(date_from)
-    #         end_date        = fields.Date.from_string(date_to)
-    #         company_success = 0
-    #         company_errors  = 0
-
-    #         while current_date <= end_date:
-    #             try:
-    #                 data = self._prepare_daily_entry(company, current_date)
-
-    #                 if data and data.get('ecritures'):
-    #                     self._send_daily_to_sage_x3_api(data, company, current_date)
-    #                     success_count   += 1
-    #                     company_success += 1
-    #                     _logger.info(
-    #                         "✅ %s — %s : %s écriture(s) envoyée(s)",
-    #                         company.name, current_date, len(data['ecritures'])
-    #                     )
-    #                 else:
-    #                     _logger.info("ℹ️  %s — %s : aucune donnée",
-    #                                  company.name, current_date)
-
-    #                 self.env.cr.commit()
-
-    #             except Exception as e:
-    #                 error_count    += 1
-    #                 company_errors += 1
-    #                 msg = f"{company.name} — {current_date}: {str(e)}"
-    #                 errors.append(msg)
-    #                 _logger.error("❌ %s", msg, exc_info=True)
-
-    #             current_date = fields.Date.add(current_date, days=1)
-
-    #         _logger.info("📊 %s : %s succès / %s erreurs",
-    #                      company.name, company_success, company_errors)
-
-    #     return {'success': success_count, 'errors': error_count, 'error_details': errors}
-
     def _process_bulk_send_to_sage_x3(self, date_from, date_to, company_ids):
         """
         Envoi groupé par société et par jour.
@@ -610,253 +556,7 @@ class AccountMoveSageX3(models.Model):
 
     # =========================================================================
     # FACLI PAR PAIEMENT is_limit
-    # Retourne AUSSI "payment_ids" : liste ordonnée des pos.payment.id
-    # → même ordre que "ecritures" pour le mapping dans payment_map
     # =========================================================================
-
-    # def _ligne_ecritures_is_limit(self, sessions, company):
-    #     receivable  = company.sage_x3_account_customer_default_id
-    #     sale_acct   = company.sage_x3_account_sale_id
-    #     sale_tva_9  = company.sage_x3_account_sale_tva_9_id
-    #     sale_tva_18 = company.sage_x3_account_sale_tva_18_id
-    #     sale_airsi  = company.sage_x3_account_sale_airsi_id
-    #     site        = company.sage_x3_site
-    #     journal     = company.sage_x3_journal_sale
-    #     type_piece  = "FACLI"
-    #     type_piece_av  = "AVCLI"
-    #     divers      = company.partner_devers_id.customer_id if company.partner_devers_id else ""
-
-    #     if not sessions:
-    #         return []
-
-    #     ecritures   = []
-    #     payment_ids = []   # même ordre que ecritures
-
-    #     for session in sessions:
-    #         payments = self.env['pos.payment'].search([
-    #             ('session_id', '=', session.id),
-    #             ('sage_x3_sent', '=',  False),
-    #             ('payment_method_id.is_limit', '=', True),
-    #         ])
-
-    #         for payment in payments:
-    #             partner      = payment.partner_id
-    #             partner_name_c = partner.name if partner else "CLIENT"
-    #             ticket_c = payment.pos_order_id.pos_reference or ""
-
-    #             partner_name = partner_name_c[:10]
-    #             ticket = ticket_c[-6:]
-
-    #             customer_id = (partner.customer_id or "").strip() if partner else ""
-    #             if customer_id.startswith(("10", "20")):
-    #                 tiers_code = divers
-    #             else:
-    #                 tiers_code = customer_id
-
-    #             pay_date = payment.payment_date.strftime("%d%m%y")  if payment.payment_date else ""
-    #             date_fr  = payment.payment_date.strftime("%d/%m/%Y") if payment.payment_date else ""
-
-    #             if payment.amount > 0:
-    #                 lines = self.env['pos.order.line'].search([
-    #                     ('order_id', '=', payment.pos_order_id.id),
-    #                 ])
-
-    #                 # lines = payment.pos_order_id.lines
-
-    #                 total_ht       = 0.0
-    #                 lines_with_tax = lines.filtered(lambda l: l.tax_ids)
-    #                 grouped_tax    = defaultdict(float)
-    #                 lignes         = []
-
-    #                 for line in lines:
-    #                     price = line.price_unit * (1 - (line.discount or 0.0) / 100.0)
-    #                     tax_res   = line.tax_ids.compute_all(
-    #                         price,
-    #                         quantity=line.qty,
-    #                         product=line.product_id,
-    #                     )
-    #                     total_ht += tax_res['total_excluded']
-    #                     for tax_line in tax_res['taxes']:
-    #                         tax  = self.env['account.tax'].browse(tax_line['id'])
-    #                         taux = tax.amount
-    #                         grouped_tax[taux] += tax_line['amount']
-    #                         grouped_tax[taux] = round(grouped_tax[taux], 2)
-
-    #                 total_ht = round(total_ht, 2)
-
-    #                 lignes.append(self._build_ligne(
-    #                     site    = site,
-    #                     compte  = receivable.code,
-    #                     sens    = 1,
-    #                     montant = round(payment.amount, 2),
-    #                     libelle = f"FACLI-{partner_name}-{ticket}",
-    #                     tiers   = tiers_code,
-    #                 ))
-
-    #                 if not lines_with_tax:
-    #                     total_ht = round(payment.amount, 2)
-
-    #                 lignes.append(self._build_ligne(
-    #                     site    = site,
-    #                     compte  = sale_acct.code,
-    #                     sens    = -1,
-    #                     montant = total_ht,
-    #                     libelle = f"CAISSE EN COMPTE {company.name} DU {date_fr}",
-    #                 ))
-
-    #                 for taux, montant in sorted(grouped_tax.items()):
-    #                     taux_int = int(round(taux))
-    #                     if taux_int == 18:
-    #                         compte = sale_tva_18
-    #                     elif taux_int == 9:
-    #                         compte = sale_tva_9
-    #                     else:
-    #                         compte = sale_airsi
-
-    #                     if montant > 0:
-    #                         lignes.append(self._build_ligne(
-    #                             site    = site,
-    #                             compte  = compte.code,
-    #                             sens    = -1,
-    #                             montant = round(montant, 2),
-    #                             libelle = f"TVA {taux_int}% {date_fr}",
-    #                         ))
-
-    #                 # ── Vérification équilibre ─────────────────────────────
-    #                 total_debit = 0.0
-    #                 total_credit = 0.0
-
-    #                 for l in lignes:
-    #                     if l['sens'] == 1:
-    #                         total_debit += l['montant']
-    #                     else:
-    #                         total_credit += l['montant']
-
-    #                 total_debit = round(total_debit, 2)
-    #                 total_credit = round(total_credit, 2)
-
-    #                 ecart = round(total_debit - total_credit, 2)
-
-    #                 # ── Ajustement si déséquilibre ─────────────────────────
-    #                 if ecart != 0:
-    #                     for l in lignes:
-    #                         if l['sens'] == 1:  # ligne client (débit)
-    #                             l['montant'] = round(l['montant'] - ecart, 2)
-    #                             break
-
-    #                 ecritures.append(self._build_ecriture(
-    #                     type_piece  = type_piece,
-    #                     site        = site,
-    #                     date_ddmmyy = pay_date,
-    #                     journal     = journal,
-    #                     libelle     = f"Mise en compte {partner_name}",
-    #                     lignes      = lignes,
-    #                 ))
-    #                 payment_ids.append(payment.id)   # ← même index que l'écriture
-
-    #             else:
-    #                 lines = self.env['pos.order.line'].search([
-    #                     ('order_id', '=', payment.pos_order_id.id),
-    #                 ])
-
-    #                 # lines = payment.pos_order_id.lines
-
-    #                 total_ht       = 0.0
-    #                 lines_with_tax = lines.filtered(lambda l: l.tax_ids)
-    #                 grouped_tax    = defaultdict(float)
-    #                 lignes         = []
-
-    #                 for line in lines:
-    #                     price = line.price_unit * (1 - (line.discount or 0.0) / 100.0)
-    #                     tax_res   = line.tax_ids.compute_all(
-    #                         price,
-    #                         quantity=line.qty,
-    #                         product=line.product_id,
-    #                     )
-    #                     total_ht += tax_res['total_excluded']
-    #                     for tax_line in tax_res['taxes']:
-    #                         tax  = self.env['account.tax'].browse(tax_line['id'])
-    #                         taux = tax.amount
-    #                         grouped_tax[taux] += tax_line['amount']
-    #                         grouped_tax[taux] = round(grouped_tax[taux], 2)
-
-    #                 total_ht = round(total_ht, 2)
-
-    #                 lignes.append(self._build_ligne(
-    #                     site    = site,
-    #                     compte  = receivable.code,
-    #                     sens    = -1,
-    #                     montant = round(-payment.amount, 2),
-    #                     libelle = f"AVCLI-{partner_name}-{ticket}",
-    #                     tiers   = tiers_code,
-    #                 ))
-
-    #                 if not lines_with_tax:
-    #                     total_ht = abs(payment.amount)
-
-    #                 lignes.append(self._build_ligne(
-    #                     site    = site,
-    #                     compte  = sale_acct.code,
-    #                     sens    = 1,
-    #                     montant = -total_ht,
-    #                     libelle = f"CAISSE EN COMPTE {company.name} DU {date_fr}",
-    #                 ))
-
-    #                 for taux, montant in sorted(grouped_tax.items()):
-    #                     taux_int = int(round(taux))
-    #                     if taux_int == 18:
-    #                         compte = sale_tva_18
-    #                     elif taux_int == 9:
-    #                         compte = sale_tva_9
-    #                     else:
-    #                         compte = sale_airsi
-
-    #                     if montant > 0:
-    #                         lignes.append(self._build_ligne(
-    #                             site    = site,
-    #                             compte  = compte.code,
-    #                             sens    = 1,
-    #                             montant = round(-montant, 2),
-    #                             libelle = f"TVA {taux_int}% {date_fr}",
-    #                         ))
-
-    #                 # ── Vérification équilibre ─────────────────────────────
-    #                 total_debit = 0.0
-    #                 total_credit = 0.0
-
-    #                 for l in lignes:
-    #                     if l['sens'] == 1:
-    #                         total_debit += l['montant']
-    #                     else:
-    #                         total_credit += l['montant']
-
-    #                 total_debit = round(total_debit, 2)
-    #                 total_credit = round(total_credit, 2)
-
-    #                 ecart = round(total_debit - total_credit, 2)
-
-    #                 # ── Ajustement si déséquilibre ─────────────────────────
-    #                 if ecart != 0:
-    #                     for l in lignes:
-    #                         if l['sens'] == 1:  # ligne client (débit)
-    #                             l['montant'] = round(l['montant'] - ecart, 2)
-    #                             break
-
-    #                 ecritures.append(self._build_ecriture(
-    #                     type_piece  = type_piece_av,
-    #                     site        = site,
-    #                     date_ddmmyy = pay_date,
-    #                     journal     = journal,
-    #                     libelle     = f"Avoir client {partner_name}",
-    #                     lignes      = lignes,
-    #                 ))
-    #                 payment_ids.append(payment.id)  
-
-    #     return {
-    #         "ecritures":   ecritures,
-    #         "payment_ids": payment_ids,
-    #     }
-
 
     def _ligne_ecritures_is_limit(self, sessions, company):
         receivable  = company.sage_x3_account_customer_default_id
@@ -901,71 +601,11 @@ class AccountMoveSageX3(models.Model):
                 date_fr  = payment.payment_date.strftime("%d/%m/%Y") if payment.payment_date else ""
 
                 # =============================================================
-                # HELPER — récupère les lignes + TVA d'une commande POS
-                # =============================================================
-
-                def _get_order_data(order_id):
-                    lines          = self.env['pos.order.line'].search([('order_id', '=', order_id)])
-                    total_ht       = 0.0
-                    lines_with_tax = lines.filtered(lambda l: l.tax_ids)
-                    grouped_tax    = defaultdict(float)
-
-                    for line in lines:
-                        price   = line.price_unit * (1 - (line.discount or 0.0) / 100.0)
-                        tax_res = line.tax_ids.compute_all(
-                            price,
-                            quantity=line.qty,
-                            product=line.product_id,
-                        )
-                        total_ht += abs(tax_res['total_excluded'])   # ✅ abs()
-
-                        for tax_line in tax_res['taxes']:
-                            tax  = self.env['account.tax'].browse(tax_line['id'])
-                            taux = tax.amount
-                            grouped_tax[taux] += abs(tax_line['amount'])   # ✅ abs()
-
-                    # Arrondi unique à la fin, pas à chaque itération
-                    grouped_tax = {t: round(m, 2) for t, m in grouped_tax.items()}
-                    return lines_with_tax, round(total_ht, 2), grouped_tax
-
-                # =============================================================
-                # HELPER — sécurise le code compte TVA
-                # =============================================================
-                def _get_compte_code(taux_int):
-                    if taux_int == 18:
-                        compte_obj = sale_tva_18
-                    elif taux_int == 9:
-                        compte_obj = sale_tva_9
-                    else:
-                        compte_obj = sale_airsi
-
-                    code = compte_obj.code if compte_obj and compte_obj.code else None
-                    if not code:
-                        _logger.error(
-                            "❌ Compte TVA %s%% non configuré pour %s — ligne ignorée",
-                            taux_int, company.name
-                        )
-                    return code
-
-                # =============================================================
-                # HELPER — équilibre débit/crédit et ajuste la ligne cible
-                # =============================================================
-                def _equilibrer(lignes, sens_cible):
-                    total_debit  = round(sum(l['montant'] for l in lignes if l['sens'] ==  1), 2)
-                    total_credit = round(sum(l['montant'] for l in lignes if l['sens'] == -1), 2)
-                    ecart        = round(total_debit - total_credit, 2)
-                    if ecart != 0:
-                        for l in lignes:
-                            if l['sens'] == sens_cible:
-                                l['montant'] = round(l['montant'] - ecart, 2)
-                                break
-
-                # =============================================================
                 # CAS 1 — FACLI (paiement positif)
                 # =============================================================
                 if payment.amount > 0:
 
-                    lines_with_tax, total_ht, grouped_tax = _get_order_data(
+                    lines_with_tax, total_ht, grouped_tax = self._get_pos_order_data(
                         payment.pos_order_id.id
                     )
                     lignes = []
@@ -995,7 +635,7 @@ class AccountMoveSageX3(models.Model):
                     # Lignes TVA (crédit)
                     for taux, montant in sorted(grouped_tax.items()):
                         taux_int    = int(round(taux))
-                        compte_code = _get_compte_code(taux_int)
+                        compte_code = self._get_tva_compte_code(taux_int, sale_tva_9, sale_tva_18, sale_airsi, company.name)
                         if not compte_code:
                             continue
                         if montant > 0:
@@ -1008,7 +648,7 @@ class AccountMoveSageX3(models.Model):
                             ))
 
                     # Équilibre — ajuster ligne client (sens=1)
-                    _equilibrer(lignes, sens_cible=1)
+                    self._equilibrer_lignes(lignes, sens_cible=1)
 
                     ecritures.append(self._build_ecriture(
                         type_piece  = type_piece,
@@ -1025,7 +665,7 @@ class AccountMoveSageX3(models.Model):
                 # =============================================================
                 else:
 
-                    lines_with_tax, total_ht, grouped_tax = _get_order_data(
+                    lines_with_tax, total_ht, grouped_tax = self._get_pos_order_data(
                         payment.pos_order_id.id
                     )
                     total_ht = abs(total_ht)   # ✅ toujours positif
@@ -1056,7 +696,7 @@ class AccountMoveSageX3(models.Model):
                     # Lignes TVA (débit)
                     for taux, montant in sorted(grouped_tax.items()):
                         taux_int    = int(round(taux))
-                        compte_code = _get_compte_code(taux_int)
+                        compte_code = self._get_tva_compte_code(taux_int, sale_tva_9, sale_tva_18, sale_airsi, company.name)
                         if not compte_code:
                             continue
                         if montant != 0:
@@ -1069,7 +709,7 @@ class AccountMoveSageX3(models.Model):
                             ))
 
                     # Équilibre — ajuster ligne client (sens=1)
-                    _equilibrer(lignes, sens_cible=1)
+                    self._equilibrer_lignes(lignes, sens_cible=1)
 
                     ecritures.append(self._build_ecriture(
                         type_piece  = type_piece_av,
@@ -1085,131 +725,57 @@ class AccountMoveSageX3(models.Model):
             "ecritures":   ecritures,
             "payment_ids": payment_ids,
         }
+
+    # =========================================================================
+    # HELPERS EXTRAITS — réutilisables, testables unitairement
+    # =========================================================================
+
+    def _get_pos_order_data(self, order_id):
+        lines          = self.env['pos.order.line'].search([('order_id', '=', order_id)])
+        total_ht       = 0.0
+        lines_with_tax = lines.filtered(lambda l: l.tax_ids)
+        grouped_tax    = defaultdict(float)
+        for line in lines:
+            price   = line.price_unit * (1 - (line.discount or 0.0) / 100.0)
+            tax_res = line.tax_ids.compute_all(price, quantity=line.qty, product=line.product_id)
+            total_ht += abs(tax_res['total_excluded'])
+            for tax_line in tax_res['taxes']:
+                taux = self.env['account.tax'].browse(tax_line['id']).amount
+                grouped_tax[taux] += abs(tax_line['amount'])
+        grouped_tax = {t: round(m, 2) for t, m in grouped_tax.items()}
+        return lines_with_tax, round(total_ht, 2), grouped_tax
+
+    def _get_tva_compte_code(self, taux_int, sale_tva_9, sale_tva_18, sale_airsi, company_name):
+        if taux_int == 18:
+            compte_obj = sale_tva_18
+        elif taux_int == 9:
+            compte_obj = sale_tva_9
+        else:
+            compte_obj = sale_airsi
+        code = compte_obj.code if compte_obj and compte_obj.code else None
+        if not code:
+            _logger.error("❌ Compte TVA %s%% non configuré pour %s — ligne ignorée",
+                          taux_int, company_name)
+        return code
+
+    def _equilibrer_lignes(self, lignes, sens_cible):
+        total_debit  = round(sum(l['montant'] for l in lignes if l['sens'] ==  1), 2)
+        total_credit = round(sum(l['montant'] for l in lignes if l['sens'] == -1), 2)
+        ecart        = round(total_debit - total_credit, 2)
+        if ecart != 0:
+            for l in lignes:
+                if l['sens'] == sens_cible:
+                    l['montant'] = round(l['montant'] - ecart, 2)
+                    break
+
     # =========================================================================
     # ENVOI INDIVIDUEL — anti-timeout
-    # Marque les pos.payment IMMÉDIATEMENT après chaque écriture réussie
     # =========================================================================
-
-
-    # def _send_daily_to_sage_x3_api(self, accounting_data, company, target_date):
-    #     config = self._get_sage_x3_config()
-
-    #     _logger.info(
-    #         "📦 JSON POS (%s — %s):\n%s",
-    #         company.name, target_date,
-    #         json.dumps(accounting_data, indent=2, ensure_ascii=False),
-    #     )
-
-    #     token = self._authenticate_sage_x3()
-    #     if not token:
-    #         raise UserError("Échec de l'authentification SAGE X3")
-
-    #     headers = {
-    #         "Authorization": f"Bearer {token}",
-    #         "Content-Type":  "application/json",
-    #         "Accept":        "application/json",
-    #     }
-
-    #     ecritures   = accounting_data.get("ecritures", [])
-    #     payment_map = accounting_data.get("payment_map", {})
-
-    #     all_pieces   = []
-    #     all_messages = []
-    #     errors       = []
-
-    #     for idx, ecriture in enumerate(ecritures):
-    #         payload = {"ecritures": [ecriture]}
-
-    #         _logger.info(
-    #             "📤 Envoi écriture [%s] index=%s (%s — %s)",
-    #             ecriture.get("type"), idx, company.name, target_date,
-    #         )
-
-    #         try:
-    #             response = self._safe_post(config['accounting_url'], headers, payload)
-
-    #             if response.status_code not in (200, 201):
-    #                 errors.append(
-    #                     f"{company.name} — {target_date} [{ecriture.get('type')}] "
-    #                     f"HTTP {response.status_code}: {response.text[:100]}"
-    #                 )
-    #                 continue
-
-    #             x3_results = self._extract_x3_results(
-    #                 response, f"{ecriture.get('type')}_{target_date}"
-    #             )
-
-    #             ecriture_ok   = True
-    #             piece_numbers = []
-    #             messages      = []
-
-    #             for res in x3_results:
-    #                 if res["piece"]:
-    #                     piece_numbers.append(res["piece"])
-    #                     messages.append(res["message"])
-    #                     _logger.info(
-    #                         "✅ [%s] Pièce SAGE X3 : %s",
-    #                         ecriture.get("type"), res["piece"],
-    #                     )
-    #                 else:
-    #                     errors.append(
-    #                         f"{company.name} — {target_date} [{ecriture.get('type')}] "
-    #                         f"{res['message']}"
-    #                     )
-    #                     ecriture_ok = False
-
-    #             if ecriture_ok:
-    #                 piece_str   = ", ".join(piece_numbers)
-    #                 message_str = "\n".join(messages)
-
-    #                 all_pieces.extend(piece_numbers)
-    #                 all_messages.extend(messages)
-
-    #                 # ✅ Marquer + commit immédiat → protège contre le rollback
-    #                 pos_payment_ids = payment_map.get(idx, [])
-    #                 if pos_payment_ids:
-    #                     self._mark_pos_payments(pos_payment_ids, piece_str, message_str)
-    #                     self.env.cr.commit()   # ← COMMIT immédiat après chaque succès
-    #                     _logger.info(
-    #                         "🔒 [%s] %s pos.payment(s) marqué(s) et commité(s) — pièce %s",
-    #                         ecriture.get("type"), len(pos_payment_ids), piece_str,
-    #                     )
-
-    #         except Exception as e:
-    #             errors.append(
-    #                 f"{company.name} — {target_date} [{ecriture.get('type')}] "
-    #                 f"Timeout ou erreur réseau : {str(e)}"
-    #             )
-    #             _logger.error(
-    #                 "❌ [%s] Échec envoi — %s", ecriture.get("type"), str(e)
-    #             )
-
-    #     # ── Résultat final ───────────────────────────────────────────────────────
-    #     # On marque les sessions et account.payments AVANT de lever l'erreur
-    #     # pour ne pas perdre ce qui a réussi
-    #     piece_numbers_all = ", ".join(all_pieces)
-    #     full_message      = "\n".join(all_messages)
-
-    #     # if piece_numbers_all:
-    #     #     self._mark_daily_as_sent(company, target_date, piece_numbers_all, full_message)
-    #     #     self.env.cr.commit()   # ← COMMIT des sessions avant raise éventuel
-
-    #     if errors:
-    #         _logger.warning(
-    #             "⚠️ %s écriture(s) en erreur sur %s :\n%s",
-    #             len(errors), target_date, "\n".join(errors),
-    #         )
-    #         raise UserError(
-    #             "❌ Certaines écritures ont échoué :\n" + "\n".join(errors)
-    #         )
-
-    #     _logger.info("✅ SAGE X3 OK — Pièces : %s", piece_numbers_all)
-    #     self._mark_daily_as_sent(company, target_date, piece_numbers_all, full_message)
 
     def _send_daily_to_sage_x3_api(self, accounting_data, company, target_date):
         config = self._get_sage_x3_config()
 
-        _logger.info(
+        _logger.debug(
             "📦 JSON POS (%s — %s):\n%s",
             company.name, target_date,
             json.dumps(accounting_data, indent=2, ensure_ascii=False),
@@ -1241,15 +807,7 @@ class AccountMoveSageX3(models.Model):
             )
 
             try:
-                response = self._safe_post(config['accounting_url'], headers, payload)
-
-                if response.status_code not in (200, 201):
-                    errors.append(
-                        f"{company.name} — {target_date} [{ecriture.get('type')}] "
-                        f"HTTP {response.status_code}: {response.text[:100]}"
-                    )
-                    continue
-
+                response   = self._safe_post(config['accounting_url'], headers, payload)
                 x3_results = self._extract_x3_results(
                     response, f"{ecriture.get('type')}_{target_date}"
                 )
@@ -1413,14 +971,14 @@ class AccountMoveSageX3(models.Model):
 
         for idx, invoice in enumerate(invoices, 1):
             try:
-                invoice._send_single_invoice_to_sage_x3()
+                self._send_single_invoice_to_sage_x3()
                 success_count += 1
                 if idx % 10 == 0:
                     self.env.cr.commit()
             except Exception as e:
                 error_count += 1
-                errors.append(f"{invoice.name}: {str(e)}")
-                _logger.error("❌ %s: %s", invoice.name, str(e))
+                errors.append(f"{self.name}: {str(e)}")
+                _logger.error("❌ %s: %s", self.name, str(e))
 
         self.env.cr.commit()
         _logger.info("📊 FACLI/AVCLI — Succès: %s | Erreurs: %s",
@@ -1443,9 +1001,9 @@ class AccountMoveSageX3(models.Model):
             )
 
         config          = self._get_sage_x3_config()
-        accounting_data = self._prepare_invoice_entry(self)
+        accounting_data = self._prepare_invoice_entry()
 
-        _logger.info(
+        _logger.debug(
             "📦 JSON %s",
             json.dumps(accounting_data, indent=2, ensure_ascii=False),
         )
@@ -1460,11 +1018,7 @@ class AccountMoveSageX3(models.Model):
             "Accept":        "application/json",
         }
 
-        response = self._safe_post(config['accounting_url'], headers, accounting_data)
-
-        if response.status_code not in (200, 201):
-            raise UserError(f"Erreur HTTP {response.status_code}: {response.text}")
-
+        response      = self._safe_post(config['accounting_url'], headers, accounting_data)
         response_data = response.json()
 
         if not isinstance(response_data, list):
@@ -1510,9 +1064,10 @@ class AccountMoveSageX3(models.Model):
         tva  = montant_ttc * taux / (1 + taux)
         return round(tva, 2)
 
-    def _prepare_invoice_entry(self, invoice):
-        company    = invoice.company_id
-        is_refund  = (invoice.move_type == 'out_refund')
+    def _prepare_invoice_entry(self):
+        self.ensure_one()
+        company    = self.company_id
+        is_refund  = (self.move_type == 'out_refund')
         type_piece = "AVCLI" if is_refund else "FACLI"
 
         sens_client = -1 if is_refund else  1
@@ -1538,9 +1093,9 @@ class AccountMoveSageX3(models.Model):
             if not val:
                 raise UserError(f"{label} non configuré pour {company.name}")
 
-        third_party = (invoice.partner_id.customer_id or "").strip()
-        date_yy     = invoice.invoice_date.strftime("%d%m%y")
-        date_fr     = invoice.invoice_date.strftime("%d/%m/%Y")
+        third_party = (self.partner_id.customer_id or "").strip()
+        date_yy     = self.invoice_date.strftime("%d%m%y")
+        date_fr     = self.invoice_date.strftime("%d/%m/%Y")
         magasin     = self._get_company_code(company)
         lignes      = []
 
@@ -1548,14 +1103,14 @@ class AccountMoveSageX3(models.Model):
             site    = site,
             compte  = receivable.code,
             sens    = sens_client,
-            montant = round(invoice.amount_total, 2),
-            libelle = f"{type_piece} {invoice.name}",
+            montant = round(self.amount_total, 2),
+            libelle = f"{type_piece} {self.name}",
             tiers   = third_party,
         ))
 
         tax_facli = defaultdict(float)
 
-        for line in invoice.invoice_line_ids:
+        for line in self.invoice_line_ids:
             if line.display_type in ('line_section', 'line_note'):
                 continue
             for tax in line.tax_ids:
@@ -1566,15 +1121,15 @@ class AccountMoveSageX3(models.Model):
                 else:
                     tax_facli[sale_airsi]  += self._compute_tva(line.price_total, tax.amount / 100)
 
-        if not invoice.amount_untaxed:
-            raise UserError(f"Aucune ligne de produit valide sur {invoice.name}")
+        if not self.amount_untaxed:
+            raise UserError(f"Aucune ligne de produit valide sur {self.name}")
 
-        if invoice.amount_untaxed > 0:
+        if self.amount_untaxed > 0:
             lignes.append(self._build_ligne(
                 site    = site,
                 compte  = sale_acct.code,
                 sens    = sens_vente,
-                montant = round(invoice.amount_untaxed, 2),
+                montant = round(self.amount_untaxed, 2),
                 libelle = f"VENTES {date_fr}",
             ))
 
@@ -1605,7 +1160,7 @@ class AccountMoveSageX3(models.Model):
                     site        = site,
                     date_ddmmyy = date_yy,
                     journal     = journal,
-                    libelle     = f"{type_piece} {magasin} {invoice.name}",
+                    libelle     = f"{type_piece} {magasin} {self.name}",
                     lignes      = lignes,
                 )
             ]

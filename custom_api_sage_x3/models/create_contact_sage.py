@@ -1,8 +1,6 @@
 import time
-import gc
 import logging
 
-import requests
 from dateutil import parser
 
 from odoo import models
@@ -10,11 +8,9 @@ from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
-MAX_RETRIES = 3
-PAGE_SIZE   = 100
-COMMIT_STEP = 20
-MAX_PAGES   = 1000
-TIMEOUT     = 30
+PAGE_SIZE    = 100
+COMMIT_STEP  = 20
+MAX_PAGES    = 1000
 MAX_DURATION = 300  # 5 minutes
 
 
@@ -25,9 +21,6 @@ class ResPartnerImport(models.Model):
     # =========================================================================
     # POINT D'ENTRÉE
     # =========================================================================
-
-    def import_contacts(self):
-        return self.action_import_contacts_external_source()
 
     def action_import_contacts_external_source(self):
         """
@@ -43,11 +36,7 @@ class ResPartnerImport(models.Model):
                 raise UserError("Échec de l'authentification SAGE X3")
 
             config = self._get_sage_x3_config()
-            if isinstance(config, dict):
-                base_url = config.get('base_url') or config.get(0)
-            else:
-                base_url = config[0]
-            customers_url  = f"{base_url}/api/Customers"
+            customers_url  = f"{config['base_url']}/api/Customers"
             headers        = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
 
             # -----------------------------------------------------------------
@@ -103,9 +92,7 @@ class ResPartnerImport(models.Model):
 
                     if existing:
                         existing.write(vals)
-                        # existing.name = vals["name"]  # Forcer la mise à jour du nom dans le cache d'Odoo
                         _logger.info("🔄 Mis à jour : %s (%s)", existing.name, existing.customer_id)
-                        existing.write({'customer_account': vals.get("customer_account", existing.customer_account)})
                         updated += 1
                     else:
                         contact = partner_model.create(vals)
@@ -114,7 +101,6 @@ class ResPartnerImport(models.Model):
 
                     if idx % COMMIT_STEP == 0:
                         self.env.cr.commit()
-                        gc.collect()
                         _logger.info("💾 Commit après %s contacts", idx)
 
                 except Exception as e:
@@ -148,26 +134,6 @@ class ResPartnerImport(models.Model):
         except Exception as e:
             _logger.exception("🚨 Échec global de l'importation des contacts : %s", str(e))
             raise UserError("L'importation des contacts a échoué.")
-
-    # =========================================================================
-    # HTTP — GET PAGINÉ (utilise le mixin pour l'auth, implémente son propre GET)
-    # =========================================================================
-
-    def _safe_get(self, url, headers, params, timeout=TIMEOUT):
-        """GET avec retry et timeout."""
-        last_exc = None
-        for attempt in range(1, MAX_RETRIES + 1):
-            try:
-                response = requests.get(url, headers=headers, params=params, timeout=timeout)
-                if response.status_code in (200, 201):
-                    return response
-                _logger.warning("⚠️ HTTP inattendu (tentative %s) : %s", attempt, response.status_code)
-                last_exc = Exception(f"HTTP {response.status_code}")
-            except requests.exceptions.RequestException as e:
-                _logger.warning("⚠️ Exception réseau (tentative %s) : %s", attempt, str(e))
-                last_exc = e
-            time.sleep(5)
-        raise UserError(f"Échec de récupération des données après {MAX_RETRIES} tentatives : {last_exc}")
 
     # =========================================================================
     # OUTILS DE CONVERSION
@@ -227,7 +193,8 @@ class ResPartnerImport(models.Model):
             "vat":                self._safe_string(customer.get("naF_0")),
             "company_registry":   self._safe_string(customer.get("crN_0")),
             "active":             True,
-            "is_airsi_eligible":  is_airsi,
+            # "is_airsi_eligible":  is_airsi,
+            "is_airsi_eligible":  False,
             "is_limit":           is_limit,
             "amount_credit_limit": credit_limit,
             "code_family":        self._safe_string(customer.get("tsccoD_0")),
@@ -271,7 +238,7 @@ class ResPartnerImport(models.Model):
         if not name:
             return False
         try:
-            rec = self.env["res.partner.category"].search([("name", "ilike", name)], limit=1)
+            rec = self.env["res.partner.category"].search([("name", "=", name)], limit=1)
             if rec:
                 return rec.id
             new_rec = self.env["res.partner.category"].create({"name": name})
@@ -298,7 +265,7 @@ class ResPartnerImport(models.Model):
         if not name:
             return False
         try:
-            rec = self.env["res.users"].search([("name", "ilike", name)], limit=1)
+            rec = self.env["res.users"].search([("name", "=", name)], limit=1)
             if rec:
                 return rec.id
             _logger.debug("ℹ️ Utilisateur introuvable : %s", name)
@@ -311,7 +278,7 @@ class ResPartnerImport(models.Model):
         if not name:
             return False
         try:
-            rec = self.env["account.payment.term"].search([("name", "ilike", name)], limit=1)
+            rec = self.env["account.payment.term"].search([("name", "=", name)], limit=1)
             if rec:
                 return rec.id
             new_rec = self.env["account.payment.term"].create({
