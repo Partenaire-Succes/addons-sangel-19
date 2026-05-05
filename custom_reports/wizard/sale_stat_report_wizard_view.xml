@@ -8,6 +8,9 @@
             <form string="Statistiques de Ventes">
                 <sheet>
                     <group>
+                        <field name="report_mode" widget="radio" options="{'horizontal': true}"/>
+                    </group>
+                    <group>
                         <group string="Période 1">
                             <label for="date_start_period1" string="Période 1"/>
                             <div>
@@ -17,7 +20,7 @@
                             </div>
                             <field name="company_id" options="{'no_create': True, 'no_open': True}" readonly="1"/>
                         </group>
-                        <group string="Période 2">
+                        <group string="Période 2" invisible="report_mode == 'single'">
                             <label for="date_start_period2" string="Période 2"/>
                             <div>
                                 <field name="date_start_period2" class="oe_inline"/>
@@ -44,7 +47,7 @@
         <field name="res_model">sale.stat.report.wizard</field>
         <field name="view_mode">form</field>
         <field name="target">new</field>
-        <field name="binding_model_id" ref="sale.model_sale_order"/>
+        <field name="binding_model_id" ref="point_of_sale.model_pos_order"/>
         <field name="binding_view_types">form,list</field>
     </record>
 

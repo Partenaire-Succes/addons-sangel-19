@@ -33,46 +33,54 @@ class SaleStatReportWizard(models.TransientModel):
         default=lambda self: self.env.company
     )
 
+    report_mode = fields.Selection([
+        ('single', 'Une période'),
+        ('comparison', 'Comparaison deux périodes'),
+    ], string='Mode', default='comparison', required=True)
+
     @api.constrains('date_start_period1', 'date_end_period1', 'date_start_period2', 'date_end_period2')
     def _check_dates(self):
         for record in self:
-            if record.date_start_period1 > record.date_end_period1:
-                raise UserError("La date de début de la période 1 doit être avant la date de fin.")
-            if record.date_start_period2 > record.date_end_period2:
-                raise UserError("La date de début de la période 2 doit être avant la date de fin.")
+            if record.date_start_period1 and record.date_end_period1:
+                if record.date_start_period1 > record.date_end_period1:
+                    raise UserError("La date de début de la période 1 doit être avant la date de fin.")
+            if record.report_mode == 'comparison':
+                if record.date_start_period2 and record.date_end_period2:
+                    if record.date_start_period2 > record.date_end_period2:
+                        raise UserError("La date de début de la période 2 doit être avant la date de fin.")
 
     def get_sale_data_by_category(self):
         """Retourne un dictionnaire des ventes groupées par catégorie client."""
         self.ensure_one()
 
-        SaleOrder = self.env['sale.order']
+        PosOrder = self.env['pos.order']
 
         # Domaine de base
         domain_base = [
-            ('state', 'in', ['sale', 'done']),
+            ('state', 'in', ['paid', 'done', 'invoiced']),
             ('company_id', '=', self.company_id.id),
         ]
-
 
         if self.partner_ids:
             domain_base.append(('partner_id', 'in', self.partner_ids.ids))
 
-        # Domaines période 1 & 2
+        # Domaine période 1
         domain_p1 = domain_base + [
             ('date_order', '>=', fields.Datetime.to_datetime(self.date_start_period1)),
             ('date_order', '<=',
              fields.Datetime.to_datetime(self.date_end_period1).replace(hour=23, minute=59, second=59)),
         ]
-        domain_p2 = domain_base + [
-            ('date_order', '>=', fields.Datetime.to_datetime(self.date_start_period2)),
-            ('date_order', '<=',
-             fields.Datetime.to_datetime(self.date_end_period2).replace(hour=23, minute=59, second=59)),
-        ]
 
-        orders_p1 = SaleOrder.search(domain_p1)
-        print("orders_p1", orders_p1)
-        orders_p2 = SaleOrder.search(domain_p2)
-        print("orders_p2", orders_p2)
+        orders_p1 = PosOrder.search(domain_p1)
+
+        orders_p2 = PosOrder
+        if self.report_mode == 'comparison':
+            domain_p2 = domain_base + [
+                ('date_order', '>=', fields.Datetime.to_datetime(self.date_start_period2)),
+                ('date_order', '<=',
+                 fields.Datetime.to_datetime(self.date_end_period2).replace(hour=23, minute=59, second=59)),
+            ]
+            orders_p2 = PosOrder.search(domain_p2)
 
         # Structure de données par catégorie
         categories_data = {}
@@ -132,7 +140,7 @@ class SaleStatReportWizard(models.TransientModel):
         def add_partner_data(cat_data, partner, order, period):
             if partner.id not in cat_data['clients']:
                 cat_data['clients'][partner.id] = {
-                    'partner_name': partner.name,
+                    'partner_name': partner.name or '',
                     'partner_ref': partner.ref or '',
                     'customer_id': partner.customer_id or '',
                     'qty_p1': 0,
@@ -151,23 +159,24 @@ class SaleStatReportWizard(models.TransientModel):
                 }
 
             data = cat_data['clients'][partner.id]
-            margin = getattr(order, 'margin', 0.0)
+            amount_ht = (order.amount_total or 0.0) - (order.amount_tax or 0.0)
+            margin = order.margin or 0.0
 
             if period == 1:
                 data['qty_p1'] += 1
-                data['ca_p1'] += order.amount_untaxed
+                data['ca_p1'] += amount_ht
                 data['margin_p1'] += margin
 
                 cat_data['total_p1_qty'] += 1
-                cat_data['total_p1_ca'] += order.amount_untaxed
+                cat_data['total_p1_ca'] += amount_ht
                 cat_data['total_p1_margin'] += margin
             else:
                 data['qty_p2'] += 1
-                data['ca_p2'] += order.amount_untaxed
+                data['ca_p2'] += amount_ht
                 data['margin_p2'] += margin
 
                 cat_data['total_p2_qty'] += 1
-                cat_data['total_p2_ca'] += order.amount_untaxed
+                cat_data['total_p2_ca'] += amount_ht
                 cat_data['total_p2_margin'] += margin
 
         # Traiter toutes les commandes
@@ -179,48 +188,41 @@ class SaleStatReportWizard(models.TransientModel):
         # Calcul des marges % et progressions
         for cat_key, cat_data in categories_data.items():
             for partner_id, vals in cat_data['clients'].items():
-                # Marges en %
                 if vals['ca_p1'] > 0:
                     vals['margin_pct_p1'] = (vals['margin_p1'] / vals['ca_p1']) * 100
-                if vals['ca_p2'] > 0:
-                    vals['margin_pct_p2'] = (vals['margin_p2'] / vals['ca_p2']) * 100
 
-                # Progressions
-                vals['prog_qty'] = vals['qty_p2'] - vals['qty_p1']
-                vals['prog_ca'] = vals['ca_p2'] - vals['ca_p1']
-                vals['prog_margin'] = vals['margin_p2'] - vals['margin_p1']
+                if self.report_mode == 'comparison':
+                    if vals['ca_p2'] > 0:
+                        vals['margin_pct_p2'] = (vals['margin_p2'] / vals['ca_p2']) * 100
+                    vals['prog_qty'] = vals['qty_p2'] - vals['qty_p1']
+                    vals['prog_ca'] = vals['ca_p2'] - vals['ca_p1']
+                    vals['prog_margin'] = vals['margin_p2'] - vals['margin_p1']
+                    if vals['ca_p1'] > 0:
+                        vals['prog_ca_pct'] = (vals['prog_ca'] / vals['ca_p1']) * 100
+                    else:
+                        vals['prog_ca_pct'] = 100.0 if vals['ca_p2'] > 0 else 0.0
+                    if vals['margin_p1'] > 0:
+                        vals['prog_margin_pct'] = (vals['prog_margin'] / vals['margin_p1']) * 100
+                    else:
+                        vals['prog_margin_pct'] = 100.0 if vals['margin_p2'] > 0 else 0.0
 
-                # Progressions en %
-                if vals['ca_p1'] > 0:
-                    vals['prog_ca_pct'] = (vals['prog_ca'] / vals['ca_p1']) * 100
-                else:
-                    vals['prog_ca_pct'] = 100.0 if vals['ca_p2'] > 0 else 0.0
-
-                if vals['margin_p1'] > 0:
-                    vals['prog_margin_pct'] = (vals['prog_margin'] / vals['margin_p1']) * 100
-                else:
-                    vals['prog_margin_pct'] = 100.0 if vals['margin_p2'] > 0 else 0.0
-
-            # Marges % totales par catégorie
             if cat_data['total_p1_ca'] > 0:
                 cat_data['total_p1_margin_pct'] = (cat_data['total_p1_margin'] / cat_data['total_p1_ca']) * 100
             else:
                 cat_data['total_p1_margin_pct'] = 0.0
 
-            if cat_data['total_p2_ca'] > 0:
-                cat_data['total_p2_margin_pct'] = (cat_data['total_p2_margin'] / cat_data['total_p2_ca']) * 100
-            else:
-                cat_data['total_p2_margin_pct'] = 0.0
-
-            # Progressions totales
-            cat_data['total_prog_qty'] = cat_data['total_p2_qty'] - cat_data['total_p1_qty']
-            cat_data['total_prog_ca'] = cat_data['total_p2_ca'] - cat_data['total_p1_ca']
-            cat_data['total_prog_margin'] = cat_data['total_p2_margin'] - cat_data['total_p1_margin']
-
-            if cat_data['total_p1_ca'] > 0:
-                cat_data['total_prog_ca_pct'] = (cat_data['total_prog_ca'] / cat_data['total_p1_ca']) * 100
-            else:
-                cat_data['total_prog_ca_pct'] = 100.0 if cat_data['total_p2_ca'] > 0 else 0.0
+            if self.report_mode == 'comparison':
+                if cat_data['total_p2_ca'] > 0:
+                    cat_data['total_p2_margin_pct'] = (cat_data['total_p2_margin'] / cat_data['total_p2_ca']) * 100
+                else:
+                    cat_data['total_p2_margin_pct'] = 0.0
+                cat_data['total_prog_qty'] = cat_data['total_p2_qty'] - cat_data['total_p1_qty']
+                cat_data['total_prog_ca'] = cat_data['total_p2_ca'] - cat_data['total_p1_ca']
+                cat_data['total_prog_margin'] = cat_data['total_p2_margin'] - cat_data['total_p1_margin']
+                if cat_data['total_p1_ca'] > 0:
+                    cat_data['total_prog_ca_pct'] = (cat_data['total_prog_ca'] / cat_data['total_p1_ca']) * 100
+                else:
+                    cat_data['total_prog_ca_pct'] = 100.0 if cat_data['total_p2_ca'] > 0 else 0.0
 
         # Trier les catégories par nom
         return dict(sorted(categories_data.items()))
@@ -248,57 +250,94 @@ class SaleStatReportWizard(models.TransientModel):
         def fill(h): return PatternFill("solid", fgColor=h)
         def aln(h="left"): return Alignment(horizontal=h, vertical="center")
 
+        is_comparison = self.report_mode == 'comparison'
         p1_label = f"{self.date_start_period1.strftime('%d/%m/%Y')} → {self.date_end_period1.strftime('%d/%m/%Y')}" if self.date_start_period1 else "Période 1"
-        p2_label = f"{self.date_start_period2.strftime('%d/%m/%Y')} → {self.date_end_period2.strftime('%d/%m/%Y')}" if self.date_start_period2 else "Période 2"
 
-        ws.merge_cells("A1:L1")
+        last_col = 12 if is_comparison else 6
+        last_col_letter = chr(64 + last_col)
+        merge_range = f"A1:{last_col_letter}1"
+
+        ws.merge_cells(merge_range)
         ws["A1"] = self.company_id.name
         ws["A1"].font = Font(name="Arial", bold=True, size=11)
-        ws.merge_cells("A2:L2")
-        ws["A2"] = f"STATISTIQUES VENTES — P1: {p1_label} | P2: {p2_label}"
+
+        ws.merge_cells(f"A2:{last_col_letter}2")
+        if is_comparison:
+            p2_label = f"{self.date_start_period2.strftime('%d/%m/%Y')} → {self.date_end_period2.strftime('%d/%m/%Y')}" if self.date_start_period2 else "Période 2"
+            ws["A2"] = f"STATISTIQUES VENTES — P1: {p1_label} | P2: {p2_label}"
+        else:
+            ws["A2"] = f"STATISTIQUES VENTES — {p1_label}"
         ws["A2"].font = Font(name="Arial", bold=True, color=WHITE, size=11)
         ws["A2"].fill = fill(BLUE); ws["A2"].alignment = aln("center")
         ws.row_dimensions[2].height = 18; ws.append([])
 
-        headers = ["Catégorie", "Client", "Qté P1", "CA HT P1", "Marge P1", "% Marge P1",
-                   "Qté P2", "CA HT P2", "Marge P2", "% Marge P2", "Prog CA", "% Prog CA"]
+        if is_comparison:
+            headers = ["Catégorie", "Client", "Qté P1", "CA HT P1", "Marge P1", "% Marge P1",
+                       "Qté P2", "CA HT P2", "Marge P2", "% Marge P2", "Prog CA", "% Prog CA"]
+            money_cols_data = (4, 5, 8, 9, 11)
+            money_cols_sub = (4, 5, 8, 9, 11)
+        else:
+            headers = ["Catégorie", "Client", "Qté", "CA HT", "Marge", "% Marge"]
+            money_cols_data = (4, 5)
+            money_cols_sub = (4, 5)
+
         ws.append(headers)
         hrow = ws.max_row
-        for col in range(1, 13):
+        for col in range(1, last_col + 1):
             c = ws.cell(row=hrow, column=col)
             c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
             c.fill = fill(BLUE); c.alignment = aln("center"); c.border = brd
 
         for cat_key, cat_data in categories_data.items():
             for client in cat_data['clients'].values():
-                ws.append([
-                    cat_data['category_name'], client['partner_name'],
-                    client['qty_p1'], client['ca_p1'], client['margin_p1'], round(client['margin_pct_p1'], 2),
-                    client['qty_p2'], client['ca_p2'], client['margin_p2'], round(client['margin_pct_p2'], 2),
-                    client['prog_ca'], round(client['prog_ca_pct'], 2),
-                ])
+                if is_comparison:
+                    row_data = [
+                        cat_data['category_name'], client['partner_name'],
+                        client['qty_p1'], client['ca_p1'], client['margin_p1'], round(client['margin_pct_p1'], 2),
+                        client['qty_p2'], client['ca_p2'], client['margin_p2'], round(client['margin_pct_p2'], 2),
+                        client['prog_ca'], round(client['prog_ca_pct'], 2),
+                    ]
+                else:
+                    row_data = [
+                        cat_data['category_name'], client['partner_name'],
+                        client['qty_p1'], client['ca_p1'], client['margin_p1'], round(client['margin_pct_p1'], 2),
+                    ]
+                ws.append(row_data)
                 r = ws.max_row
-                for col in range(1, 13):
+                for col in range(1, last_col + 1):
                     c = ws.cell(row=r, column=col)
                     c.font = Font(name="Arial", size=9); c.border = brd
                     c.alignment = aln("right" if col >= 3 else "left")
-                for col in (4, 5, 8, 9, 11):
+                for col in money_cols_data:
                     ws.cell(row=r, column=col).number_format = '#,##0.00'
 
-            ws.append(["Sous-total " + cat_data['category_name'], "",
-                       cat_data['total_p1_qty'], cat_data['total_p1_ca'], cat_data['total_p1_margin'], round(cat_data.get('total_p1_margin_pct', 0.0), 2),
-                       cat_data['total_p2_qty'], cat_data['total_p2_ca'], cat_data['total_p2_margin'], round(cat_data.get('total_p2_margin_pct', 0.0), 2),
-                       cat_data.get('total_prog_ca', 0.0), round(cat_data.get('total_prog_ca_pct', 0.0), 2)])
+            if is_comparison:
+                sub_row = [
+                    "Sous-total " + cat_data['category_name'], "",
+                    cat_data['total_p1_qty'], cat_data['total_p1_ca'], cat_data['total_p1_margin'], round(cat_data.get('total_p1_margin_pct', 0.0), 2),
+                    cat_data['total_p2_qty'], cat_data['total_p2_ca'], cat_data['total_p2_margin'], round(cat_data.get('total_p2_margin_pct', 0.0), 2),
+                    cat_data.get('total_prog_ca', 0.0), round(cat_data.get('total_prog_ca_pct', 0.0), 2),
+                ]
+            else:
+                sub_row = [
+                    "Sous-total " + cat_data['category_name'], "",
+                    cat_data['total_p1_qty'], cat_data['total_p1_ca'], cat_data['total_p1_margin'], round(cat_data.get('total_p1_margin_pct', 0.0), 2),
+                ]
+            ws.append(sub_row)
             r = ws.max_row
-            for col in range(1, 13):
+            for col in range(1, last_col + 1):
                 c = ws.cell(row=r, column=col)
                 c.font = Font(name="Arial", bold=True, size=9)
                 c.fill = fill(LBLUE); c.border = brd
                 c.alignment = aln("right" if col >= 3 else "left")
-            for col in (4, 5, 8, 9, 11):
+            for col in money_cols_sub:
                 ws.cell(row=r, column=col).number_format = '#,##0.00'
 
-        for col, width in enumerate([22, 25, 8, 14, 14, 10, 8, 14, 14, 10, 14, 10], 1):
+        if is_comparison:
+            col_widths = [22, 25, 8, 14, 14, 10, 8, 14, 14, 10, 14, 10]
+        else:
+            col_widths = [22, 25, 8, 14, 14, 10]
+        for col, width in enumerate(col_widths, 1):
             ws.column_dimensions[chr(64 + col)].width = width
 
         buffer = io.BytesIO(); wb.save(buffer); buffer.seek(0)
