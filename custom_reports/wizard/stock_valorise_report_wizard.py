@@ -140,10 +140,12 @@ class StockValoriseReport(models.TransientModel):
 
             qty_company = qty_cpy.get(product.id, 0.0)
             total_value = stock_value.get(product.id, 0.0)
-            if qty_company > 0 and total_value > 0:
-                pamp = float_round(total_value / qty_company, 2)
-            else:
-                pamp = product.standard_price or 0.0
+            # if qty_company > 0 and total_value > 0:
+            #     pamp = float_round(total_value / qty_company, 2)
+            # else:
+            #     pamp = product.standard_price or 0.0
+
+            pamp = product.with_context(to_date=date_at).avg_cost or product.standard_price or 0.0
 
             valorisation = float_round(qty * pamp, 2)
 
