@@ -1,9 +1,45 @@
 import { PosOrder } from "@point_of_sale/app/models/pos_order";
 import { roundPrecision } from "@web/core/utils/numbers";
 import { patch } from "@web/core/utils/patch";
+import OrderPaymentValidation from "@point_of_sale/app/utils/order_payment_validation";
 
 patch(PosOrder.prototype, {
-    
+
+    getLoyaltyPoints() {
+        // Log the raw state before calling super so we can diagnose spent=0 issues
+        const cpc = this.uiState?.couponPointChanges || {};
+        console.log('[LOYALTY] === getLoyaltyPoints ===');
+        console.log('[LOYALTY] uiState.couponPointChanges:', JSON.stringify(cpc));
+
+        const rewardLines = this._get_reward_lines
+            ? this._get_reward_lines()
+            : (this.lines ? this.lines.filter(l => l.is_reward_line) : []);
+        console.log('[LOYALTY] reward lines:', rewardLines.map(l => ({
+            product: l.product_id?.display_name,
+            is_reward_line: l.is_reward_line,
+            points_cost: l.points_cost,
+            coupon_id_type: typeof l.coupon_id,
+            coupon_id_id: typeof l.coupon_id === 'object' ? l.coupon_id?.id : l.coupon_id,
+        })));
+
+        const result = super.getLoyaltyPoints(...arguments);
+        if (result && result.length) {
+            for (const stat of result) {
+                if (stat.program?.program_type === 'loyalty') {
+                    console.log('[LOYALTY getLoyaltyPoints] result:', {
+                        won: stat.points.won,
+                        spent: stat.points.spent,
+                        balance: stat.points.balance,
+                        total: stat.points.total,
+                    });
+                }
+            }
+        } else {
+            console.log('[LOYALTY getLoyaltyPoints] result vide:', result);
+        }
+        return result;
+    },
+
     pointsForPrograms(programs) {
         const result = super.pointsForPrograms(programs);
 
@@ -23,13 +59,24 @@ patch(PosOrder.prototype, {
             const program = this.models["loyalty.program"].get(parseInt(programId));
 
             if (program && program.program_type === 'loyalty') {
-                const customPoints = this._calculateCustomLoyaltyPoints(program);
+                const nativeEntries = result[programId] || [];
+                // Native pointsForPrograms never returns negative entries for loyalty programs
+                // (deductions are handled in postProcessLoyalty). This filter is defensive.
+                const deductionEntries = nativeEntries.filter(e => (e.points || 0) < 0);
 
+                console.log('[LOYALTY pointsForPrograms]', {
+                    programId,
+                    nativeEntries: JSON.stringify(nativeEntries),
+                    deductionEntries: JSON.stringify(deductionEntries),
+                });
+
+                const customPoints = this._calculateCustomLoyaltyPoints(program);
+                const newEntries = [...deductionEntries];
                 if (customPoints > 0) {
-                    result[programId] = [{ points: customPoints }];
-                } else {
-                    result[programId] = [];
+                    newEntries.push({ points: customPoints });
                 }
+                result[programId] = newEntries;
+                console.log('[LOYALTY pointsForPrograms] final entries:', JSON.stringify(newEntries));
             }
         }
 
@@ -140,8 +187,58 @@ patch(PosOrder.prototype, {
         }
         
         console.log('TOTAL POINTS:', totalPoints);
-        
+
         return roundPrecision(totalPoints, 0.01);
     }
-    
+
+});
+
+patch(OrderPaymentValidation.prototype, {
+    async postProcessLoyalty(order) {
+        console.log('[LOYALTY postProcess] === Début postProcessLoyalty ===');
+
+        const cpc = order.uiState?.couponPointChanges || {};
+        console.log('[LOYALTY postProcess] couponPointChanges:', JSON.stringify(cpc));
+
+        const rewardLines = order._get_reward_lines ? order._get_reward_lines() : [];
+        console.log('[LOYALTY postProcess] reward lines:', rewardLines.map(l => ({
+            product: l.product_id?.display_name,
+            is_reward_line: l.is_reward_line,
+            points_cost: l.points_cost,
+            coupon_id_type: typeof l.coupon_id,
+            coupon_id_id: typeof l.coupon_id === 'object' ? l.coupon_id?.id : l.coupon_id,
+            reward_id: l.reward_id?.id,
+        })));
+
+        // Capture loyalty stats NOW — before super() clears couponPointChanges and reward lines.
+        // This is the only guaranteed moment where spent/won are intact.
+        try {
+            const stats = order.getLoyaltyPoints?.() || [];
+            const stat = stats.find(s => s.program?.program_type === 'loyalty');
+            if (stat) {
+                if (order.initial_loyalty_balance === null || order.initial_loyalty_balance === undefined) {
+                    order.initial_loyalty_balance = stat.points.balance;
+                }
+                // Always overwrite spent/won here — most reliable capture point.
+                order.initial_loyalty_spent = stat.points.spent ?? 0;
+                order.initial_loyalty_won   = stat.points.won   ?? 0;
+                console.log('[LOYALTY postProcess] Captured → balance:', order.initial_loyalty_balance,
+                    '| won:', order.initial_loyalty_won, '| spent:', order.initial_loyalty_spent);
+            } else {
+                console.log('[LOYALTY postProcess] Aucune stat fidélité trouvée avant super()');
+            }
+        } catch (e) {
+            console.error('[LOYALTY postProcess] Erreur capture stats:', e);
+        }
+
+        let result;
+        try {
+            result = await super.postProcessLoyalty(...arguments);
+            console.log('[LOYALTY postProcess] Terminé avec succès');
+        } catch (e) {
+            console.error('[LOYALTY postProcess] ERREUR:', e);
+            throw e;
+        }
+        return result;
+    },
 });

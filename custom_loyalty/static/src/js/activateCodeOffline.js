@@ -336,42 +336,67 @@ patch(PosStore.prototype, {
 
     /**
      * Override fetchLoyaltyCard to handle offline mode.
-     * Wraps the original method in try-catch with local fallback.
-     * 
+     *
+     * Priority order:
+     *  1. Existing positive-ID card in local cache (preloaded or server-fetched)
+     *  2. Server fetch via fetchCoupons (works online)
+     *  3. Any local card including negative IDs (offline fallback)
+     *  4. Create a temporary negative-ID card (last resort)
+     *
+     * Using super.fetchLoyaltyCard is avoided here because its own local-cache
+     * check has no `id > 0` guard — it would return a stale negative-ID card
+     * before we ever reach the server, breaking point deductions.
+     *
      * @param {int} programId - The loyalty program ID
      * @param {int} partnerId - The partner ID
      */
     async fetchLoyaltyCard(programId, partnerId) {
-        // First check if card exists in local cache
-        const existingCoupon = this.models["loyalty.card"].find(
-            (c) => c.partner_id?.id === partnerId && c.program_id?.id === programId
+        // 1. Prefer a positive-ID card already in local cache
+        const positiveCard = this.models["loyalty.card"].find(
+            (c) =>
+                c.id > 0 &&
+                (c.partner_id?.id ?? c.partner_id) === partnerId &&
+                (c.program_id?.id ?? c.program_id) === programId
         );
-        if (existingCoupon) {
-            return existingCoupon;
+        if (positiveCard) {
+            return positiveCard;
         }
-        
+
+        // 2. Try server fetch (fetchCoupons is our own override: server first, offline fallback second)
         try {
-            // Try to fetch from server using parent implementation
-            return await super.fetchLoyaltyCard(programId, partnerId);
+            const fetched = await this.fetchCoupons([
+                ["partner_id", "=", partnerId],
+                ["program_id", "=", programId],
+            ]);
+            if (fetched.length > 0) {
+                return fetched[0];
+            }
         } catch (error) {
-            console.warn("Mode hors-ligne: Impossible de récupérer la carte fidélité", error.message || error);
-            
-            // Offline fallback: Create a temporary local card
-            // This will be synced when the connection is restored
-            const loyaltyIdsGenerator = () => -Math.floor(Math.random() * 1000000);
-            
-            const localCard = await this.models["loyalty.card"].create({
-                id: loyaltyIdsGenerator(),
-                code: null,
-                program_id: this.models["loyalty.program"].get(programId),
-                partner_id: this.models["res.partner"].get(partnerId),
-                points: 0,
-                expiration_date: null,
-            });
-            
-            console.log("Mode hors-ligne: Carte fidélité locale créée:", localCard);
-            return localCard;
+            console.warn("Mode hors-ligne: fetchCoupons échoué pour carte fidélité", error.message || error);
         }
+
+        // 3. Fall back to any local card (positive or negative) — covers offline with loaded cards
+        const anyLocalCard = this.models["loyalty.card"].find(
+            (c) =>
+                (c.partner_id?.id ?? c.partner_id) === partnerId &&
+                (c.program_id?.id ?? c.program_id) === programId
+        );
+        if (anyLocalCard) {
+            console.log("[LOYALTY fetchLoyaltyCard] Carte locale (ID " + anyLocalCard.id + ") utilisée hors-ligne");
+            return anyLocalCard;
+        }
+
+        // 4. Last resort: create a temporary card with a negative ID
+        const tempCard = await this.models["loyalty.card"].create({
+            id: -Math.floor(Math.random() * 1000000),
+            code: null,
+            program_id: this.models["loyalty.program"].get(programId),
+            partner_id: this.models["res.partner"].get(partnerId),
+            points: 0,
+            expiration_date: null,
+        });
+        console.log("[LOYALTY fetchLoyaltyCard] Carte temporaire créée (hors-ligne), ID:", tempCard.id);
+        return tempCard;
     },
 
     /**

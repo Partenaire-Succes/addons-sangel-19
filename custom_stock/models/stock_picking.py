@@ -143,16 +143,28 @@ class StockPicking(models.Model):
         """
         Bouton manuel 'Éclater en unités' — à appeler après validation d'une réception.
 
-        Crée un transfert interne (carton_location → unit_location) via des
-        stock.move propres pour chaque article pack reçu. Le price_unit est
-        calculé depuis le mouvement de réception original (prix carton / pack_qty)
-        de façon à préserver l'AVCO de l'article unité.
+        Deux transferts internes sont créés :
+          1. Consommation cartons : Entrepôt → Production (retire le stock carton, AVCO correct)
+          2. Création unités    : Production → Entrepôt  (injecte les unités au bon prix)
+
+        La vue produit affiche pack_equiv_cartons_available = unités / pack_qty en temps réel.
         """
         self.ensure_one()
         if self.state != 'done':
             raise UserError(_("La réception doit d'abord être validée."))
         if self.picking_type_id.code != 'incoming':
             raise UserError(_("L'éclatement ne s'applique qu'aux réceptions."))
+
+        # ── Protection double-clic ────────────────────────────────────────────
+        already_done = self.env['stock.picking'].search([
+            ('origin', '=', 'Eclatement cartons — %s' % self.name),
+            ('state', '=', 'done'),
+        ], limit=1)
+        if already_done:
+            raise UserError(_(
+                "L'éclatement a déjà été effectué pour cette réception.\n"
+                "Transfert existant : %s"
+            ) % already_done.name)
 
         pack_moves = []
         for move in self.move_ids.filtered(lambda m: m.state == 'done' and m.quantity > 0):
@@ -188,14 +200,18 @@ class StockPicking(models.Model):
             raise UserError(_("Aucun type 'Transfert interne' trouvé."))
 
         dest_location = self.location_dest_id
-        picking_vals = {
+
+        # Crée les unités depuis Production → Entrepôt.
+        # Le stock carton physique n'est pas touché — il reste visible dans l'inventaire.
+        # L'affichage se fait via pack_equiv_cartons_available qui combine
+        # cartons physiques non éclatés + unités enfant / pack_qty.
+        explosion_picking = self.env['stock.picking'].create({
             'picking_type_id': internal_type.id,
             'location_id': production_loc.id,     # source virtuelle (Production)
             'location_dest_id': dest_location.id,  # destination = entrepôt réception
             'origin': 'Eclatement cartons — %s' % self.name,
             'company_id': self.company_id.id,
-        }
-        explosion_picking = self.env['stock.picking'].create(picking_vals)
+        })
 
         for move, pack_template in pack_moves:
             child_product = pack_template.pack_child_product_id
@@ -212,7 +228,6 @@ class StockPicking(models.Model):
                 'location_id': production_loc.id,
                 'location_dest_id': dest_location.id,
                 'price_unit': unit_price,
-                # 'name': 'Eclatement %s -> %s' % (pack_template.name, child_product.display_name),
                 'origin': self.name,
                 'company_id': self.company_id.id,
             })
@@ -239,17 +254,13 @@ class StockPicking(models.Model):
         explosion_picking.with_context(skip_backorder=True, skip_immediate=True).button_validate()
 
         self.message_post(
-            body=_('Éclatement cartons effectué → transfert <b>%s</b> créé.') % explosion_picking.name,
+            body=_('Éclatement cartons effectué → transfert unités <b>%s</b> créé.') % explosion_picking.name,
             message_type='notification',
         )
-        return {
-            'type': 'ir.actions.act_window',
-            'name': _('Éclatement cartons'),
-            'res_model': 'stock.picking',
-            'res_id': explosion_picking.id,
-            'view_mode': 'form',
-            'target': 'current',
-        }
+        # Retourner un reload de la réception (pas le formulaire du picking éclatement).
+        # Ouvrir ce formulaire plante sur _compute_forecast_information (bug Odoo 19 :
+        # KeyError sur (warehouse_id, date) pour les mouvements depuis emplacement virtuel).
+        return {'type': 'ir.actions.client', 'tag': 'reload'}
 
     # _process_pack_explosion et _process_unit_to_pack_sync supprimés :
     # ils créaient des ajustements d'inventaire sur du stock déjà modifié

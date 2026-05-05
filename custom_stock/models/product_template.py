@@ -129,7 +129,6 @@ class ProductTemplateInherit(models.Model):
         help="Nombre d'unités contenues dans un carton.",
     )
 
-    # Lecture pratique en équivalences (affichage)
     pack_equiv_cartons_available = fields.Float(
         string="Stock cartons (équiv.)",
         compute="_compute_pack_equivalences",
@@ -339,7 +338,7 @@ class ProductTemplateInherit(models.Model):
                     and tmpl.pack_qty > 0):
                 units = tmpl.pack_child_product_id.qty_available
                 tmpl.pack_equiv_units_available = units
-                tmpl.pack_equiv_cartons_available = units // tmpl.pack_qty
+                tmpl.pack_equiv_cartons_available = units / tmpl.pack_qty
 
     @api.depends('standard_price', 'purchase_new_price')
     def _compute_effective_cost(self):
