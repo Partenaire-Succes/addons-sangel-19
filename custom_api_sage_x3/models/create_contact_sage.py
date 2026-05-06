@@ -13,6 +13,15 @@ COMMIT_STEP  = 20
 MAX_PAGES    = 1000
 MAX_DURATION = 300  # 5 minutes
 
+# Champs mis à jour sur un contact existant (name et customer_id sont exclus intentionnellement)
+_CONTACT_UPDATE_FIELDS = (
+    'is_company', 'customer_rank', 'street', 'city', 'phone', 'vat',
+    'company_registry', 'active', 'is_airsi_eligible', 'is_limit',
+    'amount_credit_limit', 'code_family', 'category_id', 'currency_id',
+    'primary_responsible_id', 'secondary_responsible_id',
+    'property_payment_term_id', 'create_date_sage', 'update_date_sage',
+)
+
 
 class ResPartnerImport(models.Model):
     _name  = 'res.partner'
@@ -91,7 +100,7 @@ class ResPartnerImport(models.Model):
                     )
 
                     if existing:
-                        existing.write(vals)
+                        partner_model._update_existing_contact(existing, vals)
                         _logger.info("🔄 Mis à jour : %s (%s)", existing.name, existing.customer_id)
                         updated += 1
                     else:
@@ -228,6 +237,14 @@ class ResPartnerImport(models.Model):
             vals["update_date_sage"] = update_date
 
         return vals
+
+    def _update_existing_contact(self, existing, vals):
+        """
+        Met à jour uniquement les champs autorisés (_CONTACT_UPDATE_FIELDS) sur un contact existant.
+        name et customer_id ne sont jamais modifiés ici.
+        """
+        update_vals = {f: vals[f] for f in _CONTACT_UPDATE_FIELDS if f in vals}
+        existing.write(update_vals)
 
     # =========================================================================
     # GETTERS Many2one / Many2many
