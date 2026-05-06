@@ -971,14 +971,14 @@ class AccountMoveSageX3(models.Model):
 
         for idx, invoice in enumerate(invoices, 1):
             try:
-                self._send_single_invoice_to_sage_x3()
+                invoice._send_single_invoice_to_sage_x3()
                 success_count += 1
                 if idx % 10 == 0:
                     self.env.cr.commit()
             except Exception as e:
                 error_count += 1
-                errors.append(f"{self.name}: {str(e)}")
-                _logger.error("❌ %s: %s", self.name, str(e))
+                errors.append(f"{invoice.name}: {str(e)}")
+                _logger.error("❌ %s: %s", invoice.name, str(e))
 
         self.env.cr.commit()
         _logger.info("📊 FACLI/AVCLI — Succès: %s | Erreurs: %s",
@@ -1037,12 +1037,13 @@ class AccountMoveSageX3(models.Model):
                 errors.append(res["message"])
 
         if errors:
+            error_str = "\n".join(errors)
             self.write({
                 'sage_x3_sent':      False,
                 'sage_x3_sent_date': fields.Datetime.now(),
-                'sage_x3_error':     errors,
+                'sage_x3_error':     error_str,
             })
-            raise UserError("\n".join(errors))
+            raise UserError(error_str)
 
         piece_numbers = ", ".join(success_pieces)
         full_message  = "\n".join(success_messages)

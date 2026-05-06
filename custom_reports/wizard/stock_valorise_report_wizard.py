@@ -99,9 +99,8 @@ class StockValoriseReport(models.TransientModel):
         total_qty = 0.0
         total_valorisation = 0.0
 
-        date_at = dt.combine(self.date_report, t(23, 59, 59))
-        date_from = dt.combine(self.date_report, t.min)  # 00:00:00
-        date_to   = dt.combine(self.date_report, t.max)  # 23:59:59.999999
+        date_from = dt.combine(self.date_report, t.min)       # 00:00:00
+        date_at   = dt.combine(self.date_report, t(23, 59, 59)) # 23:59:59
 
         # Quantités à l'emplacement en batch
         loc_qtys = self.product_ids.with_context(
@@ -109,28 +108,34 @@ class StockValoriseReport(models.TransientModel):
         ).mapped('qty_available')
         qty_loc = {p.id: q for p, q in zip(self.product_ids, loc_qtys)}
 
-        # Quantités société en batch (dénominateur du PMP)
-        cpy_qtys = self.product_ids.with_context(to_date=date_at).mapped('qty_available')
-        qty_cpy = {p.id: q for p, q in zip(self.product_ids, cpy_qtys)}
-
-        # Valeur cumulée des mouvements valorisés jusqu'à date_at (une seule requête SQL).
-        # PMP historique = Σ(move.value stocké) / qty_société.
-        # move.value est figé à la validation du mouvement → valeur réellement historique,
-        # contrairement à avg_cost qui recalcule avec le standard_price actuel pour les
-        # mouvements sans facture/BdC (ajustements d'inventaire, …).
-        move_groups = self.env['stock.move'].read_group(
-            domain = [
-                    ('product_id', 'in', self.product_ids.ids),
-                    ('company_id', '=', self.company_id.id),
-                    ('state', '=', 'done'),
-                    '|', '|', ('is_in', '=', True), ('is_dropship', '=', True), ('is_out', '=', True),
-                    ('date', '>=', date_from),
-                    ('date', '<=', date_to),
-                ],
-            fields=['value:sum'],
+        # PMP du jour : mouvements entrants entre 00:00:00 et 23:59:59
+        move_groups_day = self.env['stock.move'].read_group(
+            domain=[
+                ('product_id', 'in', self.product_ids.ids),
+                ('company_id', '=', self.company_id.id),
+                ('state', '=', 'done'),
+                '|', ('is_in', '=', True), ('is_dropship', '=', True),
+                ('date', '>=', date_from),
+                ('date', '<=', date_at),
+            ],
+            fields=['value:sum', 'product_qty:sum'],
             groupby=['product_id'],
         )
-        stock_value = {r['product_id'][0]: r['value'] for r in move_groups}
+        day_moves = {r['product_id'][0]: (r['value'], r['product_qty']) for r in move_groups_day}
+
+        # PMP fallback : cumul de tous les mouvements entrants AVANT le jour sélectionné
+        move_groups_prev = self.env['stock.move'].read_group(
+            domain=[
+                ('product_id', 'in', self.product_ids.ids),
+                ('company_id', '=', self.company_id.id),
+                ('state', '=', 'done'),
+                '|', ('is_in', '=', True), ('is_dropship', '=', True),
+                ('date', '<', date_from),
+            ],
+            fields=['value:sum', 'product_qty:sum'],
+            groupby=['product_id'],
+        )
+        prev_moves = {r['product_id'][0]: (r['value'], r['product_qty']) for r in move_groups_prev}
 
         for product in self.product_ids:
             categ = product.cat_gestion_id
@@ -141,14 +146,15 @@ class StockValoriseReport(models.TransientModel):
             if not qty or qty <= 0:
                 continue
 
-            qty_company = qty_cpy.get(product.id, 0.0)
-            total_value = stock_value.get(product.id, 0.0)
-            if qty_company > 0 and total_value > 0:
-                pamp = float_round(total_value / qty_company, 2)
+            day_value, day_qty = day_moves.get(product.id, (0.0, 0.0))
+            if day_qty > 0 and day_value > 0:
+                pamp = float_round(day_value / day_qty, 2)
             else:
-                pamp = product.standard_price or 0.0
-
-            # pamp = product.with_context(to_date=date_at).avg_cost or product.standard_price or 0.0
+                prev_value, prev_qty = prev_moves.get(product.id, (0.0, 0.0))
+                if prev_qty > 0 and prev_value > 0:
+                    pamp = float_round(prev_value / prev_qty, 2)
+                else:
+                    pamp = product.standard_price or 0.0
 
             valorisation = float_round(qty * pamp, 2)
 
