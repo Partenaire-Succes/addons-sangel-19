@@ -775,7 +775,7 @@ class AccountMoveSageX3(models.Model):
     def _send_daily_to_sage_x3_api(self, accounting_data, company, target_date):
         config = self._get_sage_x3_config()
 
-        _logger.debug(
+        _logger.info(
             "📦 JSON POS (%s — %s):\n%s",
             company.name, target_date,
             json.dumps(accounting_data, indent=2, ensure_ascii=False),
@@ -1003,7 +1003,7 @@ class AccountMoveSageX3(models.Model):
         config          = self._get_sage_x3_config()
         accounting_data = self._prepare_invoice_entry()
 
-        _logger.debug(
+        _logger.info(
             "📦 JSON %s",
             json.dumps(accounting_data, indent=2, ensure_ascii=False),
         )
