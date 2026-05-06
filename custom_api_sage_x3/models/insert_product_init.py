@@ -17,6 +17,17 @@ MAX_PAGES    = 1000
 TIMEOUT      = 30
 MAX_DURATION = 300  # 5 minutes
 
+# Champs mis à jour sur un produit existant (le nom et default_code sont exclus intentionnellement)
+_PRODUCT_UPDATE_FIELDS = (
+    'barcode', 'description', 'list_price', 'taxes_id', 'supplier_taxes_id',
+    'price_unit_ttc', 'prod_cond', 'weight', 'marque',
+    'discount_ligne', 'airsi_taxes_id', 'price_catalog', 'price_carton',
+    'price_negoce', 'price_ecom', 'price_gm', 'price_rh', 'price_st',
+    'is_yop_demi_gros', 'is_yop_detail', 'is_synacass_ci', 'is_square',
+    'is_bassam', 'is_koumassi', 'allowed_company_ids', 'family_categ_id',
+    'categ_id', 'actif_x3', 'type',
+)
+
 
 class ProductTemplateImport(models.Model):
     _name    = 'product.template'
@@ -304,7 +315,7 @@ class ProductTemplateImport(models.Model):
                             new_price = vals.get("list_price", 0)
                             old_price = existing.list_price
 
-                            existing.write(vals)
+                            tmpl_model._update_existing_product(existing, vals)
 
                             if old_price != new_price:
                                 _logger.info("💰 Prix mis à jour %s : %.2f → %.2f",
@@ -659,6 +670,21 @@ class ProductTemplateImport(models.Model):
             _logger.warning("⚠️ Barcode secondaire %s ignoré (%s) : %s", barcode, product.default_code, e)
             return False
 
+    def _update_existing_product(self, existing, vals):
+        """
+        Met à jour uniquement les champs autorisés (_PRODUCT_UPDATE_FIELDS) sur un produit existant.
+        Le nom (name) et la référence (default_code) ne sont jamais modifiés ici.
+        Le barcode n'est pas écrasé par False quand le produit possède déjà un code-barres valide.
+        """
+        update_vals = {f: vals[f] for f in _PRODUCT_UPDATE_FIELDS if f in vals}
+
+        # Si le barcode calculé est False (conflit auto-détecté avec le produit lui-même),
+        # on conserve le barcode existant plutôt que de l'effacer.
+        if not update_vals.get('barcode') and existing.barcode:
+            update_vals.pop('barcode', None)
+
+        existing.write(update_vals)
+
     def _update_product_suppliers(self, product, item):
         """Crée ou met à jour la ligne fournisseur d'un produit. Retourne le nombre de lignes ajoutées."""
         supplier_code = self._safe_string(item.get("yG5FRS_0"))
@@ -733,30 +759,6 @@ class ProductTemplateImport(models.Model):
             ('custom_stock.rh_sale_price',         'basprI_0',    'TARIF RHF',                 1.02),
             ('custom_stock.st_sale_price',         'basprI_0',    'TARIF STATION',             1.01),
         ]
-
-        base_price_ttc = self._safe_float(item.get("basprI_0"))
-
-        product.write({
-            "list_price":       self._get_ht_price(item.get("ypV_SAN_0"), tax_code),
-            "taxes_id":         self._get_taxes_id(tax_code),
-            "price_unit_ttc":   self._safe_float(item.get("ypV_SAN_0")),
-            "price_catalog":    self._safe_float(item.get("basprI_0")),
-            "price_carton":     self._safe_float(item.get("ypxcA_0")),
-            "price_negoce":     self._safe_float(item.get("ypxneG_0")),
-            "price_ecom":       self._safe_float(item.get("yglovttC_0")),
-            "price_gm":         round(base_price_ttc * 1.05, 2),
-            "price_rh":         round(base_price_ttc * 1.02, 2),
-            "price_st":         round(base_price_ttc * 1.01, 2),
-            "is_yop_demi_gros": self._verify_boolean(item.get("yafdM_0")),
-            "is_yop_detail":    self._verify_boolean(item.get("yafdeT_0")),
-            "is_synacass_ci":   self._verify_boolean(item.get("yafsyN_0")),
-            "is_square":        self._verify_boolean(item.get("yafsQ_0")),
-            "is_bassam":        self._verify_boolean(item.get("yafbsM_0")),
-            "is_koumassi":      self._verify_boolean(item.get("yafkouM_0")),
-            "allowed_company_ids": self._get_allowed_company_ids(item),
-            "actif_x3":          self._safe_string(item.get("itmstA_0")),
-            "supplier_taxes_id": False,
-        })
 
         for xml_id, api_field, display_name, multiplier in pricelist_mappings:
             price_ttc = self._safe_float(item.get(api_field))

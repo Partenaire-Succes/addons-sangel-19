@@ -133,64 +133,64 @@ class ProductProduct(models.Model):
 
         return combine(domains)
 
-    @api.model
-    def name_search(self, name='', args=None, operator='ilike', limit=100):
-        if not name:
-            return super().name_search(name, args, operator, limit)
+    # @api.model
+    # def name_search(self, name='', args=None, operator='ilike', limit=100):
+    #     if not name:
+    #         return super().name_search(name, args, operator, limit)
 
-        positive_operators = ['=', 'ilike', '=ilike', 'like', '=like']
-        is_positive = operator not in expression.NEGATIVE_TERM_OPERATORS
-        products = self.browse()
-        domain = args or []
+    #     positive_operators = ['=', 'ilike', '=ilike', 'like', '=like']
+    #     is_positive = operator not in expression.NEGATIVE_TERM_OPERATORS
+    #     products = self.browse()
+    #     domain = args or []
 
-        if operator in positive_operators:
-            products = self.search_fetch(expression.AND([domain, [('default_code', '=', name)]]), ['display_name'],
-                                         limit=limit) \
-                       or self.search_fetch(expression.AND([domain, [('barcode', '=', name)]]), ['display_name'],
-                                            limit=limit) \
-                       or self.search_fetch(expression.AND([domain, [('code_article', '=', name)]]), ['display_name'],
-                                            limit=limit)  # 👈 ajout
+    #     if operator in positive_operators:
+    #         products = self.search_fetch(expression.AND([domain, [('default_code', '=', name)]]), ['display_name'],
+    #                                      limit=limit) \
+    #                    or self.search_fetch(expression.AND([domain, [('barcode', '=', name)]]), ['display_name'],
+    #                                         limit=limit) \
+    #                    or self.search_fetch(expression.AND([domain, [('code_article', '=', name)]]), ['display_name'],
+    #                                         limit=limit)  # 👈 ajout
 
-        if not products:
-            if is_positive:
-                products = self.search_fetch(expression.AND([domain, [('default_code', operator, name)]]),
-                                             ['display_name'], limit=limit)
-                limit_rest = limit and limit - len(products)
-                if limit_rest is None or limit_rest > 0:
-                    products |= self.search_fetch(
-                        expression.AND([domain, [('id', 'not in', products.ids)], [('name', operator, name)]]),
-                        ['display_name'], limit=limit_rest
-                    )
-                # 👇 recherche sur code_article si rien trouvé
-                limit_rest = limit and limit - len(products)
-                if limit_rest is None or limit_rest > 0:
-                    products |= self.search_fetch(
-                        expression.AND([domain, [('id', 'not in', products.ids)], [('code_article', operator, name)]]),
-                        ['display_name'], limit=limit_rest
-                    )
-            else:
-                domain_neg = [
-                    ('name', operator, name),
-                    '|', ('default_code', operator, name), ('default_code', '=', False),
-                ]
-                products = self.search_fetch(expression.AND([domain, domain_neg]), ['display_name'], limit=limit)
+    #     if not products:
+    #         if is_positive:
+    #             products = self.search_fetch(expression.AND([domain, [('default_code', operator, name)]]),
+    #                                          ['display_name'], limit=limit)
+    #             limit_rest = limit and limit - len(products)
+    #             if limit_rest is None or limit_rest > 0:
+    #                 products |= self.search_fetch(
+    #                     expression.AND([domain, [('id', 'not in', products.ids)], [('name', operator, name)]]),
+    #                     ['display_name'], limit=limit_rest
+    #                 )
+    #             # 👇 recherche sur code_article si rien trouvé
+    #             limit_rest = limit and limit - len(products)
+    #             if limit_rest is None or limit_rest > 0:
+    #                 products |= self.search_fetch(
+    #                     expression.AND([domain, [('id', 'not in', products.ids)], [('code_article', operator, name)]]),
+    #                     ['display_name'], limit=limit_rest
+    #                 )
+    #         else:
+    #             domain_neg = [
+    #                 ('name', operator, name),
+    #                 '|', ('default_code', operator, name), ('default_code', '=', False),
+    #             ]
+    #             products = self.search_fetch(expression.AND([domain, domain_neg]), ['display_name'], limit=limit)
 
-        if not products and operator in positive_operators and (m := re.search(r'(\[(.*?)\])', name)):
-            match_domain = [('default_code', '=', m.group(2))]
-            products = self.search_fetch(expression.AND([domain, match_domain]), ['display_name'], limit=limit)
+    #     if not products and operator in positive_operators and (m := re.search(r'(\[(.*?)\])', name)):
+    #         match_domain = [('default_code', '=', m.group(2))]
+    #         products = self.search_fetch(expression.AND([domain, match_domain]), ['display_name'], limit=limit)
 
-        if not products and (partner_id := self.env.context.get('partner_id')):
-            supplier_domain = [
-                ('partner_id', '=', partner_id),
-                '|',
-                ('product_code', operator, name),
-                ('product_name', operator, name),
-            ]
-            match_domain = [('product_tmpl_id.seller_ids', 'any', supplier_domain)]
-            products = self.search_fetch(expression.AND([domain, match_domain]), ['display_name'], limit=limit)
+    #     if not products and (partner_id := self.env.context.get('partner_id')):
+    #         supplier_domain = [
+    #             ('partner_id', '=', partner_id),
+    #             '|',
+    #             ('product_code', operator, name),
+    #             ('product_name', operator, name),
+    #         ]
+    #         match_domain = [('product_tmpl_id.seller_ids', 'any', supplier_domain)]
+    #         products = self.search_fetch(expression.AND([domain, match_domain]), ['display_name'], limit=limit)
 
-        if not products:
-            products = self.search_fetch(expression.AND([domain, [('multi_barcode_ids', operator, name)]]),
-                                         ['display_name'], limit=limit)
+    #     if not products:
+    #         products = self.search_fetch(expression.AND([domain, [('multi_barcode_ids', operator, name)]]),
+    #                                      ['display_name'], limit=limit)
 
-        return [(product.id, product.display_name) for product in products.sudo()]
+    #     return [(product.id, product.display_name) for product in products.sudo()]

@@ -100,6 +100,8 @@ class StockValoriseReport(models.TransientModel):
         total_valorisation = 0.0
 
         date_at = dt.combine(self.date_report, t(23, 59, 59))
+        date_from = dt.combine(self.date_report, t.min)  # 00:00:00
+        date_to   = dt.combine(self.date_report, t.max)  # 23:59:59.999999
 
         # Quantités à l'emplacement en batch
         loc_qtys = self.product_ids.with_context(
@@ -117,13 +119,14 @@ class StockValoriseReport(models.TransientModel):
         # contrairement à avg_cost qui recalcule avec le standard_price actuel pour les
         # mouvements sans facture/BdC (ajustements d'inventaire, …).
         move_groups = self.env['stock.move'].read_group(
-            domain=[
-                ('product_id', 'in', self.product_ids.ids),
-                ('company_id', '=', self.company_id.id),
-                ('state', '=', 'done'),
-                '|', '|', ('is_in', '=', True), ('is_dropship', '=', True), ('is_out', '=', True),
-                ('date', '<=', date_at),
-            ],
+            domain = [
+                    ('product_id', 'in', self.product_ids.ids),
+                    ('company_id', '=', self.company_id.id),
+                    ('state', '=', 'done'),
+                    '|', '|', ('is_in', '=', True), ('is_dropship', '=', True), ('is_out', '=', True),
+                    ('date', '>=', date_from),
+                    ('date', '<=', date_to),
+                ],
             fields=['value:sum'],
             groupby=['product_id'],
         )
