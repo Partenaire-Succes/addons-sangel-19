@@ -112,6 +112,7 @@ patch(PosOrder.prototype, {
         this.initial_loyalty_balance = this.initial_loyalty_balance ?? null;
         this.initial_loyalty_spent = this.initial_loyalty_spent ?? null;
         this.initial_loyalty_won = this.initial_loyalty_won ?? null;
+        this.initial_loyalty_payment = this.initial_loyalty_payment ?? 0;
     },
     export_as_JSON() {
         const json = super.export_as_JSON(...arguments);
@@ -145,17 +146,19 @@ patch(PosOrder.prototype, {
         } catch (e) {
             console.error('[LOYALTY export] Erreur:', e);
         }
-        json.initial_loyalty_balance = this.initial_loyalty_balance ?? null;
-        json.initial_loyalty_spent   = this.initial_loyalty_spent   ?? 0;
-        json.initial_loyalty_won     = this.initial_loyalty_won     ?? 0;
+        json.initial_loyalty_balance  = this.initial_loyalty_balance  ?? null;
+        json.initial_loyalty_spent    = this.initial_loyalty_spent    ?? 0;
+        json.initial_loyalty_won      = this.initial_loyalty_won      ?? 0;
+        json.initial_loyalty_payment  = this.initial_loyalty_payment  ?? 0;
         return json;
     },
     init_from_JSON(json) {
         super.init_from_JSON(...arguments);
-        this.rendu_monnaie          = json.rendu_monnaie           || 0;
-        this.initial_loyalty_balance = json.initial_loyalty_balance ?? null;
-        this.initial_loyalty_spent   = json.initial_loyalty_spent   ?? null;
-        this.initial_loyalty_won     = json.initial_loyalty_won     ?? null;
+        this.rendu_monnaie            = json.rendu_monnaie            || 0;
+        this.initial_loyalty_balance  = json.initial_loyalty_balance  ?? null;
+        this.initial_loyalty_spent    = json.initial_loyalty_spent    ?? null;
+        this.initial_loyalty_won      = json.initial_loyalty_won      ?? null;
+        this.initial_loyalty_payment  = json.initial_loyalty_payment  ?? 0;
     },
     set_rendu_monnaie(amount) {
         this.rendu_monnaie = amount;

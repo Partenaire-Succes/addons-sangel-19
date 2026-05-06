@@ -61,6 +61,17 @@ class StockPicking(models.Model):
                 "📦 Articles concernés :\n- " + "\n- ".join(errors)
             ))
 
+        # ── 1b. Capturer les prix saisis à la réception AVANT super() ────────
+        # super()._action_done() peut recalculer move.price_unit (AVCO, std price…)
+        # et écraser le prix saisi par l'utilisateur. On le sauvegarde ici.
+        prix_saisis = {}
+        for picking in self:
+            if picking.picking_type_id.code == 'incoming' and picking.purchase_id:
+                for move in picking.move_ids.filtered(
+                    lambda m: m.purchase_line_id and m.price_unit
+                ):
+                    prix_saisis[(picking.id, move.purchase_line_id.id)] = move.price_unit
+
         # ── 2. Validation standard Odoo ───────────────────────────────────────
         result = super().button_validate()
 
@@ -69,34 +80,50 @@ class StockPicking(models.Model):
             if (picking.picking_type_id.code == 'incoming'
                     and picking.state == 'done'
                     and picking.purchase_id):
-                picking._sync_invoice_from_reception()
+                picking._sync_invoice_from_reception(prix_saisis=prix_saisis)
 
         return result
 
-    def _sync_invoice_from_reception(self):
+    def _sync_invoice_from_reception(self, prix_saisis=None):
         """
         Crée et valide automatiquement la facture fournisseur depuis la réception.
 
         Appelé APRÈS super().button_validate() quand picking = done + lié à un BC.
 
         Logique :
-          1. Supprimer toute facture brouillon existante liée au BC
-             (créée prématurément à la confirmation avec qty=0).
-          2. Laisser Odoo créer la facture via action_create_invoice()
-             — à ce stade qty_received > 0, donc les lignes sont correctes.
-          3. Si le prix de réception diffère du BC, l'appliquer sur les lignes.
+          1. Supprimer toute facture brouillon existante liée au BC.
+          2. Mettre à jour le prix sur les lignes BC avec le prix de la réception.
+             La facture hérite du prix BC → on corrige la source, pas la conséquence.
+          3. Créer la facture via action_create_invoice() → quantités et prix corrects.
           4. Valider (poster) la facture.
         """
         self.ensure_one()
         purchase = self.purchase_id
 
-        # ── 1. Nettoyer les factures brouillon existantes (qty=0) ─────────────
+        # ── 1. Nettoyer les factures brouillon existantes ─────────────────────
         draft_invoices = purchase.invoice_ids.filtered(lambda i: i.state == 'draft')
         if draft_invoices:
             draft_invoices.unlink()
 
-        # ── 2. Créer la facture avec les quantités réellement reçues ──────────
-        # qty_received est maintenant > 0 → Odoo génère des lignes correctes.
+        # ── 2. Mettre à jour le prix BC avec le prix saisi à la réception ─────
+        # La facture est générée depuis purchase.order.line.price_unit.
+        # On corrige la source AVANT de créer la facture pour que le prix
+        # de réception remonte naturellement sans patch post-création.
+        if prix_saisis:
+            for (picking_id, pol_id), price in prix_saisis.items():
+                if picking_id == self.id and price:
+                    pol = self.env['purchase.order.line'].browse(pol_id)
+                    ancien_prix = pol.price_unit
+                    pol.write({'price_unit': price})
+                    _logger.info(
+                        "[SYNC_INVOICE] BC %s ligne %s : prix %s → %s",
+                        purchase.name,
+                        pol.product_id.display_name,
+                        ancien_prix,
+                        price,
+                    )
+
+        # ── 3. Créer la facture → prix BC mis à jour remontent naturellement ──
         purchase.action_create_invoice()
 
         invoice = purchase.invoice_ids.filtered(lambda i: i.state == 'draft')
@@ -107,23 +134,6 @@ class StockPicking(models.Model):
             )
             return
         invoice = invoice[0]
-
-        # ── 3. Corriger le prix unitaire si différent entre réception et BC ───
-        price_by_pol = {}
-        for move in self.move_ids.filtered(
-            lambda m: m.state == 'done' and m.purchase_line_id and m.price_unit
-        ):
-            pol_id = move.purchase_line_id.id
-            if move.price_unit != move.purchase_line_id.price_unit:
-                price_by_pol[pol_id] = move.price_unit
-
-        if price_by_pol:
-            for inv_line in invoice.invoice_line_ids.filtered(
-                lambda l: not l.display_type and l.purchase_line_id
-            ):
-                pol_id = inv_line.purchase_line_id.id
-                if pol_id in price_by_pol:
-                    inv_line.write({'price_unit': price_by_pol[pol_id]})
 
         # ── 4. Valider la facture ─────────────────────────────────────────────
         if invoice.amount_untaxed <= 0:

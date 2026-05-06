@@ -210,8 +210,25 @@ patch(OrderPaymentValidation.prototype, {
             reward_id: l.reward_id?.id,
         })));
 
-        // Capture loyalty stats NOW — before super() clears couponPointChanges and reward lines.
-        // This is the only guaranteed moment where spent/won are intact.
+        // 1. Capture amount paid via is_loyalty payment method (e.g. "Carte de fidélité").
+        //    This is NOT tracked by getLoyaltyPoints (it's a payment, not a reward line).
+        //    We store it on the order so the receipt template can read it as a plain property.
+        try {
+            // En Odoo 19, les lignes de paiement sont dans order.payment_ids (pas order.paymentlines)
+            const paymentlines = order.payment_ids || [];
+            const loyaltyPaymentAmt = Math.floor(
+                paymentlines
+                    .filter(p => p.payment_method_id?.is_loyalty)
+                    .reduce((acc, p) => acc + Math.abs(p.amount || 0), 0)
+            );
+            order.initial_loyalty_payment = loyaltyPaymentAmt;
+            console.log('[LOYALTY postProcess] loyaltyPaymentAmt:', loyaltyPaymentAmt);
+        } catch (e) {
+            console.error('[LOYALTY postProcess] Erreur capture payment:', e);
+        }
+
+        // 2. Capture loyalty stats NOW — before super() clears couponPointChanges and reward lines.
+        //    This is the only guaranteed moment where spent/won are intact.
         try {
             const stats = order.getLoyaltyPoints?.() || [];
             const stat = stats.find(s => s.program?.program_type === 'loyalty');

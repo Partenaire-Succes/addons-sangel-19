@@ -4,44 +4,34 @@
        t-inherit="point_of_sale.OrderReceipt"
        t-inherit-mode="extension">
 
-        <!--
-            Section fidélité en français, avant before-footer.
-            La section native Odoo en anglais (div.loyalty) est masquée via CSS.
-
-            Valeurs utilisées (capturées dans export_as_JSON, fiables à l'impression) :
-              order.initial_loyalty_balance → solde avant cette transaction
-              order.initial_loyalty_won     → points gagnés (calculés à export)
-              order.initial_loyalty_spent   → points utilisés pour une récompense
-              order.get_rendu_monnaie()     → monnaie rendue créditée en points
-        -->
         <xpath expr="//div[hasclass('before-footer')]" position="before">
             <t t-if="order.partner_id">
 
-                <!--
-                    Lire les valeurs capturées à l'export (état complet garanti).
-                    Fallback : getLoyaltyPoints() si les valeurs ne sont pas encore capturées
-                    (cas d'une réimpression immédiate avant tout export).
-                -->
                 <t t-set="_liveStats"
                    t-value="(order.getLoyaltyPoints and order.getLoyaltyPoints()) or []"/>
                 <t t-set="_liveStat"
                    t-value="_liveStats.find(s => s.program and s.program.program_type === 'loyalty')"/>
 
-                <!-- Points capturés à l'export (source principale) -->
+                <!-- Solde avant transaction -->
                 <t t-set="ancienSolde"
                    t-value="order.initial_loyalty_balance != null
                             ? order.initial_loyalty_balance
                             : (_liveStat ? _liveStat.points.balance : 0)"/>
 
+                <!-- Points gagnés via récompense Odoo -->
                 <t t-set="wonPts"
                    t-value="order.initial_loyalty_won != null
                             ? order.initial_loyalty_won
                             : (_liveStat ? _liveStat.points.won : 0)"/>
 
+                <!--
+                    Points utilisés = récompense Odoo (reward lines) + paiement carte fidélité (is_loyalty).
+                    initial_loyalty_payment est capturé en JS dans postProcessLoyalty depuis order.paymentlines.
+                    initial_loyalty_spent est capturé en JS depuis getLoyaltyPoints().spent (reward lines).
+                    Les deux sont des propriétés simples sur l'objet order, accessibles dans le template.
+                -->
                 <t t-set="spentPts"
-                   t-value="order.initial_loyalty_spent != null
-                            ? order.initial_loyalty_spent
-                            : (_liveStat ? _liveStat.points.spent : 0)"/>
+                   t-value="(order.initial_loyalty_spent or 0) + (order.initial_loyalty_payment or 0)"/>
 
                 <!-- Points sur monnaie rendue (1 FCFA = 1 pt) -->
                 <t t-set="renduPts"
@@ -51,10 +41,6 @@
                 <t t-set="nouveauSolde"
                    t-value="ancienSolde + wonPts - spentPts + renduPts"/>
 
-                <!--
-                    Affiche la section si le client a des points ou a eu une activité
-                    (gagné, utilisé, rendu) sur cette transaction.
-                -->
                 <t t-if="ancienSolde > 0 or wonPts > 0 or spentPts > 0 or renduPts > 0">
 
                     <div class="pos-receipt-loyalty-balance text-start pt-2"
@@ -71,7 +57,6 @@
                             </span>
                         </div>
 
-                        <!-- Points gagnés : affiché seulement si > 0 -->
                         <t t-if="wonPts > 0">
                             <div class="d-flex justify-content-between" style="color: #1a7a1a;">
                                 <span>Points gagnés :</span>
@@ -81,7 +66,6 @@
                             </div>
                         </t>
 
-                        <!-- Points utilisés : affiché si le client a utilisé une récompense -->
                         <t t-if="spentPts > 0">
                             <div class="d-flex justify-content-between text-danger">
                                 <span>Points utilisés :</span>
@@ -91,7 +75,6 @@
                             </div>
                         </t>
 
-                        <!-- Monnaie rendue → points (1 FCFA = 1 pt) -->
                         <t t-if="renduPts > 0">
                             <div class="d-flex justify-content-between" style="color: #1a5276;">
                                 <span>Monnaie rendue :</span>
