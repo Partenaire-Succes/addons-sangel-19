@@ -1114,13 +1114,14 @@ class AccountMoveSageX3(models.Model):
         for line in self.invoice_line_ids:
             if line.display_type in ('line_section', 'line_note'):
                 continue
+            ht = line.price_subtotal  # montant HT (taxes exclues)
             for tax in line.tax_ids:
                 if tax.amount == 9:
-                    tax_facli[sale_tva_9]  += self._compute_tva(line.price_total, 0.09)
+                    tax_facli[sale_tva_9]  += round(ht * 0.09, 2)
                 elif tax.amount == 18:
-                    tax_facli[sale_tva_18] += self._compute_tva(line.price_total, 0.18)
+                    tax_facli[sale_tva_18] += round(ht * 0.18, 2)
                 else:
-                    tax_facli[sale_airsi]  += self._compute_tva(line.price_total, tax.amount / 100)
+                    tax_facli[sale_airsi]  += round(ht * (tax.amount / 100), 2)
 
         if not self.amount_untaxed:
             raise UserError(f"Aucune ligne de produit valide sur {self.name}")
