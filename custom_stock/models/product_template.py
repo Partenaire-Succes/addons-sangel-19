@@ -479,6 +479,26 @@ class ProductProduct(models.Model):
         related='product_tmpl_id.code_article',
     )
 
+    def _compute_quantities_dict(self, lot_id, owner_id, package_id, from_date=False, to_date=False):
+        res = super()._compute_quantities_dict(lot_id, owner_id, package_id, from_date, to_date)
+        # Pour les produits père (carton), qty_available = stock enfant (unités) / pack_qty
+        # Même formule que pack_equiv_cartons_available → les deux champs sont toujours identiques.
+        # Le contexte skip_pack_equiv_override évite la récursion lors de la lecture du stock enfant.
+        if self.env.context.get('skip_pack_equiv_override'):
+            return res
+        for product in self:
+            tmpl = product.product_tmpl_id
+            if (getattr(tmpl, 'is_pack_parent', False)
+                    and tmpl.pack_child_product_id
+                    and tmpl.pack_qty > 0):
+                child_qty = tmpl.pack_child_product_id.with_context(
+                    skip_pack_equiv_override=True
+                ).qty_available
+                equiv = child_qty / tmpl.pack_qty
+                if product.id in res:
+                    res[product.id]['qty_available'] = equiv
+        return res
+
     _sql_constraints = [
         ('default_code_unique', 'UNIQUE(default_code)', 'Le code article doit être unique !'),
     ]
