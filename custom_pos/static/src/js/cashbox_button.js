@@ -1,14 +1,12 @@
 /** @odoo-module **/
 /**
- * Bouton d'ouverture manuelle de la caisse sur le ProductScreen.
- * Ajoute :
- *   - un bouton "Ouvrir la caisse" visible dans la zone de contrôle principale
- *   - le même bouton dans le popup "..." (pour mobile/petits écrans)
- *   - raccourci clavier Alt+C
+ * Ouverture manuelle du tiroir caisse depuis le ProductScreen.
+ * Raccourci clavier : Alt+C
  *
- * Fonctionnement : appelle directement printer.openCashbox() en contournant la
- * garde iface_cashdrawer de hardwareProxy.openCashbox(), ce qui garantit le même
- * chemin que l'impression de ticket (HWPrinter ou IoTPrinter).
+ * Utilise exactement le même chemin qu'une validation de paiement :
+ *   this.hardwareProxy.printer.openCashbox()
+ * Ce chemin est déjà opérationnel (le tiroir s'ouvre à chaque vente).
+ * On le réutilise, sans aucune infrastructure supplémentaire.
  */
 import { patch } from "@web/core/utils/patch";
 import { useService } from "@web/core/utils/hooks";
@@ -21,40 +19,19 @@ patch(ControlButtons.prototype, {
         super.setup();
         this.hardwareProxy = useService("hardware_proxy");
 
-        // Raccourci clavier Alt+C — fonctionne depuis le ProductScreen
-        useHotkey(
-            "alt+c",
-            () => this.openCashboxManual(),
-            { bypassEditableProtection: true }
-        );
+        useHotkey("alt+c", () => this.openCashboxManual(), {
+            bypassEditableProtection: true,
+        });
     },
 
     async openCashboxManual() {
-        console.log("[CAISSE] Tentative d'ouverture manuelle...");
-
-        /**
-         * POURQUOI on n'utilise plus hardwareProxy.openCashbox() :
-         *
-         * Cette méthode native contient 3 gardes silencieuses :
-         *   1. iface_cashdrawer doit être activé dans la config POS
-         *   2. hardwareProxy.printer doit être non null
-         *   3. connectionInfo.status doit être "connected" ou "init"
-         *
-         * Si l'une d'elles est fausse → rien ne se passe, pas d'erreur,
-         * et l'ancienne notification "Signal envoyé" s'affichait quand même.
-         *
-         * SOLUTION : on appelle hardwareProxy.printer.openCashbox() directement,
-         * le même chemin exact qu'une impression de ticket :
-         *   HWPrinter  → POST /hw_proxy/default_printer_action  { action:"cashbox" }
-         *   IoTPrinter → device.action({ action:"cashbox" })  via IoT longpolling
-         */
         const printer = this.hardwareProxy.printer;
 
         if (!printer) {
-            // Le proxy n'a pas de printer : iface_print_via_proxy probablement désactivé
-            console.warn("[CAISSE] hardwareProxy.printer est null — proxy non connecté ou iface_print_via_proxy désactivé");
+            // Ce message ne devrait jamais apparaître si iface_cashdrawer est activé
+            // et que l'imprimante est bien configurée dans les réglages POS.
             this.notification.add(
-                _t("Impossible d'ouvrir la caisse : l'imprimante n'est pas connectée au proxy."),
+                _t("Imprimante non connectée — vérifiez les réglages POS (Tiroir caisse activé ?)"),
                 { type: "warning", sticky: true }
             );
             return;
@@ -62,15 +39,11 @@ patch(ControlButtons.prototype, {
 
         try {
             await printer.openCashbox();
-            console.log("[CAISSE] Caisse ouverte avec succès.");
+            this.notification.add(_t("Caisse ouverte."), { type: "success" });
+        } catch (err) {
+            console.error("[CAISSE] Erreur ouverture :", err);
             this.notification.add(
-                _t("Caisse ouverte."),
-                { type: "success", sticky: false }
-            );
-        } catch (error) {
-            console.error("[CAISSE] Erreur lors de l'ouverture :", error);
-            this.notification.add(
-                _t("Échec ouverture caisse : vérifiez la connexion à l'imprimante."),
+                _t("Erreur lors de l'ouverture de la caisse."),
                 { type: "danger", sticky: true }
             );
         }
