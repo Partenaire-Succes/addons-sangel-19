@@ -27,6 +27,7 @@
         'security/ir.model.access.csv',
         'views/pos_extrait_import_wizard_views.xml',
         'views/pos_extrait_import_menu.xml',
+        'views/stock_pmp_export_wizard_views.xml',
     ],
     'installable': True,
     'application': False,
