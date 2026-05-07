@@ -28,7 +28,7 @@ class SalePromotion(models.Model):
     )
     apply_in_pos = fields.Boolean(
         string='Appliquer en caisse (POS)',
-        default=False,
+        default=True,
         help="Si activé, la remise de cette promotion sera appliquée automatiquement "
              "en caisse sur les produits concernés pendant la période de validité.",
     )
