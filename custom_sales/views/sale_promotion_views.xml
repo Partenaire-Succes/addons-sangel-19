@@ -11,8 +11,8 @@
                 <field name="company_ids" widget="many2many_tags"/>
                 <field name="date_start"/>
                 <field name="date_end"/>
-                <field name="apply_in_pos"/>
-                <field name="active" column_invisible="1"/>
+                <field name="apply_in_pos" invisible="1"/>
+                <field name="active" invisible="1"/>
             </list>
         </field>
     </record>
@@ -34,8 +34,8 @@
                         <group string="Paramètres généraux">
                             <field name="company_ids" widget="many2many_tags"
                                    options="{'no_create': True}"/>
-                            <field name="apply_in_pos"/>
-                            <field name="active"/>
+                            <field name="apply_in_pos" invisible="1"/>
+                            <field name="active" invisible='1'/>
                         </group>
                         <group string="Période de validité">
                             <field name="date_start"/>
