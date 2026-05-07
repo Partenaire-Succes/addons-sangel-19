@@ -114,7 +114,7 @@ class StockValoriseReport(models.TransientModel):
                 ('product_id', 'in', self.product_ids.ids),
                 ('company_id', '=', self.company_id.id),
                 ('state', '=', 'done'),
-                '|', ('is_in', '=', True), ('is_dropship', '=', True),
+                ('is_in', '=', True),
                 ('date', '>=', date_from),
                 ('date', '<=', date_at),
             ],
@@ -123,19 +123,35 @@ class StockValoriseReport(models.TransientModel):
         )
         day_moves = {r['product_id'][0]: (r['value'], r['product_qty']) for r in move_groups_day}
 
-        # PMP fallback : cumul de tous les mouvements entrants AVANT le jour sélectionné
-        move_groups_prev = self.env['stock.move'].read_group(
-            domain=[
-                ('product_id', 'in', self.product_ids.ids),
-                ('company_id', '=', self.company_id.id),
-                ('state', '=', 'done'),
-                '|', ('is_in', '=', True), ('is_dropship', '=', True),
-                ('date', '<', date_from),
-            ],
-            fields=['value:sum', 'product_qty:sum'],
-            groupby=['product_id'],
-        )
-        prev_moves = {r['product_id'][0]: (r['value'], r['product_qty']) for r in move_groups_prev}
+        # PMP fallback : PMP du dernier jour ayant eu une réception avant date_from
+        # On cherche la dernière date de réception par produit, puis on prend
+        # uniquement les mouvements de CE jour-là (pas une moyenne cumulative).
+        if self.product_ids:
+            self.env.cr.execute("""
+                WITH last_dates AS (
+                    SELECT product_id, MAX(date::date) AS last_date
+                    FROM stock_move
+                    WHERE product_id = ANY(%s)
+                      AND company_id = %s
+                      AND state = 'done'
+                      AND (is_in = true OR is_dropship = true)
+                      AND date < %s
+                    GROUP BY product_id
+                )
+                SELECT sm.product_id,
+                       SUM(sm.value)       AS value,
+                       SUM(sm.product_qty) AS product_qty
+                FROM stock_move sm
+                JOIN last_dates ld ON ld.product_id = sm.product_id
+                WHERE sm.state = 'done'
+                  AND (sm.is_in = true OR sm.is_dropship = true)
+                  AND sm.date::date = ld.last_date
+                  AND sm.company_id = %s
+                GROUP BY sm.product_id
+            """, [list(self.product_ids.ids), self.company_id.id, date_from, self.company_id.id])
+            prev_moves = {row[0]: (row[1], row[2]) for row in self.env.cr.fetchall()}
+        else:
+            prev_moves = {}
 
         for product in self.product_ids:
             categ = product.cat_gestion_id
