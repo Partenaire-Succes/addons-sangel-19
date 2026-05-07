@@ -37,15 +37,15 @@
                     <!-- ÉTAPE 1 : IMPORT        -->
                     <!-- ======================== -->
                     <group invisible="state != 'import'">
-                        <group string="📎 Fichier Excel">
+                        <group string="Fichier Excel">
+                            <field name="company_id"
+                                   options="{'no_create': True}"
+                                   string="Societe a corriger"/>
                             <field name="excel_file"
                                    filename="excel_filename"
                                    widget="binary"
                                    string="Fichier (.xlsx / .xls)"/>
                             <field name="excel_filename" invisible="1"/>
-                        </group>
-                        <group string="⚙️ Options">
-                            <field name="update_standard_price"/>
                         </group>
                     </group>
 

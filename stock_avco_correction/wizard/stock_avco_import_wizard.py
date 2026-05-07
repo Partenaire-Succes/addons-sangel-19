@@ -25,13 +25,17 @@ class StockAvcoImportWizard(models.TransientModel):
         ('done',    'Terminé'),
     ], default='import', string="Étape")
 
+    # Société active au moment de l'ouverture du wizard
+    company_id = fields.Many2one(
+        'res.company',
+        string="Société",
+        required=True,
+        default=lambda self: self.env.company,
+    )
+
     excel_file     = fields.Binary(string="Fichier Excel", attachment=False)
     excel_filename = fields.Char(string="Nom du fichier")
 
-    update_standard_price = fields.Boolean(
-        string="Mettre à jour le coût standard du produit",
-        default=True,
-    )
 
     line_ids = fields.One2many(
         'stock.avco.import.wizard.line', 'wizard_id',
@@ -54,6 +58,8 @@ class StockAvcoImportWizard(models.TransientModel):
         if not self.excel_file:
             raise UserError(_("Veuillez sélectionner un fichier Excel."))
 
+        company = self.company_id
+
         rows = self._parse_excel(self.excel_file, self.excel_filename)
         if not rows:
             raise UserError(_(
@@ -72,6 +78,8 @@ class StockAvcoImportWizard(models.TransientModel):
             code_padded = str(code_raw).strip().zfill(4)
             pmp_excel   = float(pmp_excel) if pmp_excel else 0.0
 
+            # Recherche produit — les produits sont partagés entre sociétés
+            # mais on vérifie qu'ils sont actifs
             product = self.env['product.product'].search([
                 ('default_code', '=', code_padded),
                 ('active', '=', True),
@@ -84,21 +92,22 @@ class StockAvcoImportWizard(models.TransientModel):
                     'code_article': code_padded,
                     'product_id':   False,
                     'pmp_excel':    pmp_excel,
-                    'nb_moves_total':         0,
-                    'nb_moves_reception_ok':  0,
-                    'nb_moves_po_mismatch':   0,
-                    'nb_moves_zero':          0,
+                    'nb_moves_total':        0,
+                    'nb_moves_reception_ok': 0,
+                    'nb_moves_po_mismatch':  0,
+                    'nb_moves_zero':         0,
                     'total_qty':    0.0,
                     'total_value':  0.0,
                     'state':        'not_found',
                 })
                 continue
 
-            # Toutes les réceptions (pas de filtre sur value)
+            # Mouvements UNIQUEMENT pour la société courante
             moves = self.env['stock.move'].search([
                 ('product_id', '=', product.id),
                 ('is_in', '=', True),
                 ('state', '=', 'done'),
+                ('company_id', '=', company.id),   # ← FILTRE SOCIÉTÉ
             ])
 
             if not moves:
@@ -107,39 +116,36 @@ class StockAvcoImportWizard(models.TransientModel):
                     'code_article': code_padded,
                     'product_id':   product.id,
                     'pmp_excel':    pmp_excel,
-                    'nb_moves_total':         0,
-                    'nb_moves_reception_ok':  0,
-                    'nb_moves_po_mismatch':   0,
-                    'nb_moves_zero':          0,
+                    'nb_moves_total':        0,
+                    'nb_moves_reception_ok': 0,
+                    'nb_moves_po_mismatch':  0,
+                    'nb_moves_zero':         0,
                     'total_qty':    0.0,
                     'total_value':  0.0,
                     'state':        'no_move',
                 })
                 continue
 
-            # ----------------------------------------------------------
-            # Analyse de chaque move
-            # ----------------------------------------------------------
-            nb_reception_ok = 0   # reception > 0 et PO = reception → rien à faire
-            nb_po_mismatch  = 0   # reception > 0 mais PO ≠ reception → corriger PO/facture
-            nb_zero         = 0   # reception = 0 → utiliser Excel
-
-            total_qty   = 0.0
-            total_value = 0.0
+            # Analyse move par move
+            nb_reception_ok = 0
+            nb_po_mismatch  = 0
+            nb_zero         = 0
+            total_qty       = 0.0
+            total_value     = 0.0
 
             for move in moves:
                 total_qty += move.quantity
                 pol = move.purchase_line_id
 
                 if move.price_unit > 0:
-                    # Le prix de la réception est la référence
                     correct_price = move.price_unit
-                    if pol and pol.price_unit != move.price_unit:
-                        nb_po_mismatch += 1   # PO à corriger
+                    # PO doit être de la même société
+                    if pol and pol.company_id == company and \
+                            abs(pol.price_unit - move.price_unit) > 0.01:
+                        nb_po_mismatch += 1
                     else:
-                        nb_reception_ok += 1  # Déjà cohérent
+                        nb_reception_ok += 1
                 else:
-                    # Réception à 0 → Excel
                     nb_zero       += 1
                     correct_price  = pmp_excel
 
@@ -149,17 +155,17 @@ class StockAvcoImportWizard(models.TransientModel):
             state = 'ready' if nb_to_fix > 0 else 'ok'
 
             lines_vals.append({
-                'wizard_id':              self.id,
-                'code_article':           code_padded,
-                'product_id':             product.id,
-                'pmp_excel':              pmp_excel,
-                'nb_moves_total':         len(moves),
-                'nb_moves_reception_ok':  nb_reception_ok,
-                'nb_moves_po_mismatch':   nb_po_mismatch,
-                'nb_moves_zero':          nb_zero,
-                'total_qty':              total_qty,
-                'total_value':            total_value,
-                'state':                  state,
+                'wizard_id':             self.id,
+                'code_article':          code_padded,
+                'product_id':            product.id,
+                'pmp_excel':             pmp_excel,
+                'nb_moves_total':        len(moves),
+                'nb_moves_reception_ok': nb_reception_ok,
+                'nb_moves_po_mismatch':  nb_po_mismatch,
+                'nb_moves_zero':         nb_zero,
+                'total_qty':             total_qty,
+                'total_value':           total_value,
+                'state':                 state,
             })
 
         self.env['stock.avco.import.wizard.line'].create(lines_vals)
@@ -171,7 +177,7 @@ class StockAvcoImportWizard(models.TransientModel):
 
         self.summary_html = self._build_load_summary_html(
             len(rows), nb_ready, nb_ok, nb_mismatch,
-            nb_zero_total, len(not_found), not_found
+            nb_zero_total, len(not_found), not_found, company.name
         )
         self.state = 'preview'
         return self._reload()
@@ -181,6 +187,8 @@ class StockAvcoImportWizard(models.TransientModel):
     # ------------------------------------------------------------------
     def action_apply(self):
         self.ensure_one()
+
+        company = self.company_id
 
         lines_to_apply = self.line_ids.filtered(
             lambda l: l.state == 'ready' and l.product_id
@@ -195,10 +203,13 @@ class StockAvcoImportWizard(models.TransientModel):
         total_value     = 0.0
 
         for line in lines_to_apply:
+
+            # Moves filtrés par société
             moves = self.env['stock.move'].search([
                 ('product_id', '=', line.product_id.id),
                 ('is_in', '=', True),
                 ('state', '=', 'done'),
+                ('company_id', '=', company.id),   # ← FILTRE SOCIÉTÉ
             ])
             if not moves:
                 continue
@@ -212,29 +223,27 @@ class StockAvcoImportWizard(models.TransientModel):
 
                 # --------------------------------------------------
                 # LOGIQUE FINALE :
-                # 1. reception.price_unit > 0 → c'est le bon prix
-                #    → si PO différent → corriger PO + facture
-                #    → recalculer value si nécessaire
-                # 2. reception.price_unit = 0 → utiliser Excel
-                #    → corriger move + PO + facture
+                # 1. reception > 0 → prix réception = vérité
+                # 2. reception = 0 → prix Excel
                 # --------------------------------------------------
                 if move.price_unit > 0:
                     correct_price = move.price_unit
                     correct_value = move.quantity * correct_price
 
-                    # Recalculer la valeur du move si elle est incorrecte
+                    # Recalculer value si incohérente
                     if abs(move.value - correct_value) > 0.01:
-                        move.sudo().write({'value': correct_value})
+                        move.write({'value': correct_value})
                         nb_moves_fixed  += 1
                         product_touched  = True
 
-                    # Corriger le PO si prix différent
-                    if pol and abs(pol.price_unit - correct_price) > 0.01:
-                        if pol.id not in po_lines_fixed:
-                            pol.sudo().write({'price_unit': correct_price})
-                            po_lines_fixed.add(pol.id)
-                            nb_po_fixed    += 1
-                            product_touched = True
+                    # Corriger le PO (même société uniquement)
+                    if pol and pol.company_id == company and \
+                            pol.id not in po_lines_fixed and \
+                            abs(pol.price_unit - correct_price) > 0.01:
+                        pol.write({'price_unit': correct_price})
+                        po_lines_fixed.add(pol.id)
+                        nb_po_fixed    += 1
+                        product_touched = True
 
                 else:
                     # Réception à 0 → prix Excel
@@ -243,28 +252,30 @@ class StockAvcoImportWizard(models.TransientModel):
                         continue
 
                     correct_value = move.quantity * correct_price
-                    move.sudo().write({
+                    move.write({
                         'price_unit': correct_price,
                         'value':      correct_value,
                     })
                     nb_moves_fixed  += 1
                     product_touched  = True
 
-                    # Corriger le PO
-                    if pol and pol.id not in po_lines_fixed:
-                        if abs(pol.price_unit - correct_price) > 0.01:
-                            pol.sudo().write({'price_unit': correct_price})
-                            po_lines_fixed.add(pol.id)
-                            nb_po_fixed += 1
+                    # Corriger le PO (même société uniquement)
+                    if pol and pol.company_id == company and \
+                            pol.id not in po_lines_fixed and \
+                            abs(pol.price_unit - correct_price) > 0.01:
+                        pol.write({'price_unit': correct_price})
+                        po_lines_fixed.add(pol.id)
+                        nb_po_fixed += 1
 
                 total_value += correct_value
 
-                # Corriger les factures fournisseur liées au PO
-                if pol:
+                # Corriger les factures fournisseur (même société)
+                if pol and pol.company_id == company:
                     po = pol.order_id
-                    for invoice in po.sudo().invoice_ids.filtered(
+                    for invoice in po.invoice_ids.filtered(
                         lambda inv: inv.move_type == 'in_invoice'
                                     and inv.state != 'cancel'
+                                    and inv.company_id == company   # ← FILTRE SOCIÉTÉ
                                     and inv.id not in invoices_fixed
                     ):
                         inv_lines = invoice.invoice_line_ids.filtered(
@@ -272,21 +283,10 @@ class StockAvcoImportWizard(models.TransientModel):
                                        and abs(il.price_unit - correct_price) > 0.01
                         )
                         if inv_lines:
-                            inv_lines.sudo().write({'price_unit': correct_price})
+                            inv_lines.write({'price_unit': correct_price})
                             invoices_fixed.add(invoice.id)
                             nb_inv_fixed += 1
 
-            # Mettre à jour le coût standard
-            if product_touched and self.update_standard_price:
-                # Utiliser le dernier prix de réception comme standard_price
-                last_move = moves.sorted('date', reverse=True)[0]
-                final_price = (last_move.price_unit
-                               if last_move.price_unit > 0
-                               else line.pmp_excel)
-                if final_price > 0:
-                    line.product_id.product_tmpl_id.sudo().write({
-                        'standard_price': final_price,
-                    })
 
             if product_touched:
                 nb_products += 1
@@ -302,12 +302,14 @@ class StockAvcoImportWizard(models.TransientModel):
             'nb_not_found': len(self.line_ids.filtered(lambda l: l.state == 'not_found')),
         })
         self.summary_html = self._build_apply_summary_html(
-            nb_products, nb_moves_fixed, nb_po_fixed, nb_inv_fixed, total_value
+            nb_products, nb_moves_fixed, nb_po_fixed,
+            nb_inv_fixed, total_value, company.name
         )
 
         _logger.info(
-            "Correction AVCO : %d produits | %d moves | %d PO | %d factures | %.2f FCFA",
-            nb_products, nb_moves_fixed, nb_po_fixed, nb_inv_fixed, total_value
+            "Correction AVCO [%s] : %d produits | %d moves | %d PO | %d factures | %.2f FCFA",
+            company.name, nb_products, nb_moves_fixed,
+            nb_po_fixed, nb_inv_fixed, total_value
         )
         return self._reload()
 
@@ -345,7 +347,7 @@ class StockAvcoImportWizard(models.TransientModel):
                          if ws.cell(1, i+1).value]
                 raise UserError(_(
                     "Colonnes 'code article' et 'pmp' non trouvées.\n"
-                    "Colonnes détectées : %s"
+                    "Colonnes detectees : %s"
                 ) % ', '.join(found))
 
             for row in ws.iter_rows(min_row=2, values_only=True):
@@ -369,7 +371,7 @@ class StockAvcoImportWizard(models.TransientModel):
                     pi  = next((i for i, h in enumerate(hdr)
                                 if any(k in h for k in ('pmp', 'prix', 'cout', 'coût'))), None)
                     if ci is None or pi is None:
-                        raise UserError(_("Colonnes non trouvées dans le fichier .xls"))
+                        raise UserError(_("Colonnes non trouvees dans le fichier .xls"))
                     for r in range(1, ws.nrows):
                         code = str(ws.cell_value(r, ci)).strip()
                         pmp  = ws.cell_value(r, pi)
@@ -390,7 +392,8 @@ class StockAvcoImportWizard(models.TransientModel):
     # HTML
     # ------------------------------------------------------------------
     def _build_load_summary_html(self, total, nb_ready, nb_ok,
-                                  nb_mismatch, nb_zero, nb_not_found, not_found_codes):
+                                  nb_mismatch, nb_zero, nb_not_found,
+                                  not_found_codes, company_name):
         nf_list = ''
         if not_found_codes:
             items  = ''.join(f'<li>{c}</li>' for c in not_found_codes[:20])
@@ -400,8 +403,12 @@ class StockAvcoImportWizard(models.TransientModel):
 
         return f"""
         <div style="font-family:Arial,sans-serif;padding:10px;">
+          <div style="background:#e8f4fd;border:1px solid #bee5eb;border-radius:6px;
+                      padding:8px 12px;margin-bottom:12px;">
+            <strong>Societe active :</strong> {company_name}
+          </div>
           <h3 style="border-bottom:2px solid #dee2e6;padding-bottom:8px;">
-            📊 Résultat de l'analyse
+            Resultat de l'analyse
           </h3>
           <table style="width:100%;border-collapse:collapse;">
             <tr style="background:#f8f9fa;">
@@ -409,72 +416,64 @@ class StockAvcoImportWizard(models.TransientModel):
               <td style="padding:8px;border:1px solid #dee2e6;font-weight:bold;">{total}</td>
             </tr>
             <tr>
-              <td style="padding:8px;border:1px solid #dee2e6;">✅ Produits avec corrections à appliquer</td>
+              <td style="padding:8px;border:1px solid #dee2e6;">Produits avec corrections a appliquer</td>
               <td style="padding:8px;border:1px solid #dee2e6;font-weight:bold;color:#28a745;">{nb_ready}</td>
             </tr>
             <tr style="background:#f8f9fa;">
               <td style="padding:8px;border:1px solid #dee2e6;">
-                &nbsp;&nbsp;↳ 🔄 Moves où PO ≠ Réception
-                <small style="color:#666;"> — prix réception propagé vers PO + facture</small>
+                Moves ou PO est different de la Reception
               </td>
               <td style="padding:8px;border:1px solid #dee2e6;font-weight:bold;color:#fd7e14;">{nb_mismatch}</td>
             </tr>
             <tr>
               <td style="padding:8px;border:1px solid #dee2e6;">
-                &nbsp;&nbsp;↳ 📄 Moves où Réception = 0
-                <small style="color:#666;"> — prix Excel utilisé pour tout corriger</small>
+                Moves ou Reception = 0 (prix Excel utilise)
               </td>
               <td style="padding:8px;border:1px solid #dee2e6;font-weight:bold;color:#17a2b8;">{nb_zero}</td>
             </tr>
             <tr style="background:#f8f9fa;">
-              <td style="padding:8px;border:1px solid #dee2e6;">✔ Produits déjà cohérents (rien à faire)</td>
+              <td style="padding:8px;border:1px solid #dee2e6;">Produits deja coherents (rien a faire)</td>
               <td style="padding:8px;border:1px solid #dee2e6;font-weight:bold;color:#6c757d;">{nb_ok}</td>
             </tr>
             <tr>
-              <td style="padding:8px;border:1px solid #dee2e6;">❌ Code article non trouvé dans Odoo</td>
+              <td style="padding:8px;border:1px solid #dee2e6;">Code article non trouve dans Odoo</td>
               <td style="padding:8px;border:1px solid #dee2e6;font-weight:bold;color:#dc3545;">{nb_not_found}</td>
             </tr>
           </table>
-          {f'<h4 style="color:#dc3545;margin-top:16px;">Codes non trouvés :</h4>{nf_list}' if nf_list else ''}
-          <div style="background:#fff8e1;border:1px solid #ffc107;border-radius:6px;
-                      padding:12px;margin-top:12px;font-size:13px;">
-            <strong>⚙️ Logique appliquée sur toutes les réceptions :</strong><br/><br/>
-            🔵 <strong>Réception a un prix</strong> → c'est le bon prix<br/>
-            &nbsp;&nbsp;&nbsp;• PO différent ? → PO mis à jour avec le prix réception<br/>
-            &nbsp;&nbsp;&nbsp;• Facture différente ? → Facture mise à jour<br/>
-            &nbsp;&nbsp;&nbsp;• Value incohérente ? → Value recalculée (qty × prix réception)<br/><br/>
-            🟡 <strong>Réception = 0</strong> → prix Excel utilisé<br/>
-            &nbsp;&nbsp;&nbsp;• stock_move.price_unit et value mis à jour<br/>
-            &nbsp;&nbsp;&nbsp;• PO et facture mis à jour
-          </div>
+          {f'<h4 style="color:#dc3545;margin-top:16px;">Codes non trouves :</h4>{nf_list}' if nf_list else ''}
         </div>
         """
 
-    def _build_apply_summary_html(self, nb_products, nb_moves, nb_po, nb_invoices, total_value):
+    def _build_apply_summary_html(self, nb_products, nb_moves, nb_po,
+                                   nb_invoices, total_value, company_name):
         return f"""
         <div style="font-family:Arial,sans-serif;padding:10px;">
+          <div style="background:#e8f4fd;border:1px solid #bee5eb;border-radius:6px;
+                      padding:8px 12px;margin-bottom:12px;">
+            <strong>Societe :</strong> {company_name}
+          </div>
           <h3 style="border-bottom:2px solid #28a745;padding-bottom:8px;color:#28a745;">
-            ✅ Corrections appliquées avec succès !
+            Corrections appliquees avec succes !
           </h3>
           <table style="width:100%;border-collapse:collapse;">
             <tr style="background:#f8f9fa;">
-              <td style="padding:8px;border:1px solid #dee2e6;">📦 Produits traités</td>
+              <td style="padding:8px;border:1px solid #dee2e6;">Produits traites</td>
               <td style="padding:8px;border:1px solid #dee2e6;font-weight:bold;">{nb_products}</td>
             </tr>
             <tr>
-              <td style="padding:8px;border:1px solid #dee2e6;">🔄 Mouvements de stock corrigés</td>
+              <td style="padding:8px;border:1px solid #dee2e6;">Mouvements de stock corriges</td>
               <td style="padding:8px;border:1px solid #dee2e6;font-weight:bold;">{nb_moves}</td>
             </tr>
             <tr style="background:#f8f9fa;">
-              <td style="padding:8px;border:1px solid #dee2e6;">🛒 Commandes d'achat mises à jour</td>
+              <td style="padding:8px;border:1px solid #dee2e6;">Commandes d'achat mises a jour</td>
               <td style="padding:8px;border:1px solid #dee2e6;font-weight:bold;">{nb_po}</td>
             </tr>
             <tr>
-              <td style="padding:8px;border:1px solid #dee2e6;">🧾 Factures fournisseurs mises à jour</td>
+              <td style="padding:8px;border:1px solid #dee2e6;">Factures fournisseurs mises a jour</td>
               <td style="padding:8px;border:1px solid #dee2e6;font-weight:bold;">{nb_invoices}</td>
             </tr>
             <tr style="background:#f8f9fa;">
-              <td style="padding:8px;border:1px solid #dee2e6;">💰 Valeur totale recalculée</td>
+              <td style="padding:8px;border:1px solid #dee2e6;">Valeur totale recalculee</td>
               <td style="padding:8px;border:1px solid #dee2e6;font-weight:bold;">
                 {total_value:,.2f} FCFA
               </td>
@@ -503,18 +502,18 @@ class StockAvcoImportWizardLine(models.TransientModel):
     product_id   = fields.Many2one('product.product',  string="Produit",   readonly=True)
     pmp_excel    = fields.Float(string="PMP Excel (FCFA)", digits=(16, 2), readonly=True)
 
-    nb_moves_total        = fields.Integer(string="Total moves",         readonly=True)
-    nb_moves_reception_ok = fields.Integer(string="✔ PO = Réception",   readonly=True)
-    nb_moves_po_mismatch  = fields.Integer(string="🔄 PO ≠ Réception",  readonly=True)
-    nb_moves_zero         = fields.Integer(string="📄 Réception = 0",   readonly=True)
+    nb_moves_total        = fields.Integer(string="Total moves",       readonly=True)
+    nb_moves_reception_ok = fields.Integer(string="PO = Reception",    readonly=True)
+    nb_moves_po_mismatch  = fields.Integer(string="PO diff. Reception", readonly=True)
+    nb_moves_zero         = fields.Integer(string="Reception = 0",     readonly=True)
 
-    total_qty   = fields.Float(string="Qté totale",    digits=(16, 3), readonly=True)
+    total_qty   = fields.Float(string="Qte totale",    digits=(16, 3), readonly=True)
     total_value = fields.Float(string="Valeur (FCFA)", digits=(16, 2), readonly=True)
 
     state = fields.Selection([
-        ('ready',     '✅ À corriger'),
-        ('ok',        '✔ Déjà cohérent'),
-        ('not_found', '❌ Code non trouvé'),
-        ('no_move',   '⚠️ Aucune réception'),
-        ('done',      '✔ Corrigé'),
+        ('ready',     'A corriger'),
+        ('ok',        'Deja coherent'),
+        ('not_found', 'Code non trouve'),
+        ('no_move',   'Aucune reception'),
+        ('done',      'Corrige'),
     ], string="Statut", readonly=True)
