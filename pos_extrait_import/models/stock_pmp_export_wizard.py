@@ -99,7 +99,7 @@ class StockPmpExportWizard(models.TransientModel):
                 ('state', '=', 'done'),
                 '|', ('is_in', '=', True), ('value', '>', 0),
             ],
-            fields=['value:sum', 'product_qty:sum'],
+            fields=['value:sum', 'quantity:sum'],
             groupby=['product_id'],
         )
         if not move_groups:
@@ -120,7 +120,7 @@ class StockPmpExportWizard(models.TransientModel):
 
         for row_idx, group in enumerate(move_groups, 2):
             product = self.env['product.product'].browse(group['product_id'][0])
-            qty     = group['product_qty'] or 0.0
+            qty     = group['quantity'] or 0.0
             value   = group['value']       or 0.0
             pmp     = round(value / qty, 2) if qty else 0.0
             fill    = st['fill_alt'] if row_idx % 2 == 0 else st['fill_white']
@@ -137,7 +137,7 @@ class StockPmpExportWizard(models.TransientModel):
 
         # Totaux
         total_row   = len(move_groups) + 2
-        total_qty   = sum(g['product_qty'] or 0 for g in move_groups)
+        total_qty   = sum(g['quantity'] or 0 for g in move_groups)
         total_value = sum(g['value']       or 0 for g in move_groups)
         total_pmp   = round(total_value / total_qty, 2) if total_qty else 0.0
 
@@ -183,6 +183,6 @@ class StockPmpExportWizard(models.TransientModel):
                 (move.product_id.default_code or '',              st['center'], None),
                 (move.picking_id.name or move.reference or '',    st['left'],   None),
                 (date_val,                                        st['center'], 'DD/MM/YYYY'),
-                (round(move.product_qty, 3),                      st['right'],  '#,##0.00'),
+                (round(move.quantity, 3),                      st['right'],  '#,##0.00'),
             ], 1):
                 self._write_cell(ws, row_idx, col, val, align, fill, st['data_font'], st['border'], fmt)
