@@ -118,10 +118,10 @@ class StockValoriseReport(models.TransientModel):
                 ('date', '>=', date_from),
                 ('date', '<=', date_at),
             ],
-            fields=['value:sum', 'product_qty:sum'],
+            fields=['value:sum', 'quantity:sum'],
             groupby=['product_id'],
         )
-        day_moves = {r['product_id'][0]: (r['value'], r['product_qty']) for r in move_groups_day}
+        day_moves = {r['product_id'][0]: (r['value'], r['quantity']) for r in move_groups_day}
 
         # PMP fallback : PMP du dernier jour ayant eu une réception avant date_from
         # On cherche la dernière date de réception par produit, puis on prend
@@ -140,7 +140,7 @@ class StockValoriseReport(models.TransientModel):
                 )
                 SELECT sm.product_id,
                        SUM(sm.value)       AS value,
-                       SUM(sm.product_qty) AS product_qty
+                       SUM(sm.quantity) AS quantity
                 FROM stock_move sm
                 JOIN last_dates ld ON ld.product_id = sm.product_id
                 WHERE sm.state = 'done'
