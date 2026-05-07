@@ -5,3 +5,5 @@ access_pos_extrait_preview_line_manager,pos.extrait.preview.line manager,model_p
 access_pos_extrait_preview_line_user,pos.extrait.preview.line user,model_pos_extrait_preview_line,point_of_sale.group_pos_user,1,0,0,0
 access_stock_pmp_export_wizard_manager,stock.pmp.export.wizard manager,model_stock_pmp_export_wizard,point_of_sale.group_pos_manager,1,1,1,1
 access_stock_pmp_export_wizard_user,stock.pmp.export.wizard user,model_stock_pmp_export_wizard,point_of_sale.group_pos_user,1,0,0,0
+access_stock_avco_correction_wizard_manager,stock.avco.correction.wizard manager,model_stock_avco_correction_wizard,point_of_sale.group_pos_manager,1,1,1,1
+access_stock_avco_correction_line_manager,stock.avco.correction.line manager,model_stock_avco_correction_line,point_of_sale.group_pos_manager,1,1,1,1
