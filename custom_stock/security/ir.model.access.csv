@@ -16,7 +16,6 @@ access_product_status_sage,product.status.sage,model_product_status_sage,,1,1,1,
 access_stock_picking_inter,stock.picking.inter,model_stock_picking_inter,,1,1,1,1
 access_stock_picking_inter_line,stock.picking.inter.line,model_stock_picking_inter_line,,1,1,1,1
 access_stock_picking_inter_wizard,stock.picking.inter.wizard,model_stock_picking_inter_wizard,,1,1,1,1
-access_physical_inventory_line_archive_user,physical.inventory.line.archive.user,model_physical_inventory_line_archive,,1,1,1,1
 access_stock_scrap_breakers_user,stock.scrap.breakers.user,model_stock_scrap_breakers,,1,1,1,1
 access_stock_picking_supply_request,stock.picking.supply.request,model_stock_picking_supply_request,,1,1,1,1
 access_stock_picking_supply_request_line,stock.picking.supply.request.line,model_stock_picking_supply_request_line,,1,1,1,1

@@ -9,7 +9,6 @@
 #############################################################################
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
-from collections import defaultdict
 
 # ── Seuil pour détecter un coût AVCO aberrant avant/après ajustement ─────────
 _AVCO_MAX_PLAUSIBLE = 10_000_000   # 10 millions FCFA max par unité
@@ -29,7 +28,6 @@ class PhysicalInventory(models.Model):
     inventory_mode = fields.Selection([
             ('normal', 'Inventaire'),
             ('libre', 'Libre'),
-            ('verification_carryover', 'Produits à vérifier')
         ], string='Mode d\'inventaire', default='normal', required=True)
     state = fields.Selection([
             ('draft', 'Compatage'), 
@@ -54,13 +52,6 @@ class PhysicalInventory(models.Model):
     date_done = fields.Datetime(string='Date de fin', copy=False, readonly=True)
     is_negative_stock = fields.Boolean(string='Stock Negatif', default=False)
     note = fields.Text('Note')
-    unverified_product_count = fields.Integer(string='Produits à vérifier', compute='_compute_unverified_product_count', store=True)
-
-    physical_achive_line_ids = fields.One2many(
-        comodel_name="physical.inventory.line.archive",
-        inverse_name='inventory_physical_id',
-        string="A vérifier"
-    )
 
 
     # def action_done(self):
@@ -173,9 +164,6 @@ class PhysicalInventory(models.Model):
                 for line in rec.physical_line_ids:
                     line.quantity = line.qty
                     line.price = line.standard_price
-            else:
-                continue
-        self.mark_check()
         self.write({'state': 'in_progress'})
 
     def update_price(self):
@@ -185,27 +173,6 @@ class PhysicalInventory(models.Model):
                 line.price = line.valorisation / line.qty_diff
             else:
                 line.price = line.standard_price
-
-
-    def mark_check(self):
-        """Marquer comme vérifiés les produits en se basant sur les lignes actuelles"""
-
-        for inventory in self:
-            for line in inventory.physical_line_ids:
-                archives = self.env['physical.inventory.line.archive'].search([
-                    ('product_id', '=', line.product_id.id),
-                    ('location_id', '=', line.location_id.id),
-                    ('company_id', '=', inventory.company_id.id),
-                    ('needs_verification', '=', True),
-                    ('verify', '=', False),
-                ])
-
-                if archives:
-                    archives.write({
-                        'verify': True,
-                    })
-
-        return True
 
 
     @api.constrains('inventory_mode', 'code_inventory_id', 'code_category_id', 'team_inventory_id')
@@ -219,43 +186,6 @@ class PhysicalInventory(models.Model):
                     raise UserError(_("La 'Categorie Code Inventaire' est obligatoire en mode 'Inventaire'."))
                 if not record.team_inventory_id:
                     raise UserError(_("L'équipe est obligatoire en mode 'Inventaire'."))
-
-    @api.depends('date', 'company_id')
-    def _compute_unverified_product_count(self):
-        """Compute count of unverified products from previous inventory sessions"""
-        for record in self:
-            if record.inventory_mode == 'verification_carryover':
-                unverified_products = self.env['physical.inventory.line.archive'].search([
-                #    ('archived_date', '<=', record.date),
-                    ('inventory_physical_id.company_id', '=', record.company_id.id),
-                    ('needs_verification', '=', True),
-                    ('verify', '=', False),
-                ])
-                record.unverified_product_count = len(unverified_products)
-            else:
-                record.unverified_product_count = 0
-
-    def _get_unverified_products_from_previous_sessions(self):
-        """Get list of unverified products from previous inventory sessions"""
-        self.ensure_one()
-        
-        # Find all archived lines marked as needs_verification from previous sessions
-        # Use strictly less-than (<) to exclude current session, only get from previous sessions
-        unverified_archives = self.env['physical.inventory.line.archive'].search([
-        #    ('archived_date', '<=', self.date),
-            ('inventory_physical_id.company_id', '=', self.company_id.id),
-            ('needs_verification', '=', True),
-            ('verify', '=', False),
-        ], order='product_tmpl_id,inventory_physical_id DESC')
-        
-        # Group by product to avoid duplicates (take latest archive per product)
-        product_dict = {}
-        for archive in unverified_archives:
-            if archive.product_id.id not in product_dict:
-                product_dict[archive.product_id.id] = archive
-        
-        return product_dict.values()
-
 
     @api.onchange('code_inventory_id')
     def get_products_quants(self):
@@ -305,63 +235,6 @@ class PhysicalInventory(models.Model):
                     'product_uom_id': stck.product_uom_id.id,
                     'code_category_id': self.code_category_id.id,
                 })
-        elif self.inventory_mode == 'verification_carryover':
-            # Verification carryover mode: generate from unverified products in previous sessions
-            unverified_archives = self._get_unverified_products_from_previous_sessions()
-            
-            for archive in unverified_archives:
-                self.env['physical.inventory.line'].create({
-                    'inventory_physical_id': self.id,
-                    'quant_id': archive.quant_id.id,
-                    'product_tmpl_id': archive.product_tmpl_id.id,
-                    'product_id': archive.product_id.id,
-                    'location_id': archive.location_id.id,
-                    'quantity': archive.quantity,
-                    'price': archive.standard_price,
-                    'lot_id': archive.lot_id.id if archive.lot_id else False,
-                    'product_uom_id': archive.product_uom_id.id,
-                    'code_category_id': archive.code_category_id.id,
-                    'needs_verification': True,
-                })
-    
-    
-    # def create_line_physical(self):
-    #     self.ensure_one()
-
-    #     # MODE LIBRE
-    #     if self.inventory_mode == 'libre':
-    #         for line in self.physical_line_ids:
-    #             if line.code_category_id:
-    #                 self.code_inventory_id = [(4, line.code_category_id.id)]
-    #                 line.quantity = line.qty
-    #         return
-
-    #     # RESET LINES
-    #     self.physical_line_ids = [(5, 0, 0)]
-
-    #     vals_list = []
-
-    #     if self.inventory_mode == 'normal':
-    #         source_lines = self.line_quant_ids
-    #     else:
-    #         source_lines = self._get_unverified_products_from_previous_sessions()
-
-    #     for src in source_lines:
-    #         vals_list.append({
-    #             'inventory_physical_id': self.id,
-    #             'quant_id': src.id,
-    #             'product_tmpl_id': src.product_tmpl_id.id,
-    #             'product_id': src.product_id.id,
-    #             'location_id': src.location_id.id,
-    #             'quantity': src.quantity,
-    #             'lot_id': src.lot_id.id if src.lot_id else False,
-    #             'product_uom_id': src.product_uom_id.id,
-    #             'code_category_id': src.code_category_id.id,
-    #             'needs_verification': self.inventory_mode != 'normal',
-    #         })
-
-    #     self.env['physical.inventory.line'].create(vals_list)
-
 
     def action_print_inventaire_report(self):
         """Méthode principale pour imprimer le rapport d'inventaire"""
@@ -426,8 +299,6 @@ class PhysicalInventoryLine(models.Model):
     _description = 'Physical Inventory line'
 
     active = fields.Boolean('Actif', default=True, tracking=True)
-    needs_verification = fields.Boolean('À vérifier', default=False, help='Marquer comme produit à vérifier dans la session suivante')
-    verified_by_id = fields.Many2one('res.partner', string='Vérifié par', help='Contact qui a vérifié ce produit')
 
     quant_id = fields.Many2one(
         'stock.quant',
@@ -498,137 +369,3 @@ class PhysicalInventoryLine(models.Model):
                     ('location_id', '=', line.location_id.id),
                 ], limit=1)
                 line.quant_id = quant
-
-
-    def action_archive_line(self):
-        """Archive la ligne et marque comme à vérifier si applicable"""
-        self.ensure_one()
-
-        if self.inventory_physical_id.inventory_mode == 'libre':
-            raise UserError(_(
-                "🚫 Hey toi 😄 !\n\n"
-                "Cet article vit sa meilleure vie en mode *inventaire libre* 🕺.\n"
-                "Impossible de le forcer à passer en 'vérifié' (il n’aime pas la pression 😬).\n\n"
-                "👉 S'il ne te plaît pas, fais simple : supprime-le de l’inventaire et on n’en parle plus 😉"
-            ))
-
-        # Création de l'enregistrement archive
-        # Automatically mark as needs_verification=True when archiving
-        # because archived lines need to be verified in a future session
-        archive_vals = {
-            'original_line_id': self.id,
-            'quant_id': self.quant_id.id,
-            'product_tmpl_id': self.product_tmpl_id.id,
-            'product_id': self.product_id.id,
-            'location_id': self.location_id.id,
-            'quantity': self.quantity,
-            'physical_qty': self.physical_qty,
-            'qty_diff': self.qty_diff,
-            'valorisation': self.valorisation,
-            'standard_price': self.price,
-            'inventory_physical_id': self.inventory_physical_id.id,
-            'code_category_id': self.code_category_id.id,
-            'lot_id': self.lot_id.id if self.lot_id else False,
-            'company_id': self.company_id.id,
-            'archived_date': fields.Datetime.now(),
-            'archived_by': self.env.user.id,
-            'needs_verification': True,
-        }
-
-        self.env['physical.inventory.line.archive'].create(archive_vals)
-
-        # Archiver la ligne
-        self.write({'active': False})
-
-        # Afficher notification et recharger le parent (vue form)
-        return {
-            "type": "ir.actions.client",
-            "tag": "display_notification",
-            "params": {
-                "title": "Archivé",
-                "message": "La ligne a été retirée avec succès.",
-                "type": "success",
-                "sticky": False,
-            },
-        }, {
-            "type": "ir.actions.act_window_view_reload"
-        }
-
-
-class PhysicalInventoryLineArchive(models.Model):
-    """Modèle pour stocker les lignes d'inventaire archivées"""
-    _name = 'physical.inventory.line.archive'
-    _inherit = ['mail.thread', 'mail.activity.mixin']
-    _description = 'Physical Inventory Line Archive'
-    _rec_name = 'product_tmpl_id'
-
-    original_line_id = fields.Many2one('physical.inventory.line', string='Ligne originale', ondelete='set null')
-    needs_verification = fields.Boolean('À vérifier', default=False, help='Produit marqué comme à vérifier pour session ultérieure')
-    verify = fields.Boolean(
-        string='Inventorier',
-        default=False,
-        help='Déjà inventorié'
-    )
-    
-    quant_id = fields.Many2one('stock.quant', 'Stock')
-    product_tmpl_id = fields.Many2one('product.template', 'Produit', required=True)
-    product_id = fields.Many2one('product.product', 'Produits', required=True)
-    location_id = fields.Many2one('stock.location', 'Emplacement')
-    quantity = fields.Float('Stock')
-    product_uom_id = fields.Many2one('uom.uom', "Unite", related="product_id.uom_id", readonly=True)
-
-    physical_qty = fields.Float('Qte compté')
-    qty_diff = fields.Float('Difference')
-    valorisation = fields.Float('Valorisation')
-    standard_price = fields.Float('Prix standard')
-
-    inventory_physical_id = fields.Many2one('physical.inventory', string='Inventaire Physique')
-    code_category_id = fields.Many2one('code.category.inventory', string='Categorie Code Inventaire')
-    code_inventory_id = fields.Many2one('code.inventory', string='Code Inventaire',
-                                        related='product_tmpl_id.code_inventory_id')
-
-    lot_id = fields.Many2one('stock.lot', string='Numéro de Lot')
-    company_id = fields.Many2one('res.company', string='Société')
-    code_article = fields.Char(string='Code Article', related='product_tmpl_id.code_article')
-
-    # Informations d'archivage
-    archived_date = fields.Datetime('Date d\'archivage', required=True, readonly=True, tracking=True)
-    archived_by = fields.Many2one('res.users', string='Archivé par', required=True, readonly=True, tracking=True)
-    archive_reason = fields.Text('Raison de l\'archivage', tracking=True)
-
-    def action_restore_line(self):
-        """Restaurer la ligne archivée"""
-        self.ensure_one()
-
-        if self.original_line_id:
-            # Réactiver la ligne originale
-            self.original_line_id.write({'active': True})
-
-            # Supprimer l'enregistrement d'archive 
-            self.unlink()
-
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': 'Restauré',
-                    'message': 'La ligne a été restaurée avec succès.',
-                    'type': 'success',
-                    'sticky': False,
-                }
-            },{
-            "type": "ir.actions.act_window_view_reload"
-             }
-        else:
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': 'Erreur',
-                    'message': 'Impossible de restaurer : ligne originale introuvable.',
-                    'type': 'warning',
-                    'sticky': False,
-                }
-            },{
-            "type": "ir.actions.act_window_view_reload"
-            }

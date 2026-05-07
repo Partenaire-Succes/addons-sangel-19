@@ -48,30 +48,26 @@
                                 <field name="name" placeholder="Nom" readonly="state == 'done'"/>
                             </h1>
                         </div>
-                        <div id="unverified_reminder" class="alert alert-info" role="alert" invisible="inventory_mode != 'verification_carryover' or unverified_product_count == 0">
-                            <strong>Rappel:</strong> <field name="unverified_product_count" readonly="1" nolabel="1"/> produit(s) à vérifier de session(s) antérieure(s).
-                        </div>
                         <group>
                             <group>
                                 <field name="inventory_mode" readonly="state != 'draft'"/>
-                                <field name="code_category_id" 
-                                       invisible="inventory_mode in ['verification_carryover', 'libre']" 
+                                <field name="code_category_id"
+                                       invisible="inventory_mode == 'libre'"
                                        required="inventory_mode == 'normal'"
                                        readonly="state == 'done'"
                                        options="{'no_create': True}"/>
                                 <field name="code_inventory_id"
                                        widget="many2many_tags"
-                                       invisible="inventory_mode in ['verification_carryover', 'libre']" 
+                                       invisible="inventory_mode == 'libre'"
                                        required="inventory_mode == 'normal'"
                                        domain="[('code_category_id', '=', code_category_id)]"
                                        readonly="state == 'done'"
                                        options="{'no_create': True}"/>
-                                <field name="team_inventory_id" 
-                                       invisible="inventory_mode in ['verification_carryover', 'libre']" 
+                                <field name="team_inventory_id"
+                                       invisible="inventory_mode == 'libre'"
                                        required="inventory_mode == 'normal'"
                                        readonly="state == 'done'"
                                        options="{'no_create': True}"/>
-                                <field name="unverified_product_count"/>
                             </group>
                             <group>
                                 <field name="date" readonly="state == 'done'"/>
@@ -84,12 +80,7 @@
                             <button name="create_line_physical"
                                     string="Generer les articles"
                                     type="object"
-                                    invisible="state != 'draft' or inventory_mode == 'verification_carryover'"
-                                    class="btn btn-success"/>
-                            <button name="create_line_physical"
-                                    string="Generer les produits à vérifer"
-                                    type="object"
-                                    invisible="state != 'draft' or inventory_mode != 'verification_carryover'"
+                                    invisible="state != 'draft'"
                                     class="btn btn-success"/>
                         </group>
                         <notebook>
@@ -116,40 +107,8 @@
                                         <field name="valorisation" string="Valorisation" invisible="state == 'draft'"/>
                                         <field name="active" column_invisible="1"/>
                                         <field name="standard_price" column_invisible="1"/>
-                                        <field name="needs_verification" column_invisible="False"/>
-                                        <field name="verified_by_id" string="Vérifié par" options="{'no_create': True}"/>
-
-                                        <button name="action_archive_line" type="object"
-                                                string="Retirer la ligne" icon="fa-archive"
-                                                class="btn-warning"
-                                                invisible="state != 'in_progress'"
-                                                confirm="Voulez-vous vraiment retirer cette ligne ?"/>
                                     </list>
                                 </field>
-                            </page>
-
-                            <page name="achive_line" string="A vérifier">
-                                <field name="physical_achive_line_ids">
-                                    <list create="0" edit="0" delete="0">
-                                        <field name="quant_id" column_invisible="True"/>
-                                        <field name="product_id" column_invisible="True"/>
-                                        <field name="location_id" column_invisible="False"/>
-                                        <field name="product_tmpl_id" column_invisible="False"/>
-                                        <field name="quantity"/>
-                                        <field name="product_uom_id" column_invisible="False"/>
-                                        <field name="physical_qty" column_invisible="False"/>
-                                        <field name="qty_diff" string="Difference"
-                                               decoration-muted="qty_diff == 0" decoration-danger="qty_diff &lt; 0"
-                                               decoration-success="qty_diff &gt; 0" decoration-bf="qty_diff != 0"/>
-                                        <field name="standard_price" string="Prix unitaire (PMP)" readonly="1"/>
-                                        <field name="valorisation" string="Valorisation"/>
-                                        <field name="verify"/>
-                                        <button name="action_restore_line" type="object"
-                                                string="Restaurer" icon="fa-undo"
-                                                class="btn-primary"/>
-                                    </list>
-                                </field>
-
                             </page>
 
                             <page string="Lignes des Produits" invisible="1">
