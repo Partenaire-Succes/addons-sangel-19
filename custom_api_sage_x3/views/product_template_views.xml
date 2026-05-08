@@ -20,19 +20,19 @@
                     <button name="normalize_taxes_tva_all_companies" 
                             string="Normaliser TVA" 
                             type="object" 
-                            invisible="0"
+                            invisible="1"
                             class="btn btn-secondary"/>
 
                     <button name="normalize_taxes_airsi_all_companies" 
                             string="Normaliser AIRSI" 
                             type="object" 
-                            invisible="0"
+                            invisible="1"
                             class="btn btn-secondary"/>
 
                     <button name="reset_airsi_taxes_all_products" 
                             string="Supprimer AIRSI" 
                             type="object" 
-                            invisible="0"
+                            invisible="1"
                             class="btn btn-secondary"/>
                 </xpath>
 
