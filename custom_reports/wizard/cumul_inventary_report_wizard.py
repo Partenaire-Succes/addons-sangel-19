@@ -85,7 +85,9 @@ class CumulInventaryReportWizard(models.TransientModel):
         self.ensure_one()
         grouped = {}
 
-        for line in self.physical_lines_ids:
+        inventories = self.filtered(lambda s: s.state == 'done')
+
+        for line in inventories.physical_lines_ids:
             # Créer une clé unique pour chaque article
             key = (line.code_article or '', line.product_tmpl_id.id)
 

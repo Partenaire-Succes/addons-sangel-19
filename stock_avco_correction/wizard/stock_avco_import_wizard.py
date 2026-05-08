@@ -342,29 +342,11 @@ class StockAvcoImportWizard(models.TransientModel):
             if product_touched:
                 nb_products += 1
 
-                # ------------------------------------------------
-                # Mise à jour du standard_price sur la fiche article
-                # On utilise _write() pour bypasser _set_standard_price()
-                # qui créerait des écritures "Adjustment" parasites.
-                # Le prix utilisé = le PMP du fichier Excel (référence fiable)
-                # ------------------------------------------------
                 if line.pmp_excel > 0:
                     variant = line.product_id.with_company(company).sudo()
                     current_standard = variant.standard_price
                     if abs(current_standard - line.pmp_excel) > 0.01:
-                        # standard_price est company_dependent → stocké en jsonb en Odoo 17+
-                        # _write() ne sait pas caster un float en jsonb, on passe par SQL direct
-                        # pour bypasser _set_standard_price() qui génère des écritures parasites.
-                        self.env.cr.execute(
-                            """
-                            UPDATE product_product
-                            SET standard_price =
-                                COALESCE(standard_price, '{}')::jsonb
-                                || jsonb_build_object(%s::text, %s::numeric)
-                            WHERE id = %s
-                            """,
-                            [str(company.id), line.pmp_excel, line.product_id.id]
-                        )
+                        variant.write({'standard_price': line.pmp_excel})
                         _logger.info(
                             "standard_price [%s] %s : %.2f -> %.2f",
                             company.name,
