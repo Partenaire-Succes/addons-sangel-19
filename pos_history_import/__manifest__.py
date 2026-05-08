@@ -18,7 +18,7 @@
         - Recherche de produits et clients par référence ou nom
     """,
     'author': 'Custom Dev',
-    'depends': ['point_of_sale'],
+    'depends': ['point_of_sale', 'custom_pos'],
     'data': [
         'security/ir.model.access.csv',
         'views/pos_import_wizard_views.xml',

@@ -340,6 +340,7 @@ class PhysicalInventoryLine(models.Model):
         string='Code Inventaire', 
         related='product_tmpl_id.code_inventory_id',
         required=True)
+    verified_by_id = fields.Many2one('res.partner', string='Vérifié par', help='Contact qui a vérifié ce produit') 
 
     lot_id = fields.Many2one('stock.lot', string='Numéro de Lot', domain="[('product_id', '=', product_id)]")
     company_id = fields.Many2one('res.company', string='Société', related='inventory_physical_id.company_id')

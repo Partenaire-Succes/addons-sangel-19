@@ -8,6 +8,6 @@
         parent="stock.menu_stock_warehouse_mgmt"
         action="action_stock_avco_import_wizard"
         sequence="98"
-        groups="stock.group_stock_manager"/>
+        groups="custom_pos.group_dsi_it"/>
 
 </odoo>

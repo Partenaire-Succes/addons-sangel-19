@@ -11,7 +11,7 @@
         - Multi-societe : corrections isolees par societe
     """,
     'author': 'Dev Interne',
-    'depends': ['stock', 'purchase', 'account', 'custom_stock'],
+    'depends': ['stock', 'purchase', 'account', 'custom_stock', 'custom_pos'],
     'data': [
         'security/ir.model.access.csv',
         'views/stock_avco_wizard_views.xml',

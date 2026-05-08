@@ -107,6 +107,7 @@
                                         <field name="valorisation" string="Valorisation" invisible="state == 'draft'"/>
                                         <field name="active" column_invisible="1"/>
                                         <field name="standard_price" column_invisible="1"/>
+                                        <field name="verified_by_id" column_invisible="0"/>
                                     </list>
                                 </field>
                             </page>
