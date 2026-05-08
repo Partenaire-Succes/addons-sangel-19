@@ -115,6 +115,7 @@ class StockValoriseReport(models.TransientModel):
                 ('company_id', '=', self.company_id.id),
                 ('state', '=', 'done'),
                 ('is_in', '=', True),
+                ('picking_id', '!=', False),
                 ('date', '>=', date_from),
                 ('date', '<=', date_at),
             ],
@@ -134,17 +135,19 @@ class StockValoriseReport(models.TransientModel):
                     WHERE product_id = ANY(%s)
                       AND company_id = %s
                       AND state = 'done'
-                      AND (is_in = true OR is_dropship = true)
+                      AND is_in = true
+                      AND picking_id IS NOT NULL
                       AND date < %s
                     GROUP BY product_id
                 )
                 SELECT sm.product_id,
-                       SUM(sm.value)       AS value,
+                       SUM(sm.value)    AS value,
                        SUM(sm.quantity) AS quantity
                 FROM stock_move sm
                 JOIN last_dates ld ON ld.product_id = sm.product_id
                 WHERE sm.state = 'done'
-                  AND (sm.is_in = true OR sm.is_dropship = true)
+                  AND sm.is_in = true
+                  AND sm.picking_id IS NOT NULL
                   AND sm.date::date = ld.last_date
                   AND sm.company_id = %s
                 GROUP BY sm.product_id
@@ -170,7 +173,7 @@ class StockValoriseReport(models.TransientModel):
                 if prev_qty > 0 and prev_value > 0:
                     pamp = float_round(prev_value / prev_qty, 2)
                 else:
-                    pamp = product.standard_price or 0.0
+                    pamp = product.with_company(self.company_id).standard_price or 0.0
 
             valorisation = float_round(qty * pamp, 2)
 
