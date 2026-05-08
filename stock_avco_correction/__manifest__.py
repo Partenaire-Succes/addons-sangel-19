@@ -2,16 +2,19 @@
     'name': 'Correction AVCO - Import Excel',
     'version': '19.0.1.0.0',
     'category': 'Inventory',
-    'summary': 'Correction du coût moyen pondéré (AVCO) via import Excel',
+    'summary': 'Correction du cout moyen pondere (AVCO) via import Excel',
     'description': """
-        Module de correction de l'AVCO après migration ProgMag vers Odoo.
-        Permet d'importer un fichier Excel contenant les codes articles et PMP corrects,
-        et de mettre à jour en masse les stock_move à valeur zéro.
+        Module de correction de l'AVCO apres migration ProgMag vers Odoo.
+        - Import Excel : code article + PMP correct
+        - Regle de variation 5% : prix reception conserve si ecart acceptable
+        - Sauvegarde des prix originaux pour tracabilite complete
+        - Multi-societe : corrections isolees par societe
     """,
-    'author': 'Votre Société',
+    'author': 'Dev Interne',
     'depends': ['stock', 'purchase', 'account'],
     'data': [
         'security/ir.model.access.csv',
+        'views/stock_move_views.xml',
         'views/stock_avco_wizard_views.xml',
         'views/menu.xml',
     ],

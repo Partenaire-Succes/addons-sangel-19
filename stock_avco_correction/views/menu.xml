@@ -1,12 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- Menu dans Inventaire → Opérations -->
+    <!-- Menu Correction AVCO -->
     <menuitem
         id="menu_stock_avco_correction"
         name="Correction AVCO"
         parent="stock.menu_stock_warehouse_mgmt"
         action="action_stock_avco_import_wizard"
+        sequence="98"
+        groups="stock.group_stock_manager"/>
+
+    <!-- Menu Historique corrections -->
+    <menuitem
+        id="menu_stock_avco_history"
+        name="Historique corrections AVCO"
+        parent="stock.menu_stock_warehouse_mgmt"
+        action="action_stock_move_avco_corrected"
         sequence="99"
         groups="stock.group_stock_manager"/>
 

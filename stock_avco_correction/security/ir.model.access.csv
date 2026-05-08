@@ -3,3 +3,4 @@ access_stock_avco_import_wizard,stock.avco.import.wizard,model_stock_avco_import
 access_stock_avco_import_wizard_user,stock.avco.import.wizard.user,model_stock_avco_import_wizard,stock.group_stock_user,1,1,1,1
 access_stock_avco_import_wizard_line,stock.avco.import.wizard.line,model_stock_avco_import_wizard_line,stock.group_stock_manager,1,1,1,1
 access_stock_avco_import_wizard_line_user,stock.avco.import.wizard.line.user,model_stock_avco_import_wizard_line,stock.group_stock_user,1,1,1,1
+access_stock_move_avco_read,stock.move.avco.read,model_stock_move,stock.group_stock_manager,1,0,0,0

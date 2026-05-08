@@ -9,7 +9,7 @@ try:
 except ImportError:
     HAS_XLRD = False
 
-from odoo import _, fields, models
+from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
@@ -280,6 +280,21 @@ class StockAvcoImportWizard(models.TransientModel):
                     update_vals['value'] = correct_value
 
                 if update_vals:
+                    # ------------------------------------------------
+                    # SAUVEGARDE AVANT CORRECTION (traçabilité)
+                    # On sauvegarde les valeurs originales uniquement
+                    # si ce move n'a pas déjà été corrigé
+                    # ------------------------------------------------
+                    if not move.avco_corrected:
+                        move.write({
+                            'avco_original_price_unit': move.price_unit,
+                            'avco_original_value':      move.value,
+                            'avco_correction_date':     fields.Datetime.now(),
+                            'avco_correction_user_id':  self.env.user.id,
+                            'avco_corrected':           True,
+                        })
+
+                    # Application de la correction
                     move.write(update_vals)
                     nb_moves_fixed  += 1
                     product_touched  = True
@@ -316,6 +331,28 @@ class StockAvcoImportWizard(models.TransientModel):
 
             if product_touched:
                 nb_products += 1
+
+                # ------------------------------------------------
+                # Mise à jour du standard_price sur la fiche article
+                # On utilise _write() pour bypasser _set_standard_price()
+                # qui créerait des écritures "Adjustment" parasites.
+                # Le prix utilisé = le PMP du fichier Excel (référence fiable)
+                # ------------------------------------------------
+                if line.pmp_excel > 0:
+                    tmpl = line.product_id.with_company(company).product_tmpl_id
+                    current_standard = tmpl.with_company(company).standard_price
+                    if abs(current_standard - line.pmp_excel) > 0.01:
+                        tmpl.with_company(company).sudo()._write({
+                            'standard_price': line.pmp_excel
+                        })
+                        _logger.info(
+                            "standard_price [%s] %s : %.2f -> %.2f",
+                            company.name,
+                            line.product_id.display_name,
+                            current_standard,
+                            line.pmp_excel,
+                        )
+
             line.write({'state': 'done'})
 
         self.write({

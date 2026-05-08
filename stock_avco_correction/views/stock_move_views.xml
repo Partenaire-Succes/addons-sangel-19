@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Ajout des champs de traçabilité AVCO dans la vue form du stock.move -->
+    <record id="view_stock_move_avco_correction_form" model="ir.ui.view">
+        <field name="name">stock.move.avco.correction.form</field>
+        <field name="model">stock.move</field>
+        <field name="inherit_id" ref="stock.view_move_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="inside">
+                <group string="Historique correction AVCO"
+                       invisible="not avco_corrected">
+                    <group>
+                        <field name="avco_corrected"           string="Corrige par AVCO"/>
+                        <field name="avco_correction_date"     string="Date de correction"/>
+                        <field name="avco_correction_user_id"  string="Corrige par"/>
+                    </group>
+                    <group>
+                        <field name="avco_original_price_unit" string="Prix unitaire original"/>
+                        <field name="avco_original_value"      string="Valeur originale"/>
+                    </group>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Vue liste des moves corrigés — accessible depuis le menu -->
+    <record id="view_stock_move_avco_corrected_list" model="ir.ui.view">
+        <field name="name">stock.move.avco.corrected.list</field>
+        <field name="model">stock.move</field>
+        <field name="arch" type="xml">
+            <list string="Mouvements corriges AVCO" create="0" edit="0" delete="0">
+                <field name="reference"                string="Reference"/>
+                <field name="product_id"               string="Produit"/>
+                <field name="date"                     string="Date reception"/>
+                <field name="quantity"                 string="Quantite"/>
+                <field name="avco_original_price_unit" string="Prix original"/>
+                <field name="avco_original_value"      string="Valeur originale"/>
+                <field name="price_unit"               string="Prix corrige"/>
+                <field name="value"                    string="Valeur corrigee"/>
+                <field name="avco_correction_date"     string="Date correction"/>
+                <field name="avco_correction_user_id"  string="Corrige par"/>
+                <field name="company_id"               string="Societe"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Action pour voir tous les moves corrigés -->
+    <record id="action_stock_move_avco_corrected" model="ir.actions.act_window">
+        <field name="name">Historique des corrections AVCO</field>
+        <field name="res_model">stock.move</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_stock_move_avco_corrected_list"/>
+        <field name="domain">[('avco_corrected', '=', True)]</field>
+        <field name="context">{'search_default_group_product_id': 1}</field>
+    </record>
+
+</odoo>
