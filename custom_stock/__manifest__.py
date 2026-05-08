@@ -37,6 +37,7 @@
         'data/code_category_inventory_data.xml',
         'data/data_sequence.xml',
         'data/product_pricelist_data.xml',
+        'views/stock_move_views.xml',
         'views/product_template_views.xml',
         'views/teams_inventory_views.xml',
         'views/res_company_views.xml',

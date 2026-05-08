@@ -1,6 +1,5 @@
 import base64
 import io
-import json
 import logging
 
 import openpyxl
@@ -136,6 +135,7 @@ class StockAvcoImportWizard(models.TransientModel):
             moves = self.env['stock.move'].search([
                 ('product_id', '=', product.id),
                 ('is_in', '=', True),
+                ('picking_id', '!=', False),
                 ('state', '=', 'done'),
                 ('company_id', '=', company.id),
             ])
@@ -253,6 +253,7 @@ class StockAvcoImportWizard(models.TransientModel):
             moves = self.env['stock.move'].search([
                 ('product_id', '=', line.product_id.id),
                 ('is_in', '=', True),
+                ('picking_id', '!=', False),
                 ('state', '=', 'done'),
                 ('company_id', '=', company.id),
             ])
@@ -281,11 +282,7 @@ class StockAvcoImportWizard(models.TransientModel):
                     update_vals['value'] = correct_value
 
                 if update_vals:
-                    # ------------------------------------------------
-                    # SAUVEGARDE AVANT CORRECTION (traçabilité)
-                    # On sauvegarde les valeurs originales uniquement
-                    # si ce move n'a pas déjà été corrigé
-                    # ------------------------------------------------
+                    # Sauvegarde traçabilité avant correction
                     if not move.avco_corrected:
                         move.write({
                             'avco_original_price_unit': move.price_unit,
@@ -295,8 +292,20 @@ class StockAvcoImportWizard(models.TransientModel):
                             'avco_corrected':           True,
                         })
 
-                    # Application de la correction
-                    move.write(update_vals)
+                    # price_unit : champ Float simple, write() ORM suffit
+                    if 'price_unit' in update_vals:
+                        move.write({'price_unit': correct_price})
+
+                    # value : en Odoo 19, stock_valuation_layer n'existe plus.
+                    # La valeur est mise à jour via product.value qui déclenche
+                    # _set_value() sur le move → mécanisme officiel Odoo 19.
+                    if 'value' in update_vals:
+                        self.env['product.value'].create({
+                            'move_id':    move.id,
+                            'value':      correct_value,
+                            'company_id': company.id,
+                        })
+
                     nb_moves_fixed  += 1
                     product_touched  = True
 
