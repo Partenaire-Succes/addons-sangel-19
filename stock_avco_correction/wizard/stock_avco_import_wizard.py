@@ -1,5 +1,6 @@
 import base64
 import io
+import json
 import logging
 
 import openpyxl
@@ -339,12 +340,22 @@ class StockAvcoImportWizard(models.TransientModel):
                 # Le prix utilisé = le PMP du fichier Excel (référence fiable)
                 # ------------------------------------------------
                 if line.pmp_excel > 0:
-                    tmpl = line.product_id.with_company(company).product_tmpl_id
-                    current_standard = tmpl.with_company(company).standard_price
+                    variant = line.product_id.with_company(company).sudo()
+                    current_standard = variant.standard_price
                     if abs(current_standard - line.pmp_excel) > 0.01:
-                        tmpl.with_company(company).sudo()._write({
-                            'standard_price': line.pmp_excel
-                        })
+                        # standard_price est company_dependent → stocké en jsonb en Odoo 17+
+                        # _write() ne sait pas caster un float en jsonb, on passe par SQL direct
+                        # pour bypasser _set_standard_price() qui génère des écritures parasites.
+                        self.env.cr.execute(
+                            """
+                            UPDATE product_product
+                            SET standard_price =
+                                COALESCE(standard_price, '{}')::jsonb
+                                || jsonb_build_object(%s::text, %s::numeric)
+                            WHERE id = %s
+                            """,
+                            [str(company.id), line.pmp_excel, line.product_id.id]
+                        )
                         _logger.info(
                             "standard_price [%s] %s : %.2f -> %.2f",
                             company.name,
