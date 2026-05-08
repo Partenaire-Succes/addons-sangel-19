@@ -122,7 +122,7 @@
     <menuitem
         id="menu_sale_promotion"
         name="Promotions Sangel"
-        parent="sale.sale_order_menu"
+        parent="point_of_sale.menu_point_of_sale"
         action="action_sale_promotion"
         sequence="25"/>
 

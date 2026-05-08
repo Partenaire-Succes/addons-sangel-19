@@ -31,6 +31,7 @@
         'report/cloture_caisse_template.xml',
         'report/avoir_journee_report.xml',
         'report/avoir_journee_template.xml',
+        'views/pos_order_inherit_views.xml',
         'views/pos_config_inherit_views.xml',
         'views/pos_payment_method_inherit_views.xml',
         'views/pos_session_inherit_views.xml',

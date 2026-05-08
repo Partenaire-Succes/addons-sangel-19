@@ -75,7 +75,7 @@ patch(ControlButtons.prototype, {
 
         doc.body.innerHTML =
             '<div class="sep"></div>' +
-            '<div class="bold">--- TIROIR CAISSE ---</div>' +
+            '<div class="bold">--- OUVERTURE TIROIR CAISSE ---</div>' +
             "<div>" + heure + "</div>" +
             (caisse ? '<div class="sm">' + caisse + "</div>" : "") +
             '<div class="sep"></div>';
