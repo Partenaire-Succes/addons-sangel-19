@@ -11,7 +11,7 @@
             <field name="inherit_id" ref="point_of_sale.view_pos_pos_form"/>
             <field name="arch" type="xml">
                 <xpath expr="//field[@name='payment_ids']" position="attributes">
-                    <attribute name="readonly">state == 'cancel'</attribute>
+                    <attribute name="readonly">state in ('done', 'cancel')</attribute>
                 </xpath>
             </field>
         </record>
