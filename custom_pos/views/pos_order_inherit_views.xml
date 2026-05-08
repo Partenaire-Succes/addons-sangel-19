@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Odoo natif bloque payment_ids si : account_move OR state='done' OR nb_print > 0
+             En production tous ces critères sont vrais sur les vraies commandes.
+             On lève le verrou pour permettre la correction du mode de paiement. -->
+        <record id="pos_order_form_inherit_payment_editable" model="ir.ui.view">
+            <field name="name">pos.order.form.inherit.payment.editable</field>
+            <field name="model">pos.order</field>
+            <field name="inherit_id" ref="point_of_sale.view_pos_pos_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='payment_ids']" position="attributes">
+                    <attribute name="readonly">state == 'cancel'</attribute>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</odoo>
