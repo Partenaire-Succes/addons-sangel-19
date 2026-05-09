@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="rapport_validation_wizard_view_form" model="ir.ui.view">
+            <field name="name">rapport.validation.wizard.form</field>
+            <field name="model">rapport.validation.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Rapport des validations manager">
+                    <group>
+                        <group string="Période">
+                            <field name="date_from"/>
+                            <field name="date_to"/>
+                        </group>
+                        <group string="Filtres">
+                            <field name="config_ids" widget="many2many_tags"
+                                   placeholder="Toutes les caisses"/>
+                        </group>
+                    </group>
+                    <footer>
+                        <button name="action_generate_report" type="object"
+                                string="Télécharger le rapport" class="btn-primary"/>
+                        <button special="cancel" string="Annuler"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_rapport_validation_wizard" model="ir.actions.act_window">
+            <field name="name">Rapport des validations manager</field>
+            <field name="res_model">rapport.validation.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+            <field name="view_id" ref="rapport_validation_wizard_view_form"/>
+        </record>
+
+        <menuitem
+            id="menu_rapport_validation_wizard"
+            name="Rapport des validations"
+            parent="point_of_sale.menu_point_of_sale"
+            action="action_rapport_validation_wizard"
+            sequence="99"
+            groups="custom_pos.group_superviseur"/>
+
+    </data>
+</odoo>

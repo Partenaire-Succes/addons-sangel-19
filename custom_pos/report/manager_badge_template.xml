@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_manager_badge">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="manager">
+                <div style="
+                    width: 77mm;
+                    height: 48mm;
+                    box-sizing: border-box;
+                    border: 1.5px solid #1a1a2e;
+                    border-radius: 5px;
+                    font-family: Arial, Helvetica, sans-serif;
+                    overflow: hidden;
+                    display: flex;
+                    flex-direction: column;
+                    page-break-after: always;
+                ">
+                    <!-- Bande supérieure société -->
+                    <div style="
+                        background: #e67e22;
+                        color: #fff;
+                        padding: 2.5mm 4mm;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        flex-shrink: 0;
+                    ">
+                        <span style="font-size:7pt; font-weight:bold; letter-spacing:0.8px; text-transform:uppercase;">
+                            <t t-esc="manager.user_id.company_id.name or manager.env.user.company_id.name or ''"/>
+                        </span>
+                        <span style="font-size:6pt; opacity:0.85; letter-spacing:0.5px;">
+                            BADGE MANAGER POS
+                        </span>
+                    </div>
+
+                    <!-- Corps -->
+                    <div style="
+                        flex: 1;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 2mm 4mm 1mm 4mm;
+                        background: #ffffff;
+                        text-align: center;
+                    ">
+                        <!-- Nom du manager -->
+                        <div style="
+                            font-size: 13pt;
+                            font-weight: bold;
+                            color: #1a1a2e;
+                            letter-spacing: 0.5px;
+                            line-height: 1.2;
+                            margin-bottom: 1mm;
+                        ">
+                            <t t-esc="manager.name"/>
+                        </div>
+
+                        <!-- Rôle -->
+                        <div style="
+                            font-size: 6.5pt;
+                            color: #7f8c8d;
+                            margin-bottom: 2.5mm;
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                        ">
+                            Validateur POS — Toutes caisses
+                        </div>
+
+                        <!-- Code-barres — badge_code stocké sur le manager -->
+                        <t t-if="manager.badge_code">
+                            <img t-att-src="'/report/barcode/Code128/' + manager.badge_code + '?width=400&amp;height=52&amp;humanreadable=0'"
+                                 style="height:13mm; max-width:68mm; display:block;"/>
+                        </t>
+                        <t t-else="">
+                            <div style="color:#dc3545; font-size:6pt;">
+                                Code non configuré sur la caisse
+                            </div>
+                        </t>
+                    </div>
+
+                    <!-- Pied de page sécurité -->
+                    <div style="
+                        background: #1a1a2e;
+                        color: #aaaaaa;
+                        text-align: center;
+                        font-size: 5.5pt;
+                        padding: 1.5mm;
+                        letter-spacing: 0.4px;
+                        flex-shrink: 0;
+                    ">
+                        CONFIDENTIEL — Badge nominatif — Ne pas reproduire
+                    </div>
+                </div>
+            </t>
+        </t>
+    </template>
+</odoo>

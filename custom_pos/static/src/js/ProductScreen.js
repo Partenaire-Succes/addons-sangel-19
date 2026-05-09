@@ -1,6 +1,7 @@
 /** @odoo-module **/
 
 import { PosStore } from "@point_of_sale/app/services/pos_store";
+import { validateManagerCode } from "@custom_pos/js/pos_validation_utils";
 import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 import { _t } from "@web/core/l10n/translation";
 import { rpc } from "@web/core/network/rpc";
@@ -162,7 +163,10 @@ patch(PosStore.prototype, {
                 if (priceResult.error && priceResult.access_required) {
                     if (priceResult.code_acces) {
                         const priceCodeInput = await this._showPasswordPrompt(priceResult.message, []);
-                        if (priceCodeInput !== priceResult.code_acces) {
+                        const { success: priceOk } = await validateManagerCode(
+                            priceCodeInput, "price_reduction", this, "", priceResult.code_acces
+                        );
+                        if (!priceOk) {
                             this.dialog.add(AlertDialog, {
                                 title: _t("Code incorrect"),
                                 body: _t("Le code saisi est invalide. La vente est annulée."),
@@ -241,7 +245,10 @@ patch(PosStore.prototype, {
             if (result.error) {
                 if (result.access_required && result.code_acces) {
                     const codeInput = await this._showPasswordPrompt(result.message, discountedProducts);
-                    if (codeInput !== result.code_acces) {
+                    const { success: stockOk } = await validateManagerCode(
+                        codeInput, hasDiscount ? "discount" : "stock", this, "", result.code_acces
+                    );
+                    if (!stockOk) {
                         this.dialog.add(AlertDialog, {
                             title: _t("Code incorrect"),
                             body: _t("Le code saisi est invalide. La vente est annulée."),
@@ -286,20 +293,12 @@ patch(PosStore.prototype, {
                 const message = "⚠️ Autorisation requise (mode hors-ligne) :\n\n" +
                     "Produits en rupture de stock :\n" +
                     produitsRupture.map(p => `   • ${p}`).join('\n');
-                
-                if (accessCode) {
-                    const codeInput = await this._showPasswordPrompt(message, discountedProducts);
-                    if (codeInput !== accessCode) {
-                        this.dialog.add(AlertDialog, {
-                            title: _t("Code incorrect"),
-                            body: _t("Le code saisi est invalide. La vente est annulée."),
-                        });
-                        return;
-                    }
-                } else {
+                const codeInput = await this._showPasswordPrompt(message, discountedProducts);
+                const { success: ok1 } = await validateManagerCode(codeInput, "stock", this, "", accessCode);
+                if (!ok1) {
                     this.dialog.add(AlertDialog, {
-                        title: _t("Stock indisponible"),
-                        body: _t(message + "\n\nAucun code d'accès configuré."),
+                        title: _t("Code incorrect"),
+                        body: _t("Le code saisi est invalide. La vente est annulée."),
                     });
                     return;
                 }
@@ -308,20 +307,12 @@ patch(PosStore.prototype, {
             else if (produitsRupture.length > 0) {
                 const message = "Les produits suivants sont en rupture de stock :\n" +
                     produitsRupture.map(p => `   • ${p}`).join('\n');
-                
-                if (accessCode) {
-                    const codeInput = await this._showPasswordPrompt(message, []);
-                    if (codeInput !== accessCode) {
-                        this.dialog.add(AlertDialog, {
-                            title: _t("Code incorrect"),
-                            body: _t("Le code saisi est invalide. La vente est annulée."),
-                        });
-                        return;
-                    }
-                } else {
+                const codeInput = await this._showPasswordPrompt(message, []);
+                const { success: ok2 } = await validateManagerCode(codeInput, "stock", this, "", accessCode);
+                if (!ok2) {
                     this.dialog.add(AlertDialog, {
-                        title: _t("Stock indisponible"),
-                        body: _t(message + "\n\nAucun code d'accès configuré."),
+                        title: _t("Code incorrect"),
+                        body: _t("Le code saisi est invalide. La vente est annulée."),
                     });
                     return;
                 }
@@ -329,18 +320,14 @@ patch(PosStore.prototype, {
             // Si seulement remise
             else if (hasDiscount) {
                 const message = "⚠️ Cette commande contient des remises.\nUn code d'accès est requis pour continuer.";
-                
-                if (accessCode) {
-                    const codeInput = await this._showPasswordPrompt(message, discountedProducts);
-                    if (codeInput !== accessCode) {
-                        this.dialog.add(AlertDialog, {
-                            title: _t("Code incorrect"),
-                            body: _t("Le code saisi est invalide. La vente est annulée."),
-                        });
-                        return;
-                    }
-                } else {
-                    console.warn("Mode hors-ligne: Pas de code d'accès configuré - vente autorisée sans vérification");
+                const codeInput = await this._showPasswordPrompt(message, discountedProducts);
+                const { success: ok3 } = await validateManagerCode(codeInput, "discount", this, "", accessCode);
+                if (!ok3) {
+                    this.dialog.add(AlertDialog, {
+                        title: _t("Code incorrect"),
+                        body: _t("Le code saisi est invalide. La vente est annulée."),
+                    });
+                    return;
                 }
             }
             // Tout est OK - pas de rupture ni remise

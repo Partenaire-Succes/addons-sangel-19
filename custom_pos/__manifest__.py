@@ -33,12 +33,18 @@
         'report/avoir_journee_template.xml',
         'views/pos_order_inherit_views.xml',
         'views/pos_config_inherit_views.xml',
+        'views/pos_manager_code_views.xml',
+        'report/manager_badge_report.xml',
+        'report/manager_badge_template.xml',
+        'report/validation_log_report.xml',
+        'report/validation_log_template.xml',
         'views/pos_payment_method_inherit_views.xml',
         'views/pos_session_inherit_views.xml',
         'views/pos_order_promo_report_views.xml',
         'views/product_template_inherit_views.xml',
         'wizard/import_loyalty_points_wizard_views.xml',
         'wizard/avoir_journee_wizard_views.xml',
+        'wizard/rapport_validation_wizard_views.xml',
     ],
     'images': ['static/description/banner.png'],
     'license': 'AGPL-3',
@@ -83,6 +89,8 @@
             "/custom_pos/static/src/xml/pos_product_info_hide_inventory.xml",
             # Navbar + TicketScreen restrictions caissière/DSI
             "/custom_pos/static/src/xml/pos_navbar_caissiere_patch.xml",
+            # Utilitaire validation managers (doit charger avant les patches qui l'importent)
+            "/custom_pos/static/src/js/pos_validation_utils.js",
             # Bouton ouverture manuelle caisse + raccourci Alt+C
             "/custom_pos/static/src/js/cashbox_button.js",
             "/custom_pos/static/src/xml/cashbox_button.xml",
