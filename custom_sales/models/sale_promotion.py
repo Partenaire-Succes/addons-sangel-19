@@ -99,7 +99,7 @@ class SalePromotionLine(models.Model):
 
     discount = fields.Float(
         string='Remise (%)',
-        digits=(5, 2),
+        digits=(8, 5),
         required=True,
         default=0.0,
         help="Pourcentage de remise. Peut aussi être calculé automatiquement "
@@ -282,7 +282,7 @@ class SalePromotionLine(models.Model):
             promo_ht = round(promo_ttc * p_ht / p_ttc, 6) if p_ht else promo_ttc
             line.promo_ht = promo_ht
             if p_ht and p_ht > 0:
-                line.discount = round((1.0 - promo_ht / p_ht) * 100.0, 2)
+                line.discount = round((1.0 - promo_ht / p_ht) * 100.0, 5)
 
     @api.depends('price_ht', 'promo_ht', 'promo_pa')
     def _compute_ratios(self):
@@ -327,7 +327,7 @@ class SalePromotionLine(models.Model):
         p_ht = self.price_ht
         promo_ht = self.promo_ht or 0.0
         if p_ht and p_ht > 0:
-            self.discount = round((1.0 - promo_ht / p_ht) * 100.0, 2)
+            self.discount = round((1.0 - promo_ht / p_ht) * 100.0, 5)
 
     @api.onchange('promo_ttc')
     def _onchange_promo_ttc(self):
@@ -340,7 +340,7 @@ class SalePromotionLine(models.Model):
         promo_ht = round(promo_ttc * p_ht / p_ttc, 6) if p_ht else promo_ttc
         self.promo_ht = promo_ht
         if p_ht and p_ht > 0:
-            self.discount = round((1.0 - promo_ht / p_ht) * 100.0, 2)
+            self.discount = round((1.0 - promo_ht / p_ht) * 100.0, 5)
 
     # ─── Onchange dates depuis l'entête ────────────────────────────────────────
 
