@@ -58,21 +58,21 @@
                                 </div>
 
                                 <!-- PRIX GRAND ET CENTRE -->
-                                <div style="font-size:36pt;
+                                <div style="font-size:30pt;
                                             font-weight:900;
                                             line-height:1;
                                             color:#111;
                                             letter-spacing:-1px;
                                             white-space:nowrap;
                                             text-align:center;">
-                                    <t t-out="'{:,.0f}'.format(price_ttc).replace(',', '\u00a0')"/>
+                                    <t t-out="'{:,.0f}'.format(price_ttc).replace(',', '&#160;')"/>
                                 </div>
 
                                 <!-- UNITE -->
-                                <div style="font-size:9pt;
+                                <div style="font-size:8.5pt;
                                             font-weight:700;
                                             color:#444;
-                                            margin-top:1.5mm;
+                                            margin-top:1mm;
                                             text-align:center;
                                             line-height:1;">
                                     FCFA&#160;/&#160;<t t-out="product.uom_id.name"/>
@@ -80,13 +80,13 @@
 
                                 <!-- REF VISIBLE -->
                                 <!-- <t t-if="product.default_code"> -->
-                                <div style="font-size:8pt;
+                                <div style="font-size:7.5pt;
                                             color:#111;
-                                            margin-top:2mm;
+                                            margin-top:1mm;
                                             font-weight:900;
                                             text-align:center;
                                             letter-spacing:0.5px;
-                                            line-height:1;">
+                                            line-height:1.2;">
                                     Ref&#160;:&#160;<t t-out="product.default_code"/><br/>Imprimé le&#160;:&#160;<t t-out="datetime.date.today().strftime('%d/%m/%Y')"/>
                                 </div>
                                 <!-- </t> -->
@@ -186,14 +186,14 @@
                                             letter-spacing:-1px;
                                             white-space:nowrap;
                                             text-align:center;">
-                                    <t t-out="'{:,.0f}'.format(price_ttc).replace(',', '\u00a0')"/>
+                                    <t t-out="'{:,.0f}'.format(price_ttc).replace(',', '&#160;')"/>
                                 </div>
 
                                 <!-- UNITE -->
                                 <div style="font-size:7pt;
                                             font-weight:700;
                                             color:#444;
-                                            margin-top:1.2mm;
+                                            margin-top:1mm;
                                             text-align:center;
                                             line-height:1;">
                                     FCFA&#160;/&#160;<t t-out="product.uom_id.name"/>
@@ -201,13 +201,13 @@
 
                                 <!-- REF VISIBLE -->
                                 <t t-if="product.default_code">
-                                    <div style="font-size:7pt;
+                                    <div style="font-size:6.5pt;
                                                 color:#111;
-                                                margin-top:1.5mm;
+                                                margin-top:1mm;
                                                 font-weight:900;
                                                 text-align:center;
                                                 letter-spacing:0.5px;
-                                                line-height:1;">
+                                                line-height:1.2;">
                                         Ref&#160;:&#160;<t t-out="product.default_code"/><br/>Imprimé le&#160;:&#160;<t t-out="datetime.date.today().strftime('%d/%m/%Y')"/>
                                     </div>
                                 </t>
