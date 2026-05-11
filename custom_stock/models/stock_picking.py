@@ -34,13 +34,7 @@ class StockPicking(models.Model):
 
 
     def button_validate(self):
-        """Override: price validation + sync facture fournisseur après réception.
-
-        Le sync pack/unité a été retiré de button_validate pour éviter la
-        double-décrémentation des SVL (stock.valuation.layer) qui corrompait
-        l'AVCO. L'éclatement carton→unité se fait via le bouton dédié
-        'Éclater en unités' après validation de la réception.
-        """
+        """Override: price validation + sync facture fournisseur + éclatement cartons après réception."""
 
         # ── 1. Pre-validation checks (before calling super) ──────────────────
         errors = []
@@ -81,6 +75,11 @@ class StockPicking(models.Model):
                     and picking.state == 'done'
                     and picking.purchase_id):
                 picking._sync_invoice_from_reception(prix_saisis=prix_saisis)
+
+        # ── 4. Éclatement automatique cartons → unités ───────────────────────
+        for picking in self:
+            if picking.picking_type_id.code == 'incoming' and picking.state == 'done':
+                picking.action_eclater_cartons_en_unites(auto=True)
 
         return result
 
@@ -150,15 +149,13 @@ class StockPicking(models.Model):
             invoice.name, self.name, purchase.name,
         )
 
-    def action_eclater_cartons_en_unites(self):
+    def action_eclater_cartons_en_unites(self, auto=False):
         """
-        Bouton manuel 'Éclater en unités' — à appeler après validation d'une réception.
+        Bouton manuel 'Éclater en unités' — ou appelé automatiquement après validation.
 
-        Deux transferts internes sont créés :
-          1. Consommation cartons : Entrepôt → Production (retire le stock carton, AVCO correct)
-          2. Création unités    : Production → Entrepôt  (injecte les unités au bon prix)
+        Création d'un transfert interne : Production → Entrepôt (injecte les unités au bon prix).
 
-        La vue produit affiche pack_equiv_cartons_available = unités / pack_qty en temps réel.
+        :param auto: True quand appelé depuis button_validate (skip silencieux si non applicable).
         """
         self.ensure_one()
         if self.state != 'done':
@@ -166,12 +163,15 @@ class StockPicking(models.Model):
         if self.picking_type_id.code != 'incoming':
             raise UserError(_("L'éclatement ne s'applique qu'aux réceptions."))
 
-        # ── Protection double-clic ────────────────────────────────────────────
+        # ── Protection double-appel ───────────────────────────────────────────
         already_done = self.env['stock.picking'].search([
             ('origin', '=', 'Eclatement cartons — %s' % self.name),
             ('state', '=', 'done'),
         ], limit=1)
         if already_done:
+            if auto:
+                _logger.info("[ECLATER_AUTO] Déjà effectué pour %s → %s", self.name, already_done.name)
+                return
             raise UserError(_(
                 "L'éclatement a déjà été effectué pour cette réception.\n"
                 "Transfert existant : %s"
@@ -185,6 +185,8 @@ class StockPicking(models.Model):
             pack_moves.append((move, pack_template))
 
         if not pack_moves:
+            if auto:
+                return
             raise UserError(_("Aucun article pack (carton) trouvé dans cette réception."))
 
         # En Odoo 19, l'emplacement Production est par société (pas d'XML ID global).
@@ -264,18 +266,16 @@ class StockPicking(models.Model):
 
         explosion_picking.with_context(skip_backorder=True, skip_immediate=True).button_validate()
 
+        label = _('Éclatement cartons automatique') if auto else _('Éclatement cartons effectué')
         self.message_post(
-            body=_('Éclatement cartons effectué → transfert unités <b>%s</b> créé.') % explosion_picking.name,
+            body=_('%s → transfert unités <b>%s</b> créé.') % (label, explosion_picking.name),
             message_type='notification',
         )
-        # Retourner un reload de la réception (pas le formulaire du picking éclatement).
-        # Ouvrir ce formulaire plante sur _compute_forecast_information (bug Odoo 19 :
-        # KeyError sur (warehouse_id, date) pour les mouvements depuis emplacement virtuel).
+        _logger.info("[ECLATER_AUTO] Éclatement effectué pour %s → %s", self.name, explosion_picking.name)
+        if auto:
+            return
         return {'type': 'ir.actions.client', 'tag': 'reload'}
 
-    # _process_pack_explosion et _process_unit_to_pack_sync supprimés :
-    # ils créaient des ajustements d'inventaire sur du stock déjà modifié
-    # par le picking → double-décrémentation → corruption AVCO.
 
     def _get_pack_template_for_move(self, move):
         """Récupère le template pack pour un mouvement de carton"""
@@ -295,11 +295,6 @@ class StockPicking(models.Model):
             ("company_id", "in", [False, self.company_id.id]),
         ], limit=1)
 
-    # Méthodes supprimées (corrompaient l'AVCO par double-décrémentation SVL) :
-    # _create_inventory_adjustment_for_units, _process_template_unit_sync,
-    # _update_template_counter_and_process, _create_inventory_adjustment_for_cartons,
-    # _decrement_units_for_sold_cartons
-    # → remplacées par action_eclater_cartons_en_unites (transfert interne propre).
 
     def _get_current_qty(self, product, location):
         """Récupère la quantité actuelle d'un produit dans un emplacement"""
@@ -327,7 +322,3 @@ class StockPicking(models.Model):
                 ('usage', '=', 'internal'),
                 ('company_id', '=', self.company_id.id)
             ], limit=1)
-
-    # _direct_inventory_adjustment, _create_unit_decrement_move et _force_unit_adjustment
-    # supprimés : écrire directement sur stock.quant.quantity bypasse le SVL et
-    # corrompt l'AVCO de façon irréversible. Aucun fallback silencieux accepté.
