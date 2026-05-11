@@ -32,15 +32,15 @@ async function _sha256(str) {
 /**
  * Valide un code manager via RPC (online) ou SHA-256 (offline).
  *
- * @param {string}  code         - Code saisi ou scanné par le manager
- * @param {string}  actionKey    - Clé de l'action : 'refund'|'discount'|'stock'|
- *                                 'price_reduction'|'print'|'details'|'invoice'
- * @param {object}  pos          - Instance PosStore (this.pos ou this dans PosStore)
- * @param {string}  orderRef     - Référence commande concernée (optionnel)
- * @param {string}  fallbackCode - Code partagé global (pos.config.code_acces)
+ * @param {string}       code         - Code saisi ou scanné par le manager
+ * @param {string}       actionKey    - 'refund'|'discount'|'stock'|'price_reduction'|'print'|'details'|'invoice'
+ * @param {object}       pos          - Instance PosStore
+ * @param {string}       orderRef     - Référence commande (optionnel)
+ * @param {string}       fallbackCode - Code partagé global (pos.config.code_acces)
+ * @param {object|null}  priceInfo    - Pour price_reduction : { old_price, new_price, product_name }
  * @returns {Promise<{success: boolean, managerName: string|null}>}
  */
-export async function validateManagerCode(code, actionKey, pos, orderRef, fallbackCode) {
+export async function validateManagerCode(code, actionKey, pos, orderRef, fallbackCode, priceInfo = null) {
     if (!code) {
         return { success: false, managerName: null };
     }
@@ -54,7 +54,7 @@ export async function validateManagerCode(code, actionKey, pos, orderRef, fallba
             model: "pos.manager.code",
             method: "validate_manager_code",
             args: [code, actionKey, sessionId, cashierName, orderRef || ""],
-            kwargs: {},
+            kwargs: { price_info: priceInfo || false },
         });
         return {
             success: result.success === true,

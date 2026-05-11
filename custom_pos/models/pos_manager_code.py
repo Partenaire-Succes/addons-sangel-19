@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import logging
 from odoo import models, fields, api
@@ -19,12 +20,54 @@ class PosManagerCode(models.Model):
     badge_code = fields.Char(compute='_compute_badge_code', store=True)
     code_hash = fields.Char(compute='_compute_code_hash', store=True)
     barcode_html = fields.Html(compute='_compute_barcode_html', sanitize=False)
+    # Barcode PNG en base64 pour l'impression PDF (évite le chargement URL par wkhtmltopdf)
+    badge_barcode_b64 = fields.Char(compute='_compute_badge_barcode_b64', store=False)
+    # Logo société en base64 pour l'impression PDF
+    logo_b64 = fields.Char(compute='_compute_logo_b64', store=False)
     active = fields.Boolean(default=True)
 
     @api.depends('config_id.code_acces')
     def _compute_badge_code(self):
         for rec in self:
             rec.badge_code = rec.config_id.code_acces if rec.config_id else False
+
+    def _compute_logo_b64(self):
+        for rec in self:
+            company = rec.user_id.company_id if rec.user_id else self.env.company
+            if company and company.logo:
+                rec.logo_b64 = company.logo.decode('utf-8') if isinstance(company.logo, bytes) else company.logo
+            else:
+                rec.logo_b64 = False
+
+    @api.depends('badge_code')
+    def _compute_badge_barcode_b64(self):
+        for rec in self:
+            if not rec.badge_code:
+                rec.badge_barcode_b64 = False
+                continue
+            # Méthode 1 : API standard Odoo (reportlab via ir.actions.report)
+            try:
+                barcode_bytes = self.env['ir.actions.report'].barcode(
+                    'Code128', rec.badge_code,
+                    width=420, height=60, humanreadable=0,
+                )
+                rec.badge_barcode_b64 = base64.b64encode(barcode_bytes).decode('utf-8')
+                continue
+            except Exception as e1:
+                _logger.warning("Barcode méthode 1 échouée pour %s: %s", rec.name, e1)
+            # Méthode 2 : reportlab directement
+            try:
+                from reportlab.graphics.barcode import createBarcodeDrawing
+                drawing = createBarcodeDrawing(
+                    'Code128', value=rec.badge_code,
+                    width=420, height=60, humanReadable=False,
+                )
+                rec.badge_barcode_b64 = base64.b64encode(
+                    drawing.asString('png')
+                ).decode('utf-8')
+            except Exception as e2:
+                _logger.warning("Barcode méthode 2 échouée pour %s: %s", rec.name, e2)
+                rec.badge_barcode_b64 = False
 
     @api.depends('badge_code')
     def _compute_code_hash(self):
@@ -61,7 +104,7 @@ class PosManagerCode(models.Model):
 
     @api.model
     def validate_manager_code(self, code, action, session_id=None,
-                               cashier_name='', order_ref=''):
+                               cashier_name='', order_ref='', price_info=None):
         if not code:
             return {'success': False, 'manager_name': False, 'manager_id': False}
 
@@ -82,6 +125,7 @@ class PosManagerCode(models.Model):
                 cashier_name=cashier_name,
                 order_ref=order_ref,
                 offline=False,
+                price_info=price_info,
             )
             return {
                 'success': True,
@@ -92,7 +136,7 @@ class PosManagerCode(models.Model):
         return {'success': False, 'manager_name': False, 'manager_id': False}
 
     def _write_log(self, manager_code, manager_name, action,
-                   session_id, cashier_name, order_ref, offline=False):
+                   session_id, cashier_name, order_ref, offline=False, price_info=None):
         session = (
             self.env['pos.session'].browse(session_id)
             if session_id else self.env['pos.session']
@@ -101,7 +145,7 @@ class PosManagerCode(models.Model):
             session.config_id
             if session.exists() else self.env['pos.config'].search([], limit=1)
         )
-        self.env['pos.access.log'].sudo().create({
+        vals = {
             'manager_code_id': manager_code.id if manager_code else False,
             'manager_name': manager_name or '',
             'action': action or 'unknown',
@@ -111,7 +155,12 @@ class PosManagerCode(models.Model):
             'cashier_name': cashier_name or '',
             'order_ref': order_ref or '',
             'offline': offline,
-        })
+        }
+        if price_info and isinstance(price_info, dict):
+            vals['old_price'] = float(price_info.get('old_price') or 0.0)
+            vals['new_price'] = float(price_info.get('new_price') or 0.0)
+            vals['price_product'] = str(price_info.get('product_name') or '')
+        self.env['pos.access.log'].sudo().create(vals)
 
     def action_print_badge(self):
         return self.env.ref('custom_pos.action_report_manager_badge').report_action(self)
@@ -143,3 +192,6 @@ class PosAccessLog(models.Model):
     ], string='Action validée', readonly=True)
     order_ref = fields.Char('Référence commande', readonly=True)
     offline = fields.Boolean('Hors-ligne', readonly=True, default=False)
+    price_product = fields.Char('Produit(s) modifié(s)', readonly=True)
+    old_price = fields.Float('Ancien prix', readonly=True, digits='Product Price')
+    new_price = fields.Float('Nouveau prix', readonly=True, digits='Product Price')

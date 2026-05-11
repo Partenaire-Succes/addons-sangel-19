@@ -18,13 +18,11 @@
 
         <record id="action_report_validation_log" model="ir.actions.report">
             <field name="name">Rapport des validations</field>
-            <field name="model">pos.session</field>
+            <field name="model">rapport.validation.wizard</field>
             <field name="report_type">qweb-pdf</field>
             <field name="report_name">custom_pos.report_validation_log_document</field>
             <field name="report_file">custom_pos.report_validation_log_document</field>
-            <field name="print_report_name">'Validations_%s_%s' % (object.config_id.name, object.start_at.strftime('%Y%m%d') if object.start_at else '')</field>
-            <field name="binding_model_id" ref="point_of_sale.model_pos_session"/>
-            <field name="binding_type">report</field>
+            <field name="print_report_name">'Rapport_Validations_POS'</field>
             <field name="paperformat_id" ref="custom_pos.paperformat_validation_log"/>
         </record>
 

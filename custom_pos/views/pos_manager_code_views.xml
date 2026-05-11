@@ -99,6 +99,12 @@
                            decoration-danger="action == 'refund'"
                            decoration-warning="action in ('discount','price_reduction','stock')"
                            decoration-info="action in ('print','details','invoice')"/>
+                    <field name="price_product" string="Produit" optional="show"
+                           invisible="action != 'price_reduction'"/>
+                    <field name="old_price" string="Ancien prix" optional="show"
+                           invisible="action != 'price_reduction'"/>
+                    <field name="new_price" string="Nouveau prix" optional="show"
+                           invisible="action != 'price_reduction'"/>
                     <field name="order_ref"/>
                     <field name="offline" optional="show"/>
                 </list>

@@ -13,6 +13,8 @@ class RapportValidationWizard(models.TransientModel):
         'pos.config', string='Caisses',
         help="Laisser vide pour inclure toutes les caisses."
     )
+    # Sessions calculées lors de la génération — passées au template en un seul document
+    session_ids = fields.Many2many('pos.session', string='Sessions du rapport')
 
     @api.constrains('date_from', 'date_to')
     def _check_dates(self):
@@ -36,4 +38,6 @@ class RapportValidationWizard(models.TransientModel):
                 )
             )
 
-        return self.env.ref('custom_pos.action_report_validation_log').report_action(sessions)
+        # Stocker les sessions sur le wizard pour le template ; passer self (1 seul doc)
+        self.session_ids = sessions
+        return self.env.ref('custom_pos.action_report_validation_log').report_action(self)

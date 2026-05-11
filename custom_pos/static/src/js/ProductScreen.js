@@ -163,8 +163,15 @@ patch(PosStore.prototype, {
                 if (priceResult.error && priceResult.access_required) {
                     if (priceResult.code_acces) {
                         const priceCodeInput = await this._showPasswordPrompt(priceResult.message, []);
+                        // Construire le résumé des prix pour le journal
+                        const priceInfo = priceReductionLines.length > 0 ? {
+                            old_price: priceReductionLines[0].original_price,
+                            new_price: priceReductionLines[0].unit_price,
+                            product_name: priceReductionLines.map(p => p.product_name).join(', '),
+                        } : null;
                         const { success: priceOk } = await validateManagerCode(
-                            priceCodeInput, "price_reduction", this, "", priceResult.code_acces
+                            priceCodeInput, "price_reduction", this,
+                            currentOrder?.name || "", priceResult.code_acces, priceInfo
                         );
                         if (!priceOk) {
                             this.dialog.add(AlertDialog, {
@@ -194,10 +201,19 @@ patch(PosStore.prototype, {
                         .join('\n');
                     
                     const message = `⚠️ Modification de prix détectée (mode hors-ligne) :\n\n${productList}\n\nUn code d'accès est requis pour valider cette réduction de prix.`;
-                    
+
                     if (accessCode) {
                         const codeInput = await this._showPasswordPrompt(message, []);
-                        if (codeInput !== accessCode) {
+                        const offlinePriceInfo = priceReductionLines.length > 0 ? {
+                            old_price: priceReductionLines[0].original_price,
+                            new_price: priceReductionLines[0].unit_price,
+                            product_name: priceReductionLines.map(p => p.product_name).join(', '),
+                        } : null;
+                        const { success: offlinePriceOk } = await validateManagerCode(
+                            codeInput, "price_reduction", this,
+                            currentOrder?.name || "", accessCode, offlinePriceInfo
+                        );
+                        if (!offlinePriceOk) {
                             this.dialog.add(AlertDialog, {
                                 title: _t("Code incorrect"),
                                 body: _t("Le code saisi est invalide. La vente est annulée."),
