@@ -58,11 +58,12 @@
                                 </div>
 
                                 <!-- PRIX GRAND ET CENTRE -->
-                                <div style="font-size:46pt;
+                                <div style="font-size:36pt;
                                             font-weight:900;
-                                            line-height:0.9;
+                                            line-height:1;
                                             color:#111;
-                                            letter-spacing:-2px;
+                                            letter-spacing:-1px;
+                                            white-space:nowrap;
                                             text-align:center;">
                                     <t t-out="'{:,.0f}'.format(price_ttc).replace(',', '\u00a0')"/>
                                 </div>
@@ -178,11 +179,12 @@
                                 </div>
 
                                 <!-- PRIX GRAND ET CENTRE -->
-                                <div style="font-size:30pt;
+                                <div style="font-size:24pt;
                                             font-weight:900;
-                                            line-height:0.88;
+                                            line-height:1;
                                             color:#111;
                                             letter-spacing:-1px;
+                                            white-space:nowrap;
                                             text-align:center;">
                                     <t t-out="'{:,.0f}'.format(price_ttc).replace(',', '\u00a0')"/>
                                 </div>
