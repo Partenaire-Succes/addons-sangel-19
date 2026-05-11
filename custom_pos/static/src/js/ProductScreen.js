@@ -132,16 +132,24 @@ patch(PosStore.prototype, {
             if (line.price_unit !== undefined && line.price_unit < 0) return;
             
             const product = line.product_id;
-            const originalPrice = product.lst_price;
-            const currentPrice = line.price_unit;
-            
+            const originalPrice = product.lst_price;  // HT catalogue
+            const currentPrice = line.price_unit;      // HT modifié
+
+            // Facteur TTC : price_subtotal_incl / price_subtotal
+            // Fonctionne que la taxe soit incluse ou non (si pas de taxe → facteur = 1)
+            const taxFactor = (line.price_subtotal > 0)
+                ? line.price_subtotal_incl / line.price_subtotal
+                : 1;
+
             // Vérifier si le prix a été réduit
             if (currentPrice < originalPrice) {
                 priceReductionLines.push({
                     product_id: product.id,
-                    unit_price: currentPrice,
+                    unit_price: currentPrice,               // HT → vérification backend
                     product_name: product.display_name,
-                    original_price: originalPrice,
+                    original_price: originalPrice,          // HT → vérification backend
+                    original_price_ttc: originalPrice * taxFactor,  // TTC → journal
+                    unit_price_ttc: currentPrice * taxFactor,       // TTC → journal
                 });
             }
         });
@@ -164,11 +172,13 @@ patch(PosStore.prototype, {
                     if (priceResult.code_acces) {
                         const priceCodeInput = await this._showPasswordPrompt(priceResult.message, []);
                         // Construire le résumé des prix pour le journal
-                        const priceInfo = priceReductionLines.length > 0 ? {
-                            old_price: priceReductionLines[0].original_price,
-                            new_price: priceReductionLines[0].unit_price,
-                            product_name: priceReductionLines.map(p => p.product_name).join(', '),
-                        } : null;
+                        const priceInfo = priceReductionLines.length > 0
+                            ? priceReductionLines.map(p => ({
+                                produit: p.product_name,
+                                avant: p.original_price_ttc,   // TTC catalogue
+                                apres: p.unit_price_ttc,       // TTC modifié à la caisse
+                            }))
+                            : null;
                         const { success: priceOk } = await validateManagerCode(
                             priceCodeInput, "price_reduction", this,
                             currentOrder?.name || "", priceResult.code_acces, priceInfo
@@ -204,11 +214,13 @@ patch(PosStore.prototype, {
 
                     if (accessCode) {
                         const codeInput = await this._showPasswordPrompt(message, []);
-                        const offlinePriceInfo = priceReductionLines.length > 0 ? {
-                            old_price: priceReductionLines[0].original_price,
-                            new_price: priceReductionLines[0].unit_price,
-                            product_name: priceReductionLines.map(p => p.product_name).join(', '),
-                        } : null;
+                        const offlinePriceInfo = priceReductionLines.length > 0
+                            ? priceReductionLines.map(p => ({
+                                produit: p.product_name,
+                                avant: p.original_price_ttc,   // TTC catalogue
+                                apres: p.unit_price_ttc,       // TTC modifié à la caisse
+                            }))
+                            : null;
                         const { success: offlinePriceOk } = await validateManagerCode(
                             codeInput, "price_reduction", this,
                             currentOrder?.name || "", accessCode, offlinePriceInfo
@@ -262,7 +274,7 @@ patch(PosStore.prototype, {
                 if (result.access_required && result.code_acces) {
                     const codeInput = await this._showPasswordPrompt(result.message, discountedProducts);
                     const { success: stockOk } = await validateManagerCode(
-                        codeInput, hasDiscount ? "discount" : "stock", this, "", result.code_acces
+                        codeInput, hasDiscount ? "discount" : "stock", this, currentOrder?.name || "", result.code_acces
                     );
                     if (!stockOk) {
                         this.dialog.add(AlertDialog, {
@@ -310,7 +322,7 @@ patch(PosStore.prototype, {
                     "Produits en rupture de stock :\n" +
                     produitsRupture.map(p => `   • ${p}`).join('\n');
                 const codeInput = await this._showPasswordPrompt(message, discountedProducts);
-                const { success: ok1 } = await validateManagerCode(codeInput, "stock", this, "", accessCode);
+                const { success: ok1 } = await validateManagerCode(codeInput, "stock", this, currentOrder?.name || "", accessCode);
                 if (!ok1) {
                     this.dialog.add(AlertDialog, {
                         title: _t("Code incorrect"),
@@ -324,7 +336,7 @@ patch(PosStore.prototype, {
                 const message = "Les produits suivants sont en rupture de stock :\n" +
                     produitsRupture.map(p => `   • ${p}`).join('\n');
                 const codeInput = await this._showPasswordPrompt(message, []);
-                const { success: ok2 } = await validateManagerCode(codeInput, "stock", this, "", accessCode);
+                const { success: ok2 } = await validateManagerCode(codeInput, "stock", this, currentOrder?.name || "", accessCode);
                 if (!ok2) {
                     this.dialog.add(AlertDialog, {
                         title: _t("Code incorrect"),
@@ -337,7 +349,7 @@ patch(PosStore.prototype, {
             else if (hasDiscount) {
                 const message = "⚠️ Cette commande contient des remises.\nUn code d'accès est requis pour continuer.";
                 const codeInput = await this._showPasswordPrompt(message, discountedProducts);
-                const { success: ok3 } = await validateManagerCode(codeInput, "discount", this, "", accessCode);
+                const { success: ok3 } = await validateManagerCode(codeInput, "discount", this, currentOrder?.name || "", accessCode);
                 if (!ok3) {
                     this.dialog.add(AlertDialog, {
                         title: _t("Code incorrect"),

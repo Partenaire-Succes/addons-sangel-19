@@ -61,7 +61,8 @@ export async function validateManagerCode(code, actionKey, pos, orderRef, fallba
             managerName: result.manager_name || null,
         };
     } catch (_e) {
-        // Réseau indisponible → mode hors-ligne
+        // Réseau indisponible ou droits insuffisants → mode hors-ligne
+        console.warn("[validateManagerCode] RPC échoué :", _e?.message || _e);
     }
 
     // ── 2. Offline : comparaison SHA-256 ────────────────────────────────────

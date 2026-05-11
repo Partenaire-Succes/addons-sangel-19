@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import json
 import logging
 from odoo import models, fields, api
 
@@ -156,10 +157,16 @@ class PosManagerCode(models.Model):
             'order_ref': order_ref or '',
             'offline': offline,
         }
-        if price_info and isinstance(price_info, dict):
-            vals['old_price'] = float(price_info.get('old_price') or 0.0)
-            vals['new_price'] = float(price_info.get('new_price') or 0.0)
-            vals['price_product'] = str(price_info.get('product_name') or '')
+        if price_info:
+            if isinstance(price_info, list):
+                vals['price_details'] = json.dumps(price_info, ensure_ascii=False)
+            elif isinstance(price_info, dict):
+                # compatibilité ancien format → on l'encapsule en liste
+                vals['price_details'] = json.dumps([{
+                    'produit': str(price_info.get('product_name') or ''),
+                    'avant': float(price_info.get('old_price') or 0.0),
+                    'apres': float(price_info.get('new_price') or 0.0),
+                }], ensure_ascii=False)
         self.env['pos.access.log'].sudo().create(vals)
 
     def action_print_badge(self):
@@ -192,6 +199,31 @@ class PosAccessLog(models.Model):
     ], string='Action validée', readonly=True)
     order_ref = fields.Char('Référence commande', readonly=True)
     offline = fields.Boolean('Hors-ligne', readonly=True, default=False)
-    price_product = fields.Char('Produit(s) modifié(s)', readonly=True)
-    old_price = fields.Float('Ancien prix', readonly=True, digits='Product Price')
-    new_price = fields.Float('Nouveau prix', readonly=True, digits='Product Price')
+    price_details = fields.Text(
+        'Détails produits', readonly=True,
+        help="JSON : liste de {produit, avant, apres} — une entrée par produit affecté."
+    )
+    price_details_formatted = fields.Char(
+        'Produits modifiés', compute='_compute_price_details_formatted', store=False
+    )
+
+    @api.depends('price_details')
+    def _compute_price_details_formatted(self):
+        for rec in self:
+            if not rec.price_details:
+                rec.price_details_formatted = ''
+                continue
+            try:
+                data = json.loads(rec.price_details)
+                parts = []
+                for item in data:
+                    produit = item.get('produit', '?')
+                    avant = item.get('avant')
+                    apres = item.get('apres')
+                    if avant is not None and apres is not None:
+                        parts.append(f"{produit}: {avant:,.0f} → {apres:,.0f}")
+                    else:
+                        parts.append(produit)
+                rec.price_details_formatted = ' | '.join(parts)
+            except Exception:
+                rec.price_details_formatted = rec.price_details or ''

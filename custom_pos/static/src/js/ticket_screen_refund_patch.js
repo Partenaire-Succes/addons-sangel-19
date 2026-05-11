@@ -364,6 +364,7 @@ patch(TicketScreen.prototype, {
 patch(InvoiceButton.prototype, {
 
     async _invoiceOrder() {
+        const orderRef = this.props?.order?.name || this.pos?.selectedOrder?.name || "";
         const ok = await _checkCaissiereCodeAccess(
             this.pos.user._is_caissiere,
             this.pos.config.code_acces,
@@ -371,7 +372,7 @@ patch(InvoiceButton.prototype, {
             _t("Facture"),
             this.pos,
             "invoice",
-            ""
+            orderRef
         );
         if (!ok) return;
         return super._invoiceOrder(...arguments);

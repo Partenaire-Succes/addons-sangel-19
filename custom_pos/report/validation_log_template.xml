@@ -91,9 +91,8 @@
                                                 <th style="padding:2.5mm 3mm;text-align:left;width:12%;">Caissiere</th>
                                                 <th style="padding:2.5mm 3mm;text-align:left;width:12%;">Valide par</th>
                                                 <th style="padding:2.5mm 3mm;text-align:left;width:16%;">Action</th>
-                                                <th style="padding:2.5mm 3mm;text-align:left;width:18%;">Produit / Commande</th>
-                                                <th style="padding:2.5mm 3mm;text-align:right;width:10%;">Anc. prix</th>
-                                                <th style="padding:2.5mm 3mm;text-align:right;width:10%;">Nouv. prix</th>
+                                                <th style="padding:2.5mm 3mm;text-align:left;width:10%;">Commande</th>
+                                                <th style="padding:2.5mm 3mm;text-align:left;width:28%;">Produits / Détails prix</th>
                                                 <th style="padding:2.5mm 3mm;text-align:center;width:6%;">H-ligne</th>
                                             </tr>
                                         </thead>
@@ -135,29 +134,12 @@
                                                             <t t-esc="log.action or ''"/>
                                                         </t>
                                                     </td>
-                                                    <td style="padding:2mm 3mm;border-bottom:1px solid #e9ecef;font-size:8pt;color:#555;">
-                                                        <t t-if="log.action == 'price_reduction' and log.price_product">
-                                                            <span style="color:#1a1a2e;"><t t-esc="log.price_product"/></span>
-                                                            <t t-if="log.order_ref">
-                                                                <br/><span style="font-size:7.5pt;color:#888;"><t t-esc="log.order_ref"/></span>
-                                                            </t>
-                                                        </t>
-                                                        <t t-else="">
-                                                            <t t-esc="log.order_ref or ''"/>
-                                                        </t>
+                                                    <td style="padding:2mm 3mm;border-bottom:1px solid #e9ecef;font-size:8pt;color:#555;white-space:nowrap;">
+                                                        <t t-esc="log.order_ref or ''"/>
                                                     </td>
-                                                    <td style="padding:2mm 3mm;border-bottom:1px solid #e9ecef;text-align:right;white-space:nowrap;">
-                                                        <t t-if="log.action == 'price_reduction' and log.old_price">
-                                                            <span style="font-size:8pt;color:#555;">
-                                                                <t t-esc="'{:,.0f}'.format(log.old_price)"/>
-                                                            </span>
-                                                        </t>
-                                                    </td>
-                                                    <td style="padding:2mm 3mm;border-bottom:1px solid #e9ecef;text-align:right;white-space:nowrap;">
-                                                        <t t-if="log.action == 'price_reduction' and log.new_price">
-                                                            <span style="font-size:8pt;font-weight:bold;color:#dc3545;">
-                                                                <t t-esc="'{:,.0f}'.format(log.new_price)"/>
-                                                            </span>
+                                                    <td style="padding:2mm 3mm;border-bottom:1px solid #e9ecef;font-size:8pt;color:#1a1a2e;">
+                                                        <t t-if="log.price_details_formatted">
+                                                            <t t-esc="log.price_details_formatted"/>
                                                         </t>
                                                     </td>
                                                     <td style="padding:2mm 3mm;border-bottom:1px solid #e9ecef;text-align:center;">
