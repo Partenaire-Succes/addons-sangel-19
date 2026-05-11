@@ -65,7 +65,7 @@ class ProductProduct(models.Model):
             if ancien <= 0 or nouveau <= 0:
                 continue
 
-            qty_dispo = product._with_valuation_context().qty_available
+            qty_dispo = product.with_context(company_id=self.env.company.id).qty_available
             qty_nulle = float_is_zero(qty_dispo, precision_rounding=product.uom_id.rounding)
 
             corruption_detectee = (nouveau > ancien * RATIO_ALERTE) and qty_nulle
