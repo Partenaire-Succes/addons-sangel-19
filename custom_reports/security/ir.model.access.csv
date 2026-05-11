@@ -12,3 +12,4 @@ access_product_report_wizard,product.report.wizard,model_product_report_wizard,,
 access_retours_consolides_report_wizard,retours.consolides.report.wizard,model_retours_consolides_report_wizard,,1,1,1,1
 access_recap_caisses_wizard_user,recap.caisses.wizard_user,model_recap_caisses_wizard,point_of_sale.group_pos_user,1,1,1,1
 access_recap_caisses_wizard_manager,recap.caisses.wizard_manager,model_recap_caisses_wizard,point_of_sale.group_pos_manager,1,1,1,1
+access_stock_magasin_report_wizard,stock.magasin.report.wizard,model_stock_magasin_report_wizard,,1,1,1,1

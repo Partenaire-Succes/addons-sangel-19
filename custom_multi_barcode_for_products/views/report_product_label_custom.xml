@@ -38,7 +38,7 @@
                         <tr>
                             <td colspan="2"
                                 t-att-style="'padding:1.5mm 3mm 1mm 3mm;text-align:center;border-bottom:1.5pt solid ' + hcol + ';'">
-                                <div t-att-style="'font-size:9.5pt;font-weight:900;line-height:1.2;text-align:center;overflow:hidden;max-height:10mm;color:' + hcol + ';'">
+                                <div style="font-size:9.5pt;font-weight:900;line-height:1.2;text-align:center;overflow:hidden;max-height:10mm;color:#111;">
                                     <t t-out="product.name"/>
                                 </div>
                             </td>
@@ -71,7 +71,7 @@
                                 <!-- UNITE -->
                                 <div style="font-size:8.5pt;
                                             font-weight:700;
-                                            color:#444;
+                                            color:#111;
                                             margin-top:1mm;
                                             text-align:center;
                                             line-height:1;">
@@ -159,7 +159,7 @@
                         <tr>
                             <td colspan="2"
                                 t-att-style="'padding:1.5mm 2mm 1mm 2mm;text-align:center;border-bottom:1.5pt solid ' + hcol + ';'">
-                                <div t-att-style="'font-size:7.5pt;font-weight:900;line-height:1.2;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:' + hcol + ';'">
+                                <div style="font-size:7.5pt;font-weight:900;line-height:1.2;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#111;">
                                     <t t-out="product.name"/>
                                 </div>
                             </td>
@@ -192,7 +192,7 @@
                                 <!-- UNITE -->
                                 <div style="font-size:7pt;
                                             font-weight:700;
-                                            color:#444;
+                                            color:#111;
                                             margin-top:1mm;
                                             text-align:center;
                                             line-height:1;">

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Vue formulaire du wizard -->
+    <record id="view_stock_magasin_report_wizard_form" model="ir.ui.view">
+        <field name="name">stock.magasin.report.wizard.form</field>
+        <field name="model">stock.magasin.report.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Rapport Stock Magasin">
+                <group>
+                    <field name="company_id" options="{'no_create': True}"/>
+                </group>
+                <footer>
+                    <button name="action_generate_report"
+                            string="Générer le rapport Excel"
+                            type="object"
+                            class="btn-primary"
+                            data-hotkey="v"/>
+                    <button string="Annuler"
+                            class="btn-secondary"
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action d'ouverture du wizard -->
+    <record id="action_stock_magasin_report_wizard" model="ir.actions.act_window">
+        <field name="name">Rapport Stock Magasin</field>
+        <field name="res_model">stock.magasin.report.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Entrée de menu -->
+    <menuitem
+        id="menu_stock_magasin_report"
+        name="Stock Magasin"
+        parent="custom_reports.menu_reports_stock"
+        action="action_stock_magasin_report_wizard"
+        sequence="10"/>
+
+</odoo>
