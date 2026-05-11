@@ -28,3 +28,9 @@ access_import_loyalty_points_wizard_user,import_loyalty_points_wizard_user,model
 access_import_loyalty_points_line_user,import_loyalty_points_line_user,model_import_loyalty_points_line,point_of_sale.group_pos_user,1,1,1,1
 
 access_avoir_journee_wizard,avoir.journee.wizard,model_avoir_journee_wizard,,1,1,1,1
+access_rapport_validation_wizard_superviseur,rapport.validation.wizard.superviseur,model_rapport_validation_wizard,custom_pos.group_superviseur,1,1,1,1
+access_pos_manager_code_respo,pos.manager.code.respo,model_pos_manager_code,custom_pos.group_responsable_magasin,1,1,1,1
+access_pos_manager_code_superviseur,pos.manager.code.superviseur,model_pos_manager_code,custom_pos.group_superviseur,1,0,0,0
+access_pos_manager_code_caissiere,pos.manager.code.caissiere,model_pos_manager_code,custom_pos.group_caissiere,1,0,0,0
+access_pos_access_log_superviseur,pos.access.log.superviseur,model_pos_access_log,custom_pos.group_superviseur,1,0,0,0
+access_pos_access_log_respo,pos.access.log.respo,model_pos_access_log,custom_pos.group_responsable_magasin,1,0,0,0

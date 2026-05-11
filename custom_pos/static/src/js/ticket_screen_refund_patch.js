@@ -6,6 +6,7 @@ import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 import { _t } from "@web/core/l10n/translation";
 import { rpc } from "@web/core/network/rpc";
 import { patch } from "@web/core/utils/patch";
+import { validateManagerCode } from "@custom_pos/js/pos_validation_utils";
 
 // ============================================================
 // HELPER MODULE — Popup code d'accès (partagé par tous les patches)
@@ -69,24 +70,28 @@ function _showCodePromptDialog(actionLabel) {
 
 /**
  * Vérifie si la caissière est autorisée à effectuer une action.
- * @param {boolean} isCaissiere    — this.pos.user._is_caissiere
- * @param {string}  code_acces     — this.pos.config.code_acces
- * @param {object}  dialog         — service dialog (this.dialog)
- * @param {string}  actionLabel    — libellé de l'action
+ * Utilise validateManagerCode pour logging + codes individuels par manager.
+ *
+ * @param {boolean} isCaissiere  — this.pos.user._is_caissiere
+ * @param {string}  code_acces   — this.pos.config.code_acces (fallback global)
+ * @param {object}  dialog       — service dialog (this.dialog)
+ * @param {string}  actionLabel  — libellé affiché dans la popup
+ * @param {object}  pos          — instance PosStore (this.pos)
+ * @param {string}  actionKey    — clé stable pour le log ('print'|'details'|'invoice'|...)
+ * @param {string}  orderRef     — référence commande (optionnel)
  * @returns {Promise<boolean>}
  */
-async function _checkCaissiereCodeAccess(isCaissiere, code_acces, dialog, actionLabel) {
+async function _checkCaissiereCodeAccess(isCaissiere, code_acces, dialog, actionLabel, pos, actionKey, orderRef) {
     if (!isCaissiere) return true;
-    if (!code_acces) {
-        dialog.add(AlertDialog, {
-            title: _t("Action non autorisée"),
-            body: _t("Aucun code d'accès configuré. Contactez votre administrateur."),
-        });
-        return false;
-    }
+
     const input = await _showCodePromptDialog(actionLabel);
     if (input === null) return false;
-    if (input !== code_acces) {
+
+    const { success } = await validateManagerCode(
+        input, actionKey, pos, orderRef || '', code_acces
+    );
+
+    if (!success) {
         dialog.add(AlertDialog, {
             title: _t("Code incorrect"),
             body: _t("Le code saisi est invalide. Action annulée."),
@@ -147,14 +152,18 @@ patch(TicketScreen.prototype, {
                         return;
                     }
                     
-                    if (codeInput !== result.code_acces) {
+                    const orderRef = order?.name || "";
+                    const { success: codeOk } = await validateManagerCode(
+                        codeInput, "refund", this.pos, orderRef, result.code_acces
+                    );
+                    if (!codeOk) {
                         this.dialog.add(AlertDialog, {
                             title: _t("Code incorrect"),
                             body: _t("Le code saisi est invalide. Le remboursement est annulé."),
                         });
                         return;
                     }
-                    
+
                     console.log("✅ Refund authorization code accepted");
                 } else {
                     // No access code configured
@@ -181,14 +190,17 @@ patch(TicketScreen.prototype, {
                     return;
                 }
                 
-                if (codeInput !== accessCode) {
+                const { success: offlineOk } = await validateManagerCode(
+                    codeInput, "refund", this.pos, order?.name || "", accessCode
+                );
+                if (!offlineOk) {
                     this.dialog.add(AlertDialog, {
                         title: _t("Code incorrect"),
                         body: _t("Le code saisi est invalide. Le remboursement est annulé."),
                     });
                     return;
                 }
-                
+
                 console.log("✅ Refund authorization code accepted (offline)");
             }
         }
@@ -314,7 +326,10 @@ patch(TicketScreen.prototype, {
             this.pos.user._is_caissiere,
             this.pos.config.code_acces,
             this.dialog,
-            _t("Imprimer le ticket")
+            _t("Imprimer le ticket"),
+            this.pos,
+            "print",
+            order?.name || ""
         );
         if (!ok) return;
         return super.print(...arguments);
@@ -329,7 +344,10 @@ patch(TicketScreen.prototype, {
             this.pos.user._is_caissiere,
             this.pos.config.code_acces,
             this.dialog,
-            _t("Détails commande")
+            _t("Détails commande"),
+            this.pos,
+            "details",
+            order?.name || ""
         );
         if (!ok) return;
         this.pos.orderDetails(order);
@@ -346,11 +364,15 @@ patch(TicketScreen.prototype, {
 patch(InvoiceButton.prototype, {
 
     async _invoiceOrder() {
+        const orderRef = this.props?.order?.name || this.pos?.selectedOrder?.name || "";
         const ok = await _checkCaissiereCodeAccess(
             this.pos.user._is_caissiere,
             this.pos.config.code_acces,
             this.dialog,
-            _t("Facture")
+            _t("Facture"),
+            this.pos,
+            "invoice",
+            orderRef
         );
         if (!ok) return;
         return super._invoiceOrder(...arguments);

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_manager_badge">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="manager">
+                <!--
+                    Palette SANgel : violet #6B4FBF / blanc / gris clair
+                    Layout table-based (wkhtmltopdf ne supporte pas flexbox).
+                    85x54mm page -> marges 4/3mm -> zone utile 77x48mm.
+                    header 9mm + body 32mm + footer 7mm = 48mm.
+                    page-break-after uniquement si pas dernier element.
+                -->
+                <div t-att-style="'width:77mm;height:48mm;border:1.5px solid #6B4FBF;font-family:Arial,Helvetica,sans-serif;overflow:hidden;' + ('' if manager_last else 'page-break-after:always;')">
+
+                    <!-- HEADER violet -->
+                    <div style="background:#6B4FBF;height:9mm;box-sizing:border-box;padding:1.5mm 3mm;overflow:hidden;">
+                        <table style="width:100%;border-collapse:collapse;height:6mm;">
+                            <tr>
+                                <td style="width:12mm;vertical-align:middle;">
+                                    <t t-if="manager.logo_b64">
+                                        <img t-att-src="'data:image/png;base64,' + manager.logo_b64"
+                                             style="height:6mm;max-width:11mm;display:block;"/>
+                                    </t>
+                                </td>
+                                <td style="color:#ffffff;font-size:6.5pt;font-weight:bold;letter-spacing:0.6px;text-transform:uppercase;vertical-align:middle;">
+                                    <t t-esc="manager.user_id.company_id.name or ''"/>
+                                </td>
+                                <td style="color:#d4bfff;font-size:5.5pt;letter-spacing:0.4px;text-align:right;vertical-align:middle;white-space:nowrap;">
+                                    BADGE MANAGER POS
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- CORPS blanc -->
+                    <table style="width:77mm;height:32mm;background:#ffffff;border-collapse:collapse;">
+                        <tr>
+                            <td style="text-align:center;vertical-align:middle;padding:2mm 4mm;">
+                                <!-- Nom du manager -->
+                                <div style="font-size:13pt;font-weight:bold;color:#3D2080;letter-spacing:0.5px;line-height:1.2;margin-bottom:1mm;">
+                                    <t t-esc="manager.name"/>
+                                </div>
+
+                                <!-- Role -->
+                                <div style="font-size:6.5pt;color:#7B68C8;margin-bottom:2mm;text-transform:uppercase;letter-spacing:0.5px;">
+                                    Validateur POS - Toutes caisses
+                                </div>
+
+                                <!-- Code-barres embarque en base64 -->
+                                <t t-if="manager.badge_barcode_b64">
+                                    <img t-att-src="'data:image/png;base64,' + manager.badge_barcode_b64"
+                                         style="height:12mm;max-width:68mm;display:block;margin:0 auto;"/>
+                                </t>
+                                <t t-else="">
+                                    <div style="color:#dc3545;font-size:6pt;">
+                                        Code non configure sur la caisse
+                                    </div>
+                                </t>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <!-- FOOTER violet fonce -->
+                    <div style="background:#3D2080;color:#c4b5f4;text-align:center;font-size:5.5pt;padding:2mm;letter-spacing:0.4px;height:7mm;box-sizing:border-box;line-height:normal;">
+                        CONFIDENTIEL - Badge nominatif - Ne pas reproduire
+                    </div>
+
+                </div>
+            </t>
+        </t>
+    </template>
+</odoo>

@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!--
+            Un seul doc (rapport.validation.wizard).
+            Un seul <div class="article"> pour eviter l'erreur wkhtmltopdf QT
+            "multiple documents". Les sessions sont separees par page-break-before
+            sur les divs internes (sauf la premiere).
+        -->
+        <template id="report_validation_log_document">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="doc">
+                    <div class="article" style="font-family:Arial,Helvetica,sans-serif;font-size:10pt;padding:5mm;">
+                        <t t-set="all_sessions" t-value="doc.session_ids.sorted(key=lambda s: s.start_at)"/>
+                        <t t-foreach="all_sessions" t-as="session">
+                            <t t-set="logs" t-value="session.env['pos.access.log'].search([('session_id','=',session.id)], order='datetime asc')"/>
+
+                            <div t-att-style="'' if session_first else 'page-break-before:always;'">
+
+                                <!-- EN-TETE -->
+                                <table style="width:100%;border-bottom:2px solid #6B4FBF;margin-bottom:6mm;">
+                                    <tr>
+                                        <td style="vertical-align:top;width:60%;">
+                                            <div style="font-size:14pt;font-weight:bold;color:#1a1a2e;">
+                                                Rapport des validations manager
+                                            </div>
+                                            <div style="font-size:9pt;color:#555;margin-top:2mm;">
+                                                <t t-esc="session.config_id.company_id.name"/>
+                                                - Caisse : <t t-esc="session.config_id.name"/>
+                                            </div>
+                                        </td>
+                                        <td style="vertical-align:top;text-align:right;width:40%;">
+                                            <div style="font-size:9pt;color:#555;">
+                                                Session du
+                                                <t t-esc="session.start_at.strftime('%d/%m/%Y %H:%M') if session.start_at else '-'"/>
+                                            </div>
+                                            <t t-if="session.stop_at">
+                                                <div style="font-size:9pt;color:#555;">
+                                                    au <t t-esc="session.stop_at.strftime('%d/%m/%Y %H:%M')"/>
+                                                </div>
+                                            </t>
+                                            <div style="font-size:8pt;color:#aaa;margin-top:1mm;">
+                                                Genere le <t t-esc="time.strftime('%d/%m/%Y')"/>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <!-- RESUME -->
+                                <table style="width:100%;border-collapse:collapse;margin-bottom:6mm;font-size:9pt;">
+                                    <tr>
+                                        <td style="padding:3mm;background:#f8f9fa;border:1px solid #dee2e6;text-align:center;">
+                                            <div style="font-size:18pt;font-weight:bold;color:#6B4FBF;">
+                                                <t t-esc="len(logs)"/>
+                                            </div>
+                                            <div style="color:#555;">Total validations</div>
+                                        </td>
+                                        <td style="padding:3mm;background:#fff5f5;border:1px solid #dee2e6;text-align:center;">
+                                            <div style="font-size:18pt;font-weight:bold;color:#dc3545;">
+                                                <t t-esc="len(logs.filtered(lambda l: l.action == 'refund'))"/>
+                                            </div>
+                                            <div style="color:#555;">Remboursements</div>
+                                        </td>
+                                        <td style="padding:3mm;background:#fffdf0;border:1px solid #dee2e6;text-align:center;">
+                                            <div style="font-size:18pt;font-weight:bold;color:#6B4FBF;">
+                                                <t t-esc="len(logs.filtered(lambda l: l.action in ('discount','price_reduction','stock')))"/>
+                                            </div>
+                                            <div style="color:#555;">Remises / Prix / Ruptures</div>
+                                        </td>
+                                        <td style="padding:3mm;background:#f0f8ff;border:1px solid #dee2e6;text-align:center;">
+                                            <div style="font-size:18pt;font-weight:bold;color:#0d6efd;">
+                                                <t t-esc="len(logs.filtered(lambda l: l.action in ('print','details','invoice')))"/>
+                                            </div>
+                                            <div style="color:#555;">Impression / Facture</div>
+                                        </td>
+                                        <td style="padding:3mm;background:#f8f9fa;border:1px solid #dee2e6;text-align:center;">
+                                            <div style="font-size:18pt;font-weight:bold;color:#6c757d;">
+                                                <t t-esc="len(logs.filtered(lambda l: l.offline))"/>
+                                            </div>
+                                            <div style="color:#555;">Hors-ligne</div>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <!-- TABLEAU DETAIL -->
+                                <t t-if="logs">
+                                    <table style="width:100%;border-collapse:collapse;font-size:8.5pt;">
+                                        <thead>
+                                            <tr style="background:#3D2080;color:#fff;">
+                                                <th style="padding:2.5mm 3mm;text-align:left;width:12%;">Date/Heure</th>
+                                                <th style="padding:2.5mm 3mm;text-align:left;width:12%;">Caissiere</th>
+                                                <th style="padding:2.5mm 3mm;text-align:left;width:12%;">Valide par</th>
+                                                <th style="padding:2.5mm 3mm;text-align:left;width:16%;">Action</th>
+                                                <th style="padding:2.5mm 3mm;text-align:left;width:10%;">Commande</th>
+                                                <th style="padding:2.5mm 3mm;text-align:left;width:28%;">Produits / Détails prix</th>
+                                                <th style="padding:2.5mm 3mm;text-align:center;width:6%;">H-ligne</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-foreach="logs" t-as="log">
+                                                <tr t-att-style="'background:#fff;' if log_index % 2 == 0 else 'background:#f8f9fa;'">
+                                                    <td style="padding:2mm 3mm;border-bottom:1px solid #e9ecef;white-space:nowrap;">
+                                                        <t t-esc="log.datetime.strftime('%d/%m %H:%M') if log.datetime else ''"/>
+                                                    </td>
+                                                    <td style="padding:2mm 3mm;border-bottom:1px solid #e9ecef;">
+                                                        <t t-esc="log.cashier_name or ''"/>
+                                                    </td>
+                                                    <td style="padding:2mm 3mm;border-bottom:1px solid #e9ecef;font-weight:bold;">
+                                                        <t t-esc="log.manager_name or ''"/>
+                                                    </td>
+                                                    <td style="padding:2mm 3mm;border-bottom:1px solid #e9ecef;">
+                                                        <t t-if="log.action == 'refund'">
+                                                            <span style="color:#dc3545;font-weight:bold;">Remboursement</span>
+                                                        </t>
+                                                        <t t-elif="log.action == 'discount'">
+                                                            <span style="color:#6B4FBF;">Remise manuelle</span>
+                                                        </t>
+                                                        <t t-elif="log.action == 'price_reduction'">
+                                                            <span style="color:#6B4FBF;font-weight:bold;">Reduction de prix</span>
+                                                        </t>
+                                                        <t t-elif="log.action == 'stock'">
+                                                            <span style="color:#6B4FBF;">Rupture de stock</span>
+                                                        </t>
+                                                        <t t-elif="log.action == 'print'">
+                                                            <span style="color:#0d6efd;">Impression ticket</span>
+                                                        </t>
+                                                        <t t-elif="log.action == 'details'">
+                                                            <span style="color:#0d6efd;">Details commande</span>
+                                                        </t>
+                                                        <t t-elif="log.action == 'invoice'">
+                                                            <span style="color:#0d6efd;">Facture</span>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <t t-esc="log.action or ''"/>
+                                                        </t>
+                                                    </td>
+                                                    <td style="padding:2mm 3mm;border-bottom:1px solid #e9ecef;font-size:8pt;color:#555;white-space:nowrap;">
+                                                        <t t-esc="log.order_ref or ''"/>
+                                                    </td>
+                                                    <td style="padding:2mm 3mm;border-bottom:1px solid #e9ecef;font-size:8pt;color:#1a1a2e;">
+                                                        <t t-if="log.price_details_formatted">
+                                                            <t t-esc="log.price_details_formatted"/>
+                                                        </t>
+                                                    </td>
+                                                    <td style="padding:2mm 3mm;border-bottom:1px solid #e9ecef;text-align:center;">
+                                                        <t t-if="log.offline">
+                                                            <span style="color:#6B4FBF;font-weight:bold;">&#10003;</span>
+                                                        </t>
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                    </table>
+                                </t>
+                                <t t-else="">
+                                    <div style="text-align:center;padding:10mm;color:#aaa;font-style:italic;">
+                                        Aucune validation enregistree pour cette session.
+                                    </div>
+                                </t>
+
+                                <!-- PIED DE PAGE -->
+                                <div style="margin-top:8mm;padding-top:3mm;border-top:1px solid #dee2e6;font-size:8pt;color:#aaa;text-align:center;">
+                                    SANGEL - Rapport confidentiel - Usage interne uniquement
+                                </div>
+
+                            </div>
+                        </t>
+                    </div>
+                </t>
+            </t>
+        </template>
+    </data>
+</odoo>
