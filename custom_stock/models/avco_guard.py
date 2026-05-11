@@ -1,30 +1,111 @@
 # -*- coding: utf-8 -*-
 """
-Garde-fou AVCO — Detecte les couts aberrants et alerte avant qu'ils impactent
-les rapports et la comptabilite.
+Garde-fou AVCO — deux niveaux de protection :
 
-Regles de sante AVCO :
-  1. standard_price < 0              → toujours aberrant
-  2. standard_price = 0 AND stock > 0 → produit en stock sans cout
-  3. standard_price > SEUIL_MAX      → valeur improbable (configurable)
+  NIVEAU 1 — Prevention (temps reel)
+    Override de _update_standard_price : si le nouveau cout est plus de 1000x
+    superieur a l'ancien (artefact flottant par division quasi-zero), le prix
+    est bloque et l'ancien cout est conserve.
 
-Le cron tourne chaque nuit et poste un message dans le chatter de chaque
-produit corrompu + envoie un mail a l'administrateur.
+    Cause racine : -0.02 + 0.02 = 5.55e-18 en IEEE 754 (pas exactement 0).
+    Odoo calcule alors AVCO = valeur / 5.55e-18 = 1.54e+16.
+
+  NIVEAU 2 — Detection (cron nocturne)
+    Scanne tous les produits AVCO et alerte si un cout aberrant passe quand meme.
 """
 import logging
 from odoo import api, models
+from odoo.tools import float_is_zero
 
 _logger = logging.getLogger(__name__)
 
-SEUIL_MAX_FCFA = 10_000_000  # 10 millions FCFA — ajuster selon votre catalogue
+SEUIL_MAX_FCFA   = 10_000_000   # 10 millions FCFA — ajuster selon catalogue
+RATIO_ALERTE     = 1_000        # prix_nouveau > prix_ancien * 1000 → corruption FP
 
 
 class ProductProduct(models.Model):
     _inherit = 'product.product'
 
+    # -------------------------------------------------------------------------
+    # NIVEAU 1 : Prevention en temps reel
+    # -------------------------------------------------------------------------
+
+    def _update_standard_price(self, extra_value=None, extra_quantity=None):
+        """
+        Protege contre la corruption AVCO par division par quasi-zero.
+
+        Quand le stock passe par zero apres une vente negative + ajustement
+        d'inventaire, la quantite resultante est 5.55e-18 (IEEE 754) au lieu
+        de 0.0 exactement. Odoo divise la valeur par ce flottant et obtient
+        un prix absurde (ex : 1.54e+16 FCFA).
+
+        Ce garde-fou compare le nouveau prix avec l'ancien : si le rapport
+        depasse RATIO_ALERTE et que la quantite disponible est quasi-nulle,
+        on bloque la mise a jour et on conserve le dernier prix valide.
+        """
+        # Sauvegarder les prix avant mise a jour
+        prix_avant = {
+            p.id: p.with_company(self.env.company).standard_price
+            for p in self
+            if p.cost_method == 'average'
+        }
+
+        result = super()._update_standard_price(
+            extra_value=extra_value,
+            extra_quantity=extra_quantity,
+        )
+
+        # Verifier chaque produit AVCO apres mise a jour
+        for product in self:
+            if product.cost_method != 'average':
+                continue
+            ancien = prix_avant.get(product.id, 0.0)
+            nouveau = product.with_company(self.env.company).standard_price
+
+            if ancien <= 0 or nouveau <= 0:
+                continue
+
+            qty_dispo = product._with_valuation_context().qty_available
+            qty_nulle = float_is_zero(qty_dispo, precision_rounding=product.uom_id.rounding)
+
+            corruption_detectee = (nouveau > ancien * RATIO_ALERTE) and qty_nulle
+
+            if corruption_detectee:
+                _logger.warning(
+                    '[AVCO_GUARD] Corruption FP bloquee — produit: %s (id=%s) '
+                    'ancien: %.4f  nouveau aberrant: %.4e  qty: %.6f — '
+                    'Ancien prix conserve.',
+                    product.display_name, product.id, ancien, nouveau, qty_dispo,
+                )
+                product.sudo().with_context(
+                    disable_auto_revaluation=True
+                ).standard_price = ancien
+
+                # Poster une note dans le chatter du produit
+                try:
+                    product.message_post(
+                        body=(
+                            '<b>AVCO GUARD</b> : Corruption de prix bloquee automatiquement.<br/>'
+                            f'Prix aberrant calcule : <b>{nouveau:,.2f} FCFA</b><br/>'
+                            f'Prix conserve : <b>{ancien:,.2f} FCFA</b><br/>'
+                            f'Quantite en stock au moment de la correction : <b>{qty_dispo:.4f}</b><br/>'
+                            '<i>Cause probable : stock passe par zero (vente en negatif + ajustement inventaire).</i>'
+                        ),
+                        message_type='notification',
+                        subtype_xmlid='mail.mt_note',
+                    )
+                except Exception as exc:
+                    _logger.error('[AVCO_GUARD] Impossible de poster le chatter : %s', exc)
+
+        return result
+
+    # -------------------------------------------------------------------------
+    # NIVEAU 2 : Detection nocturne (cron)
+    # -------------------------------------------------------------------------
+
     @api.model
     def _cron_check_avco_sanity(self):
-        """Detecte les produits AVCO avec un cout aberrant."""
+        """Detecte les produits AVCO avec un cout aberrant (filet de securite)."""
         companies = self.env['res.company'].search([])
         all_corrupted = []
 
@@ -36,7 +117,7 @@ class ProductProduct(models.Model):
 
             for product in products:
                 price = product.with_company(company).standard_price
-                qty = product.with_context(company_id=company.id).qty_available
+                qty   = product.with_context(company_id=company.id).qty_available
 
                 reasons = []
                 if price < 0:
@@ -51,8 +132,8 @@ class ProductProduct(models.Model):
                         'product': product,
                         'company': company,
                         'reasons': reasons,
-                        'price': price,
-                        'qty': qty,
+                        'price':   price,
+                        'qty':     qty,
                     })
                     _logger.error(
                         '[AVCO_GUARD] %s (id=%s) societe=%s — %s',
@@ -68,7 +149,6 @@ class ProductProduct(models.Model):
     @api.model
     def _avco_guard_notify(self, corrupted_list):
         """Envoie un mail d'alerte et poste dans le chatter de chaque produit."""
-        # -- Chatter sur chaque produit --
         for item in corrupted_list:
             try:
                 item['product'].message_post(
@@ -82,10 +162,9 @@ class ProductProduct(models.Model):
                     message_type='notification',
                     subtype_xmlid='mail.mt_note',
                 )
-            except Exception as e:
-                _logger.error('[AVCO_GUARD] Impossible de poster le chatter : %s', e)
+            except Exception as exc:
+                _logger.error('[AVCO_GUARD] Impossible de poster le chatter : %s', exc)
 
-        # -- Email a l'administrateur --
         try:
             admin = self.env.ref('base.user_admin', raise_if_not_found=False)
             if not admin or not admin.email:
@@ -123,5 +202,5 @@ class ProductProduct(models.Model):
                 'auto_delete': True,
             }).send()
 
-        except Exception as e:
-            _logger.error('[AVCO_GUARD] Impossible d\'envoyer le mail d\'alerte : %s', e)
+        except Exception as exc:
+            _logger.error('[AVCO_GUARD] Impossible d\'envoyer le mail d\'alerte : %s', exc)

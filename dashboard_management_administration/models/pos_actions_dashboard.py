@@ -278,26 +278,26 @@ class PosActionsDashboard(models.Model):
         company_id = self.env.company.id
 
         # Seuls les avoirs POS avec is_limit sont envoyés via ce wizard
-        refund_candidates = self.env['account.move'].search([
-            ('company_id',   '=',  company_id),
-            ('move_type',    '=',  'out_refund'),
-            ('state',        '=',  'posted'),
-            ('sage_x3_sent', '=',  False),
-        ])
-        pending_invoices = refund_candidates.filtered(
-            lambda m: any(
-                p.payment_method_id.is_limit
-                for o in m.pos_order_ids
-                for p in o.payment_ids
-            )
-        )
+        # refund_candidates = self.env['account.move'].search([
+        #     ('company_id',   '=',  company_id),
+        #     ('move_type',    '=',  'out_refund'),
+        #     ('state',        '=',  'posted'),
+        #     ('sage_x3_sent', '=',  False),
+        # ])
+        # pending_invoices = refund_candidates.filtered(
+        #     lambda m: any(
+        #         p.payment_method_id.is_limit
+        #         for o in m.pos_order_ids
+        #         for p in o.payment_ids
+        #     )
+        # )
 
-        if not pending_invoices:
-            return self._notify(
-                'Information',
-                'Aucun avoir POS en attente d\'envoi à SAGE X3.',
-                'warning',
-            )
+        # if not pending_invoices:
+        #     return self._notify(
+        #         'Information',
+        #         'Aucun avoir POS en attente d\'envoi à SAGE X3.',
+        #         'warning',
+        #     )
 
         return {
             'type':      'ir.actions.act_window',
