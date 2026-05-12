@@ -4,19 +4,19 @@
         <t t-call="web.html_container">
             <t t-foreach="docs" t-as="manager">
                 <!--
-                    Palette SANgel : violet #6B4FBF / blanc / gris clair
+                    Palette SANgel : #5579ac / blanc
                     Layout table-based (wkhtmltopdf ne supporte pas flexbox).
                     85x54mm page -> marges 4/3mm -> zone utile 77x48mm.
                     header 9mm + body 32mm + footer 7mm = 48mm.
                     page-break-after uniquement si pas dernier element.
                 -->
-                <div t-att-style="'width:77mm;height:48mm;border:1.5px solid #6B4FBF;font-family:Arial,Helvetica,sans-serif;overflow:hidden;' + ('' if manager_last else 'page-break-after:always;')">
+                <div t-att-style="'width:77mm;height:49mm;border:1.5px solid #5579ac;font-family:Arial,Helvetica,sans-serif;overflow:hidden;' + ('' if manager_last else 'page-break-after:always;')">
 
-                    <!-- HEADER violet -->
-                    <div style="background:#6B4FBF;height:9mm;box-sizing:border-box;padding:1.5mm 3mm;overflow:hidden;">
+                    <!-- HEADER -->
+                    <div style="background:#5579ac;height:9mm;box-sizing:border-box;padding:1.5mm 3mm;overflow:hidden;">
                         <table style="width:100%;border-collapse:collapse;height:6mm;">
                             <tr>
-                                <td style="width:12mm;vertical-align:middle;">
+                                <td style="background:white;width:12mm;vertical-align:middle;">
                                     <t t-if="manager.logo_b64">
                                         <img t-att-src="'data:image/png;base64,' + manager.logo_b64"
                                              style="height:6mm;max-width:11mm;display:block;"/>
@@ -25,7 +25,7 @@
                                 <td style="color:#ffffff;font-size:6.5pt;font-weight:bold;letter-spacing:0.6px;text-transform:uppercase;vertical-align:middle;">
                                     <t t-esc="manager.user_id.company_id.name or ''"/>
                                 </td>
-                                <td style="color:#d4bfff;font-size:5.5pt;letter-spacing:0.4px;text-align:right;vertical-align:middle;white-space:nowrap;">
+                                <td style="color:#ffffff;font-size:5.5pt;letter-spacing:0.4px;text-align:right;vertical-align:middle;white-space:nowrap;">
                                     BADGE MANAGER POS
                                 </td>
                             </tr>
@@ -33,16 +33,16 @@
                     </div>
 
                     <!-- CORPS blanc -->
-                    <table style="width:77mm;height:32mm;background:#ffffff;border-collapse:collapse;">
+                    <table style="width:77mm;height:33mm;background:#ffffff;border-collapse:collapse;">
                         <tr>
                             <td style="text-align:center;vertical-align:middle;padding:2mm 4mm;">
                                 <!-- Nom du manager -->
-                                <div style="font-size:13pt;font-weight:bold;color:#3D2080;letter-spacing:0.5px;line-height:1.2;margin-bottom:1mm;">
+                                <div style="font-size:13pt;font-weight:bold;color:#5579ac;letter-spacing:0.5px;line-height:1.2;margin-bottom:1mm;">
                                     <t t-esc="manager.name"/>
                                 </div>
 
                                 <!-- Role -->
-                                <div style="font-size:6.5pt;color:#7B68C8;margin-bottom:2mm;text-transform:uppercase;letter-spacing:0.5px;">
+                                <div style="font-size:6.5pt;color:#5579ac;margin-bottom:2mm;text-transform:uppercase;letter-spacing:0.5px;">
                                     Validateur POS - Toutes caisses
                                 </div>
 
@@ -60,8 +60,8 @@
                         </tr>
                     </table>
 
-                    <!-- FOOTER violet fonce -->
-                    <div style="background:#3D2080;color:#c4b5f4;text-align:center;font-size:5.5pt;padding:2mm;letter-spacing:0.4px;height:7mm;box-sizing:border-box;line-height:normal;">
+                    <!-- FOOTER -->
+                    <div style="background:#5579ac;color:#ffffff;text-align:center;font-size:5.5pt;padding:2mm;letter-spacing:0.4px;height:7mm;box-sizing:border-box;line-height:normal;">
                         CONFIDENTIEL - Badge nominatif - Ne pas reproduire
                     </div>
 

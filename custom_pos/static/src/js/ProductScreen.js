@@ -169,31 +169,22 @@ patch(PosStore.prototype, {
                 console.log("Résultat vérification prix:", priceResult);
                 
                 if (priceResult.error && priceResult.access_required) {
-                    if (priceResult.code_acces) {
-                        const priceCodeInput = await this._showPasswordPrompt(priceResult.message, []);
-                        // Construire le résumé des prix pour le journal
-                        const priceInfo = priceReductionLines.length > 0
-                            ? priceReductionLines.map(p => ({
-                                produit: p.product_name,
-                                avant: p.original_price_ttc,   // TTC catalogue
-                                apres: p.unit_price_ttc,       // TTC modifié à la caisse
-                            }))
-                            : null;
-                        const { success: priceOk } = await validateManagerCode(
-                            priceCodeInput, "price_reduction", this,
-                            currentOrder?.name || "", priceResult.code_acces, priceInfo
-                        );
-                        if (!priceOk) {
-                            this.dialog.add(AlertDialog, {
-                                title: _t("Code incorrect"),
-                                body: _t("Le code saisi est invalide. La vente est annulée."),
-                            });
-                            return;
-                        }
-                    } else {
+                    const priceCodeInput = await this._showPasswordPrompt(priceResult.message, []);
+                    const priceInfo = priceReductionLines.length > 0
+                        ? priceReductionLines.map(p => ({
+                            produit: p.product_name,
+                            avant: p.original_price_ttc,
+                            apres: p.unit_price_ttc,
+                        }))
+                        : null;
+                    const { success: priceOk } = await validateManagerCode(
+                        priceCodeInput, "price_reduction", this,
+                        currentOrder?.name || "", priceResult.code_acces || null, priceInfo
+                    );
+                    if (!priceOk) {
                         this.dialog.add(AlertDialog, {
-                            title: _t("Réduction de prix non autorisée"),
-                            body: _t(priceResult.message + "\n\nAucun code d'accès configuré."),
+                            title: _t("Code incorrect"),
+                            body: _t("Le code saisi est invalide. La vente est annulée."),
                         });
                         return;
                     }
@@ -271,10 +262,11 @@ patch(PosStore.prototype, {
             console.log("Résultat vérification:", result);
             
             if (result.error) {
-                if (result.access_required && result.code_acces) {
+                if (result.access_required) {
                     const codeInput = await this._showPasswordPrompt(result.message, discountedProducts);
                     const { success: stockOk } = await validateManagerCode(
-                        codeInput, hasDiscount ? "discount" : "stock", this, currentOrder?.name || "", result.code_acces
+                        codeInput, hasDiscount ? "discount" : "stock", this,
+                        currentOrder?.name || "", result.code_acces || null
                     );
                     if (!stockOk) {
                         this.dialog.add(AlertDialog, {
@@ -284,6 +276,7 @@ patch(PosStore.prototype, {
                         return;
                     }
                 } else {
+                    // Blocage définitif : pas d'override possible.
                     this.dialog.add(AlertDialog, {
                         title: _t("Stock indisponible"),
                         body: _t(result.message),
@@ -443,6 +436,14 @@ patch(PosStore.prototype, {
                 document.body.removeChild(overlay);
                 resolve(value);
             };
+
+            // Bloque l'interception du scanner par le POS global + gère Enter/Escape
+            input.addEventListener("keydown", (e) => {
+                e.stopPropagation();
+                if (e.key === "Enter") okBtn.click();
+                else if (e.key === "Escape") cancelBtn.click();
+            });
+            input.addEventListener("keyup", (e) => e.stopPropagation());
 
             btnRow.appendChild(cancelBtn);
             btnRow.appendChild(okBtn);

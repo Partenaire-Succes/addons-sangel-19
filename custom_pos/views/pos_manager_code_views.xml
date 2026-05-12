@@ -29,6 +29,11 @@
                                     class="oe_stat_button"
                                     icon="fa-id-card"
                                     string="Imprimer le badge"/>
+                            <button name="action_download_badge_jpeg"
+                                    type="object"
+                                    class="oe_stat_button"
+                                    icon="fa-download"
+                                    string="Télécharger JPEG"/>
                         </div>
                         <div class="oe_title">
                             <label for="user_id" string="Manager"/>
@@ -37,7 +42,7 @@
                         <group>
                             <group string="Configuration">
                                 <field name="config_id"
-                                       help="Sélectionner une caisse dont le code d'accès sera utilisé pour ce badge. Assurez-vous que toutes vos caisses ont le même code."/>
+                                       help="Caisse de référence dont le code d'accès est utilisé pour le badge."/>
                                 <field name="active"/>
                             </group>
                         </group>

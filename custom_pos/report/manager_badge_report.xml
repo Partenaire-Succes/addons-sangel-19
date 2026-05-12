@@ -7,7 +7,7 @@
             <field name="default" eval="False"/>
             <field name="format">custom</field>
             <field name="page_width">85</field>
-            <field name="page_height">54</field>
+            <field name="page_height">55</field>
             <field name="orientation">Landscape</field>
             <field name="margin_top">3</field>
             <field name="margin_bottom">3</field>
@@ -15,7 +15,7 @@
             <field name="margin_right">4</field>
             <field name="header_line" eval="False"/>
             <field name="header_spacing">0</field>
-            <field name="dpi">200</field>
+            <field name="dpi">150</field>
         </record>
 
         <record id="action_report_manager_badge" model="ir.actions.report">
