@@ -15,7 +15,7 @@
                     <button name="action_apply"
                             string="Appliquer les corrections"
                             type="object" class="btn-primary"
-                            confirm="Les mouvements, commandes et factures seront mis a jour. Continuer ?"
+                            confirm="Les mouvements, commandes et factures seront mis à jour avec le PMP Excel. Continuer ?"
                             invisible="state != 'preview'"/>
                     <button name="action_reset"
                             string="Recommencer"
@@ -34,31 +34,15 @@
                     <!-- ETAPE 1 : IMPORT        -->
                     <!-- ======================== -->
                     <group invisible="state != 'import'">
-                        <group string="Fichier et Societe">
+                        <group string="Fichier et Société">
                             <field name="company_id" options="{'no_create': True}"
-                                   string="Societe a corriger"/>
+                                   string="Société à corriger"/>
                             <field name="excel_file" filename="excel_filename"
                                    widget="binary" string="Fichier (.xlsx / .xls)"/>
                             <field name="excel_filename" invisible="1"/>
                         </group>
-                        <group string="Parametres">
-                            <field name="variation_threshold"
-                                   string="Seuil de variation (%)"
-                                   help="Si la variation entre le prix reception et le prix Excel est inferieure ou egale a ce seuil, le prix reception est conserve. Sinon le prix Excel est utilise."/>
-                        </group>
                     </group>
 
-                    <!-- Explication règle -->
-                    <div invisible="state != 'import'"
-                         style="background:#fff8e1;border:1px solid #ffc107;
-                                border-radius:6px;padding:12px;margin-top:8px;font-size:13px;">
-                        <b>Regle de correction appliquee :</b><br/><br/>
-                        1. Reception = 0 &#8594; Prix Excel utilise<br/>
-                        2. Variation entre reception et Excel &lt;= seuil &#8594; Prix reception conserve (correct)<br/>
-                        3. Variation entre reception et Excel &gt; seuil &#8594; Prix Excel utilise (prix reception errone)
-                    </div>
-
-                    <!-- Format Excel -->
                     <div invisible="state != 'import'"
                          style="background:#f0f7ff;border:1px solid #b8d4f0;
                                 border-radius:6px;padding:12px;margin-top:8px;">
@@ -73,6 +57,9 @@
                                 <td style="padding:6px;border:1px solid #ddd;text-align:right;">2582.67</td>
                             </tr>
                         </table>
+                        <p style="margin-top:8px;font-size:12px;color:#6c757d;">
+                            Le PMP Excel est appliqué directement sur tous les mouvements de réception du produit.
+                        </p>
                     </div>
 
                     <!-- ======================== -->
@@ -83,50 +70,47 @@
                         <field name="summary_html" widget="html" readonly="1" nolabel="1"/>
 
                         <notebook>
-                            <page string="Lignes a corriger" invisible="state == 'done'">
+                            <page string="Articles à corriger" invisible="state == 'done'">
                                 <field name="line_ids" nolabel="1" readonly="1">
                                     <list decoration-success="state == 'ready'"
                                           decoration-danger="state == 'not_found'"
                                           decoration-warning="state == 'no_move'"
-                                          decoration-muted="state in ('ok','done')">
-                                        <field name="code_article"            string="Code"/>
-                                        <field name="product_id"              string="Produit"/>
-                                        <field name="pmp_excel"               string="PMP Excel"/>
-                                        <field name="nb_moves_total"          string="Total"/>
-                                        <field name="nb_moves_no_change"      string="Sans chgt"/>
-                                        <field name="nb_moves_reception_ok"   string="Var.&lt;=seuil"/>
-                                        <field name="nb_moves_excel_override" string="Var.&gt;seuil"/>
-                                        <field name="nb_moves_excel_zero"     string="Récep.=0"/>
-                                        <field name="total_qty"               string="Qte"/>
-                                        <field name="total_value"             string="Valeur (FCFA)"/>
+                                          decoration-muted="state == 'done'">
+                                        <field name="code_article" string="Code"/>
+                                        <field name="product_id"   string="Produit"/>
+                                        <field name="pmp_excel"    string="PMP Excel" digits="[16,4]"/>
+                                        <field name="nb_moves"     string="Mouvements"/>
+                                        <field name="total_qty"    string="Qté totale" digits="[16,3]"/>
+                                        <field name="old_value"    string="Valeur actuelle" digits="[16,2]"/>
+                                        <field name="new_value"    string="Nouvelle valeur" digits="[16,2]"/>
                                         <field name="state" string="Statut" widget="badge"
                                                decoration-success="state == 'ready'"
                                                decoration-danger="state == 'not_found'"
                                                decoration-warning="state == 'no_move'"
-                                               decoration-muted="state in ('ok','done')"/>
+                                               decoration-muted="state == 'done'"/>
                                     </list>
                                 </field>
                             </page>
 
-                            <page string="Codes non trouves" invisible="nb_not_found == 0">
+                            <page string="Codes non trouvés" invisible="nb_not_found == 0">
                                 <field name="line_ids" nolabel="1" readonly="1"
                                        domain="[('state','=','not_found')]">
                                     <list>
                                         <field name="code_article" string="Code Article"/>
-                                        <field name="pmp_excel"    string="PMP Excel"/>
+                                        <field name="pmp_excel"    string="PMP Excel" digits="[16,4]"/>
                                     </list>
                                 </field>
                             </page>
 
-                            <page string="Resultat" invisible="state != 'done'">
+                            <page string="Résultat" invisible="state != 'done'">
                                 <group>
                                     <group string="Statistiques">
-                                        <field name="nb_products_updated"  string="Produits traites"/>
-                                        <field name="nb_moves_corrected"   string="Mouvements corriges"/>
-                                        <field name="nb_po_updated"        string="Commandes mises a jour"/>
-                                        <field name="nb_invoice_updated"   string="Factures mises a jour"/>
+                                        <field name="nb_products_updated"  string="Produits traités"/>
+                                        <field name="nb_moves_corrected"   string="Mouvements corrigés"/>
+                                        <field name="nb_po_updated"        string="Commandes mises à jour"/>
+                                        <field name="nb_invoice_updated"   string="Factures mises à jour"/>
                                         <field name="total_value_injected" string="Valeur totale (FCFA)"/>
-                                        <field name="nb_not_found"         string="Codes non trouves"/>
+                                        <field name="nb_not_found"         string="Codes non trouvés"/>
                                     </group>
                                 </group>
                             </page>

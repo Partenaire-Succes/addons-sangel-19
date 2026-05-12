@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_pos_margin_cost_wizard_form" model="ir.ui.view">
+        <field name="name">pos.margin.cost.wizard.form</field>
+        <field name="model">pos.margin.cost.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Correction des coûts et marges POS">
+
+                <header>
+                    <button name="action_preview"
+                            string="Analyser le fichier"
+                            type="object" class="btn-primary"
+                            invisible="state != 'import'"/>
+                    <button name="action_apply"
+                            string="Appliquer les corrections"
+                            type="object" class="btn-primary"
+                            confirm="Le coût total sera mis à jour sur toutes les lignes POS des articles concernés. Continuer ?"
+                            invisible="state != 'preview' or count_ok == 0"/>
+                    <button name="action_reset"
+                            string="Recommencer"
+                            type="object" class="btn-secondary"
+                            invisible="state == 'import'"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="import,preview,done"/>
+                </header>
+
+                <sheet>
+                    <div class="oe_title">
+                        <h1>Correction des coûts et marges POS</h1>
+                    </div>
+
+                    <!-- ══════════════════════════════════════ -->
+                    <!-- ÉTAPE 1 : Import                      -->
+                    <!-- ══════════════════════════════════════ -->
+                    <group invisible="state != 'import'">
+                        <group string="Paramètres">
+                            <field name="company_id" options="{'no_create': True}"/>
+                            <field name="date_from"/>
+                            <field name="date_to"/>
+                            <field name="excel_file" filename="excel_filename"
+                                   widget="binary" string="Fichier Excel (.xlsx)"/>
+                            <field name="excel_filename" invisible="1"/>
+                        </group>
+                    </group>
+
+                    <div invisible="state != 'import'"
+                         style="background:#f0f7ff;border:1px solid #b8d4f0;
+                                border-radius:6px;padding:12px;margin-top:8px;">
+                        <b>Format Excel attendu :</b>
+                        <table style="margin-top:8px;border-collapse:collapse;width:300px;">
+                            <tr style="background:#d0e8ff;">
+                                <th style="padding:6px;border:1px solid #aac;">code article</th>
+                                <th style="padding:6px;border:1px solid #aac;">cout</th>
+                            </tr>
+                            <tr>
+                                <td style="padding:6px;border:1px solid #ddd;text-align:center;">0404</td>
+                                <td style="padding:6px;border:1px solid #ddd;text-align:right;">2582.67</td>
+                            </tr>
+                            <tr style="background:#f8f9fa;">
+                                <td style="padding:6px;border:1px solid #ddd;text-align:center;">0512</td>
+                                <td style="padding:6px;border:1px solid #ddd;text-align:right;">1250.00</td>
+                            </tr>
+                        </table>
+                        <p style="margin-top:8px;font-size:12px;color:#6c757d;">
+                            Le code article est complété à 4 chiffres automatiquement.
+                            Le coût est appliqué directement sans seuil de tolérance.
+                        </p>
+                    </div>
+
+                    <!-- ══════════════════════════════════════ -->
+                    <!-- ÉTAPE 2 : Aperçu                      -->
+                    <!-- ══════════════════════════════════════ -->
+                    <div invisible="state != 'preview'">
+                        <group string="Résumé de l'analyse">
+                            <group>
+                                <field name="count_ok"        string="Articles à corriger"/>
+                                <field name="total_lines_pos" string="Lignes POS impactées"/>
+                            </group>
+                            <group>
+                                <field name="count_not_found" string="Codes non trouvés"/>
+                                <field name="count_no_lines"  string="Sans lignes POS"/>
+                            </group>
+                        </group>
+
+                        <notebook>
+                            <page string="Articles à corriger">
+                                <field name="line_ids" nolabel="1" readonly="1"
+                                       domain="[('state', '=', 'ok')]">
+                                    <list decoration-success="state == 'ok'"
+                                          decoration-danger="state == 'not_found'"
+                                          decoration-warning="state == 'no_lines'">
+                                        <field name="code_article"       string="Code"/>
+                                        <field name="product_id"         string="Article"/>
+                                        <field name="correct_unit_cost"  string="Coût Excel (unit.)"
+                                               digits="[16,4]"/>
+                                        <field name="nb_pos_lines"       string="Nb lignes POS"/>
+                                        <field name="total_qty"          string="Qté totale"
+                                               digits="[16,3]"/>
+                                        <field name="old_total_cost"     string="Coût total actuel"
+                                               digits="[16,2]"/>
+                                        <field name="new_total_cost"     string="Nouveau coût total"
+                                               digits="[16,2]"/>
+                                        <field name="state" string="Statut" widget="badge"
+                                               decoration-success="state == 'ok'"
+                                               decoration-danger="state == 'not_found'"
+                                               decoration-warning="state == 'no_lines'"/>
+                                    </list>
+                                </field>
+                            </page>
+
+                            <page string="Codes non trouvés / Sans lignes"
+                                  invisible="count_not_found == 0 and count_no_lines == 0">
+                                <field name="line_ids" nolabel="1" readonly="1"
+                                       domain="[('state', 'in', ['not_found', 'no_lines'])]">
+                                    <list decoration-danger="state == 'not_found'"
+                                          decoration-warning="state == 'no_lines'">
+                                        <field name="code_article" string="Code Article"/>
+                                        <field name="correct_unit_cost" string="Coût Excel"
+                                               digits="[16,4]"/>
+                                        <field name="state"   string="Statut" widget="badge"
+                                               decoration-danger="state == 'not_found'"
+                                               decoration-warning="state == 'no_lines'"/>
+                                        <field name="message" string="Message"/>
+                                    </list>
+                                </field>
+                            </page>
+                        </notebook>
+                    </div>
+
+                    <!-- ══════════════════════════════════════ -->
+                    <!-- ÉTAPE 3 : Résultat                    -->
+                    <!-- ══════════════════════════════════════ -->
+                    <div invisible="state != 'done'">
+                        <field name="line_ids" nolabel="1" readonly="1"
+                               domain="[('state', '=', 'done')]">
+                            <list>
+                                <field name="code_article"      string="Code"/>
+                                <field name="product_id"        string="Article"/>
+                                <field name="correct_unit_cost" string="Coût appliqué"
+                                       digits="[16,4]"/>
+                                <field name="nb_pos_lines"      string="Lignes corrigées"/>
+                                <field name="total_qty"         string="Qté totale"
+                                       digits="[16,3]"/>
+                                <field name="old_total_cost"    string="Ancien coût total"
+                                       digits="[16,2]"/>
+                                <field name="new_total_cost"    string="Nouveau coût total"
+                                       digits="[16,2]"/>
+                            </list>
+                        </field>
+                        <field name="summary_html" widget="html" readonly="1" nolabel="1"/>
+                    </div>
+
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_pos_margin_cost_wizard" model="ir.actions.act_window">
+        <field name="name">Correction coûts/marges POS</field>
+        <field name="res_model">pos.margin.cost.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+</odoo>

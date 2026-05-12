@@ -10,4 +10,13 @@
         sequence="98"
         groups="custom_pos.group_dsi_it"/>
 
+    <!-- Menu Correction coûts/marges POS -->
+    <menuitem
+        id="menu_pos_margin_cost_correction"
+        name="Correction coûts/marges POS"
+        parent="stock.menu_stock_warehouse_mgmt"
+        action="action_pos_margin_cost_wizard"
+        sequence="99"
+        groups="custom_pos.group_dsi_it"/>
+
 </odoo>
