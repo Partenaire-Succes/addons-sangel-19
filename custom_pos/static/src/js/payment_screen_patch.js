@@ -7,6 +7,8 @@ import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 import { _t } from "@web/core/l10n/translation";
 import { patch } from "@web/core/utils/patch";
 import { PosOrder } from "@point_of_sale/app/models/pos_order";
+import { PaymentScreen } from "@point_of_sale/app/screens/payment_screen/payment_screen";
+import { createDeferredLogs } from "@custom_pos/js/pos_validation_utils";
 
 console.warn("🟢 payment_screen_patch.js - All imports successful, applying patch now");
 
@@ -114,6 +116,23 @@ patch(ActionpadWidget.prototype, {
                 title: _t("Error"),
                 body: _t("Failed to apply the remise. Please try again."),
             });
+        }
+    },
+});
+
+patch(PaymentScreen.prototype, {
+    async validateOrder(isForceValidate) {
+        const order = this.currentOrder;
+        const pendingLogs = order?._pendingLogs?.length ? [...order._pendingLogs] : [];
+        if (order) order._pendingLogs = [];
+
+        await super.validateOrder(isForceValidate);
+
+        // order.finalized = true dès que finalizeValidation() passe order.state à "paid"
+        // order.name est assigné côté serveur après syncAllOrders()
+        if (pendingLogs.length > 0 && order?.finalized) {
+            const orderRef = order.name || order.pos_reference || order.tracking_number?.toString() || "";
+            await createDeferredLogs(pendingLogs, this.pos, orderRef);
         }
     },
 });

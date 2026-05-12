@@ -55,9 +55,11 @@ function _showCodePromptDialog(actionLabel) {
         okBtn.onclick = () => { document.body.removeChild(overlay); resolve(input.value); };
 
         input.addEventListener("keydown", (e) => {
+            e.stopPropagation();
             if (e.key === "Enter") okBtn.click();
             else if (e.key === "Escape") cancelBtn.click();
         });
+        input.addEventListener("keyup", (e) => e.stopPropagation());
 
         btnRow.appendChild(cancelBtn);
         btnRow.appendChild(okBtn);
@@ -291,14 +293,16 @@ patch(TicketScreen.prototype, {
                 resolve(value);
             };
 
-            // Handle Enter key
+            // Bloque l'interception du scanner par le POS global + gère Enter/Escape
             input.addEventListener("keydown", (e) => {
+                e.stopPropagation();
                 if (e.key === "Enter") {
                     okBtn.click();
                 } else if (e.key === "Escape") {
                     cancelBtn.click();
                 }
             });
+            input.addEventListener("keyup", (e) => e.stopPropagation());
 
             btnRow.appendChild(cancelBtn);
             btnRow.appendChild(okBtn);
