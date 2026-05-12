@@ -18,10 +18,10 @@
                             <div t-att-style="'' if session_first else 'page-break-before:always;'">
 
                                 <!-- EN-TETE -->
-                                <table style="width:100%;border-bottom:2px solid #6B4FBF;margin-bottom:6mm;">
+                                <table style="width:100%;border-bottom:2px solid #5579ac;margin-bottom:6mm;">
                                     <tr>
                                         <td style="vertical-align:top;width:60%;">
-                                            <div style="font-size:14pt;font-weight:bold;color:#1a1a2e;">
+                                            <div style="font-size:14pt;font-weight:bold;color:#333333;">
                                                 Rapport des validations manager
                                             </div>
                                             <div style="font-size:9pt;color:#555;margin-top:2mm;">
@@ -50,7 +50,7 @@
                                 <table style="width:100%;border-collapse:collapse;margin-bottom:6mm;font-size:9pt;">
                                     <tr>
                                         <td style="padding:3mm;background:#f8f9fa;border:1px solid #dee2e6;text-align:center;">
-                                            <div style="font-size:18pt;font-weight:bold;color:#6B4FBF;">
+                                            <div style="font-size:18pt;font-weight:bold;color:#5579ac;">
                                                 <t t-esc="len(logs)"/>
                                             </div>
                                             <div style="color:#555;">Total validations</div>
@@ -62,7 +62,7 @@
                                             <div style="color:#555;">Remboursements</div>
                                         </td>
                                         <td style="padding:3mm;background:#fffdf0;border:1px solid #dee2e6;text-align:center;">
-                                            <div style="font-size:18pt;font-weight:bold;color:#6B4FBF;">
+                                            <div style="font-size:18pt;font-weight:bold;color:#5579ac;">
                                                 <t t-esc="len(logs.filtered(lambda l: l.action in ('discount','price_reduction','stock')))"/>
                                             </div>
                                             <div style="color:#555;">Remises / Prix / Ruptures</div>
@@ -86,7 +86,7 @@
                                 <t t-if="logs">
                                     <table style="width:100%;border-collapse:collapse;font-size:8.5pt;">
                                         <thead>
-                                            <tr style="background:#3D2080;color:#fff;">
+                                            <tr style="background:#5579ac;color:#fff;">
                                                 <th style="padding:2.5mm 3mm;text-align:left;width:12%;">Date/Heure</th>
                                                 <th style="padding:2.5mm 3mm;text-align:left;width:12%;">Caissiere</th>
                                                 <th style="padding:2.5mm 3mm;text-align:left;width:12%;">Valide par</th>
@@ -113,13 +113,13 @@
                                                             <span style="color:#dc3545;font-weight:bold;">Remboursement</span>
                                                         </t>
                                                         <t t-elif="log.action == 'discount'">
-                                                            <span style="color:#6B4FBF;">Remise manuelle</span>
+                                                            <span style="color:#5579ac;">Remise manuelle</span>
                                                         </t>
                                                         <t t-elif="log.action == 'price_reduction'">
-                                                            <span style="color:#6B4FBF;font-weight:bold;">Reduction de prix</span>
+                                                            <span style="color:#5579ac;font-weight:bold;">Reduction de prix</span>
                                                         </t>
                                                         <t t-elif="log.action == 'stock'">
-                                                            <span style="color:#6B4FBF;">Rupture de stock</span>
+                                                            <span style="color:#5579ac;">Rupture de stock</span>
                                                         </t>
                                                         <t t-elif="log.action == 'print'">
                                                             <span style="color:#0d6efd;">Impression ticket</span>
@@ -137,14 +137,14 @@
                                                     <td style="padding:2mm 3mm;border-bottom:1px solid #e9ecef;font-size:8pt;color:#555;white-space:nowrap;">
                                                         <t t-esc="log.order_ref or ''"/>
                                                     </td>
-                                                    <td style="padding:2mm 3mm;border-bottom:1px solid #e9ecef;font-size:8pt;color:#1a1a2e;">
+                                                    <td style="padding:2mm 3mm;border-bottom:1px solid #e9ecef;font-size:8pt;color:#333333;">
                                                         <t t-if="log.price_details_formatted">
                                                             <t t-esc="log.price_details_formatted"/>
                                                         </t>
                                                     </td>
                                                     <td style="padding:2mm 3mm;border-bottom:1px solid #e9ecef;text-align:center;">
                                                         <t t-if="log.offline">
-                                                            <span style="color:#6B4FBF;font-weight:bold;">&#10003;</span>
+                                                            <span style="color:#5579ac;font-weight:bold;">&#10003;</span>
                                                         </t>
                                                     </td>
                                                 </tr>

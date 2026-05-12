@@ -58,6 +58,7 @@ class PosOrder(models.Model):
     @api.model
     def check_stock_levels(self, product_ids, has_discount=False):
         produits_rupture = []
+        rupture_details = []
         products = self.env['product.product'].browse(product_ids)
 
         # Si l'utilisateur est admin, pas de vérification
@@ -67,12 +68,16 @@ class PosOrder(models.Model):
                 'access_required': False,
                 'code_acces': False,
                 'message': False,
+                'rupture_details': [],
             }
 
         # Vérification du stock
         for product in products:
             if product.qty_available <= 0:
-                produits_rupture.append(product.default_code)
+                code = product.default_code or ''
+                label = f"[{code}] {product.name}" if code else product.name
+                produits_rupture.append(label)
+                rupture_details.append({'produit': label})
 
         pos_config = self.env['pos.config'].search([], limit=1)
         code_acces = pos_config.code_acces if pos_config else False
@@ -86,6 +91,7 @@ class PosOrder(models.Model):
                 'message': "⚠️ Autorisation requise :\n\n" +
                             "Produits en rupture de stock : " +
                             ", ".join(produits_rupture),
+                'rupture_details': rupture_details,
             }
 
         # Si seulement rupture de stock
@@ -95,7 +101,8 @@ class PosOrder(models.Model):
                 'access_required': True,
                 'code_acces': code_acces,
                 'message': "Les produits suivants sont en rupture de stock :\n" +
-                        ",".join(produits_rupture),
+                        ", ".join(produits_rupture),
+                'rupture_details': rupture_details,
             }
 
         # Si seulement remise
@@ -105,6 +112,7 @@ class PosOrder(models.Model):
                 'access_required': True,
                 'code_acces': code_acces,
                 'message': "⚠️ Cette commande contient des remises.\nUn code d'accès est requis pour continuer.",
+                'rupture_details': [],
             }
 
         # Tout est OK
@@ -113,6 +121,7 @@ class PosOrder(models.Model):
             'access_required': False,
             'code_acces': False,
             'message': False,
+            'rupture_details': [],
         }
 
     @api.model

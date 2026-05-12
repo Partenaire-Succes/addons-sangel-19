@@ -177,9 +177,10 @@ patch(PosStore.prototype, {
                             apres: p.unit_price_ttc,
                         }))
                         : null;
-                    const { success: priceOk } = await validateManagerCode(
+                    // Log différé : order.name (serveur) n'est disponible qu'après paiement
+                    const { success: priceOk, managerId: priceMgrId } = await validateManagerCode(
                         priceCodeInput, "price_reduction", this,
-                        currentOrder?.name || "", priceResult.code_acces || null, priceInfo
+                        "", priceResult.code_acces || null, null, false
                     );
                     if (!priceOk) {
                         this.dialog.add(AlertDialog, {
@@ -188,6 +189,8 @@ patch(PosStore.prototype, {
                         });
                         return;
                     }
+                    if (!currentOrder._pendingLogs) currentOrder._pendingLogs = [];
+                    currentOrder._pendingLogs.push({ manager_id: priceMgrId, action: "price_reduction", price_info: priceInfo });
                 }
             } catch (error) {
                 // Mode hors-ligne - vérification locale de réduction de prix
@@ -264,9 +267,10 @@ patch(PosStore.prototype, {
             if (result.error) {
                 if (result.access_required) {
                     const codeInput = await this._showPasswordPrompt(result.message, discountedProducts);
-                    const { success: stockOk } = await validateManagerCode(
+                    // Log différé : order.name (serveur) n'est disponible qu'après paiement
+                    const { success: stockOk, managerId: stockMgrId } = await validateManagerCode(
                         codeInput, hasDiscount ? "discount" : "stock", this,
-                        currentOrder?.name || "", result.code_acces || null
+                        "", result.code_acces || null, null, false
                     );
                     if (!stockOk) {
                         this.dialog.add(AlertDialog, {
@@ -275,6 +279,9 @@ patch(PosStore.prototype, {
                         });
                         return;
                     }
+                    if (!currentOrder._pendingLogs) currentOrder._pendingLogs = [];
+                    const stockPriceInfo = result.rupture_details?.length ? result.rupture_details : null;
+                    currentOrder._pendingLogs.push({ manager_id: stockMgrId, action: hasDiscount ? "discount" : "stock", price_info: stockPriceInfo });
                 } else {
                     // Blocage définitif : pas d'override possible.
                     this.dialog.add(AlertDialog, {

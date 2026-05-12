@@ -105,7 +105,7 @@
                            decoration-warning="action in ('discount','price_reduction','stock')"
                            decoration-info="action in ('print','details','invoice')"/>
                     <field name="price_details_formatted" string="Produits modifiés" optional="show"
-                           invisible="action != 'price_reduction'"/>
+                           invisible="action not in ('price_reduction', 'discount', 'stock')"/>
                     <field name="order_ref"/>
                     <field name="offline" optional="show"/>
                 </list>

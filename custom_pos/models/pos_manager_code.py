@@ -237,7 +237,7 @@ class PosManagerCode(models.Model):
         """Reconstruction pixel-perfect du badge avec Pillow uniquement."""
         from PIL import Image, ImageDraw, ImageFont
 
-        W, H = 502, 325
+        W, H = 502, 319
         BLUE = (85, 121, 172)    # #5579ac
         WHITE = (255, 255, 255)
 
@@ -367,7 +367,7 @@ class PosAccessLog(models.Model):
                     avant = item.get('avant')
                     apres = item.get('apres')
                     if avant is not None and apres is not None:
-                        parts.append(f"{produit}: {avant:,.0f} → {apres:,.0f}")
+                        parts.append(f"{produit}: {avant:.0f} → {apres:.0f}")
                     else:
                         parts.append(produit)
                 rec.price_details_formatted = ' | '.join(parts)
