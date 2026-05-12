@@ -149,7 +149,7 @@ class StockAvcoImportWizard(models.TransientModel):
 
         company = self.company_id
         lines_to_apply = self.line_ids.filtered(
-            lambda l: l.state == 'ready' and l.product_id
+            lambda l: l.state in ('ready', 'no_move') and l.product_id
         )
         if not lines_to_apply:
             raise UserError(_("Aucune ligne à corriger."))
@@ -236,17 +236,19 @@ class StockAvcoImportWizard(models.TransientModel):
                             invoices_fixed.add(invoice.id)
                             nb_inv_fixed += 1
 
+            # Mise à jour standard_price dans tous les cas (avec ou sans mouvements)
+            variant = line.product_id.with_company(company).sudo()
+            if abs(variant.standard_price - line.pmp_excel) > 0.01:
+                old_std = variant.standard_price
+                variant.write({'standard_price': line.pmp_excel})
+                _logger.info(
+                    "standard_price [%s] %s : %.2f → %.2f",
+                    company.name, line.product_id.display_name,
+                    old_std, line.pmp_excel,
+                )
+
             if product_touched:
                 nb_products += 1
-                variant = line.product_id.with_company(company).sudo()
-                if abs(variant.standard_price - line.pmp_excel) > 0.01:
-                    old_std = variant.standard_price
-                    variant.write({'standard_price': line.pmp_excel})
-                    _logger.info(
-                        "standard_price [%s] %s : %.2f → %.2f",
-                        company.name, line.product_id.display_name,
-                        old_std, line.pmp_excel,
-                    )
 
             line.write({'state': 'done'})
 
