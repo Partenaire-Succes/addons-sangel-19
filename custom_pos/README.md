@@ -304,3 +304,6 @@ Le module contient une base technique pour une promo type **“3 achetés = 1 of
 - [CAPTURE] POS : encart solde fidélité sur écran paiement
 - [CAPTURE] Reçu : nom de la caisse dans l’en-tête
 - [CAPTURE] Reçu : pied de page sans : "Powered by Odoo"
+- [CAPTURE] Rapport validation manager : liste des validations
+- [CAPTURE] Rapport validation manager : résumé global
+
