@@ -11,21 +11,10 @@ class StockValoriseReport(models.TransientModel):
     _name = 'stock.valorise.report'
     _description = 'Rapport de Stock Valorisé'
 
-    date_report = fields.Date(
+    date_report = fields.Datetime(
         string='Date de valorisation',
         required=True,
         default=fields.Date.context_today
-    )
-
-    date_from = fields.Datetime(
-        string='Date debut',
-        required=True,
-        default=fields.Date.context_today
-    )
-
-    date_to = fields.Datetime(
-        string='Date fin',
-        required=True,
     )
 
     location_id = fields.Many2one(
@@ -110,14 +99,12 @@ class StockValoriseReport(models.TransientModel):
         total_qty = 0.0
         total_valorisation = 0.0
 
-        # date_from = dt.combine(self.date_report, t.min)       # 00:00:00
-        # date_at   = dt.combine(self.date_report, t(23, 59, 59)) # 23:59:59
-        date_from = self.date_from
-        date_at = self.date_to
+        date_from = self.date_report
+        date_at = dt.combine(self.date_report.date(), t(23, 59, 59))
 
         # Quantités à l'emplacement en batch
         loc_qtys = self.product_ids.with_context(
-            location=self.location_id.id, to_date=date_at
+            location=self.location_id.id, to_date=date_from
         ).mapped('qty_available')
         qty_loc = {p.id: q for p, q in zip(self.product_ids, loc_qtys)}
 
@@ -137,37 +124,9 @@ class StockValoriseReport(models.TransientModel):
         )
         day_moves = {r['product_id'][0]: (r['value'], r['quantity']) for r in move_groups_day}
 
-        # PMP fallback 1 : premier jour APRÈS date_from ayant eu une réception
-        if self.product_ids:
-            self.env.cr.execute("""
-                WITH next_dates AS (
-                    SELECT product_id, MIN(date::date) AS next_date
-                    FROM stock_move
-                    WHERE product_id = ANY(%s)
-                      AND company_id = %s
-                      AND state = 'done'
-                      AND is_in = true
-                      AND picking_id IS NOT NULL
-                      AND date > %s
-                    GROUP BY product_id
-                )
-                SELECT sm.product_id,
-                       SUM(sm.value)    AS value,
-                       SUM(sm.quantity) AS quantity
-                FROM stock_move sm
-                JOIN next_dates nd ON nd.product_id = sm.product_id
-                WHERE sm.state = 'done'
-                  AND sm.is_in = true
-                  AND sm.picking_id IS NOT NULL
-                  AND sm.date::date = nd.next_date
-                  AND sm.company_id = %s
-                GROUP BY sm.product_id
-            """, [list(self.product_ids.ids), self.company_id.id, date_at, self.company_id.id])
-            next_moves = {row[0]: (row[1], row[2]) for row in self.env.cr.fetchall()}
-        else:
-            next_moves = {}
-
-        # PMP fallback 2 : dernier jour AVANT date_from ayant eu une réception
+        # PMP fallback : PMP du dernier jour ayant eu une réception avant date_from
+        # On cherche la dernière date de réception par produit, puis on prend
+        # uniquement les mouvements de CE jour-là (pas une moyenne cumulative).
         if self.product_ids:
             self.env.cr.execute("""
                 WITH last_dates AS (
@@ -203,22 +162,18 @@ class StockValoriseReport(models.TransientModel):
             code_article = product.code_article or product.product_tmpl_id.code_article or ''
 
             qty = qty_loc.get(product.id, 0.0)
-            # if not qty or qty <= 0:
-            #     continue
+            if not qty or qty <= 0:
+                continue
 
             day_value, day_qty = day_moves.get(product.id, (0.0, 0.0))
             if day_qty > 0 and day_value > 0:
                 pamp = float_round(day_value / day_qty, 2)
             else:
-                next_value, next_qty = next_moves.get(product.id, (0.0, 0.0))
-                if next_qty > 0 and next_value > 0:
-                    pamp = float_round(next_value / next_qty, 2)
+                prev_value, prev_qty = prev_moves.get(product.id, (0.0, 0.0))
+                if prev_qty > 0 and prev_value > 0:
+                    pamp = float_round(prev_value / prev_qty, 2)
                 else:
-                    prev_value, prev_qty = prev_moves.get(product.id, (0.0, 0.0))
-                    if prev_qty > 0 and prev_value > 0:
-                        pamp = float_round(prev_value / prev_qty, 2)
-                    else:
-                        pamp = product.with_company(self.company_id).standard_price or 0.0
+                    pamp = product.with_company(self.company_id).standard_price or 0.0
 
             valorisation = float_round(qty * pamp, 2)
 
@@ -294,7 +249,7 @@ class StockValoriseReport(models.TransientModel):
         ws["A1"].font = Font(name="Arial", bold=True, size=11)
 
         ws.merge_cells("A2:G2")
-        ws["A2"] = f"STOCK VALORISÉ — DU {self.date_from.strftime('%d/%m/%Y')} A {self.date_to.strftime('%d/%m/%Y')} — {self.location_id.complete_name}"
+        ws["A2"] = f"STOCK VALORISÉ — {self.date_report.strftime('%d/%m/%Y')} — {self.location_id.complete_name}"
         ws["A2"].font = Font(name="Arial", bold=True, color=WHITE, size=11)
         ws["A2"].fill = fill(BLUE)
         ws["A2"].alignment = aln("center")
@@ -344,7 +299,7 @@ class StockValoriseReport(models.TransientModel):
 
         buffer = io.BytesIO(); wb.save(buffer); buffer.seek(0)
         xlsx_data = base64.b64encode(buffer.read()).decode()
-        filename = f"Stock_Valorise_{self.date_from.strftime('%d%m%Y')}.xlsx"
+        filename = f"Stock_Valorise_{self.date_report.strftime('%d%m%Y')}.xlsx"
         attachment = self.env['ir.attachment'].create({
             'name': filename, 'type': 'binary', 'datas': xlsx_data,
             'mimetype': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
