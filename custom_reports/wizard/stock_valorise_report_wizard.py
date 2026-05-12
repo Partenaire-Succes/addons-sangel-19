@@ -17,6 +17,17 @@ class StockValoriseReport(models.TransientModel):
         default=fields.Date.context_today
     )
 
+    date_from = fields.Datetime(
+        string='Date debut',
+        required=True,
+        default=fields.Date.context_today
+    )
+
+    date_to = fields.Datetime(
+        string='Date fin',
+        required=True,
+    )
+
     location_id = fields.Many2one(
         'stock.location',
         string='Emplacement',
@@ -99,8 +110,10 @@ class StockValoriseReport(models.TransientModel):
         total_qty = 0.0
         total_valorisation = 0.0
 
-        date_from = dt.combine(self.date_report, t.min)       # 00:00:00
-        date_at   = dt.combine(self.date_report, t(23, 59, 59)) # 23:59:59
+        # date_from = dt.combine(self.date_report, t.min)       # 00:00:00
+        # date_at   = dt.combine(self.date_report, t(23, 59, 59)) # 23:59:59
+        date_from = self.date_from
+        date_at = self.date_to
 
         # Quantités à l'emplacement en batch
         loc_qtys = self.product_ids.with_context(
@@ -281,7 +294,7 @@ class StockValoriseReport(models.TransientModel):
         ws["A1"].font = Font(name="Arial", bold=True, size=11)
 
         ws.merge_cells("A2:G2")
-        ws["A2"] = f"STOCK VALORISÉ — {self.date_report.strftime('%d/%m/%Y')} — {self.location_id.complete_name}"
+        ws["A2"] = f"STOCK VALORISÉ — DU {self.date_from.strftime('%d/%m/%Y')} A {self.date_to.strftime('%d/%m/%Y')} — {self.location_id.complete_name}"
         ws["A2"].font = Font(name="Arial", bold=True, color=WHITE, size=11)
         ws["A2"].fill = fill(BLUE)
         ws["A2"].alignment = aln("center")
@@ -331,7 +344,7 @@ class StockValoriseReport(models.TransientModel):
 
         buffer = io.BytesIO(); wb.save(buffer); buffer.seek(0)
         xlsx_data = base64.b64encode(buffer.read()).decode()
-        filename = f"Stock_Valorise_{self.date_report.strftime('%d%m%Y')}.xlsx"
+        filename = f"Stock_Valorise_{self.date_from.strftime('%d%m%Y')}.xlsx"
         attachment = self.env['ir.attachment'].create({
             'name': filename, 'type': 'binary', 'datas': xlsx_data,
             'mimetype': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
