@@ -190,8 +190,8 @@ class StockValoriseReport(models.TransientModel):
             code_article = product.code_article or product.product_tmpl_id.code_article or ''
 
             qty = qty_loc.get(product.id, 0.0)
-            if not qty or qty <= 0:
-                continue
+            # if not qty or qty <= 0:
+            #     continue
 
             day_value, day_qty = day_moves.get(product.id, (0.0, 0.0))
             if day_qty > 0 and day_value > 0:
