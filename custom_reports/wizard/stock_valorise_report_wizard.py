@@ -124,9 +124,37 @@ class StockValoriseReport(models.TransientModel):
         )
         day_moves = {r['product_id'][0]: (r['value'], r['quantity']) for r in move_groups_day}
 
-        # PMP fallback : PMP du dernier jour ayant eu une réception avant date_from
-        # On cherche la dernière date de réception par produit, puis on prend
-        # uniquement les mouvements de CE jour-là (pas une moyenne cumulative).
+        # PMP fallback 1 : premier jour APRÈS date_from ayant eu une réception
+        if self.product_ids:
+            self.env.cr.execute("""
+                WITH next_dates AS (
+                    SELECT product_id, MIN(date::date) AS next_date
+                    FROM stock_move
+                    WHERE product_id = ANY(%s)
+                      AND company_id = %s
+                      AND state = 'done'
+                      AND is_in = true
+                      AND picking_id IS NOT NULL
+                      AND date > %s
+                    GROUP BY product_id
+                )
+                SELECT sm.product_id,
+                       SUM(sm.value)    AS value,
+                       SUM(sm.quantity) AS quantity
+                FROM stock_move sm
+                JOIN next_dates nd ON nd.product_id = sm.product_id
+                WHERE sm.state = 'done'
+                  AND sm.is_in = true
+                  AND sm.picking_id IS NOT NULL
+                  AND sm.date::date = nd.next_date
+                  AND sm.company_id = %s
+                GROUP BY sm.product_id
+            """, [list(self.product_ids.ids), self.company_id.id, date_at, self.company_id.id])
+            next_moves = {row[0]: (row[1], row[2]) for row in self.env.cr.fetchall()}
+        else:
+            next_moves = {}
+
+        # PMP fallback 2 : dernier jour AVANT date_from ayant eu une réception
         if self.product_ids:
             self.env.cr.execute("""
                 WITH last_dates AS (
@@ -169,11 +197,15 @@ class StockValoriseReport(models.TransientModel):
             if day_qty > 0 and day_value > 0:
                 pamp = float_round(day_value / day_qty, 2)
             else:
-                prev_value, prev_qty = prev_moves.get(product.id, (0.0, 0.0))
-                if prev_qty > 0 and prev_value > 0:
-                    pamp = float_round(prev_value / prev_qty, 2)
+                next_value, next_qty = next_moves.get(product.id, (0.0, 0.0))
+                if next_qty > 0 and next_value > 0:
+                    pamp = float_round(next_value / next_qty, 2)
                 else:
-                    pamp = product.with_company(self.company_id).standard_price or 0.0
+                    prev_value, prev_qty = prev_moves.get(product.id, (0.0, 0.0))
+                    if prev_qty > 0 and prev_value > 0:
+                        pamp = float_round(prev_value / prev_qty, 2)
+                    else:
+                        pamp = product.with_company(self.company_id).standard_price or 0.0
 
             valorisation = float_round(qty * pamp, 2)
 
