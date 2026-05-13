@@ -958,7 +958,7 @@ class AccountMoveSageX3(models.Model):
             _logger.info("✅ %s règlement(s) clients marqué(s)", len(account_payments))
 
     # =========================================================================
-    # PARTIE 2 — FACLI / AVCLI (factures et avoirs hors POS)
+    # PARTIE 2 — FACLI / AVCLI (factures et avoirs hors POS, sélection manuelle)
     # =========================================================================
 
     @api.model
@@ -985,6 +985,58 @@ class AccountMoveSageX3(models.Model):
                      success_count, error_count)
         return {'success': success_count, 'errors': error_count,
                 'error_details': errors}
+
+    # =========================================================================
+    # PARTIE 3 — FACLI / AVCLI liées à des ventes (sale.order)
+    # =========================================================================
+
+    @api.model
+    def _get_pending_sale_invoices(self, date_from, date_to, company_id):
+        """Retourne les factures/avoirs clients liés à un sale.order, non encore envoyés."""
+        return self.search([
+            ('move_type',                      'in', ('out_invoice', 'out_refund')),
+            ('state',                          '=',  'posted'),
+            ('sage_x3_sent',                   '=',  False),
+            ('company_id',                     '=',  company_id),
+            ('invoice_date',                   '>=', date_from),
+            ('invoice_date',                   '<=', date_to),
+            ('invoice_line_ids.sale_line_ids', '!=', False),
+        ])
+
+    @api.model
+    def _process_bulk_send_sale_invoices_to_sage_x3(self, date_from, date_to, company_ids):
+        """Envoi en masse des FACLI/AVCLI liées à des ventes (sale.order)."""
+        success_count = 0
+        error_count   = 0
+        errors        = []
+
+        for company_id in company_ids:
+            invoices = self._get_pending_sale_invoices(date_from, date_to, company_id)
+            _logger.info(
+                "📤 Factures ventes à envoyer — société %s : %s",
+                company_id, len(invoices),
+            )
+            for idx, invoice in enumerate(invoices, 1):
+                try:
+                    invoice._send_single_invoice_to_sage_x3()
+                    success_count += 1
+                    if idx % 10 == 0:
+                        self.env.cr.commit()
+                except Exception as e:
+                    error_count += 1
+                    errors.append(f"{invoice.name}: {str(e)}")
+                    _logger.error("❌ %s: %s", invoice.name, str(e))
+
+        self.env.cr.commit()
+        _logger.info(
+            "📊 FACLI/AVCLI ventes — Succès: %s | Erreurs: %s",
+            success_count, error_count,
+        )
+        return {
+            'success':       success_count,
+            'errors':        error_count,
+            'error_details': errors,
+        }
 
     def _send_single_invoice_to_sage_x3(self):
         """Envoie une facture (FACLI) ou un avoir (AVCLI) à SAGE X3."""

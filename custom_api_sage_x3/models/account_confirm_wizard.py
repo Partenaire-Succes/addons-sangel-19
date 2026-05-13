@@ -11,10 +11,11 @@ class SageX3SendWizard(models.TransientModel):
     """
     Wizard d'envoi vers SAGE X3.
 
-    Lance 2 flux en séquence :
+    Lance 3 flux en séquence :
       1. Récap journalier POS (ENCAI + DECAI)
          → inclut automatiquement les account.payment du jour dans l'ENCAI
-      2. Factures et avoirs classiques hors POS (FACLI / AVCLI)
+      2. Factures et avoirs classiques hors POS (FACLI / AVCLI) — sélection manuelle
+      3. Factures et avoirs liés à des ventes (sale.order) — auto-découverte
 
     Note : les account.payment ne sont PAS envoyés séparément.
     Ils sont intégrés dans l'ENCAI journalier du flux POS.
@@ -54,6 +55,11 @@ class SageX3SendWizard(models.TransientModel):
         help    = "Ces règlements seront inclus dans le récap ENCAI journalier, "
                   "pas envoyés séparément.",
     )
+    count_sale_invoices = fields.Integer(
+        string  = "Factures ventes: FACLI/AVCLI",
+        compute = "_compute_counts",
+        help    = "Factures et avoirs clients liés à un bon de commande (sale.order).",
+    )
 
     # =========================================================================
     # CONTRAINTES ET COMPTEURS
@@ -74,6 +80,7 @@ class SageX3SendWizard(models.TransientModel):
                 wizard.count_pos_sessions = 0
                 wizard.count_refunds      = 0
                 wizard.count_payments     = 0
+                wizard.count_sale_invoices     = 0
                 continue
 
             company_ids = wizard.company_ids.ids
@@ -122,6 +129,16 @@ class SageX3SendWizard(models.TransientModel):
                 ('date',         '<=', wizard.date_to),
             ])
 
+            wizard.count_sale_invoices = self.env['account.move'].search_count([
+                ('move_type',                      'in', ('out_invoice', 'out_refund')),
+                ('state',                          '=',  'posted'),
+                ('sage_x3_sent',                   '=',  False),
+                ('company_id',                     'in', company_ids),
+                ('invoice_date',                   '>=', wizard.date_from),
+                ('invoice_date',                   '<=', wizard.date_to),
+                ('invoice_line_ids.sale_line_ids', '!=', False),
+            ])
+
     # =========================================================================
     # ACTION PRINCIPALE
     # =========================================================================
@@ -130,18 +147,18 @@ class SageX3SendWizard(models.TransientModel):
         """
         Lance les envois dans cet ordre :
           1. Récap journalier POS → ENCAI (ventes + règlements) + DECAI
-          2. Factures classiques hors POS → FACLI
-          3. Avoirs classiques hors POS   → AVCLI
+          2. Factures classiques hors POS (FACLI / AVCLI) — sélection manuelle
+          3. Factures liées à des ventes (sale.order) → FACLI / AVCLI — auto
 
         Les account.payment sont inclus dans l'ENCAI du flux POS (étape 1).
         Ils ne sont jamais envoyés séparément pour éviter les doublons.
         """
         self.ensure_one()
 
-        company_ids    = self.company_ids.ids
-        account_model  = self.env['account.move']
+        company_ids   = self.company_ids.ids
+        account_model = self.env['account.move']
 
-        # Factures et avoirs classiques hors POS (les deux types ensemble)
+        # Factures et avoirs classiques hors POS (avoirs POS is_limit)
         moves = account_model.search([
             ('move_type', '=', 'out_refund'),
             ('state', '=', 'posted'),
@@ -160,7 +177,7 @@ class SageX3SendWizard(models.TransientModel):
 
         _logger.info(
             "📤 Envoi SAGE X3 | Sociétés: %s | Période: %s → %s | "
-            "Factures/Avoirs: %s",
+            "Avoirs POS is_limit: %s",
             self.company_ids.mapped('name'),
             self.date_from,
             self.date_to,
@@ -168,34 +185,43 @@ class SageX3SendWizard(models.TransientModel):
         )
 
         # ── Flux 1 : Récap journalier POS (ENCAI + DECAI) ────────────────────
-        # Inclut automatiquement les account.payment du jour dans l'ENCAI
         result_pos = account_model._process_bulk_send_to_sage_x3(
             self.date_from, self.date_to, company_ids
         )
 
-        # ── Flux 2 : Factures et avoirs classiques (FACLI / AVCLI) ───────────
+        # ── Flux 2 : Avoirs classiques hors POS (sélection manuelle) ─────────
         result_invoices = account_model._process_bulk_send_classic_invoices_to_sage_x3(
             pending_invoices_refunds.ids
         )
 
+        # ── Flux 3 : Factures liées à des ventes (sale.order) ────────────────
+        result_sale = account_model._process_bulk_send_sale_invoices_to_sage_x3(
+            self.date_from, self.date_to, company_ids
+        )
+
         # ── Résumé ────────────────────────────────────────────────────────────
-        total_success = result_pos['success'] + result_invoices['success']
-        total_errors  = result_pos['errors']  + result_invoices['errors']
+        total_errors = (
+            result_pos['errors'] + result_invoices['errors'] + result_sale['errors']
+        )
 
         if total_errors == 0:
             title      = "✅ Envoi terminé avec succès"
             notif_type = "success"
             message    = (
                 f"Toutes les données ont été envoyées.\n"
-                f"• Récap caisse POS  : {result_pos['success']} journée(s)\n"
-                f"• Factures / Avoirs : {result_invoices['success']}"
+                f"• Récap caisse POS     : {result_pos['success']} journée(s)\n"
+                f"• Avoirs POS classiques: {result_invoices['success']}\n"
+                f"• Factures ventes      : {result_sale['success']}"
             )
         else:
             title      = "⚠️ Envoi terminé avec erreurs"
             notif_type = "warning"
 
-            # ── Détail des écritures en erreur ───────────────────────────────
-            all_errors = result_pos['error_details'] + result_invoices['error_details']
+            all_errors = (
+                result_pos['error_details']
+                + result_invoices['error_details']
+                + result_sale['error_details']
+            )
 
             detail_lines = []
             for err in all_errors:
@@ -205,10 +231,12 @@ class SageX3SendWizard(models.TransientModel):
             detail_str = "\n".join(detail_lines) if detail_lines else "Voir les logs serveur."
 
             message = (
-                f"Récap caisse POS  : {result_pos['success']} succès "
+                f"Récap caisse POS     : {result_pos['success']} succès "
                 f"/ {result_pos['errors']} erreur(s)\n"
-                f"Factures / Avoirs : {result_invoices['success']} succès "
+                f"Avoirs POS classiques: {result_invoices['success']} succès "
                 f"/ {result_invoices['errors']} erreur(s)\n"
+                f"Factures ventes      : {result_sale['success']} succès "
+                f"/ {result_sale['errors']} erreur(s)\n"
                 f"\nÉcritures non envoyées :\n{detail_str}"
             )
 
@@ -220,6 +248,6 @@ class SageX3SendWizard(models.TransientModel):
                 'message': message,
                 'type':    notif_type,
                 'sticky':  True,
-                'next':    None,  # <-- plus d'erreur
+                'next':    None,
             },
         }

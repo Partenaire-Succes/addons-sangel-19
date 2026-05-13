@@ -31,6 +31,7 @@
                         <field name="count_refunds"      readonly="1"/>
                         <field name="count_payments"     readonly="1"/>
                         <field name="count_pos_sessions" readonly="1"/>
+                        <field name="count_sale_invoices" readonly="1"/>
                     </group>
                 </group>
                 <footer>
@@ -38,7 +39,7 @@
                             type="object"
                             string="Confirmer l'envoi"
                             class="btn-primary"
-                            invisible="count_pos_sessions == 0 and count_refunds == 0 and count_payments == 0"/>
+                            invisible="count_pos_sessions == 0 and count_refunds == 0 and count_payments == 0 and count_sale_invoices == 0"/>
                     <button string="Annuler" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>
