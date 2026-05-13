@@ -22,13 +22,46 @@
                             </div>
                         </div>
                     </section>
-                    
+
                 </t>
             </t>
 
         </xpath>
     </t>
 
+
+
+    <!-- FeedbackScreen : monnaie en grand, montant payé en petit -->
+    <t t-name="custom_pos.FeedbackScreen"
+       t-inherit="point_of_sale.FeedbackScreen"
+       t-inherit-mode="extension">
+
+        <xpath expr="//div[hasclass('amount-paid')]" position="replace">
+            <t t-if="this.currentOrder.amount_return > 0">
+                <div class="amount-paid fw-bolder">MONNAIE À RENDRE</div>
+            </t>
+            <t t-else="">
+                <div class="amount-paid fw-bolder">Montant payé</div>
+            </t>
+        </xpath>
+
+        <xpath expr="//div[hasclass('amount') and hasclass('lh-sm')]" position="replace">
+            <t t-if="this.currentOrder.amount_return > 0">
+                <div t-ref="amount" class="amount lh-sm text-dark fw-bold">
+                    <PriceFormatter price="this.env.utils.formatCurrency(this.currentOrder.amount_return, false)"/>
+                </div>
+                <div class="text-center text-secondary mt-3 fw-semibold" style="font-size: 26px;">
+                    Payé : <t t-esc="this.env.utils.formatCurrency(this.currentOrder.amount_paid, false)"/>
+                </div>
+            </t>
+            <t t-else="">
+                <div t-ref="amount" class="amount lh-sm">
+                    <PriceFormatter price="this.env.utils.formatCurrency(this.currentOrder.amount_total, false)"/>
+                </div>
+            </t>
+        </xpath>
+
+    </t>
 
 
     <!-- Insert Preset Remise Buttons into Actionpad (Product Screen) -->
