@@ -1,6 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
 
+    <!-- Vue liste pour le catalogue achat — lecture seule, produits en D déjà exclus par domaine -->
+    <record id="product_view_list_catalog_purchase" model="ir.ui.view">
+        <field name="name">product.view.list.catalog.purchase</field>
+        <field name="model">product.product</field>
+        <field name="arch" type="xml">
+            <list string="Produits" create="false" default_order="default_code, name">
+                <field name="default_code" string="Référence" optional="show"/>
+                <field name="name" string="Produit"/>
+                <field name="categ_id" string="Catégorie" optional="show"/>
+                <field name="uom_id" string="Unité" groups="uom.group_uom" optional="show"/>
+                <field name="current_company_status_id" string="Statut magasin" optional="show"/>
+            </list>
+        </field>
+    </record>
+
     <!--
         Filtre produits dans purchase.order.line :
           - actif_x3 = '1' (Actif X3 uniquement)
@@ -23,6 +38,7 @@
                         ('status_id.code', '=', 'D')
                     ])
                 ]</attribute>
+                <attribute name="options">{"no_create": True, "no_create_edit": True}</attribute>
             </xpath>
         </field>
     </record>
