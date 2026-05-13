@@ -306,4 +306,5 @@ Le module contient une base technique pour une promo type **“3 achetés = 1 of
 - [CAPTURE] Reçu : pied de page sans : "Powered by Odoo"
 - [CAPTURE] Rapport validation manager : liste des validations
 - [CAPTURE] Rapport validation manager : résumé global
-
+- [CAPTURE] Rapport validation manager : filtres (dates, caissier, etc.)
+- [CAPTURE] Rapport validation manager : export PDF/Excel
