@@ -19,7 +19,8 @@
                                 type="object"
                                 string="Actualiser Stock et Prix"
                                 class="btn-secondary"
-                                invisible="state == 'done'"/>
+                                confirm="Cette action va écraser le stock et le prix de toutes les lignes avec les valeurs actuelles. Confirmer ?"
+                                invisible="state != 'in_progress'"/>
 
                         <button name="action_done" 
                                 type="object"

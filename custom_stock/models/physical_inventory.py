@@ -176,8 +176,8 @@ class PhysicalInventory(models.Model):
 
     def action_refresh_qty_price(self):
         self.ensure_one()
-        if self.state == 'done':
-            raise UserError(_("Impossible d'actualiser un inventaire déjà terminé."))
+        if self.state != 'in_progress':
+            raise UserError(_("L'actualisation du stock et du prix n'est possible qu'en phase de Vérification."))
         for line in self.physical_line_ids.filtered(lambda l: l.active):
             quant = line.quant_id if line.quant_id and line.quant_id.exists() else False
             if not quant and line.product_id and line.location_id:
