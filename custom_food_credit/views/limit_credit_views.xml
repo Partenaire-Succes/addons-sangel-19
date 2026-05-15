@@ -98,6 +98,12 @@
                   action="action_limit_credit"
                   sequence="13"/>
 
+        <menuitem id="menu_limit_credit_report"
+                  name="Rapport des crédits clients"
+                  parent="sale.menu_sale_config"
+                  action="custom_food_credit.action_limit_credit_report_wizard"
+                  sequence="14"/>
+
 
     </data>
 
