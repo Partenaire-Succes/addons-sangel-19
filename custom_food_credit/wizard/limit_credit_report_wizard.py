@@ -17,7 +17,8 @@ class LimitCreditReportWizard(models.TransientModel):
     partner_ids = fields.Many2many(
         'res.partner',
         string='Clients',
-        help="Laisser vide pour inclure tous les clients",
+        domain=[('is_limit', '=', True)],
+        help="Laisser vide pour inclure tous les clients avec une limite de crédit",
     )
     date_from = fields.Date(
         string='Date début',
@@ -35,7 +36,7 @@ class LimitCreditReportWizard(models.TransientModel):
     ], string='Format', default='pdf', required=True)
 
     def _get_report_data(self):
-        domain = []
+        domain = [('is_limit', '=', True)]
         if self.partner_ids:
             domain.append(('partner_id', 'in', self.partner_ids.ids))
 
