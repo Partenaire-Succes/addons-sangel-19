@@ -18,7 +18,7 @@
 
                     <table class="table table-sm table-bordered o_main_table"
                            style="font-size:9pt;">
-                        <thead>
+                        <thead style="background-color:#1a3a5c;color:white;">
                             <tr>
                                 <th style="width:20%">Client</th>
                                 <th class="text-end" style="width:13%">Limite (FCFA)</th>
@@ -36,7 +36,7 @@
                                         <tr>
                                             <t t-if="op_index == 0">
                                                 <td t-att-rowspan="len(line['operations'])"
-                                                    style="font-weight:bold;vertical-align:top;">
+                                                    style="background:#dce6f1;font-weight:bold;vertical-align:top;">
                                                     <t t-out="line['partner_name']"/>
                                                 </td>
                                                 <td t-att-rowspan="len(line['operations'])"
@@ -66,7 +66,7 @@
                                 </t>
                                 <t t-else="">
                                     <tr>
-                                        <td style="font-weight:bold;">
+                                        <td style="background:#dce6f1;font-weight:bold;">
                                             <t t-out="line['partner_name']"/>
                                         </td>
                                         <td class="text-end">
