@@ -43,9 +43,16 @@ class UpdateLimitCreditWizard(models.TransientModel):
     )
     
     state = fields.Selection([
-        ('invoice', 'Réglé une facture'), 
-        ('limit', 'Modifier le crédit')
+        ('invoice', 'Réglé une facture'),
+        ('limit', 'Modifier le crédit'),
+        ('change_conso', 'Modifier la consommation'),
     ], string='Motif', default='invoice', required=True)
+
+    amount_conso = fields.Float(
+        string="Somme payée par le client",
+        default=0.0,
+        help="Montant payé directement par le client, déduit de la consommation actuelle.",
+    )
     
     amount_limit = fields.Float(
         string="Limite Crédit Actuelle", 
@@ -64,38 +71,47 @@ class UpdateLimitCreditWizard(models.TransientModel):
     def _check_amount(self):
         """Validation du montant"""
         for wizard in self:
-            if wizard.amount <= 0:
-                raise ValidationError("Le montant doit être supérieur à zéro.")
+            if self.state == 'invoice':
+                if wizard.amount <= 0:
+                    raise ValidationError("Le montant doit être supérieur à zéro.")
             
     @api.onchange('state', 'payment_id', 'limit_id')
     def _onchange_amount(self):
         if self.state == 'invoice':
             self.amount = self.payment_id.amount if self.payment_id else 0.0
-        else:
+        elif self.state == 'limit':
             self.amount = self.limit_id.amount_limit if self.limit_id else 0.0
+        else:
+            self.amount_conso = 0.0
     
     def update_limit_credit(self):
         """Met à jour la limite de crédit selon le motif"""
         self.ensure_one()
-        
-        if not self.limit_id:
-            raise UserError("Veuillez sélectionner un client.")
-        
-        if self.amount <= 0:
-            raise UserError("Le montant doit être supérieur à zéro.")
-        
+ 
         try:
             existing_limit = self.limit_id
             
             if self.state == 'invoice':
                 # Cas: Règlement d'une facture - diminue le crédit consommé
+                if self.amount <= 0:
+                    raise UserError("Le montant doit être supérieur à zéro.")
+
                 self._process_invoice_payment(existing_limit)
                 message = f"Facture de {self.amount:.2f} FCFA réglée avec succès"
-                
+
             elif self.state == 'limit':
                 # Cas: Modification de la limite de crédit
+                if not self.limit_id:
+                    raise UserError("Veuillez sélectionner un client.")
                 self._process_limit_update(existing_limit)
                 message = f"Limite de crédit modifiée de {existing_limit.amount_limit:.2f} à {self.amount:.2f} FCFA"
+
+            elif self.state == 'change_conso':
+                # Cas: Modification directe de la consommation
+                if self.amount_conso <= 0:
+                    raise UserError("La somme payée doit être supérieure à zéro.")
+                self._process_conso_update(existing_limit)
+                message = f"Consommation réduite de {self.amount_conso:.2f} FCFA"
             else:
                 raise UserError("Motif invalide sélectionné.")
             
@@ -179,6 +195,28 @@ class UpdateLimitCreditWizard(models.TransientModel):
             f"{old_limit:.2f} → {self.amount:.2f} FCFA"
         )
     
+    def _process_conso_update(self, limit_credit):
+        """Modifie directement la consommation via une somme payée par le client"""
+        if self.amount_conso > limit_credit.amount_limit_consumed:
+            raise UserError(
+                f"La somme payée ({self.amount_conso:.2f} FCFA) ne peut pas "
+                f"dépasser la consommation actuelle ({limit_credit.amount_limit_consumed:.2f} FCFA)."
+            )
+        new_consumed = limit_credit.amount_limit_consumed - self.amount_conso
+        limit_credit.write({'amount_limit_consumed': new_consumed})
+
+        self.env['limit.credit.operation'].create({
+            'limit_id': limit_credit.id,
+            'name': f"Modification consommation - paiement {self.amount_conso:.2f} FCFA",
+            'amount_operation': -self.amount_conso,
+            'operation_date': fields.Datetime.now(),
+        })
+
+        _logger.info(
+            f"Consommation modifiée pour {limit_credit.partner_id.name}: "
+            f"-{self.amount_conso:.2f} FCFA → nouveau consommé: {new_consumed:.2f} FCFA"
+        )
+
     def action_cancel(self):
         """Ferme le wizard sans action"""
         return {'type': 'ir.actions.act_window_close'}
