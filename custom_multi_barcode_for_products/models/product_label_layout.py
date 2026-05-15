@@ -17,7 +17,7 @@ class ProductLabelLayout(models.TransientModel):
         company = self.env.company
 
         # Étape 1 : récupérer les promos actives pour la société courante (une seule requête)
-        active_promos = self.env['sale.promotion'].search([
+        active_promos = self.env['sale.promotion'].sudo().search([
             ('date_start', '<=', today),
             ('date_end', '>=', today),
             ('active', '=', True),
@@ -63,7 +63,7 @@ class ProductLabelLayout(models.TransientModel):
                     price_ttc = price_ht
 
                 # Étape 2 : chercher une ligne de promo pour ce produit parmi les promos actives
-                promo_line = self.env['sale.promotion.line'].search([
+                promo_line = self.env['sale.promotion.line'].sudo().search([
                     ('product_id', '=', product.id),
                     ('promotion_id', 'in', active_promos.ids),
                 ], limit=1)

@@ -29,8 +29,8 @@
                 <t t-set="today"         t-value="datetime.date.today()"/>
                 <t t-set="curr_co_id"    t-value="product.env.company.id"/>
                 <t t-set="variant_ids"   t-value="[product.id] if product._name == 'product.product' else product.product_variant_ids.ids"/>
-                <t t-set="active_promos" t-value="product.env['sale.promotion'].search([('date_start', '&lt;=', today), ('date_end', '&gt;=', today), ('active', '=', True), '|', ('company_ids', '=', False), ('company_ids', 'in', [curr_co_id])])"/>
-                <t t-set="promo_line"    t-value="product.env['sale.promotion.line'].search([('product_id', 'in', variant_ids), ('promotion_id', 'in', active_promos.ids)], limit=1)"/>
+                <t t-set="active_promos" t-value="product.env['sale.promotion'].sudo().search([('date_start', '&lt;=', today), ('date_end', '&gt;=', today), ('active', '=', True), '|', ('company_ids', '=', False), ('company_ids', 'in', [curr_co_id])])"/>
+                <t t-set="promo_line"    t-value="product.env['sale.promotion.line'].sudo().search([('product_id', 'in', variant_ids), ('promotion_id', 'in', active_promos.ids)], limit=1)"/>
                 <t t-set="price_display" t-value="promo_line.promo_ttc if promo_line else price_ttc"/>
 
                 <div class="o_label_full"
@@ -170,8 +170,8 @@
                 <t t-set="today"         t-value="datetime.date.today()"/>
                 <t t-set="curr_co_id"    t-value="product.env.company.id"/>
                 <t t-set="variant_ids"   t-value="[product.id] if product._name == 'product.product' else product.product_variant_ids.ids"/>
-                <t t-set="active_promos" t-value="product.env['sale.promotion'].search([('date_start', '&lt;=', today), ('date_end', '&gt;=', today), ('active', '=', True), '|', ('company_ids', '=', False), ('company_ids', 'in', [curr_co_id])])"/>
-                <t t-set="promo_line"    t-value="product.env['sale.promotion.line'].search([('product_id', 'in', variant_ids), ('promotion_id', 'in', active_promos.ids)], limit=1)"/>
+                <t t-set="active_promos" t-value="product.env['sale.promotion'].sudo().search([('date_start', '&lt;=', today), ('date_end', '&gt;=', today), ('active', '=', True), '|', ('company_ids', '=', False), ('company_ids', 'in', [curr_co_id])])"/>
+                <t t-set="promo_line"    t-value="product.env['sale.promotion.line'].sudo().search([('product_id', 'in', variant_ids), ('promotion_id', 'in', active_promos.ids)], limit=1)"/>
                 <t t-set="price_display" t-value="promo_line.promo_ttc if promo_line else price_ttc"/>
 
                 <div class="o_label_full"
