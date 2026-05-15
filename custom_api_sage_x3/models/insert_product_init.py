@@ -968,3 +968,15 @@ class ProductProduct(models.Model):
 
     def action_import_products_external_source(self):
         return self.product_tmpl_id.action_import_products_external_source()
+
+    def action_delete_products_no_company(self):
+        return self.product_tmpl_id.action_delete_products_no_company()
+
+    def normalize_taxes_tva_all_companies(self):
+        return self.product_tmpl_id.normalize_taxes_tva_all_companies()
+
+    def normalize_taxes_airsi_all_companies(self):
+        return self.product_tmpl_id.normalize_taxes_airsi_all_companies()
+
+    def reset_airsi_taxes_all_products(self):
+        return self.product_tmpl_id.reset_airsi_taxes_all_products()

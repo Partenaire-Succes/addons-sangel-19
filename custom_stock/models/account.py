@@ -14,13 +14,11 @@ class AccountMoveSageX3(models.Model):
     sage_x3_sent = fields.Boolean(
         string="Envoyé à SAGE X3",
         default=False,
-        readonly=True,
         copy=False,
         help="Indique si la facture a été envoyée à SAGE X3"
     )
     sage_x3_sent_date = fields.Datetime(
         string="Date envoi SAGE X3",
-        readonly=True,
         copy=False
     )
     sage_sent = fields.Boolean(
@@ -60,12 +58,10 @@ class AccountPaymentSageX3(models.Model):
     sage_x3_sent = fields.Boolean(
         string="Envoyé à SAGE X3",
         default=False,
-        readonly=True,
         copy=False
     )
     sage_x3_sent_date = fields.Datetime(
         string="Date envoi SAGE X3",
-        readonly=True,
         copy=False
     )
     sage_x3_piece_number = fields.Char(

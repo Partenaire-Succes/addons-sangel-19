@@ -214,7 +214,6 @@ class PosSession(models.Model):
     sage_x3_piece_number = fields.Char(string="Numéro de pièce SAGE X3", copy=False)
     message = fields.Text(
         string="Réponse SAGE X3",
-        readonly=True,
         copy=False
     )
 
@@ -226,7 +225,6 @@ class PosPayment(models.Model):
     sage_x3_piece_number = fields.Char(string="Numéro de pièce SAGE X3", copy=False)
     message = fields.Text(
         string="Réponse SAGE X3",
-        readonly=True,
         copy=False
     )
 

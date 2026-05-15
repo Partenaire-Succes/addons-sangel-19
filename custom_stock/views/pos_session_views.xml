@@ -10,12 +10,12 @@
             <xpath expr="//group" position="after">
                 <group name="sage_x3" string="SAGE X3">
                     <group>
-                        <field name="sage_x3_piece_number"/>
-                        <field name="sage_x3_sent"/>
+                        <field name="sage_x3_piece_number" readonly="False"/>
+                        <field name="sage_x3_sent" readonly="False"/>
                     </group>
                     <group>
-                        <field name="sage_x3_sent_date"/>
-                        <field name="message"/>
+                        <field name="sage_x3_sent_date" readonly="False"/>
+                        <field name="message" readonly="False"/>
                     </group>
                 </group>
             </xpath>

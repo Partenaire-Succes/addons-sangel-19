@@ -12,19 +12,26 @@
                 <t t-set="price_ht"
                    t-value="pricelist._get_product_price(
                                 product, 1,
-                                currency=pricelist.currency_id or product.currency_id)"/>
+                                currency=pricelist.currency_id or product.currency_id)
+                             if pricelist else (product.lst_price if product._name == 'product.product' else product.list_price)"/>
                 <t t-set="applicable_taxes"
                    t-value="product.taxes_id.filtered(
-                                lambda t: t.company_id == product.env.user.company_id)"/>
+                                lambda t: t.company_id == product.env.company)"/>
                 <t t-set="tax_result"
                    t-value="applicable_taxes.compute_all(
                                 price_ht,
-                                pricelist.currency_id or product.currency_id,
+                                (pricelist.currency_id if pricelist else False) or product.currency_id,
                                 1, product=product)"/>
                 <t t-set="price_ttc" t-value="tax_result['total_included']"/>
-                <t t-set="company"   t-value="product.env.user.company_id"/>
+                <t t-set="company"   t-value="product.env.company"/>
                 <t t-set="logo_bin"  t-value="company.label_logo"/>
                 <t t-set="hcol"      t-value="company.primary_color or '#1a3a5c'"/>
+                <t t-set="today"         t-value="datetime.date.today()"/>
+                <t t-set="curr_co_id"    t-value="product.env.company.id"/>
+                <t t-set="variant_ids"   t-value="[product.id] if product._name == 'product.product' else product.product_variant_ids.ids"/>
+                <t t-set="active_promos" t-value="product.env['sale.promotion'].search([('date_start', '&lt;=', today), ('date_end', '&gt;=', today), ('active', '=', True), '|', ('company_ids', '=', False), ('company_ids', 'in', [curr_co_id])])"/>
+                <t t-set="promo_line"    t-value="product.env['sale.promotion.line'].search([('product_id', 'in', variant_ids), ('promotion_id', 'in', active_promos.ids)], limit=1)"/>
+                <t t-set="price_display" t-value="promo_line.promo_ttc if promo_line else price_ttc"/>
 
                 <div class="o_label_full"
                      t-att-style="table_style + ';font-family:Arial,Helvetica,sans-serif;box-sizing:border-box;overflow:hidden;padding:0;margin:0;'">
@@ -65,7 +72,7 @@
                                             letter-spacing:-1px;
                                             white-space:nowrap;
                                             text-align:center;">
-                                    <t t-out="'{:,.0f}'.format(price_ttc).replace(',', '&#160;')"/>
+                                    <t t-out="'{:,.0f}'.format(price_display).replace(',', '&#160;')"/>
                                 </div>
 
                                 <!-- UNITE -->
@@ -133,19 +140,26 @@
                 <t t-set="price_ht"
                    t-value="pricelist._get_product_price(
                                 product, 1,
-                                currency=pricelist.currency_id or product.currency_id)"/>
+                                currency=pricelist.currency_id or product.currency_id)
+                             if pricelist else (product.lst_price if product._name == 'product.product' else product.list_price)"/>
                 <t t-set="applicable_taxes"
                    t-value="product.taxes_id.filtered(
-                                lambda t: t.company_id == product.env.user.company_id)"/>
+                                lambda t: t.company_id == product.env.company)"/>
                 <t t-set="tax_result"
                    t-value="applicable_taxes.compute_all(
                                 price_ht,
-                                pricelist.currency_id or product.currency_id,
+                                (pricelist.currency_id if pricelist else False) or product.currency_id,
                                 1, product=product)"/>
                 <t t-set="price_ttc" t-value="tax_result['total_included']"/>
-                <t t-set="company"   t-value="product.env.user.company_id"/>
+                <t t-set="company"   t-value="product.env.company"/>
                 <t t-set="logo_bin"  t-value="company.label_logo"/>
                 <t t-set="hcol"      t-value="company.primary_color or '#1a3a5c'"/>
+                <t t-set="today"         t-value="datetime.date.today()"/>
+                <t t-set="curr_co_id"    t-value="product.env.company.id"/>
+                <t t-set="variant_ids"   t-value="[product.id] if product._name == 'product.product' else product.product_variant_ids.ids"/>
+                <t t-set="active_promos" t-value="product.env['sale.promotion'].search([('date_start', '&lt;=', today), ('date_end', '&gt;=', today), ('active', '=', True), '|', ('company_ids', '=', False), ('company_ids', 'in', [curr_co_id])])"/>
+                <t t-set="promo_line"    t-value="product.env['sale.promotion.line'].search([('product_id', 'in', variant_ids), ('promotion_id', 'in', active_promos.ids)], limit=1)"/>
+                <t t-set="price_display" t-value="promo_line.promo_ttc if promo_line else price_ttc"/>
 
                 <div class="o_label_full"
                      t-att-style="table_style + ';font-family:Arial,Helvetica,sans-serif;box-sizing:border-box;overflow:hidden;padding:0;margin:0;'">
@@ -186,7 +200,7 @@
                                             letter-spacing:-1px;
                                             white-space:nowrap;
                                             text-align:center;">
-                                    <t t-out="'{:,.0f}'.format(price_ttc).replace(',', '&#160;')"/>
+                                    <t t-out="'{:,.0f}'.format(price_display).replace(',', '&#160;')"/>
                                 </div>
 
                                 <!-- UNITE -->
