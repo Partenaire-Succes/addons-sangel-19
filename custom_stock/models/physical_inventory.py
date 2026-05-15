@@ -174,6 +174,21 @@ class PhysicalInventory(models.Model):
             else:
                 line.price = line.standard_price
 
+    def action_refresh_qty_price(self):
+        self.ensure_one()
+        if self.state == 'done':
+            raise UserError(_("Impossible d'actualiser un inventaire déjà terminé."))
+        for line in self.physical_line_ids.filtered(lambda l: l.active):
+            quant = line.quant_id if line.quant_id and line.quant_id.exists() else False
+            if not quant and line.product_id and line.location_id:
+                quant = self.env['stock.quant'].search([
+                    ('product_id',  '=', line.product_id.id),
+                    ('location_id', '=', line.location_id.id),
+                    ('lot_id',      '=', line.lot_id.id if line.lot_id else False),
+                ], limit=1)
+            if quant:
+                line.quantity = quant.quantity
+            line.price = line.product_tmpl_id.standard_price
 
     @api.constrains('inventory_mode', 'code_inventory_id', 'code_category_id', 'team_inventory_id')
     def _check_required_fields_for_normal_mode(self):
@@ -347,7 +362,7 @@ class PhysicalInventoryLine(models.Model):
     code_article = fields.Char(string='Code Article', related='product_tmpl_id.code_article')
                 
 
-    @api.depends('physical_qty', 'quantity', 'standard_price', 'price')
+    @api.depends('physical_qty', 'quantity', 'price')
     def compute_qty_dif(self):
         for line in self:
             # Utiliser `quantity` (stock du quant) et non `qty` (qty_available)

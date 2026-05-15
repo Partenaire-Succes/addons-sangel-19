@@ -41,16 +41,16 @@
                                                 </td>
                                                 <td t-att-rowspan="len(line['operations'])"
                                                     class="text-end" style="vertical-align:top;">
-                                                    <t t-out="'{:,.0f}'.format(line['amount_limit'])"/>
+                                                    <t t-out="'{:,.0f}'.format(line['amount_limit']).replace(',', ' ')"/>
                                                 </td>
                                                 <td t-att-rowspan="len(line['operations'])"
                                                     class="text-end" style="vertical-align:top;">
-                                                    <t t-out="'{:,.0f}'.format(line['amount_consumed'])"/>
+                                                    <t t-out="'{:,.0f}'.format(line['amount_consumed']).replace(',', ' ')"/>
                                                 </td>
                                                 <td t-att-rowspan="len(line['operations'])"
                                                     class="text-end" style="vertical-align:top;"
                                                     t-att-class="'text-danger' if line['amount_solde'] &lt; 0 else ''">
-                                                    <t t-out="'{:,.0f}'.format(line['amount_solde'])"/>
+                                                    <t t-out="'{:,.0f}'.format(line['amount_solde']).replace(',', ' ')"/>
                                                 </td>
                                             </t>
                                             <td><t t-out="op['name']"/></td>
@@ -59,7 +59,7 @@
                                             </td>
                                             <td class="text-end"
                                                 t-att-style="'color:#cc0000' if op['amount'] &lt; 0 else 'color:#007700'">
-                                                <t t-out="'{:,.0f}'.format(op['amount'])"/>
+                                                <t t-out="'{:,.0f}'.format(op['amount']).replace(',', ' ')"/>
                                             </td>
                                         </tr>
                                     </t>
@@ -70,14 +70,14 @@
                                             <t t-out="line['partner_name']"/>
                                         </td>
                                         <td class="text-end">
-                                            <t t-out="'{:,.0f}'.format(line['amount_limit'])"/>
+                                            <t t-out="'{:,.0f}'.format(line['amount_limit']).replace(',', ' ')"/>
                                         </td>
                                         <td class="text-end">
-                                            <t t-out="'{:,.0f}'.format(line['amount_consumed'])"/>
+                                            <t t-out="'{:,.0f}'.format(line['amount_consumed']).replace(',', ' ')"/>
                                         </td>
                                         <td class="text-end"
                                             t-att-class="'text-danger' if line['amount_solde'] &lt; 0 else ''">
-                                            <t t-out="'{:,.0f}'.format(line['amount_solde'])"/>
+                                            <t t-out="'{:,.0f}'.format(line['amount_solde']).replace(',', ' ')"/>
                                         </td>
                                         <td colspan="3" class="text-center text-muted fst-italic">
                                             Aucune opération sur la période
