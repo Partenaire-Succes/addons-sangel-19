@@ -55,8 +55,8 @@
                         <tr style="height:29mm;">
 
                             <!-- GAUCHE : prix + unite + ref -->
-                            <td style="vertical-align:middle;
-                                       padding:2mm 1mm 2mm 3mm;
+                            <td style="vertical-align:top;
+                                       padding:0.5mm 1mm 2mm 3mm;
                                        text-align:center;">
 
                                 <div class="o_label_extra_data"
@@ -64,16 +64,29 @@
                                     <t t-out="extra_html"/>
                                 </div>
 
-                                <!-- PRIX GRAND ET CENTRE -->
-                                <div style="font-size:30pt;
-                                            font-weight:900;
-                                            line-height:1;
-                                            color:#111;
-                                            letter-spacing:-1px;
-                                            white-space:nowrap;
-                                            text-align:center;">
-                                    <t t-out="'{:,.0f}'.format(price_display).replace(',', '&#160;')"/>
-                                </div>
+                                <!-- PRIX -->
+                                <t t-if="promo_line">
+                                    <div style="font-size:34pt;
+                                                font-weight:900;
+                                                line-height:1;
+                                                white-space:nowrap;
+                                                text-align:center;
+                                                letter-spacing:-1px;">
+                                        <span style="font-size:10pt;font-weight:700;color:#666;text-decoration:line-through;vertical-align:middle;"><t t-out="'{:,.0f}'.format(price_ttc).replace(',', '&#160;')"/></span>
+                                        <span style="color:#111;vertical-align:middle;">&#160;<t t-out="'{:,.0f}'.format(price_display).replace(',', '&#160;')"/></span>
+                                    </div>
+                                </t>
+                                <t t-else="">
+                                    <div style="font-size:34pt;
+                                                font-weight:900;
+                                                line-height:1;
+                                                color:#111;
+                                                letter-spacing:-1px;
+                                                white-space:nowrap;
+                                                text-align:center;">
+                                        <t t-out="'{:,.0f}'.format(price_display).replace(',', '&#160;')"/>
+                                    </div>
+                                </t>
 
                                 <!-- UNITE -->
                                 <div style="font-size:8.5pt;
@@ -183,8 +196,8 @@
                         <tr style="height:28mm;">
 
                             <!-- GAUCHE : prix + unite + ref -->
-                            <td style="vertical-align:middle;
-                                       padding:1.5mm 0.5mm 1.5mm 2mm;
+                            <td style="vertical-align:top;
+                                       padding:0.5mm 0.5mm 1.5mm 2mm;
                                        text-align:center;">
 
                                 <div class="o_label_extra_data"
@@ -192,16 +205,29 @@
                                     <t t-out="extra_html"/>
                                 </div>
 
-                                <!-- PRIX GRAND ET CENTRE -->
-                                <div style="font-size:24pt;
-                                            font-weight:900;
-                                            line-height:1;
-                                            color:#111;
-                                            letter-spacing:-1px;
-                                            white-space:nowrap;
-                                            text-align:center;">
-                                    <t t-out="'{:,.0f}'.format(price_display).replace(',', '&#160;')"/>
-                                </div>
+                                <!-- PRIX -->
+                                <t t-if="promo_line">
+                                    <div style="font-size:26pt;
+                                                font-weight:900;
+                                                line-height:1;
+                                                white-space:nowrap;
+                                                text-align:center;
+                                                letter-spacing:-1px;">
+                                        <span style="font-size:8pt;font-weight:700;color:#666;text-decoration:line-through;vertical-align:middle;"><t t-out="'{:,.0f}'.format(price_ttc).replace(',', '&#160;')"/></span>
+                                        <span style="color:#111;vertical-align:middle;">&#160;<t t-out="'{:,.0f}'.format(price_display).replace(',', '&#160;')"/></span>
+                                    </div>
+                                </t>
+                                <t t-else="">
+                                    <div style="font-size:26pt;
+                                                font-weight:900;
+                                                line-height:1;
+                                                color:#111;
+                                                letter-spacing:-1px;
+                                                white-space:nowrap;
+                                                text-align:center;">
+                                        <t t-out="'{:,.0f}'.format(price_display).replace(',', '&#160;')"/>
+                                    </div>
+                                </t>
 
                                 <!-- UNITE -->
                                 <div style="font-size:7pt;
