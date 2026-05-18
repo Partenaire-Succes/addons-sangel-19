@@ -59,43 +59,63 @@ class ProductProduct(models.Model):
         for product in self:
             if product.cost_method != 'average':
                 continue
-            ancien = prix_avant.get(product.id, 0.0)
+            ancien  = prix_avant.get(product.id, 0.0)
             nouveau = product.with_company(self.env.company).standard_price
-
-            if ancien <= 0 or nouveau <= 0:
-                continue
 
             qty_dispo = product.with_context(company_id=self.env.company.id).qty_available
             qty_nulle = float_is_zero(qty_dispo, precision_rounding=product.uom_id.rounding)
 
-            corruption_detectee = (nouveau > ancien * RATIO_ALERTE) and qty_nulle
+            # --- Detection par valeur absolue -----------------------------------
+            # L'ancienne logique utilisait (nouveau > ancien * RATIO_ALERTE)
+            # et sautait si nouveau <= 0. Cela manquait les corruptions negatives
+            # (ex : -2.22e22) car la condition `nouveau <= 0` stoppait le check.
+            #
+            # On utilise abs(nouveau) pour capter les deux sens de corruption :
+            #   + infini (valeur residuelle positive / quasi-zero)
+            #   - infini (valeur residuelle negative / quasi-zero)
+            # -----------------------------------------------------------------------
+            abs_nouveau = abs(nouveau)
 
-            if corruption_detectee:
-                _logger.warning(
-                    '[AVCO_GUARD] Corruption FP bloquee — produit: %s (id=%s) '
-                    'ancien: %.4f  nouveau aberrant: %.4e  qty: %.6f — '
-                    'Ancien prix conserve.',
-                    product.display_name, product.id, ancien, nouveau, qty_dispo,
+            corruption_detectee = (
+                # Cas 1 : valeur absolue depasse le seuil physique max — stock nul
+                (abs_nouveau > SEUIL_MAX_FCFA and qty_nulle)
+                # Cas 2 : rapport vs ancien trop grand — stock nul — si ancien connu
+                or (ancien > 0 and abs_nouveau > ancien * RATIO_ALERTE and qty_nulle)
+            )
+
+            if not corruption_detectee:
+                continue
+
+            # Prix de repli : dernier prix valide avant le mouvement (ou 0 si inconnu)
+            prix_repli = ancien if ancien > 0 else 0.0
+
+            _logger.warning(
+                '[AVCO_GUARD] Corruption FP bloquee — produit: %s (id=%s) '
+                'ancien: %.4f  nouveau aberrant: %.4e  qty: %.6f — '
+                'Prix restaure: %.4f',
+                product.display_name, product.id, ancien, nouveau,
+                qty_dispo, prix_repli,
+            )
+            product.sudo().with_context(
+                disable_auto_revaluation=True
+            ).standard_price = prix_repli
+
+            try:
+                product.message_post(
+                    body=(
+                        '<b>AVCO GUARD</b> : Corruption de prix bloquee automatiquement.<br/>'
+                        f'Prix aberrant calcule : <b>{nouveau:,.2f} FCFA</b><br/>'
+                        f'Prix restaure : <b>{prix_repli:,.2f} FCFA</b><br/>'
+                        f'Quantite en stock : <b>{qty_dispo:.4f}</b><br/>'
+                        '<i>Cause : stock passe par zero (vente en negatif + '
+                        'ajustement inventaire). Valeur residuelle non nulle '
+                        'divisee par une quantite quasi-zero (IEEE 754).</i>'
+                    ),
+                    message_type='notification',
+                    subtype_xmlid='mail.mt_note',
                 )
-                product.sudo().with_context(
-                    disable_auto_revaluation=True
-                ).standard_price = ancien
-
-                # Poster une note dans le chatter du produit
-                try:
-                    product.message_post(
-                        body=(
-                            '<b>AVCO GUARD</b> : Corruption de prix bloquee automatiquement.<br/>'
-                            f'Prix aberrant calcule : <b>{nouveau:,.2f} FCFA</b><br/>'
-                            f'Prix conserve : <b>{ancien:,.2f} FCFA</b><br/>'
-                            f'Quantite en stock au moment de la correction : <b>{qty_dispo:.4f}</b><br/>'
-                            '<i>Cause probable : stock passe par zero (vente en negatif + ajustement inventaire).</i>'
-                        ),
-                        message_type='notification',
-                        subtype_xmlid='mail.mt_note',
-                    )
-                except Exception as exc:
-                    _logger.error('[AVCO_GUARD] Impossible de poster le chatter : %s', exc)
+            except Exception as exc:
+                _logger.error('[AVCO_GUARD] Impossible de poster le chatter : %s', exc)
 
         return result
 
