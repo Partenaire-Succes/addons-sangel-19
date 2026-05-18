@@ -197,7 +197,7 @@ class PurchaseOrderSageX3(models.Model):
                 "DateCommande":            date_commande,
                 "Client":                  self.company_id.lib_company or "YOP01",
                 "Devise":                  self.currency_id.name or "XOF",
-                "Magasin":                 self.company_id.name or "PRINCIPAL",
+                "Magasin":                 self.company_id.lib_company or "PRINCIPAL",
                 "ReferenceCommandeClient": self.name,
                 "items":                   items,
             }]
