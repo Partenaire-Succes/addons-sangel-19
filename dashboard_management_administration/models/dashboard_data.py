@@ -43,8 +43,20 @@ class DashboardManagementAdmin(models.Model):
         all_orders = self.env['sale.order'].search(invoice_domain)
         orders = self.env['sale.order'].search(invoice_domain, limit=LIMIT, order='date_order desc')
 
-        total = sum(all_orders.mapped('amount_total'))
-        total_ht = sum(all_orders.mapped('amount_untaxed'))
+        # Avoirs validés sur la période (hors POS)
+        refunds = self.env['account.move'].search([
+            ('invoice_date', '>=', date_from),
+            ('invoice_date', '<=', date_to),
+            ('move_type', '=', 'out_refund'),
+            ('state', '=', 'posted'),
+            ('pos_order_ids', '=', False),
+            ('company_id', '=', self.env.company.id),
+        ])
+        refund_ht = sum(refunds.mapped('amount_untaxed'))
+        refund_ttc = sum(refunds.mapped('amount_total'))
+
+        total = sum(all_orders.mapped('amount_total')) - refund_ttc
+        total_ht = sum(all_orders.mapped('amount_untaxed')) - refund_ht
         marge = sum(all_orders.mapped('margin'))
         marge_percent = round(marge / total_ht * 100, 2) if total_ht else 0
 
