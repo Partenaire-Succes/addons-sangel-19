@@ -142,6 +142,7 @@ class PurchaseOrderSageX3(models.Model):
             "Accept":        "application/json",
         }
 
+        _logger.info("📤 Payload SAGE X3 Orders: %s", json.dumps(order_data, default=str, ensure_ascii=False))
         response_data = self._safe_post(orders_url, headers, order_data).json()
 
         if isinstance(response_data, list) and response_data:
@@ -186,11 +187,14 @@ class PurchaseOrderSageX3(models.Model):
                 "quantite":   max(line.product_qty, 0.01),
             })
 
+        dt = self.date_order or datetime.now()
+        date_commande = dt.strftime('%Y-%m-%dT%H:%M:%S.') + f"{dt.microsecond // 1000:03d}Z"
+
         return {
             "commandes": [{
                 "NumeroCommande":          self.name,
                 "siteVente":               "VRIDI",
-                "DateCommande":            (self.date_order or datetime.now()).isoformat(),
+                "DateCommande":            date_commande,
                 "Client":                  self.company_id.lib_company or "YOP01",
                 "Devise":                  self.currency_id.name or "XOF",
                 "Magasin":                 self.company_id.name or "PRINCIPAL",
