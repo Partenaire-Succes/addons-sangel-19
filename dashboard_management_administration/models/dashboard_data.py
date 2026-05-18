@@ -71,6 +71,7 @@ class DashboardManagementAdmin(models.Model):
                 'marge_percent': round(o.margin / o.amount_untaxed * 100 if o.amount_untaxed else 0, 2),
             } for o in orders],
             'total': total,
+            'total_ht': total_ht,
             'count': len(all_orders),
             'marge': marge,
             'marge_percent': marge_percent,
@@ -90,8 +91,13 @@ class DashboardManagementAdmin(models.Model):
         orders = self.env['pos.order'].search(domain, limit=LIMIT, order='date_order desc')
 
         total = sum(all_orders.mapped('amount_total'))
+        total_ht = sum(
+            order.amount_total if order.amount_tax == 0
+            else (order.amount_total - order.amount_tax)
+            for order in all_orders
+        )
         marge = sum(all_orders.mapped('margin'))
-        marge_percent = round(marge / total * 100, 2) if total else 0
+        marge_percent = round(marge / total_ht * 100, 2) if total_ht else 0
 
         return {
             'orders': [{
@@ -104,6 +110,7 @@ class DashboardManagementAdmin(models.Model):
                 'marge_percent': round(o.margin / o.amount_total * 100 if o.amount_total else 0, 2),
             } for o in orders],
             'total': total,
+            'total_ht': total_ht,
             'count': len(all_orders),
             'marge': marge,
             'marge_percent': marge_percent,
@@ -155,6 +162,20 @@ class DashboardManagementAdmin(models.Model):
                 pid = o.partner_id.id
                 sales_data[pid] = sales_data.get(pid, 0) + o.amount_total
 
+        # Avoirs validés, soustraits par partenaire
+        refunds = self.env['account.move'].search([
+            ('invoice_date', '>=', date_from),
+            ('invoice_date', '<=', date_to),
+            ('move_type', '=', 'out_refund'),
+            ('state', '=', 'posted'),
+            ('pos_order_ids', '=', False),
+            ('company_id', '=', company_id),
+        ])
+        for move in refunds:
+            if move.partner_id.id:
+                pid = move.partner_id.id
+                sales_data[pid] = sales_data.get(pid, 0) - move.amount_total
+
         # Ventes POS
         query_pos = """
             SELECT partner_id, SUM(amount_total) as total
@@ -192,8 +213,9 @@ class DashboardManagementAdmin(models.Model):
         achats = self._get_achats_commande(date_from, date_to)
 
         total_revenus = ventes['total'] + pos['total']
+        total_revenus_ht = ventes['total_ht'] + pos['total_ht']
         marge_brute = ventes['marge'] + pos['marge']
-        taux_marge = round(marge_brute / total_revenus * 100, 2) if total_revenus > 0 else 0,
+        taux_marge = round(marge_brute / total_revenus_ht * 100, 2) if total_revenus_ht > 0 else 0
 
         return {
             'total_ventes': ventes['total'],
@@ -214,7 +236,7 @@ class DashboardManagementAdmin(models.Model):
     def _get_evolution_ventes(self, date_from, date_to):
         company_id = self.env.company.id
 
-        # Ventes via factures validées, groupées par invoice_date
+        # Factures validées, groupées par invoice_date
         sale_moves = self.env['account.move'].search([
             ('invoice_date', '>=', date_from),
             ('invoice_date', '<=', date_to),
@@ -227,6 +249,19 @@ class DashboardManagementAdmin(models.Model):
         for move in sale_moves:
             date_str = move.invoice_date.strftime('%Y-%m-%d')
             sales_by_date[date_str] = sales_by_date.get(date_str, 0) + move.amount_total
+
+        # Avoirs validés, soustraits par date
+        refunds = self.env['account.move'].search([
+            ('invoice_date', '>=', date_from),
+            ('invoice_date', '<=', date_to),
+            ('move_type', '=', 'out_refund'),
+            ('state', '=', 'posted'),
+            ('pos_order_ids', '=', False),
+            ('company_id', '=', company_id),
+        ])
+        for move in refunds:
+            date_str = move.invoice_date.strftime('%Y-%m-%d')
+            sales_by_date[date_str] = sales_by_date.get(date_str, 0) - move.amount_total
 
         # POS par date_order
         query_pos = """
