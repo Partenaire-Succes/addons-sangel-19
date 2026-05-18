@@ -342,3 +342,4 @@ Usage :
 - [Capture] Onglet “A vérifier” (archivage/restauration)
 - [Capture] Transfert Inter Magasin — ajout produits multiple
 - [Capture] Règles de réapprovisionnement — bouton mise à jour fournisseurs
+- [Capture] 
