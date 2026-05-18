@@ -285,7 +285,7 @@
                     <td class="num">0</td><td class="num">0</td>
                 </tr>
                 <tr class="row-bold">
-                    <td>Avoir</td>
+                    <td>Crédit alim. / Avoir</td>
                     <td class="num">0</td>
                     <td class="num"><t t-esc="'{:,.0f}'.format(r_avr.get('comptants',0)).replace(',', ' ')"/></td>
                     <td class="num">0</td><td class="num">0</td>

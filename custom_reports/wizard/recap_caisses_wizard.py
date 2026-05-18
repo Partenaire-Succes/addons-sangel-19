@@ -80,105 +80,368 @@ class RecapCaissesWizard(models.TransientModel):
 
         data = self.get_report_data()
         wb = Workbook()
-        BLUE = "1A5276"; LBLUE = "D6EAF8"; WHITE = "FFFFFF"; GRAY = "F0F0F0"
+
+        DARK  = "1A5276"
+        GRAY  = "F0F0F0"
+        GREEN = "D5E8D4"
+        LBLUE = "DAE8FC"
+        WHITE = "FFFFFF"
+        RED_L = "FDECEA"
+        GRN_L = "EAFAF1"
+        YELL  = "FEF9E7"
+
         thin = Side(style='thin', color="AAAAAA")
         brd  = Border(left=thin, right=thin, top=thin, bottom=thin)
+
         def fill(h): return PatternFill("solid", fgColor=h)
         def aln(h="left"): return Alignment(horizontal=h, vertical="center")
-        def hdr(ws, title):
-            ws.merge_cells("A1:F1"); ws["A1"] = data['header']['company_name']
-            ws["A1"].font = Font(name="Arial", bold=True, size=11)
-            ws.merge_cells("A2:F2"); ws["A2"] = f"{title} — Du {self.date_from.strftime('%d/%m/%Y')} au {self.date_to.strftime('%d/%m/%Y')}"
-            ws["A2"].font = Font(name="Arial", bold=True, color=WHITE, size=11)
-            ws["A2"].fill = fill(BLUE); ws["A2"].alignment = aln("center")
-            ws.row_dimensions[2].height = 18; ws.append([])
 
-        # ── Feuille 1 : CA Détaillé ───────────────────────────────────────────
-        ws1 = wb.active; ws1.title = "CA Détaillé"
-        hdr(ws1, "RÉCAPITULATIF CAISSES — CA DÉTAILLÉ")
-        ws1.append(["Type", "CA HT", "CA TTC", "Marge", "% Marge", "% Marque"])
-        hrow = ws1.max_row
-        for col in range(1, 7):
-            c = ws1.cell(row=hrow, column=col)
-            c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
-            c.fill = fill(BLUE); c.alignment = aln("center"); c.border = brd
-        ca = data['ca_detaille']
-        for label, key in [("Comptant", "comptant"), ("Avoir émis", "avoir_emis"), ("En compte facturé", "en_compte_facture"), ("TOTAL", "total")]:
+        def make_header(ws, title, ncols):
+            ec = chr(64 + ncols)
+            ws.merge_cells(f"A1:{ec}1")
+            ws["A1"] = data['header']['company_name']
+            ws["A1"].font = Font(name="Arial", bold=True, size=11)
+            ws.merge_cells(f"A2:{ec}2")
+            ws["A2"] = (
+                f"{title} — "
+                f"Du {self.date_from.strftime('%d/%m/%Y')} "
+                f"au {self.date_to.strftime('%d/%m/%Y')}"
+            )
+            ws["A2"].font = Font(name="Arial", bold=True, color=WHITE, size=11)
+            ws["A2"].fill = fill(DARK)
+            ws["A2"].alignment = aln("center")
+            ws.row_dimensions[2].height = 18
+            ws.append([])
+
+        def col_hdr(ws, labels):
+            ws.append(labels)
+            r = ws.max_row
+            for col in range(1, len(labels) + 1):
+                c = ws.cell(row=r, column=col)
+                c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
+                c.fill = fill(DARK)
+                c.alignment = aln("center")
+                c.border = brd
+
+        def apply_num_fmt(ws, row, cols, fmt='#,##0.00'):
+            for col in cols:
+                ws.cell(row=row, column=col).number_format = fmt
+
+        def style_row(ws, row, ncols, bold=False, fg="1A1A1A", bg=None,
+                      italic=False, right_from=2):
+            for col in range(1, ncols + 1):
+                c = ws.cell(row=row, column=col)
+                c.font = Font(name="Arial", bold=bold, color=fg, size=9, italic=italic)
+                if bg:
+                    c.fill = fill(bg)
+                c.border = brd
+                c.alignment = aln("right" if col >= right_from else "left")
+
+        # ── Feuille 1 : CA Détaillé (7 colonnes) ──────────────────────────────
+        ws1 = wb.active
+        ws1.title = "CA Détaillé"
+        make_header(ws1, "RÉCAPITULATIF CAISSES — CA DÉTAILLÉ", 7)
+        col_hdr(ws1, ["Type", "Sous-type", "CA HT", "CA TTC", "Marge", "% Marge", "% Marque"])
+
+        ca   = data['ca_detaille']
+        ZERO = {'ca_ht': 0.0, 'ca_ttc': 0.0, 'marge': 0.0, 'pct_marge': 0.0, 'pct_marque': 0.0}
+
+        def ca_append(ws, typ, subtyp, d, bold=False, is_total=False,
+                      italic=False, bg=None):
+            ws.append([typ, subtyp,
+                       d['ca_ht'], d['ca_ttc'], d['marge'],
+                       d['pct_marge'], d['pct_marque']])
+            r   = ws.max_row
+            fg  = WHITE if is_total else "1A1A1A"
+            row_bg = DARK if is_total else bg
+            style_row(ws, r, 7, bold=bold or is_total, fg=fg,
+                      bg=row_bg, italic=italic, right_from=3)
+            apply_num_fmt(ws, r, [3, 4, 5], '#,##0.00')
+            apply_num_fmt(ws, r, [6, 7], '0.00')
+
+        for lbl, key in [("Comptant", "comptant"),
+                         ("Avoir émis", "avoir_emis"),
+                         ("En compte facturé", "en_compte_facture")]:
             d = ca[key]
-            ws1.append([label, d['ca_ht'], d['ca_ttc'], d['marge'], d['pct_marge'], d.get('pct_marque', 0.0)])
-            r = ws1.max_row
-            is_total = label == "TOTAL"
-            for col in range(1, 7):
-                c = ws1.cell(row=r, column=col)
-                c.font = Font(name="Arial", bold=is_total, color=WHITE if is_total else "1A1A1A", size=9 if not is_total else 10)
-                if is_total: c.fill = fill(BLUE)
-                elif label == "Comptant": c.fill = fill(GRAY)
-                c.border = brd; c.alignment = aln("right" if col >= 2 else "left")
-            for col in (2, 3, 4): ws1.cell(row=r, column=col).number_format = '#,##0.00'
-        for col, w in enumerate([22, 14, 14, 14, 10, 10], 1):
+            ca_append(ws1, lbl,  "Total",        d,    bold=True, bg=GRAY)
+            ca_append(ws1, "",   "Ventes locales", d,   italic=True, bg="F8F8F8")
+            ca_append(ws1, "",   "Exportation HT", ZERO, italic=True)
+            ca_append(ws1, "",   "Rétrocessions",  ZERO, italic=True, bg="F8F8F8")
+
+        ca_append(ws1, "Total du CA", "", ca['total'], is_total=True)
+
+        for col, w in enumerate([20, 16, 14, 14, 14, 10, 10], 1):
             ws1.column_dimensions[chr(64 + col)].width = w
 
-        # ── Feuille 2 : Encaissements ─────────────────────────────────────────
+        # ── Feuille 2 : Encaissements (10 colonnes) ───────────────────────────
         ws2 = wb.create_sheet("Encaissements")
-        hdr(ws2, "RÉCAPITULATIF CAISSES — ENCAISSEMENTS")
-        ws2.append(["Mode paiement", "FDC Init", "Encaissements", "Total Enc.", "Décaissements", "Total Déc.", "FDC Final"])
-        hrow = ws2.max_row
-        for col in range(1, 8):
-            c = ws2.cell(row=hrow, column=col)
-            c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
-            c.fill = fill(BLUE); c.alignment = aln("center"); c.border = brd
-        labels = {'especes': 'Espèces', 'cheques': 'Chèques', 'cartes': 'Cartes', 'titres': 'Titres de paiement',
-                  'avoir': 'Avoirs / Food', 'porte_monnaie': 'Porte-monnaie', 'virements': 'Virements', 'ecart_regl': 'Écart règlement'}
-        rows_enc = data['encaissements']['rows']
-        for key, lbl in labels.items():
-            row = rows_enc[key]
-            ws2.append([lbl, row['fdc_init'], row['comptants'], row['total_enc'], row['prelev'], row['total_dec'], row['fdc_final']])
-            r = ws2.max_row
-            for col in range(1, 8):
-                c = ws2.cell(row=r, column=col)
-                c.font = Font(name="Arial", size=9); c.border = brd
-                c.alignment = aln("right" if col >= 2 else "left")
-            for col in range(2, 8): ws2.cell(row=r, column=col).number_format = '#,##0.00'
-        t1 = data['encaissements']['total1']
-        ws2.append(["TOTAL", t1['fdc_init'], t1['comptants'], t1['total_enc'], t1['prelev'], t1['total_dec'], t1['fdc_final']])
+        make_header(ws2, "RÉCAPITULATIF CAISSES — ENCAISSEMENTS", 10)
+        col_hdr(ws2, [
+            "Mode paiement", "FDC Init.", "Comptants",
+            "Acomptes perçus", "Règl. de dûs", "Total Enc.",
+            "Prélèv.", "Total Déc.", "FDC Finaux", "Écarts",
+        ])
+
+        enc  = data['encaissements']
+        rows = enc['rows']
+        t1   = enc['total1']
+        t2   = enc['total2']
+        tgen = enc['total_general']
+        mise = enc.get('mise_en_compte', 0.0)
+
+        def enc_append(ws, vals, bold=False, italic=False,
+                       fg="1A1A1A", bg=None):
+            ws.append(vals)
+            r = ws.max_row
+            style_row(ws, r, 10, bold=bold, fg=fg, bg=bg,
+                      italic=italic, right_from=2)
+            apply_num_fmt(ws, r, range(2, 11))
+
+        r_esp = rows['especes']
+        r_chq = rows['cheques']
+        r_crt = rows['cartes']
+        r_tit = rows['titres']
+        r_avr = rows['avoir']
+        r_ecr = rows['ecart_regl']
+
+        enc_append(ws2, ["Espèces",
+                         r_esp['fdc_init'], r_esp['comptants'], 0, 0,
+                         r_esp['total_enc'], r_esp['prelev'],
+                         r_esp['total_dec'], r_esp['fdc_final'],
+                         r_esp.get('ecart', 0)], bold=True)
+        enc_append(ws2, ["Chèques",
+                         0, r_chq['comptants'], 0, 0,
+                         r_chq['total_enc'], r_chq['prelev'],
+                         r_chq['total_dec'], 0, 0], bold=True, bg=GRAY)
+        enc_append(ws2, ["Cartes",
+                         0, r_crt['comptants'], 0, 0,
+                         r_crt['total_enc'], r_crt['prelev'],
+                         r_crt['total_dec'], 0, 0], bold=True)
+        enc_append(ws2, ["Titres de paiements",
+                         0, r_tit['comptants'], 0, 0,
+                         r_tit['total_enc'], r_tit['prelev'],
+                         r_tit['total_dec'], 0, 0], bold=True, bg=GRAY)
+        enc_append(ws2, ["Crédit alim. / Avoir",
+                         0, r_avr['comptants'], 0, 0,
+                         r_avr['total_enc'], r_avr['prelev'],
+                         r_avr['total_dec'], 0, 0], bold=True)
+        enc_append(ws2, ["Virements / Traites",
+                         0, 0, 0, 0, 0, 0, 0, 0, 0], bold=True, bg=GRAY)
+        enc_append(ws2, ["Écarts de règlement",
+                         0, 0, 0, 0, 0, 0, 0, 0,
+                         r_ecr.get('ecart', 0)], bold=True)
+
+        # Total 1 (vert)
+        enc_append(ws2, ["Total 1",
+                         t1['fdc_init'], t1['comptants'], 0, 0,
+                         t1['total_enc'], t1['prelev'],
+                         t1['total_dec'], t1['fdc_final'],
+                         t1.get('ecart', 0)], bold=True, bg=GREEN)
+
+        # Lignes de déduction (italique, fond jaune clair)
+        av_ded = t2.get('avoir_deduits', 0.0)
+        enc_append(ws2, ["Avoir déduits",
+                         av_ded, None, None, None,
+                         av_ded, av_ded, av_ded, None, None],
+                   italic=True, bg=YELL)
+        enc_append(ws2, ["Acomptes déduits",
+                         0, None, None, None, 0, 0, 0, None, None],
+                   italic=True, bg=YELL)
+
+        # Total 2 (bleu clair)
+        enc_append(ws2, ["Total 2",
+                         None, None, None, None,
+                         t2['total_enc'], None,
+                         t2['total_dec'], t2['fdc_final'], None],
+                   bold=True, bg=LBLUE)
+
+        enc_append(ws2, ["Avoirs émis",
+                         0, None, None, None, 0, None, 0, None, None],
+                   italic=True, bg=YELL)
+        enc_append(ws2, ["Mise en compte",
+                         mise, None, None, None,
+                         mise, None, 0, None, None],
+                   italic=True, bg=YELL)
+
+        # Total général (fond sombre, texte blanc)
+        enc_append(ws2, ["Total général",
+                         tgen['total_enc'], 0, 0, None, None,
+                         tgen['total_dec'], 0, None, None],
+                   bold=True, fg=WHITE, bg=DARK)
+
+        # Total des chèques à échoir
+        ws2.append([])
+        ws2.append(["Total des chèques à échoir", 0])
         r = ws2.max_row
-        for col in range(1, 8):
+        for col in (1, 2):
             c = ws2.cell(row=r, column=col)
-            c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
-            c.fill = fill(BLUE); c.border = brd; c.alignment = aln("right" if col >= 2 else "left")
-        for col in range(2, 8): ws2.cell(row=r, column=col).number_format = '#,##0.00'
-        for col, w in enumerate([22, 14, 14, 14, 14, 14, 14], 1):
+            c.font = Font(name="Arial", bold=True, size=9)
+            c.border = brd
+        ws2.cell(row=r, column=2).number_format = '#,##0.00'
+        ws2.cell(row=r, column=2).alignment = aln("right")
+
+        for col, w in enumerate([22, 12, 12, 15, 13, 12, 10, 10, 11, 10], 1):
             ws2.column_dimensions[chr(64 + col)].width = w
 
-        # ── Feuille 3 : TVA ───────────────────────────────────────────────────
-        ws3 = wb.create_sheet("TVA")
-        hdr(ws3, "RÉCAPITULATIF CAISSES — RÉPARTITION TVA")
-        ws3.append(["% TVA", "CA TTC", "Base HT", "TVA", "Base calculée", "TVA calculée", "Écart"])
+        # ── Feuille 3 : Remises fidélités (7 colonnes) ────────────────────────
+        ws3 = wb.create_sheet("Remises fidélités")
+        make_header(ws3, "RÉCAPITULATIF CAISSES — REMISES FIDÉLITÉS", 7)
+
+        remises = data['remises_fidelites']
+        ws3.append(["", "Nombre total", "Montant total",
+                    "Nb réduction", "Montant déduit",
+                    "Nb ajout", "Montant ajout"])
         hrow = ws3.max_row
+        hdr_bgs = [DARK, DARK, DARK, "C0392B", "C0392B", "27AE60", "27AE60"]
         for col in range(1, 8):
             c = ws3.cell(row=hrow, column=col)
             c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
-            c.fill = fill(BLUE); c.alignment = aln("center"); c.border = brd
-        for tva in data['tva_repartition']:
-            ws3.append([f"{tva['tax_percent']}%", tva['ca_ttc'], tva['base_ht'], tva['tva'], tva['base_calc'], tva['tva_calc'], tva['ecart']])
-            r = ws3.max_row
-            for col in range(1, 8):
-                c = ws3.cell(row=r, column=col)
-                c.font = Font(name="Arial", size=9); c.border = brd
-                c.alignment = aln("right" if col >= 2 else "center")
-            for col in range(2, 8): ws3.cell(row=r, column=col).number_format = '#,##0.00'
-        for col, w in enumerate([10, 14, 14, 14, 14, 14, 12], 1):
+            c.fill = fill(hdr_bgs[col - 1])
+            c.alignment = aln("center")
+            c.border = brd
+
+        ws3.append([
+            "Porte-monnaie",
+            remises.get('porte_monnaie_count', 0),
+            remises.get('porte_monnaie_total', 0.0),
+            remises.get('nb_reduction', 0),
+            remises.get('montant_deduit', 0.0),
+            remises.get('nb_ajout', 0),
+            remises.get('montant_ajout', 0.0),
+        ])
+        r = ws3.max_row
+        for col in range(1, 8):
+            c = ws3.cell(row=r, column=col)
+            c.font = Font(name="Arial", bold=True, size=9)
+            c.border = brd
+            c.alignment = aln("right" if col >= 2 else "left")
+            if col in (4, 5):
+                c.fill = fill(RED_L)
+            elif col in (6, 7):
+                c.fill = fill(GRN_L)
+        apply_num_fmt(ws3, r, [3, 5, 7])
+
+        ws3.append([])
+        note_r = ws3.max_row + 1
+        ws3.cell(row=note_r, column=1).value = (
+            "Réduction : montant prélevé sur la carte pour compléter un paiement. "
+            "Ajout : monnaie rendue sur la carte quand la caissière n'a pas de monnaie à rendre."
+        )
+        ws3.cell(row=note_r, column=1).font = Font(
+            name="Arial", italic=True, size=8, color="666666")
+        ws3.merge_cells(f"A{note_r}:G{note_r}")
+        ws3.cell(row=note_r, column=1).alignment = Alignment(wrap_text=True)
+
+        for col, w in enumerate([22, 14, 14, 14, 16, 12, 14], 1):
             ws3.column_dimensions[chr(64 + col)].width = w
 
-        buffer = io.BytesIO(); wb.save(buffer); buffer.seek(0)
+        # ── Feuille 4 : Titres de paiement (3 colonnes) ───────────────────────
+        ws4 = wb.create_sheet("Titres de paiement")
+        make_header(ws4, "RÉCAPITULATIF CAISSES — TITRES DE PAIEMENT", 3)
+        col_hdr(ws4, ["Mode de paiement", "Nombre", "Montant TTC"])
+
+        titres = data['titres_detail']
+        if titres:
+            for i, titre in enumerate(titres):
+                ws4.append([titre.get('name', ''),
+                            titre.get('count', 0),
+                            titre.get('total', 0.0)])
+                r = ws4.max_row
+                style_row(ws4, r, 3, bg=GRAY if i % 2 == 0 else None,
+                          right_from=2)
+                apply_num_fmt(ws4, r, [3])
+            ws4.append(["Total titres",
+                        sum(t.get('count', 0) for t in titres),
+                        sum(t.get('total', 0.0) for t in titres)])
+            r = ws4.max_row
+            style_row(ws4, r, 3, bold=True, fg=WHITE, bg=DARK, right_from=2)
+            apply_num_fmt(ws4, r, [3])
+        else:
+            ws4.append(["Aucun titre de paiement enregistré", "", ""])
+            r = ws4.max_row
+            ws4.cell(row=r, column=1).font = Font(
+                name="Arial", italic=True, color="888888", size=9)
+            ws4.merge_cells(f"A{r}:C{r}")
+
+        for col, w in enumerate([30, 14, 16], 1):
+            ws4.column_dimensions[chr(64 + col)].width = w
+
+        # ── Feuille 5 : Répartition encaissements (5 colonnes) ────────────────
+        ws5 = wb.create_sheet("Répartition encaissements")
+        make_header(ws5, "RÉCAPITULATIF CAISSES — RÉPARTITION DES ENCAISSEMENTS", 5)
+        col_hdr(ws5, ["Modalité", "Nombre", "% répartition", "Montant TTC", "% répartition"])
+
+        repartition = data['repartition_encaissements']
+        for i, rep in enumerate(repartition):
+            ws5.append([rep.get('label', ''), rep.get('count', 0),
+                        rep.get('pct_count', 0.0),
+                        rep.get('montant', 0.0),
+                        rep.get('pct_montant', 0.0)])
+            r = ws5.max_row
+            style_row(ws5, r, 5, bold=True,
+                      bg=GRAY if i % 2 == 0 else None, right_from=2)
+            apply_num_fmt(ws5, r, [3, 5], '0.00')
+            apply_num_fmt(ws5, r, [4])
+
+        ws5.append(["Total",
+                    sum(rep.get('count', 0) for rep in repartition),
+                    None,
+                    sum(rep.get('montant', 0.0) for rep in repartition),
+                    None])
+        r = ws5.max_row
+        style_row(ws5, r, 5, bold=True, fg=WHITE, bg=DARK, right_from=2)
+        apply_num_fmt(ws5, r, [4])
+
+        for col, w in enumerate([22, 12, 14, 16, 14], 1):
+            ws5.column_dimensions[chr(64 + col)].width = w
+
+        # ── Feuille 6 : TVA (12 colonnes) ─────────────────────────────────────
+        ws6 = wb.create_sheet("TVA")
+        make_header(ws6, "RÉCAPITULATIF CAISSES — RÉPARTITION TVA", 12)
+        col_hdr(ws6, [
+            "% TVA", "CA TTC", "Base HT",
+            "Art. tenus", "Art. non tenus",
+            "TVA", "TVA tenus", "TVA non tenus",
+            "Base HT calc.", "TVA calc.", "Écart", "% Écart",
+        ])
+
+        for tva in data['tva_repartition']:
+            ws6.append([
+                f"{tva['tax_percent']}%",
+                tva['ca_ttc'],    tva['base_ht'],
+                tva['articles_tenus'], tva['articles_non_tenus'],
+                tva['tva'],       tva['tva_tenus'], tva['tva_non_tenus'],
+                tva['base_calc'], tva['tva_calc'],
+                tva['ecart'],     tva['pct_ecart'],
+            ])
+            r = ws6.max_row
+            style_row(ws6, r, 12, right_from=2)
+            apply_num_fmt(ws6, r, range(2, 12))
+            apply_num_fmt(ws6, r, [12], '0.00')
+
+        for col, w in enumerate([10, 12, 12, 12, 14, 12, 12, 14, 14, 12, 10, 10], 1):
+            ws6.column_dimensions[chr(64 + col)].width = w
+
+        # ── Export ────────────────────────────────────────────────────────────
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
         xlsx_data = base64.b64encode(buffer.read()).decode()
-        filename = f"Recap_Caisses_{self.date_from.strftime('%d%m%Y')}_{self.date_to.strftime('%d%m%Y')}.xlsx"
+        filename = (
+            f"Recap_Caisses_"
+            f"{self.date_from.strftime('%d%m%Y')}_"
+            f"{self.date_to.strftime('%d%m%Y')}.xlsx"
+        )
         attachment = self.env['ir.attachment'].create({
             'name': filename, 'type': 'binary', 'datas': xlsx_data,
             'mimetype': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'res_model': self._name, 'res_id': self.id,
         })
-        return {'type': 'ir.actions.act_url', 'url': f'/web/content/{attachment.id}?download=true', 'target': 'new'}
+        return {
+            'type': 'ir.actions.act_url',
+            'url': f'/web/content/{attachment.id}?download=true',
+            'target': 'new',
+        }
 
     # ------------------------------------------------------------------
     # Helpers
@@ -200,6 +463,8 @@ class RecapCaissesWizard(models.TransientModel):
         ]
         if self.config_ids:
             domain.append(('config_id', 'in', self.config_ids.ids))
+        if self.caissier_ids:
+            domain.append(('user_id', 'in', self.caissier_ids.ids))
         return self.env['pos.order'].search(domain)
 
     def _get_sessions(self):
@@ -238,7 +503,14 @@ class RecapCaissesWizard(models.TransientModel):
         self.ensure_one()
 
         all_orders = self._get_orders()
-        sessions = self._get_sessions()
+        # Quand un filtre caissier est actif, on restreint aux sessions
+        # où ce(s) caissier(s) ont réellement travaillé.
+        # Sans filtre caissier, on prend toutes les sessions de la période.
+        sessions = (
+            all_orders.mapped('session_id')
+            if self.caissier_ids
+            else self._get_sessions()
+        )
 
         # ================================================================
         # Section 1 – CA détaillé
@@ -280,9 +552,11 @@ class RecapCaissesWizard(models.TransientModel):
         # ================================================================
         # Section 2 – Encaissements / Décaissements
         # ================================================================
-        session_ids = sessions.ids
+        # Paiements liés uniquement aux commandes filtrées (caissier + période).
+        # On évite la recherche par session_id qui retournerait les paiements
+        # de tous les caissiers de la même session.
         all_payments = self.env['pos.payment'].search(
-            [('session_id', 'in', session_ids)] if session_ids else [('id', '=', False)]
+            [('pos_order_id', 'in', all_orders.ids)] if all_orders else [('id', '=', False)]
         )
 
         especes_p = all_payments.filtered(lambda p: p.payment_method_id.is_cash_count)
