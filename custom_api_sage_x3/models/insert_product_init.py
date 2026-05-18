@@ -24,7 +24,7 @@ _PRODUCT_UPDATE_FIELDS = (
     'discount_ligne', 'airsi_taxes_id', 'price_catalog', 'price_carton',
     'price_negoce', 'price_ecom', 'price_gm', 'price_rh', 'price_st',
     'is_yop_demi_gros', 'is_yop_detail', 'is_synacass_ci', 'is_square',
-    'is_bassam', 'is_koumassi', 'allowed_company_ids', 'family_categ_id',
+    'is_bassam', 'is_koumassi', 'is_abobo', 'allowed_company_ids', 'family_categ_id',
     'categ_id', 'actif_x3', 'type',
 )
 
@@ -302,6 +302,7 @@ class ProductTemplateImport(models.Model):
                             vals.get("is_square"),
                             vals.get("is_koumassi"),
                             vals.get("is_bassam"),
+                            vals.get("is_abobo"),
                         ]):
                             _logger.warning("⚠️ Produit ignoré aucune societe associée : %s", vals.get("name"))
                             skipped += 1
@@ -608,6 +609,7 @@ class ProductTemplateImport(models.Model):
             "is_square":         self._verify_boolean(item.get("yafsQ_0")),
             "is_bassam":         self._verify_boolean(item.get("yafbsM_0")),
             "is_koumassi":       self._verify_boolean(item.get("yafkouM_0")),
+            "is_abobo":       self._verify_boolean(item.get("yafdoK_0")),
             "allowed_company_ids": self._get_allowed_company_ids(item),
             "family_categ_id":   family_id,
             "categ_id":          family_id,
@@ -947,7 +949,7 @@ class ProductTemplateImport(models.Model):
             "04": item.get("yafsQ_0"),
             "05": item.get("yafbsM_0"),
             "06": item.get("yafkouM_0"),
-            "07": item.get("abobo"),
+            "07": item.get("yafdoK_0"),
         }
         active_codes = [code for code, flag in company_map.items()
                         if self._verify_boolean(flag)]
@@ -968,3 +970,15 @@ class ProductProduct(models.Model):
 
     def action_import_products_external_source(self):
         return self.product_tmpl_id.action_import_products_external_source()
+
+    def action_delete_products_no_company(self):
+        return self.product_tmpl_id.action_delete_products_no_company()
+
+    def normalize_taxes_tva_all_companies(self):
+        return self.product_tmpl_id.normalize_taxes_tva_all_companies()
+
+    def normalize_taxes_airsi_all_companies(self):
+        return self.product_tmpl_id.normalize_taxes_airsi_all_companies()
+
+    def reset_airsi_taxes_all_products(self):
+        return self.product_tmpl_id.reset_airsi_taxes_all_products()

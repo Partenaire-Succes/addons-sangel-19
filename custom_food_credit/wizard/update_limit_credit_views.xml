@@ -12,13 +12,14 @@
                         <group>
                             <field name="limit_id"/>
                             <field name="state"/>
-                            <field name="move_id" required="state != 'limit'" invisible="state != 'invoice'"/>
-                            <field name="payment_id" required="state != 'limit'" invisible="state != 'invoice'"/>
+                            <field name="move_id" required="state == 'invoice'" invisible="state != 'invoice'"/>
+                            <field name="payment_id" required="state == 'invoice'" invisible="state != 'invoice'"/>
+                            <field name="amount_conso" required="state == 'change_conso'" invisible="state != 'change_conso'"/>
                         </group>
                         <group>
                             <field name="amount_limit"/>
                             <field name="amount_limit_consumed"/>
-                            <field name="amount" readonly="state != 'limit'"/>
+                            <field name="amount" invisible="state == 'change_conso'" readonly="state != 'limit'"/>
                         </group>
                     </group>
                     <footer>

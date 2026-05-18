@@ -89,7 +89,7 @@ class SageX3SendWizard(models.TransientModel):
             date_from_dt = fields.Datetime.to_datetime(wizard.date_from)
             date_to_dt   = fields.Datetime.to_datetime(wizard.date_to) + timedelta(days=1)
 
-            pos_sessions = self.env['pos.session'].search([
+            wizard.count_pos_sessions = self.env['pos.session'].search_count([
                 ('company_id',   'in', company_ids),
                 ('state',        '=',  'closed'),
                 ('sage_x3_sent', '=',  False),
@@ -97,7 +97,7 @@ class SageX3SendWizard(models.TransientModel):
                 ('start_at',     '<',  date_to_dt),
             ])
 
-            wizard.count_pos_sessions = len(pos_sessions.filtered(lambda s: s.cash_register_balance_end > 0))
+            # wizard.count_pos_sessions = len(pos_sessions.filtered(lambda s: s.cash_register_balance_end > 0))
 
             # Avoirs POS avec mode de paiement is_limit
             refund_candidates = self.env['account.move'].search([

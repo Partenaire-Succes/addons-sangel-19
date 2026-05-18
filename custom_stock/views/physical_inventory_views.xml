@@ -15,6 +15,13 @@
                         <button name="update_price" type="object" string="Mise a Jours"
                                 class="btn-primary" invisible="1"/>
 
+                        <button name="action_refresh_qty_price"
+                                type="object"
+                                string="Actualiser Stock et Prix"
+                                class="btn-secondary"
+                                confirm="Cette action va écraser le stock et le prix de toutes les lignes avec les valeurs actuelles. Confirmer ?"
+                                invisible="state != 'in_progress'"/>
+
                         <button name="action_done" 
                                 type="object"
                                 string="Valider l'inventaire"

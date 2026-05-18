@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="product_label_layout_form_price_info" model="ir.ui.view">
+        <field name="name">product.label.layout.form.price.info</field>
+        <field name="model">product.label.layout</field>
+        <field name="inherit_id" ref="product.product_label_layout_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//footer" position="before">
+                <group string="Prix à imprimer" col="1"
+                       invisible="not product_ids and not product_tmpl_ids">
+                    <field name="price_info" nolabel="1" readonly="1"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

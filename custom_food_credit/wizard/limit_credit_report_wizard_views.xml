@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_limit_credit_report_wizard_form" model="ir.ui.view">
+        <field name="name">limit.credit.report.wizard.form</field>
+        <field name="model">limit.credit.report.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Rapport récapitulatif des crédits">
+                <group>
+                    <group string="Filtres">
+                        <field name="partner_ids" widget="many2many_tags"
+                               placeholder="Tous les clients si vide"/>
+                        <field name="date_from"/>
+                        <field name="date_to"/>
+                    </group>
+                    <group string="Options">
+                        <field name="report_type" widget="radio"/>
+                    </group>
+                </group>
+                <footer>
+                    <button string="Générer" name="action_generate"
+                            type="object" class="btn-primary"/>
+                    <button string="Annuler" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_limit_credit_report_wizard" model="ir.actions.act_window">
+        <field name="name">Rapport des crédits clients</field>
+        <field name="res_model">limit.credit.report.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

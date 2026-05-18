@@ -167,41 +167,32 @@ class ReportDailySalesWizard(models.TransientModel):
                 refund_ttc = sum(refunds.mapped('amount_total'))
 
             if self.report_type == 'sale':
+                # Identifier les factures validées de la période (hors POS)
                 moves = self.env['account.move'].search([
                     ('invoice_date', '>=', fields.Date.to_date(current_date)),
                     ('invoice_date', '<', fields.Date.to_date(next_day)),
                     ('move_type', '=', 'out_invoice'),
                     ('state', '=', 'posted'),
-                    ('pos_order_ids', '=', False),  # Exclure les factures liées à des commandes POS
+                    ('pos_order_ids', '=', False),
                     ('company_id', 'in', self.company_ids.ids),
                 ])
 
-                order_lines = self.env['account.move.line'].search([
-                    ('move_id', 'in', moves.ids)
+                # Récupérer les sale.order liés à ces factures validées
+                orders = self.env['sale.order'].search([
+                    ('invoice_ids', 'in', moves.ids),
                 ])
+                order_lines = orders.mapped('order_line')
 
-                ca_ht = sum(order.amount_untaxed for order in orders) - refund_ht
-                ca_ttc = sum(order.amount_total for order in orders) - refund_ttc
-                cout_total = sum(
-                    line.quantity * line.product_id.standard_price
-                    for line in order_lines
-                )
-                marge = ca_ht - cout_total
-                remises = 0.0
-                remise_line = sum(
-                    l.price_unit * l.quantity * (l.discount or 0.0) / 100.0
+                ca_ht = sum(orders.mapped('amount_untaxed')) - refund_ht
+                ca_ttc = sum(orders.mapped('amount_total')) - refund_ttc
+                marge = sum(orders.mapped('margin'))
+                remises = sum(
+                    l.price_unit * l.product_uom_qty * (l.discount or 0.0) / 100.0
                     for l in order_lines
                 )
-                remise_global = sum(
-                    l.price_unit * l.quantity
-                    for l in order_lines
-                    if l.price_unit < 0
-                )
-                remises = remise_line - remise_global
                 nb_clients = len(orders)
-                # FIX 4 : champ correct pour panier_qte
                 total_qte = sum(
-                    line.quantity
+                    line.product_uom_qty
                     for line in order_lines
                     if line.price_unit >= 0
                 )
@@ -213,36 +204,19 @@ class ReportDailySalesWizard(models.TransientModel):
                     ('state', 'in', ['paid', 'invoiced', 'done']),
                     ('company_id', 'in', self.company_ids.ids),
                 ])
-                order_lines = self.env['pos.order.line'].search([
-                    ('order_id', 'in', orders.ids)
-                ])
+                order_lines = orders.mapped('lines')
 
-                # FIX 3 : remplacer le and/or par un vrai ternaire
                 ca_ht = sum(
                     order.amount_total if order.amount_tax == 0
                     else (order.amount_total - order.amount_tax)
                     for order in orders
                 ) - refund_ht
-                ca_ttc = sum(order.amount_total for order in orders) - refund_ttc
-
-                # cout_total = sum(
-                #     line.qty * line.product_id.standard_price
-                #     for line in order_lines
-                # )
-                # marge = ca_ht - cout_total
-
+                ca_ttc = sum(orders.mapped('amount_total')) - refund_ttc
                 marge = sum(orders.mapped('margin'))
-                remises = 0.0
-                remise_line = sum(
+                remises = sum(
                     l.price_unit * l.qty * (l.discount or 0.0) / 100.0
                     for l in order_lines
                 )
-                remise_global = sum(
-                    l.price_unit * l.qty
-                    for l in order_lines
-                    if l.price_unit < 0
-                )
-                remises = remise_line - remise_global
                 nb_clients = len(orders)
                 total_qte = sum(
                     line.qty
@@ -252,40 +226,31 @@ class ReportDailySalesWizard(models.TransientModel):
 
             else:  # 'all' : ventes + POS combinés
 
+                # Identifier les factures validées de la période (hors POS)
                 sale_moves = self.env['account.move'].search([
                     ('invoice_date', '>=', fields.Date.to_date(current_date)),
                     ('invoice_date', '<', fields.Date.to_date(next_day)),
                     ('move_type', '=', 'out_invoice'),
                     ('state', '=', 'posted'),
-                    ('pos_order_ids', '=', False),  # Exclure les factures liées à des commandes POS
+                    ('pos_order_ids', '=', False),
                     ('company_id', 'in', self.company_ids.ids),
                 ])
 
-                sale_order_lines = self.env['account.move.line'].search([
-                    ('move_id', 'in', sale_moves.ids),
+                # Récupérer les sale.order liés à ces factures validées
+                sale_orders = self.env['sale.order'].search([
+                    ('invoice_ids', 'in', sale_moves.ids),
                 ])
+                sale_order_lines = sale_orders.mapped('order_line')
 
-
-                sale_ca_ht = sum(order.amount_untaxed for order in sale_moves)
-                sale_ca_ttc = sum(order.amount_total for order in sale_moves)
-                sale_cout_total = sum(
-                    line.quantity * line.product_id.standard_price
-                    for line in sale_order_lines
-                )
-                sale_marge = sale_ca_ht - sale_cout_total
-                sale_remises = 0.0
-                sale_remise_line = sum(
-                    l.price_unit * l.quantity * (l.discount or 0.0) / 100.0
+                sale_ca_ht = sum(sale_orders.mapped('amount_untaxed'))
+                sale_ca_ttc = sum(sale_orders.mapped('amount_total'))
+                sale_marge = sum(sale_orders.mapped('margin'))
+                sale_remises = sum(
+                    l.price_unit * l.product_uom_qty * (l.discount or 0.0) / 100.0
                     for l in sale_order_lines
                 )
-                sale_remise_global = sum(
-                    l.price_unit * l.quantity
-                    for l in sale_order_lines
-                    if l.price_unit < 0
-                )
-                sale_remises = sale_remise_line - sale_remise_global
                 sale_qte = sum(
-                    line.quantity
+                    line.product_uom_qty
                     for line in sale_order_lines
                     if line.price_unit >= 0
                 )
@@ -297,33 +262,19 @@ class ReportDailySalesWizard(models.TransientModel):
                     ('state', 'in', ['paid', 'invoiced', 'done']),
                     ('company_id', 'in', self.company_ids.ids),
                 ])
-                pos_order_lines = self.env['pos.order.line'].search([
-                    ('order_id', 'in', pos_orders.ids)
-                ])
-                # FIX 3 : ternaire propre
+                pos_order_lines = pos_orders.mapped('lines')
+
                 pos_ca_ht = sum(
                     order.amount_total if order.amount_tax == 0
                     else (order.amount_total - order.amount_tax)
                     for order in pos_orders
                 )
-                pos_ca_ttc = sum(order.amount_total for order in pos_orders)
-                # pos_cout_total = sum(
-                #     line.qty * line.product_id.standard_price
-                #     for line in pos_order_lines
-                # )
-                # pos_marge = pos_ca_ht - pos_cout_total
+                pos_ca_ttc = sum(pos_orders.mapped('amount_total'))
                 pos_marge = sum(pos_orders.mapped('margin'))
-                pos_remises = 0.0
-                pos_remise_line = sum(
+                pos_remises = sum(
                     l.price_unit * l.qty * (l.discount or 0.0) / 100.0
                     for l in pos_order_lines
                 )
-                pos_remise_global = sum(
-                    l.price_unit * l.qty
-                    for l in pos_order_lines
-                    if l.price_unit < 0
-                )
-                pos_remises = pos_remise_line - pos_remise_global
                 pos_qte = sum(
                     line.qty
                     for line in pos_order_lines
@@ -335,7 +286,7 @@ class ReportDailySalesWizard(models.TransientModel):
                 ca_ttc = sale_ca_ttc + pos_ca_ttc - refund_ttc
                 marge = sale_marge + pos_marge
                 remises = sale_remises + pos_remises
-                nb_clients = len(sale_moves) + len(pos_orders)
+                nb_clients = len(sale_orders) + len(pos_orders)
                 # FIX 2 : total_qte calculé sans .mapped() sur une liste
                 total_qte = sale_qte + pos_qte
 

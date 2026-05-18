@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <template id="report_limit_credit_template">
+        <t t-call="web.html_container">
+            <t t-call="web.external_layout">
+                <div class="page">
+
+                    <h3 class="text-center" style="margin-bottom:4px;">
+                        Récapitulatif des crédits clients
+                    </h3>
+                    <p class="text-center text-muted" style="margin-bottom:16px;">
+                        Période du
+                        <strong><t t-out="date_from.strftime('%d/%m/%Y')"/></strong>
+                        au
+                        <strong><t t-out="date_to.strftime('%d/%m/%Y')"/></strong>
+                    </p>
+
+                    <table class="table table-sm table-bordered o_main_table"
+                           style="font-size:9pt;">
+                        <thead style="background-color:#1a3a5c;color:white;">
+                            <tr>
+                                <th style="width:20%">Client</th>
+                                <th class="text-end" style="width:13%">Limite (FCFA)</th>
+                                <th class="text-end" style="width:13%">Consommé (FCFA)</th>
+                                <th class="text-end" style="width:13%">Solde (FCFA)</th>
+                                <th style="width:25%">Opération</th>
+                                <th style="width:10%">Date</th>
+                                <th class="text-end" style="width:6%">Montant</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="report_lines" t-as="line">
+                                <t t-if="line['operations']">
+                                    <t t-foreach="line['operations']" t-as="op">
+                                        <tr>
+                                            <t t-if="op_index == 0">
+                                                <td t-att-rowspan="len(line['operations'])"
+                                                    style="background:#dce6f1;font-weight:bold;vertical-align:top;">
+                                                    <t t-out="line['partner_name']"/>
+                                                </td>
+                                                <td t-att-rowspan="len(line['operations'])"
+                                                    class="text-end" style="vertical-align:top;">
+                                                    <t t-out="'{:,.0f}'.format(line['amount_limit']).replace(',', ' ')"/>
+                                                </td>
+                                                <td t-att-rowspan="len(line['operations'])"
+                                                    class="text-end" style="vertical-align:top;">
+                                                    <t t-out="'{:,.0f}'.format(line['amount_consumed']).replace(',', ' ')"/>
+                                                </td>
+                                                <td t-att-rowspan="len(line['operations'])"
+                                                    class="text-end" style="vertical-align:top;"
+                                                    t-att-class="'text-danger' if line['amount_solde'] &lt; 0 else ''">
+                                                    <t t-out="'{:,.0f}'.format(line['amount_solde']).replace(',', ' ')"/>
+                                                </td>
+                                            </t>
+                                            <td><t t-out="op['name']"/></td>
+                                            <td style="white-space:nowrap;">
+                                                <t t-out="op['date'].strftime('%d/%m/%Y')"/>
+                                            </td>
+                                            <td class="text-end"
+                                                t-att-style="'color:#cc0000' if op['amount'] &lt; 0 else 'color:#007700'">
+                                                <t t-out="'{:,.0f}'.format(op['amount']).replace(',', ' ')"/>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </t>
+                                <t t-else="">
+                                    <tr>
+                                        <td style="background:#dce6f1;font-weight:bold;">
+                                            <t t-out="line['partner_name']"/>
+                                        </td>
+                                        <td class="text-end">
+                                            <t t-out="'{:,.0f}'.format(line['amount_limit']).replace(',', ' ')"/>
+                                        </td>
+                                        <td class="text-end">
+                                            <t t-out="'{:,.0f}'.format(line['amount_consumed']).replace(',', ' ')"/>
+                                        </td>
+                                        <td class="text-end"
+                                            t-att-class="'text-danger' if line['amount_solde'] &lt; 0 else ''">
+                                            <t t-out="'{:,.0f}'.format(line['amount_solde']).replace(',', ' ')"/>
+                                        </td>
+                                        <td colspan="3" class="text-center text-muted fst-italic">
+                                            Aucune opération sur la période
+                                        </td>
+                                    </tr>
+                                </t>
+                            </t>
+                        </tbody>
+                    </table>
+
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <record id="action_report_limit_credit" model="ir.actions.report">
+        <field name="name">Récapitulatif des crédits clients</field>
+        <field name="model">limit.credit.report.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">custom_food_credit.report_limit_credit_template</field>
+        <field name="report_file">custom_food_credit.report_limit_credit_template</field>
+        <field name="print_report_name">'Recap_Credits_Clients'</field>
+        <field name="binding_model_id" eval="False"/>
+    </record>
+
+</odoo>

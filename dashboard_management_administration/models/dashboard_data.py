@@ -30,27 +30,35 @@ class DashboardManagementAdmin(models.Model):
 
     # ------------------ VENTES ------------------
     def _get_ventes_demi_gros(self, date_from, date_to):
-        domain = [
-            ('date_order', '>=', date_from),
-            ('date_order', '<=', date_to),
+        # Factures validées dans la période (hors POS)
+        moves = self.env['account.move'].search([
+            ('invoice_date', '>=', date_from),
+            ('invoice_date', '<=', date_to),
+            ('move_type', '=', 'out_invoice'),
+            ('state', '=', 'posted'),
+            ('pos_order_ids', '=', False),
             ('company_id', '=', self.env.company.id),
-            ('state', 'in', ['sale', 'done'])
-        ]
-        orders = self.env['sale.order'].search(domain, limit=LIMIT, order="date_order desc")
-        all_orders = self.env['sale.order'].search(domain)
+        ])
+        invoice_domain = [('invoice_ids', 'in', moves.ids)]
+        all_orders = self.env['sale.order'].search(invoice_domain)
+        orders = self.env['sale.order'].search(invoice_domain, limit=LIMIT, order='date_order desc')
 
-        def compute_marge(order):
-            return sum(
-                (line.price_unit - line.product_id.standard_price) * line.product_uom_qty
-                for line in order.order_line
-                if line.product_id
-            )
+        # Avoirs validés sur la période (hors POS)
+        refunds = self.env['account.move'].search([
+            ('invoice_date', '>=', date_from),
+            ('invoice_date', '<=', date_to),
+            ('move_type', '=', 'out_refund'),
+            ('state', '=', 'posted'),
+            ('pos_order_ids', '=', False),
+            ('company_id', '=', self.env.company.id),
+        ])
+        refund_ht = sum(refunds.mapped('amount_untaxed'))
+        refund_ttc = sum(refunds.mapped('amount_total'))
 
-        marge_cache = {o.id: compute_marge(o) for o in all_orders}
-
-        total = sum(all_orders.mapped('amount_total'))
-        marge = sum(marge_cache.values())
-        marge_percent = round(marge / sum(all_orders.mapped('amount_untaxed')) * 100, 2) if total else 0
+        total = sum(all_orders.mapped('amount_total')) - refund_ttc
+        total_ht = sum(all_orders.mapped('amount_untaxed')) - refund_ht
+        marge = sum(all_orders.mapped('margin'))
+        marge_percent = round(marge / total_ht * 100, 2) if total_ht else 0
 
         return {
             'orders': [{
@@ -59,14 +67,15 @@ class DashboardManagementAdmin(models.Model):
                 'date': o.date_order.strftime('%Y-%m-%d'),
                 'amount': o.amount_total,
                 'state': o.state,
-                'marge': marge_cache[o.id],
-                'marge_percent': round(marge_cache[o.id] / o.amount_untaxed * 100 if o.amount_untaxed else 0, 2),
+                'marge': o.margin,
+                'marge_percent': round(o.margin / o.amount_untaxed * 100 if o.amount_untaxed else 0, 2),
             } for o in orders],
             'total': total,
+            'total_ht': total_ht,
             'count': len(all_orders),
             'marge': marge,
             'marge_percent': marge_percent,
-            'domain': domain,
+            'domain': invoice_domain,
             'model': 'sale.order',
         }
 
@@ -78,17 +87,17 @@ class DashboardManagementAdmin(models.Model):
             ('company_id', '=', self.env.company.id),
             ('state', 'in', ['paid', 'done', 'invoiced'])
         ]
-        orders = self.env['pos.order'].search(domain, limit=LIMIT, order="date_order desc")
         all_orders = self.env['pos.order'].search(domain)
-
-        def compute_marge(order):
-            return sum(line.margin for line in order.lines if line.margin)
-
-        marge_cache = {o.id: compute_marge(o) for o in all_orders}
+        orders = self.env['pos.order'].search(domain, limit=LIMIT, order='date_order desc')
 
         total = sum(all_orders.mapped('amount_total'))
-        marge = sum(marge_cache.values())
-        marge_percent = round(marge / sum(all_orders.mapped('amount_total')) * 100, 2) if total else 0
+        total_ht = sum(
+            order.amount_total if order.amount_tax == 0
+            else (order.amount_total - order.amount_tax)
+            for order in all_orders
+        )
+        marge = sum(all_orders.mapped('margin'))
+        marge_percent = round(marge / total_ht * 100, 2) if total_ht else 0
 
         return {
             'orders': [{
@@ -97,10 +106,11 @@ class DashboardManagementAdmin(models.Model):
                 'date': o.date_order.strftime('%Y-%m-%d %H:%M'),
                 'amount': o.amount_total,
                 'session': o.session_id.name,
-                'marge': marge_cache[o.id],
-                'marge_percent': round(marge_cache[o.id] / o.amount_total * 100 if o.amount_total else 0, 2),
+                'marge': o.margin,
+                'marge_percent': round(o.margin / o.amount_total * 100 if o.amount_total else 0, 2),
             } for o in orders],
             'total': total,
+            'total_ht': total_ht,
             'count': len(all_orders),
             'marge': marge,
             'marge_percent': marge_percent,
@@ -134,19 +144,38 @@ class DashboardManagementAdmin(models.Model):
         }
     
     def _get_top_clients(self, date_from, date_to):
-        """Récupère les 5 meilleurs clients"""
         company_id = self.env.company.id
-        
-        # Ventes module vente
-        query_sales = """
-            SELECT partner_id, SUM(amount_total) as total
-            FROM sale_order
-            WHERE date_order >= %s AND date_order <= %s
-            AND company_id = %s
-            AND state IN ('sale', 'done')
-            GROUP BY partner_id
-        """
-        
+
+        # Ventes via factures validées
+        moves = self.env['account.move'].search([
+            ('invoice_date', '>=', date_from),
+            ('invoice_date', '<=', date_to),
+            ('move_type', '=', 'out_invoice'),
+            ('state', '=', 'posted'),
+            ('pos_order_ids', '=', False),
+            ('company_id', '=', company_id),
+        ])
+        sale_orders = self.env['sale.order'].search([('invoice_ids', 'in', moves.ids)])
+        sales_data = {}
+        for o in sale_orders:
+            if o.partner_id.id:
+                pid = o.partner_id.id
+                sales_data[pid] = sales_data.get(pid, 0) + o.amount_total
+
+        # Avoirs validés, soustraits par partenaire
+        refunds = self.env['account.move'].search([
+            ('invoice_date', '>=', date_from),
+            ('invoice_date', '<=', date_to),
+            ('move_type', '=', 'out_refund'),
+            ('state', '=', 'posted'),
+            ('pos_order_ids', '=', False),
+            ('company_id', '=', company_id),
+        ])
+        for move in refunds:
+            if move.partner_id.id:
+                pid = move.partner_id.id
+                sales_data[pid] = sales_data.get(pid, 0) - move.amount_total
+
         # Ventes POS
         query_pos = """
             SELECT partner_id, SUM(amount_total) as total
@@ -157,35 +186,24 @@ class DashboardManagementAdmin(models.Model):
             AND partner_id IS NOT NULL
             GROUP BY partner_id
         """
-        
-        self.env.cr.execute(query_sales, (date_from, date_to, company_id))
-        sales_data = {row[0]: row[1] for row in self.env.cr.fetchall()}
-        
         self.env.cr.execute(query_pos, (date_from, date_to, company_id))
         pos_data = {row[0]: row[1] for row in self.env.cr.fetchall()}
-        
-        # Combiner les données
+
         all_partners = {}
-        for partner_id, amount in sales_data.items():
-            all_partners[partner_id] = all_partners.get(partner_id, 0) + amount
-        for partner_id, amount in pos_data.items():
-            all_partners[partner_id] = all_partners.get(partner_id, 0) + amount
-        
-        # Trier et prendre les 5 premiers
+        for pid, amount in sales_data.items():
+            all_partners[pid] = all_partners.get(pid, 0) + amount
+        for pid, amount in pos_data.items():
+            all_partners[pid] = all_partners.get(pid, 0) + amount
+
         sorted_partners = sorted(all_partners.items(), key=lambda x: x[1], reverse=True)[:5]
-        
-        top_clients = []
-        for partner_id, total in sorted_partners:
-            partner = self.env['res.partner'].browse(partner_id)
-            top_clients.append({
-                'id': partner_id,
-                'name': partner.name,
-                'total': total,
-                'ventes': sales_data.get(partner_id, 0),
-                'pos': pos_data.get(partner_id, 0),
-            })
-        
-        return top_clients
+
+        return [{
+            'id': pid,
+            'name': self.env['res.partner'].browse(pid).name,
+            'total': total,
+            'ventes': sales_data.get(pid, 0),
+            'pos': pos_data.get(pid, 0),
+        } for pid, total in sorted_partners]
 
     
     def _get_statistiques(self, date_from, date_to):
@@ -195,8 +213,9 @@ class DashboardManagementAdmin(models.Model):
         achats = self._get_achats_commande(date_from, date_to)
 
         total_revenus = ventes['total'] + pos['total']
+        total_revenus_ht = ventes['total_ht'] + pos['total_ht']
         marge_brute = ventes['marge'] + pos['marge']
-        taux_marge = round(marge_brute / total_revenus * 100, 2) if total_revenus > 0 else 0,
+        taux_marge = round(marge_brute / total_revenus_ht * 100, 2) if total_revenus_ht > 0 else 0
 
         return {
             'total_ventes': ventes['total'],
@@ -215,43 +234,49 @@ class DashboardManagementAdmin(models.Model):
         }
 
     def _get_evolution_ventes(self, date_from, date_to):
-        """Récupère l'évolution des ventes par jour"""
         company_id = self.env.company.id
-        
-        query = """
-            SELECT DATE(date_order) as date, 
-                   SUM(amount_total) as ventes,
-                   0 as pos
-            FROM sale_order
-            WHERE date_order >= %s AND date_order <= %s
-            AND company_id = %s
-            AND state IN ('sale', 'done')
-            GROUP BY DATE(date_order)
-            
-            UNION ALL
-            
-            SELECT DATE(date_order) as date,
-                   0 as ventes,
-                   SUM(amount_total) as pos
+
+        # Factures validées, groupées par invoice_date
+        sale_moves = self.env['account.move'].search([
+            ('invoice_date', '>=', date_from),
+            ('invoice_date', '<=', date_to),
+            ('move_type', '=', 'out_invoice'),
+            ('state', '=', 'posted'),
+            ('pos_order_ids', '=', False),
+            ('company_id', '=', company_id),
+        ])
+        sales_by_date = {}
+        for move in sale_moves:
+            date_str = move.invoice_date.strftime('%Y-%m-%d')
+            sales_by_date[date_str] = sales_by_date.get(date_str, 0) + move.amount_total
+
+        # Avoirs validés, soustraits par date
+        refunds = self.env['account.move'].search([
+            ('invoice_date', '>=', date_from),
+            ('invoice_date', '<=', date_to),
+            ('move_type', '=', 'out_refund'),
+            ('state', '=', 'posted'),
+            ('pos_order_ids', '=', False),
+            ('company_id', '=', company_id),
+        ])
+        for move in refunds:
+            date_str = move.invoice_date.strftime('%Y-%m-%d')
+            sales_by_date[date_str] = sales_by_date.get(date_str, 0) - move.amount_total
+
+        # POS par date_order
+        query_pos = """
+            SELECT DATE(date_order) as date, SUM(amount_total) as pos
             FROM pos_order
             WHERE date_order >= %s AND date_order <= %s
             AND company_id = %s
             AND state IN ('paid', 'done', 'invoiced')
             GROUP BY DATE(date_order)
-            
-            ORDER BY date
         """
-        
-        self.env.cr.execute(query, (date_from, date_to, company_id, date_from, date_to, company_id))
-        results = self.env.cr.fetchall()
-        
-        # Agréger par date
-        evolution = {}
-        for date, ventes, pos in results:
-            date_str = date.strftime('%Y-%m-%d')
-            if date_str not in evolution:
-                evolution[date_str] = {'date': date_str, 'ventes': 0, 'pos': 0}
-            evolution[date_str]['ventes'] += ventes
-            evolution[date_str]['pos'] += pos
-        
-        return list(evolution.values())
+        self.env.cr.execute(query_pos, (date_from, date_to, company_id))
+        pos_by_date = {row[0].strftime('%Y-%m-%d'): row[1] for row in self.env.cr.fetchall()}
+
+        all_dates = set(sales_by_date.keys()) | set(pos_by_date.keys())
+        return [
+            {'date': d, 'ventes': sales_by_date.get(d, 0), 'pos': pos_by_date.get(d, 0)}
+            for d in sorted(all_dates)
+        ]

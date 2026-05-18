@@ -29,6 +29,7 @@
         'wizard/generate_invoice_credit_food_views.xml',
         'wizard/update_limit_credit_views.xml',
         'wizard/import_limit_credit_wizard_views.xml',
+        'wizard/limit_credit_report_wizard_views.xml',
         'wizard/account_payment_register_inherit_views.xml',
         
         'views/food_credit_view.xml',
@@ -40,6 +41,7 @@
         'views/sale_order_inherit_views.xml',
         'views/account_tax_inherit_views.xml',
         'views/report_invoices.xml',
+        'views/report_limit_credit.xml',
         
     ],
     'license': 'LGPL-3',
