@@ -291,6 +291,12 @@ class ProductTemplateInherit(models.Model):
         help="Cochez si ce produit fait partie de la gamme Koumassi.",
     )
 
+    is_abobo = fields.Boolean(
+        string="Dokui",
+        default=False,
+        help="Cochez si ce produit fait partie de la gamme Dokui.",
+    )
+
     _sql_constraints = [
         (
             'default_code_unique',

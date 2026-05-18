@@ -154,6 +154,7 @@
                                 <field name="is_yop_demi_gros" readonly="1"/>
                                 <field name="is_yop_detail" readonly="1"/>
                                 <field name="is_synacass_ci" readonly="1"/>
+                                <field name="is_abobo" readonly="1"/>
                             </group>
                             <group>
                                 <field name="is_bassam" readonly="1"/>
