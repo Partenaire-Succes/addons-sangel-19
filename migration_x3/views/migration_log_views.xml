@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_migration_log_tree" model="ir.ui.view">
+        <field name="name">x3.migration.log.tree</field>
+        <field name="model">x3.migration.log</field>
+        <field name="arch" type="xml">
+            <tree string="Logs de migration"
+                  decoration-success="state=='success'"
+                  decoration-warning="state=='partial'"
+                  decoration-danger="state=='error'">
+                <field name="date"/>
+                <field name="config_id"/>
+                <field name="objet"/>
+                <field name="total_x3"/>
+                <field name="total_ok"/>
+                <field name="total_errors"/>
+                <field name="state"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_migration_log_form" model="ir.ui.view">
+        <field name="name">x3.migration.log.form</field>
+        <field name="model">x3.migration.log</field>
+        <field name="arch" type="xml">
+            <form string="Log de migration">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="config_id"/>
+                            <field name="objet"/>
+                            <field name="state"/>
+                        </group>
+                        <group>
+                            <field name="total_x3"/>
+                            <field name="total_ok"/>
+                            <field name="total_errors"/>
+                        </group>
+                    </group>
+                    <field name="details" widget="code" readonly="1"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_migration_log" model="ir.actions.act_window">
+        <field name="name">Logs de migration</field>
+        <field name="res_model">x3.migration.log</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+</odoo>

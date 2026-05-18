@@ -1,0 +1,6 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_x3_config_admin,x3.config admin,model_x3_config,base.group_system,1,1,1,1
+access_x3_config_user,x3.config user,model_x3_config,base.group_user,1,0,0,0
+access_x3_log_admin,x3.migration.log admin,model_x3_migration_log,base.group_system,1,1,1,1
+access_x3_log_user,x3.migration.log user,model_x3_migration_log,base.group_user,1,0,0,0
+access_x3_wizard,x3.migration.wizard,model_x3_migration_wizard,base.group_system,1,1,1,1

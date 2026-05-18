@@ -26,8 +26,11 @@ class StockAverageCostReportOverride(models.AbstractModel):
             avco = 0.0
             for record in records:
                 if record.res_model_name == 'stock.move':
-                    added_value = record.value
-                    total_value += record.value
+                    if record.quantity > 0:
+                        added_value = record.value
+                    else:
+                        added_value = avco * record.quantity
+                    total_value += added_value
                     total_quantity += record.quantity
                 elif record.res_model_name == 'product.value':
                     added_value = (record.value * total_quantity) - total_value
