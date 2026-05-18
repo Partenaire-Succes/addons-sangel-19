@@ -180,8 +180,8 @@ class ReportDailySalesWizard(models.TransientModel):
                     ('move_id', 'in', moves.ids)
                 ])
 
-                ca_ht = sum(order.amount_untaxed for order in orders) - refund_ht
-                ca_ttc = sum(order.amount_total for order in orders) - refund_ttc
+                ca_ht = sum(order.amount_untaxed for order in moves) - refund_ht
+                ca_ttc = sum(order.amount_total for order in moves) - refund_ttc
                 cout_total = sum(
                     line.quantity * line.product_id.standard_price
                     for line in order_lines
@@ -198,7 +198,7 @@ class ReportDailySalesWizard(models.TransientModel):
                     if l.price_unit < 0
                 )
                 remises = remise_line - remise_global
-                nb_clients = len(orders)
+                nb_clients = len(moves)
                 # FIX 4 : champ correct pour panier_qte
                 total_qte = sum(
                     line.quantity
