@@ -23,13 +23,14 @@
                         <page string="Produits">
                             <field name="line_ids" nolabel="1">
                                 <list editable="bottom" decoration-warning="qty_to_order == 0">
-                                    <field name="product_id" readonly="1"/>
+                                    <field name="orderpoint_id" column_invisible="1" force_save="1"/>
+                                    <field name="product_id" readonly="1" force_save="1"/>
                                     <field name="location_id" readonly="1"/>
                                     <field name="qty_on_hand" readonly="1"/>
                                     <field name="product_min_qty" readonly="1"/>
                                     <field name="product_max_qty" readonly="1"/>
                                     <field name="qty_to_order"/>
-                                    <field name="product_uom_id" readonly="1"/>
+                                    <field name="product_uom_id" readonly="1" force_save="1"/>
                                     <field name="price_unit"/>
                                     <field name="subtotal" readonly="1"/>
                                 </list>

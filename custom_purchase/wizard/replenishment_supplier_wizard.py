@@ -50,6 +50,8 @@ class ReplenishmentSupplierWizard(models.TransientModel):
                 continue
 
             qty_to_order = max(0.0, op.qty_to_order or 0.0)
+            if qty_to_order == 0:
+                continue
             lines.append((0, 0, {
                 'orderpoint_id': op.id,
                 'product_id': op.product_id.id,
@@ -75,21 +77,29 @@ class ReplenishmentSupplierWizard(models.TransientModel):
             'company_id': self.company_id.id,
         })
 
-        PurchaseLine = self.env['purchase.order.line']
+        lang = self.supplier_id.lang or self.env.lang
         for line in lines:
-            # Utiliser la méthode native d'Odoo qui construit correctement
-            # name, date_planned, tax_ids, price_unit depuis le seller
-            vals = PurchaseLine._prepare_purchase_order_line(
-                product_id=line.product_id,
-                product_qty=line.qty_to_order,
-                product_uom=line.product_uom_id,
-                company_id=self.company_id,
-                partner_id=self.supplier_id,
-                po=po,
+            product = line.product_id
+            product_lang = product.with_context(lang=lang)
+            name = product_lang.display_name or product.name or '/'
+            if product_lang.description_purchase:
+                name += '\n' + product_lang.description_purchase
+
+            taxes = product.supplier_taxes_id.filtered(
+                lambda t: t.company_id.id == self.company_id.id
             )
-            # Garder le prix saisi dans le wizard
-            vals['price_unit'] = line.price_unit
-            PurchaseLine.create(vals)
+
+            self.env['purchase.order.line'].create({
+                'order_id': po.id,
+                'product_id': product.id,
+                'name': name,
+                'product_qty': line.qty_to_order,
+                'product_uom_id': line.product_uom_id.id,
+                'price_unit': line.price_unit,
+                'date_planned': fields.Datetime.now(),
+                'tax_ids': [(6, 0, taxes.ids)],
+                'orderpoint_id': line.orderpoint_id.id,
+            })
 
         return {
             'type': 'ir.actions.act_window',
