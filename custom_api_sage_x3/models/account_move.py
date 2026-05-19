@@ -1163,17 +1163,19 @@ class AccountMoveSageX3(models.Model):
 
         tax_facli = defaultdict(float)
 
-        for line in self.invoice_line_ids:
-            if line.display_type in ('line_section', 'line_note'):
+        for line in self.line_ids:
+            if not line.tax_line_id:
                 continue
-            ht = line.price_subtotal  # montant HT (taxes exclues)
-            for tax in line.tax_ids:
-                if tax.amount == 9:
-                    tax_facli[sale_tva_9]  += round(ht * 0.09, 2)
-                elif tax.amount == 18:
-                    tax_facli[sale_tva_18] += round(ht * 0.18, 2)
-                else:
-                    tax_facli[sale_airsi]  += round(ht * (tax.amount / 100), 2)
+            taux = line.tax_line_id.amount
+            amount = abs(line.balance)
+            if taux == 9:
+                tax_facli[sale_tva_9] += amount
+            elif taux == 18:
+                tax_facli[sale_tva_18] += amount
+            else:
+                tax_facli[sale_airsi] += amount
+
+        tax_facli = {k: round(v, 2) for k, v in tax_facli.items()}
 
         if not self.amount_untaxed:
             raise UserError(f"Aucune ligne de produit valide sur {self.name}")
@@ -1206,6 +1208,8 @@ class AccountMoveSageX3(models.Model):
                     montant = round(amount, 2),
                     libelle = libelle,
                 ))
+
+        self._equilibrer_lignes(lignes, sens_cible=sens_client)
 
         return {
             "ecritures": [
