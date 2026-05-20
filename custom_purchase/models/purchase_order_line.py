@@ -41,6 +41,22 @@ class PurchaseOrderLine(models.Model):
 
     # ── Avertissement UX lors de la sélection dans le formulaire ────────────
 
+    def _compute_price_unit_and_date_planned_and_name(self):
+        """Fallback coût produit quand le fournisseur a prix = 0.
+
+        Odoo standard : si fournisseur trouvé → price_unit = seller.price (même si 0).
+        Ce fallback : si price_unit reste 0 après le compute et que le produit
+        a un coût standard > 0, on l'utilise comme prix de référence.
+        Aucun accès à product_uom ou _select_seller pour éviter les incompatibilités.
+        """
+        super()._compute_price_unit_and_date_planned_and_name()
+        for line in self:
+            if line.price_unit or not line.product_id or not line.company_id:
+                continue
+            standard_price = line.product_id.with_company(line.company_id).standard_price
+            if standard_price > 0:
+                line.price_unit = standard_price
+
     @api.onchange('product_id')
     def _onchange_product_id_check_status(self):
         if not self.product_id:
