@@ -124,13 +124,17 @@ patch(PosStore.prototype, {
         console.log("Code d'accès requis:", hasDiscount);
 
         // ========== Vérification réduction de prix ==========
-        // Collecter les lignes avec prix modifié (pour vérification backend)
+        // Collecter les lignes avec prix modifié MANUELLEMENT (pour vérification backend).
+        // Les prix issus d'une liste de prix (price_type !== "manual") sont exclus :
+        // ils ont été définis par la configuration tarifaire, pas par la caissière.
         const priceReductionLines = [];
         orderLines.forEach(line => {
             if (!line || !line.product_id) return;
             if (line.is_reward_line) return;
             if (line.price_unit !== undefined && line.price_unit < 0) return;
-            
+            // Prix appliqué par une liste de prix → pas de code requis
+            if (line.price_type !== "manual") return;
+
             const product = line.product_id;
             const originalPrice = product.lst_price;  // HT catalogue
             const currentPrice = line.price_unit;      // HT modifié
