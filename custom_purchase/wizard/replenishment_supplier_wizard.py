@@ -24,7 +24,7 @@ class ReplenishmentSupplierWizard(models.TransientModel):
     )
     line_count = fields.Integer(compute='_compute_line_count')
 
-    @api.depends('line_ids')
+    @api.depends('line_ids', 'supplier_id')
     def _compute_line_count(self):
         for rec in self:
             rec.line_count = len(rec.line_ids.filtered(lambda l: l.qty_to_order > 0))
@@ -50,8 +50,8 @@ class ReplenishmentSupplierWizard(models.TransientModel):
                 continue
 
             qty_to_order = max(0.0, op.qty_to_order or 0.0)
-            if qty_to_order == 0:
-                continue
+            # if qty_to_order == 0:
+            #     continue
             lines.append((0, 0, {
                 'orderpoint_id': op.id,
                 'product_id': op.product_id.id,

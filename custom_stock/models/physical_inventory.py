@@ -320,6 +320,7 @@ class PhysicalInventoryLine(models.Model):
         'Stock'
     )
     state = fields.Selection(related='inventory_physical_id.state', string='État')
+    inventory_mode = fields.Selection(related='inventory_physical_id.inventory_mode', string='Mode', store=False)
     product_tmpl_id = fields.Many2one(
         'product.template',
         'Produit'
@@ -361,6 +362,15 @@ class PhysicalInventoryLine(models.Model):
     company_id = fields.Many2one('res.company', string='Société', related='inventory_physical_id.company_id')
     code_article = fields.Char(string='Code Article', related='product_tmpl_id.code_article')
                 
+
+    def unlink(self):
+        for line in self:
+            if line.inventory_physical_id and line.inventory_physical_id.inventory_mode == 'normal':
+                raise UserError(
+                    "La suppression de lignes n'est pas autorisée en mode Inventaire normal.\n"
+                    "Merci de valider votre inventaire."
+                )
+        return super().unlink()
 
     @api.depends('physical_qty', 'quantity', 'price')
     def compute_qty_dif(self):
