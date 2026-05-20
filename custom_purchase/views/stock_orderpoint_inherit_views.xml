@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Menu Commander par Fournisseur sous Inventaire > Opérations -->
+    <menuitem
+        id="menu_replenishment_supplier_wizard"
+        name="Commander par Fournisseur"
+        parent="stock.menu_stock_procurement"
+        action="custom_purchase.action_replenishment_supplier_wizard"
+        sequence="20"/>
+
+</odoo>

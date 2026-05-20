@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_replenishment_supplier_wizard_form" model="ir.ui.view">
+        <field name="name">replenishment.supplier.wizard.form</field>
+        <field name="model">replenishment.supplier.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Réassort par Fournisseur">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>Réassort par Fournisseur</h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="supplier_id" options="{'no_create': True}"/>
+                            <field name="company_id" invisible="1"/>
+                        </group>
+                        <group>
+                            <field name="line_count" string="Produits à commander" readonly="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Produits">
+                            <field name="line_ids" nolabel="1">
+                                <list editable="bottom" decoration-warning="qty_to_order == 0">
+                                    <field name="orderpoint_id" column_invisible="1" force_save="1"/>
+                                    <field name="product_id" readonly="1" force_save="1"/>
+                                    <field name="location_id" readonly="1"/>
+                                    <field name="qty_on_hand" readonly="1"/>
+                                    <field name="product_min_qty" readonly="1"/>
+                                    <field name="product_max_qty" readonly="1"/>
+                                    <field name="qty_to_order"/>
+                                    <field name="product_uom_id" readonly="1" force_save="1"/>
+                                    <field name="price_unit"/>
+                                    <field name="subtotal" readonly="1"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <footer>
+                    <button name="action_create_purchase_order"
+                            string="Créer le bon d'achat"
+                            type="object"
+                            class="btn-primary"/>
+                    <button string="Annuler" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_replenishment_supplier_wizard" model="ir.actions.act_window">
+        <field name="name">Commander par Fournisseur</field>
+        <field name="res_model">replenishment.supplier.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+</odoo>
