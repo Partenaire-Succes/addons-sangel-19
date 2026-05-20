@@ -86,8 +86,9 @@ class ProductProduct(models.Model):
             if not corruption_detectee:
                 continue
 
-            # Prix de repli : dernier prix valide avant le mouvement (ou 0 si inconnu)
-            prix_repli = ancien if ancien > 0 else 0.0
+            # Stock est à zéro : l'AVCO est indéfini → on pose le prix à 0.
+            # La prochaine réception définira le nouveau coût unitaire.
+            prix_repli = 0.0
 
             _logger.warning(
                 '[AVCO_GUARD] Corruption FP bloquee — produit: %s (id=%s) '
