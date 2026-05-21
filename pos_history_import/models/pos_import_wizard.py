@@ -12,7 +12,7 @@ _logger = logging.getLogger(__name__)
 
 try:
     import openpyxl
-    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.styles import Font, Alignment
     OPENPYXL_AVAILABLE = True
 except ImportError:
     OPENPYXL_AVAILABLE = False
@@ -37,7 +37,7 @@ COL_ALIASES = {
     'discount':      ['discount', 'remise', 'remise_pct'],
     'note':          ['note', 'notes', 'commentaire', 'remarque'],
 }
-REQUIRED_COLS = ['date_order', 'qty', 'price_unit']
+REQUIRED_COLS = ['date_order', 'qty', 'price_ht']
 
 
 class PosHistoryImportWizard(models.TransientModel):
@@ -122,55 +122,41 @@ class PosHistoryImportWizard(models.TransientModel):
         ws.title = "Import POS"
 
         COLUMNS = [
-            ('date_order',    'Date\n(JJ/MM/AAAA)',            True,  16),
-            ('order_ref',     'Commande\n(réf. unique)',        True,  18),
-            ('customer_ref',  'Id client\n(réf. client)',       False, 16),
-            ('customer_name', 'Nom\n(nom client)',              False, 22),
-            ('product_ref',   'Code article *\n(réf. interne)', True,  16),
-            ('product_name',  'Produit\n(nom fallback)',        False, 28),
-            ('qty',           'Qty *\n(négatif = retour)',      True,  12),
-            ('price_ht',      'Prix_ht *\n(HT unité)',          True,  14),
-            ('price_unit',    'Prix_ttc *\n(TTC unité)',        True,  14),
-            ('note',          'Note\n(optionnel)',               False, 20),
+            ('date_order',    'date_order',    16),
+            ('order_ref',     'order_ref',     18),
+            ('customer_ref',  'customer_ref',  16),
+            ('customer_name', 'customer_name', 22),
+            ('product_ref',   'product_ref',   16),
+            ('product_name',  'product_name',  28),
+            ('qty',           'qty',           12),
+            ('price_ht',      'prix_ht',       14),
+            ('note',          'note',          20),
         ]
 
-        fill_req = PatternFill("solid", fgColor="1F4E79")
-        fill_opt = PatternFill("solid", fgColor="2E75B6")
-        fill_ex  = PatternFill("solid", fgColor="EBF3FB")
-        font_hdr = Font(color="FFFFFF", bold=True, size=10)
+        font_hdr = Font(bold=True, size=10)
         font_dat = Font(size=10)
         align_c  = Alignment(horizontal='center', vertical='center', wrap_text=True)
-        thin     = Side(style='thin', color='CCCCCC')
-        border   = Border(left=thin, right=thin, top=thin, bottom=thin)
 
-        ws.row_dimensions[1].height = 48
-        for c, (key, label, req, width) in enumerate(COLUMNS, 1):
-            cell = ws.cell(row=1, column=c, value=label)
+        ws.row_dimensions[1].height = 24
+        for c, (key, label, width) in enumerate(COLUMNS, 1):
+            cell           = ws.cell(row=1, column=c, value=label)
             cell.font      = font_hdr
-            cell.fill      = fill_req if req else fill_opt
             cell.alignment = align_c
-            cell.border    = border
             ws.column_dimensions[openpyxl.utils.get_column_letter(c)].width = width
 
         examples = [
-            # Commande 2 lignes
-            ['01/01/2026', '01-1-53026', None,    None,          '3253', 'SAUCISSE POULET 10X34G', 1,    975,  1150, ''],
-            ['01/01/2026', '01-1-53026', None,    None,          '4657', 'PONDEUSE',               3.82, 10514, 11460, ''],
-            # Commande 1 ligne avec client
-            ['01/01/2026', '01-1-53027', 'C-001', 'Jean Dupont', '4657', 'PONDEUSE',               4.02, 11065, 12060, ''],
-            # Retour (qty négative)
-            ['01/01/2026', '01-1-53031', None,    None,          '4044', 'LANGUE DE BOEUF',        -1.115, -2604, -2604, 'Retour'],
-            # Jour 2
-            ['02/01/2026', '01-2-53100', None,    None,          '2676', 'POULET EFFILE',           1.116, 3069, 3069, ''],
+            ['01/01/2026', '01-1-53026', None,    None,          '3253', 'SAUCISSE POULET 10X34G', 1,     975,  ''],
+            ['01/01/2026', '01-1-53026', None,    None,          '4657', 'PONDEUSE',               3.82,  10514, ''],
+            ['01/01/2026', '01-1-53027', 'C-001', 'Jean Dupont', '4657', 'PONDEUSE',               4.02,  11065, ''],
+            ['01/01/2026', '01-1-53031', None,    None,          '4044', 'LANGUE DE BOEUF',        -1.115, -2604, 'Retour'],
+            ['02/01/2026', '01-2-53100', None,    None,          '2676', 'POULET EFFILE',           1.116, 3069, ''],
         ]
         for r, row in enumerate(examples, 2):
-            ws.row_dimensions[r].height = 20
+            ws.row_dimensions[r].height = 18
             for c, v in enumerate(row, 1):
                 cell           = ws.cell(row=r, column=c, value=v)
                 cell.font      = font_dat
-                cell.fill      = fill_ex
                 cell.alignment = Alignment(horizontal='center', vertical='center')
-                cell.border    = border
 
         output = io.BytesIO()
         wb.save(output)
@@ -492,9 +478,10 @@ class PosHistoryImportWizard(models.TransientModel):
                 continue
 
             try:
-                qty       = float(row.get('qty') or 0)
-                price_ttc = float(row.get('price_unit') or 0)
-                price_ht  = float(row.get('price_ht') or price_ttc)
+                qty      = float(row.get('qty') or 0)
+                price_ht = float(row.get('price_ht') or 0)
+                # price_unit (TTC) sera calculé via les taxes produit à l'import
+                price_ttc = float(row.get('price_unit') or price_ht)
                 disc      = float(row.get('discount') or 0)
             except (ValueError, TypeError):
                 errors.append(f"Ligne {rn} : valeurs numériques invalides.")
@@ -587,18 +574,28 @@ class PosHistoryImportWizard(models.TransientModel):
             if not product:
                 raise UserError(_("Produit non trouvé."))
 
-            qty       = line_data['qty']
-            price_ttc = line_data['price_unit']
-            price_ht  = line_data.get('price_ht', price_ttc)
+            qty      = line_data['qty']
+            price_ht = line_data.get('price_ht') or line_data.get('price_unit') or 0.0
 
-            # Utiliser les montants exacts du fichier source
-            sub  = price_ht  * qty  # HT
-            subi = price_ttc * qty  # TTC
+            taxes = product.taxes_id.filtered(lambda t: t.company_id == self.env.company)
+
+            if taxes:
+                tax_result = taxes.compute_all(
+                    price_ht,
+                    currency=self.env.company.currency_id,
+                    quantity=1.0,
+                    product=product,
+                )
+                price_ttc = tax_result['total_included']
+            else:
+                price_ttc = price_ht
+
+            sub  = price_ht  * qty   # HT
+            subi = price_ttc * qty   # TTC
 
             amount_total += subi
             amount_tax   += (subi - sub)
 
-            taxes = product.taxes_id.filtered(lambda t: t.company_id == self.env.company)
             lv = {
                 'product_id':          product.id,
                 'qty':                 qty,
