@@ -9,6 +9,14 @@
         action="custom_purchase.action_replenishment_supplier_wizard"
         sequence="20"/>
 
+    <!-- Menu Commander par Fournisseur sous Achats > Commandes -->
+    <menuitem
+        id="menu_replenishment_supplier_wizard_purchase"
+        name="Commander par Fournisseur"
+        parent="purchase.menu_procurement_management"
+        action="custom_purchase.action_replenishment_supplier_wizard"
+        sequence="20"/>
+
     <!-- Masquer le menu Réassort natif Odoo -->
     <record id="stock.menu_reordering_rules_replenish" model="ir.ui.menu">
         <field name="active" eval="False"/>

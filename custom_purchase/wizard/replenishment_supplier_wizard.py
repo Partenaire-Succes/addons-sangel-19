@@ -49,6 +49,9 @@ class ReplenishmentSupplierWizard(models.TransientModel):
             if not seller:
                 continue
 
+            if op.product_id.current_company_status_id.code != 'C':
+                continue
+
             qty_to_order = max(0.0, op.qty_to_order or 0.0)
             # if qty_to_order == 0:
             #     continue
@@ -126,7 +129,7 @@ class ReplenishmentSupplierWizardLine(models.TransientModel):
     product_uom_id = fields.Many2one('uom.uom', string='UdM')
     subtotal = fields.Float(string='Sous-total', compute='_compute_subtotal')
 
-    @api.depends('qty_to_order', 'price_unit')
+    @api.depends('qty_to_order', 'price_unit') 
     def _compute_subtotal(self):
         for line in self:
             line.subtotal = line.qty_to_order * line.price_unit
