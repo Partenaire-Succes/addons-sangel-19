@@ -7,19 +7,6 @@ _logger = logging.getLogger(__name__)
 class PosOrder(models.Model):
     _inherit = 'pos.order'
 
-    def _prepare_tax_base_line_values(self):
-        result = super()._prepare_tax_base_line_values()
-        if result and self.env.context.get('invoicing'):
-            _logger.info("POS INVOICE FIX: pré-calcul taxes sur %d lignes (commande %s)", len(result), self[:1].name)
-            AccountTax = self.env['account.tax']
-            company = self[:1].company_id or self.env.company
-            AccountTax._add_tax_details_in_base_lines(result, company)
-            AccountTax._round_base_lines_tax_details(result, company)
-            AccountTax._fix_base_lines_tax_details_on_manual_tax_amounts(result, company)
-            for r in result:
-                _logger.info("  ligne %s: manual_tax_amounts=%s", r.get('record'), r.get('manual_tax_amounts'))
-        return result
-
     def write(self, vals):
         """
         Override to allow payment method modification on printed orders.

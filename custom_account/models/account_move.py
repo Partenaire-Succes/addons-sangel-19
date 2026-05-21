@@ -26,6 +26,50 @@ class AccountMove(models.Model):
         return res
     
 
+    def _get_unbalanced_moves(self, container):
+        result = super()._get_unbalanced_moves(container)
+        if not result:
+            return result
+
+        remaining = []
+        for row in result:
+            move_id = row[0]
+            move = self.browse(move_id)
+
+            if not move.pos_order_ids:
+                remaining.append(row)
+                continue
+
+            delta = sum(line.balance for line in move.line_ids)
+            delta_rounded = move.currency_id.round(delta)
+
+            if not delta_rounded or abs(delta_rounded) > 5:
+                remaining.append(row)
+                continue
+
+            tax_lines = move.line_ids.filtered(lambda l: l.tax_line_id)
+            if not tax_lines:
+                remaining.append(row)
+                continue
+
+            biggest = max(tax_lines, key=lambda l: abs(l.balance))
+            new_balance = biggest.balance - delta_rounded
+            new_debit = max(0.0, new_balance)
+            new_credit = max(0.0, -new_balance)
+
+            self.env.cr.execute(
+                "UPDATE account_move_line SET balance=%s, amount_currency=%s, debit=%s, credit=%s WHERE id=%s",
+                [new_balance, new_balance, new_debit, new_credit, biggest.id]
+            )
+            move.line_ids.invalidate_recordset(['balance', 'amount_currency', 'debit', 'credit'])
+            _logger.info(
+                "POS INVOICE: équilibrage automatique (delta=%s) sur facture %s, ligne '%s': %s -> %s",
+                delta_rounded, move.pos_order_ids[:1].name, biggest.name or '?',
+                biggest.balance + delta_rounded, new_balance
+            )
+
+        return remaining
+
     def _check_credit_limit(self):
         for order in self:
             if order.mode_payment == 'credit':
