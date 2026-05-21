@@ -27,7 +27,10 @@ class AccountMove(models.Model):
     
 
     def _get_unbalanced_moves(self, container):
+        _logger.info("POS_BALANCE_DEBUG: _get_unbalanced_moves appelé, container records=%s",
+                     container.get('records'))
         result = super()._get_unbalanced_moves(container)
+        _logger.info("POS_BALANCE_DEBUG: super() result=%s", result)
         if not result:
             return result
 
@@ -36,19 +39,27 @@ class AccountMove(models.Model):
             move_id = row[0]
             move = self.browse(move_id)
 
-            if not move.pos_order_ids:
+            pos_orders = move.sudo().pos_order_ids
+            _logger.info("POS_BALANCE_DEBUG: move_id=%s, pos_order_ids=%s, row=%s",
+                         move_id, pos_orders.ids, row)
+
+            if not pos_orders:
+                _logger.info("POS_BALANCE_DEBUG: pas de pos_order_ids → skip")
                 remaining.append(row)
                 continue
 
             delta = sum(line.balance for line in move.line_ids)
             delta_rounded = move.currency_id.round(delta)
+            _logger.info("POS_BALANCE_DEBUG: delta brut=%s, delta arrondi=%s", delta, delta_rounded)
 
             if not delta_rounded or abs(delta_rounded) > 5:
+                _logger.info("POS_BALANCE_DEBUG: delta=0 ou trop grand → skip")
                 remaining.append(row)
                 continue
 
             tax_lines = move.line_ids.filtered(lambda l: l.tax_line_id)
             if not tax_lines:
+                _logger.info("POS_BALANCE_DEBUG: pas de lignes taxe → skip")
                 remaining.append(row)
                 continue
 
@@ -64,7 +75,7 @@ class AccountMove(models.Model):
             move.line_ids.invalidate_recordset(['balance', 'amount_currency', 'debit', 'credit'])
             _logger.info(
                 "POS INVOICE: équilibrage automatique (delta=%s) sur facture %s, ligne '%s': %s -> %s",
-                delta_rounded, move.pos_order_ids[:1].name, biggest.name or '?',
+                delta_rounded, pos_orders[:1].name, biggest.name or '?',
                 biggest.balance + delta_rounded, new_balance
             )
 

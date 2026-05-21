@@ -5,3 +5,5 @@ access_stock_avco_import_wizard_line,stock.avco.import.wizard.line,model_stock_a
 access_stock_avco_import_wizard_line_user,stock.avco.import.wizard.line.user,model_stock_avco_import_wizard_line,stock.group_stock_user,1,1,1,1
 access_pos_margin_cost_wizard,pos.margin.cost.wizard,model_pos_margin_cost_wizard,stock.group_stock_manager,1,1,1,1
 access_pos_margin_cost_wizard_line,pos.margin.cost.wizard.line,model_pos_margin_cost_wizard_line,stock.group_stock_manager,1,1,1,1
+access_product_status_import_wizard,product.status.import.wizard,model_product_status_import_wizard,stock.group_stock_manager,1,1,1,1
+access_product_status_import_wizard_line,product.status.import.wizard.line,model_product_status_import_wizard_line,stock.group_stock_manager,1,1,1,1

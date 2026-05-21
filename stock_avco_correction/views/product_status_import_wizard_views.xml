@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_product_status_import_wizard_form" model="ir.ui.view">
+        <field name="name">product.status.import.wizard.form</field>
+        <field name="model">product.status.import.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Import statuts magasin">
+                <field name="state" invisible="1"/>
+
+                <!-- ÉTAPE 1 : Import -->
+                <group invisible="state != 'import'">
+                    <group string="Paramètres">
+                        <field name="company_id" string="Magasin"/>
+                        <field name="excel_file"
+                               filename="excel_filename"
+                               widget="binary"
+                               string="Fichier Excel (.xlsx / .xls)"/>
+                        <field name="excel_filename" invisible="1"/>
+                    </group>
+                    <group string="Format attendu">
+                        <div style="padding:8px;background:#f8f9fa;border:1px solid #dee2e6;border-radius:4px;font-size:12px;">
+                            <b>Colonnes du fichier Excel :</b><br/>
+                            &#8226; <b>code article</b> — code interne de l'article<br/>
+                            &#8226; <b>statut</b> — code du statut (ex : A, C, D…)<br/>
+                            <br/>
+                            Les statuts seront appliqués sur le magasin sélectionné ci-dessus.
+                        </div>
+                    </group>
+                </group>
+
+                <!-- ÉTAPES 2 et 3 : résumé -->
+                <group invisible="state == 'import'">
+                    <field name="summary_html" widget="html" nolabel="1"/>
+                </group>
+
+                <notebook invisible="state == 'import'">
+                    <page string="Lignes à traiter" invisible="state == 'done'">
+                        <field name="line_ids" readonly="1">
+                            <list decoration-success="state == 'ready'"
+                                  decoration-danger="state in ('not_found', 'unknown_status')"
+                                  decoration-muted="state == 'done'"
+                                  limit="500">
+                                <field name="code_article"/>
+                                <field name="product_id"/>
+                                <field name="current_status_id" string="Statut actuel"/>
+                                <field name="code_statut"       string="Code nouveau"/>
+                                <field name="status_id"         string="Nouveau statut"/>
+                                <field name="state" widget="badge"
+                                       decoration-success="state == 'ready'"
+                                       decoration-danger="state in ('not_found', 'unknown_status')"
+                                       decoration-muted="state == 'done'"/>
+                            </list>
+                        </field>
+                    </page>
+
+                    <page string="Résultats" invisible="state != 'done'">
+                        <group>
+                            <field name="nb_updated"/>
+                            <field name="nb_created"/>
+                            <field name="nb_not_found"/>
+                            <field name="nb_unknown_status"/>
+                        </group>
+                        <field name="line_ids" readonly="1">
+                            <list decoration-success="state == 'done'"
+                                  decoration-danger="state in ('not_found', 'unknown_status')"
+                                  limit="500">
+                                <field name="code_article"/>
+                                <field name="product_id"/>
+                                <field name="current_status_id" string="Statut avant"/>
+                                <field name="status_id"         string="Nouveau statut"/>
+                                <field name="state" widget="badge"
+                                       decoration-success="state == 'done'"
+                                       decoration-danger="state in ('not_found', 'unknown_status')"/>
+                            </list>
+                        </field>
+                    </page>
+                </notebook>
+
+                <footer>
+                    <button name="action_load_file"
+                            string="Analyser le fichier"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state != 'import'"/>
+
+                    <button name="action_apply"
+                            string="Appliquer les statuts"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state != 'preview'"/>
+
+                    <button name="action_reset"
+                            string="Recommencer"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="state == 'import'"/>
+
+                    <button string="Fermer"
+                            class="btn-secondary"
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_product_status_import_wizard" model="ir.actions.act_window">
+        <field name="name">Import statuts magasin</field>
+        <field name="res_model">product.status.import.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+</odoo>

@@ -16,6 +16,7 @@
         'security/ir.model.access.csv',
         'views/stock_avco_wizard_views.xml',
         'views/sale_margin_recompute_wizard_views.xml',
+        'views/product_status_import_wizard_views.xml',
         'views/menu.xml',
     ],
     'installable': True,

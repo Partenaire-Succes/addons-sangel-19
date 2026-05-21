@@ -19,4 +19,13 @@
         sequence="99"
         groups="custom_pos.group_dsi_it"/>
 
+    <!-- Menu Import statuts magasin -->
+    <menuitem
+        id="menu_product_status_import"
+        name="Import statuts magasin"
+        parent="stock.menu_stock_warehouse_mgmt"
+        action="action_product_status_import_wizard"
+        sequence="100"
+        groups="custom_pos.group_dsi_it"/>
+
 </odoo>
