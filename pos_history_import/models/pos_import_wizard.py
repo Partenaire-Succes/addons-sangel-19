@@ -35,6 +35,7 @@ COL_ALIASES = {
     'price_unit':    ['price_unit', 'prix_ttc', 'prix ttc', 'ttc', 'prix_unit',
                       'price', 'montant_ttc'],
     'discount':      ['discount', 'remise', 'remise_pct'],
+    'margin':        ['margin', 'marge', 'marge_ht', 'margin_ht'],
     'note':          ['note', 'notes', 'commentaire', 'remarque'],
 }
 REQUIRED_COLS = ['date_order', 'qty', 'price_ht']
@@ -122,14 +123,15 @@ class PosHistoryImportWizard(models.TransientModel):
         ws.title = "Import POS"
 
         COLUMNS = [
-            ('date_order',    'date_order',    16),
+            ('date_order',    'date_order *',  16),
             ('order_ref',     'order_ref',     18),
             ('customer_ref',  'customer_ref',  16),
             ('customer_name', 'customer_name', 22),
-            ('product_ref',   'product_ref',   16),
+            ('product_ref',   'product_ref *', 16),
             ('product_name',  'product_name',  28),
-            ('qty',           'qty',           12),
-            ('price_ht',      'prix_ht',       14),
+            ('qty',           'qty *',         12),
+            ('price_ht',      'prix_ht *',     14),
+            ('margin',        'marge',         14),
             ('note',          'note',          20),
         ]
 
@@ -145,11 +147,11 @@ class PosHistoryImportWizard(models.TransientModel):
             ws.column_dimensions[openpyxl.utils.get_column_letter(c)].width = width
 
         examples = [
-            ['01/01/2026', '01-1-53026', None,    None,          '3253', 'SAUCISSE POULET 10X34G', 1,     975,  ''],
-            ['01/01/2026', '01-1-53026', None,    None,          '4657', 'PONDEUSE',               3.82,  10514, ''],
-            ['01/01/2026', '01-1-53027', 'C-001', 'Jean Dupont', '4657', 'PONDEUSE',               4.02,  11065, ''],
-            ['01/01/2026', '01-1-53031', None,    None,          '4044', 'LANGUE DE BOEUF',        -1.115, -2604, 'Retour'],
-            ['02/01/2026', '01-2-53100', None,    None,          '2676', 'POULET EFFILE',           1.116, 3069, ''],
+            ['01/01/2026', '01-1-53026', None,    None,          '3253', 'SAUCISSE POULET 10X34G', 1,      975,   150,  ''],
+            ['01/01/2026', '01-1-53026', None,    None,          '4657', 'PONDEUSE',               3.82,  10514,  1200, ''],
+            ['01/01/2026', '01-1-53027', 'C-001', 'Jean Dupont', '4657', 'PONDEUSE',               4.02,  11065,  1260, ''],
+            ['01/01/2026', '01-1-53031', None,    None,          '4044', 'LANGUE DE BOEUF',        -1.115, -2604, -300, 'Retour'],
+            ['02/01/2026', '01-2-53100', None,    None,          '2676', 'POULET EFFILE',           1.116,  3069,  420, ''],
         ]
         for r, row in enumerate(examples, 2):
             ws.row_dimensions[r].height = 18
@@ -221,6 +223,7 @@ class PosHistoryImportWizard(models.TransientModel):
                         'qty':          line_data['qty'],
                         'price_ht':     line_data.get('price_ht', 0.0),
                         'price_unit':   line_data['price_unit'],
+                        'margin':       line_data.get('margin') or 0.0,
                         'note':         line_data.get('note', ''),
                         'line_state':   state,
                         'message':      msg,
@@ -390,10 +393,11 @@ class PosHistoryImportWizard(models.TransientModel):
 
             orders_map[ref]['lines'].append({
                 'resolved_product_id': line.resolved_product_id,
-                'qty':       line.qty,
-                'price_ht':  line.price_ht,
+                'qty':        line.qty,
+                'price_ht':   line.price_ht,
                 'price_unit': line.price_unit,
-                'note':      line.note,
+                'margin':     line.margin if line.margin != 0.0 else None,
+                'note':       line.note,
             })
 
         return orders_map, sessions_map
@@ -478,11 +482,12 @@ class PosHistoryImportWizard(models.TransientModel):
                 continue
 
             try:
-                qty      = float(row.get('qty') or 0)
-                price_ht = float(row.get('price_ht') or 0)
-                # price_unit (TTC) sera calculé via les taxes produit à l'import
+                qty       = float(row.get('qty') or 0)
+                price_ht  = float(row.get('price_ht') or 0)
                 price_ttc = float(row.get('price_unit') or price_ht)
                 disc      = float(row.get('discount') or 0)
+                margin    = row.get('margin')
+                margin    = float(margin) if margin not in (None, '', 'None', 'nan') else None
             except (ValueError, TypeError):
                 errors.append(f"Ligne {rn} : valeurs numériques invalides.")
                 continue
@@ -514,6 +519,7 @@ class PosHistoryImportWizard(models.TransientModel):
                 'price_ht':     price_ht,
                 'price_unit':   price_ttc,
                 'discount':     disc,
+                'margin':       margin,
                 'note':         self._clean_str(row.get('note')),
                 '_row':         rn,
             })
@@ -596,14 +602,23 @@ class PosHistoryImportWizard(models.TransientModel):
             amount_total += subi
             amount_tax   += (subi - sub)
 
+            # Coût total déduit depuis la marge du fichier source
+            line_margin = line_data.get('margin')
+            if line_margin is not None:
+                total_cost = sub - line_margin
+            else:
+                total_cost = 0.0
+
             lv = {
-                'product_id':          product.id,
-                'qty':                 qty,
-                'price_unit':          price_ttc,
-                'discount':            line_data.get('discount', 0.0),
-                'tax_ids':             [(6, 0, taxes.ids)] if taxes else [(5,)],
-                'price_subtotal':      sub,
-                'price_subtotal_incl': subi,
+                'product_id':             product.id,
+                'qty':                    qty,
+                'price_unit':             price_ttc,
+                'discount':               line_data.get('discount', 0.0),
+                'tax_ids':                [(6, 0, taxes.ids)] if taxes else [(5,)],
+                'price_subtotal':         sub,
+                'price_subtotal_incl':    subi,
+                'total_cost':             total_cost,
+                'is_total_cost_computed': line_margin is not None,
             }
             if line_data.get('note'):
                 lv['note'] = line_data['note']

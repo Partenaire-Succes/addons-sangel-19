@@ -25,6 +25,7 @@ class PosImportPreviewLine(models.TransientModel):
     qty           = fields.Float(string='Qté',           readonly=True, digits=(12, 3))
     price_ht      = fields.Float(string='Prix HT',       readonly=True, digits=(12, 2))
     price_unit    = fields.Float(string='Prix TTC',      readonly=True, digits=(12, 2))
+    margin        = fields.Float(string='Marge',         readonly=True, digits=(12, 2))
     note          = fields.Char(string='Note',           readonly=True)
 
     # ── IDs résolus (utilisés lors du vrai import) ─────────────────────────

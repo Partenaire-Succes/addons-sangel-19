@@ -35,9 +35,9 @@
                 <field name="product_ref"    string="Réf. produit"    optional="show"/>
                 <field name="product_name"   string="Produit"         optional="show"/>
                 <field name="qty"            string="Qté"             optional="show"/>
-                <field name="price_unit"     string="Prix unit. TTC"
-                       widget="monetary" options="{'currency_field': 'currency_id'}"
-                       optional="show"/>
+                <field name="price_ht"       string="Prix HT"         optional="show"/>
+                <field name="price_unit"     string="Prix TTC"        optional="show"/>
+                <field name="margin"         string="Marge"           optional="show"/>
 
                 <!-- Note -->
                 <field name="note"           string="Note"            optional="hide"/>
@@ -325,7 +325,11 @@
                                 <field name="product_name"   string="Produit"          optional="show"/>
                                 <field name="qty"            string="Qté"
                                        digits="[12,2]"                                 optional="show"/>
-                                <field name="price_unit"     string="Prix unit."
+                                <field name="price_ht"       string="Prix HT"
+                                       digits="[12,2]"                                 optional="show"/>
+                                <field name="price_unit"     string="Prix TTC"
+                                       digits="[12,2]"                                 optional="show"/>
+                                <field name="margin"         string="Marge"
                                        digits="[12,2]"                                 optional="show"/>
                                 <field name="note"           string="Note"             optional="hide"/>
                                 <field name="message"        string="Message"          optional="show"/>
