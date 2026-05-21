@@ -9,16 +9,15 @@ class PosOrder(models.Model):
 
     def _prepare_tax_base_line_values(self):
         result = super()._prepare_tax_base_line_values()
-        # Quand appelé depuis _prepare_invoice_lines (contexte invoicing=True),
-        # pré-calcule et arrondit les taxes globalement sur toutes les lignes.
-        # Sans ça, l'arrondi indépendant par ligne sur XOF (0 décimale) avec
-        # taux mixtes (9% + 18%) produit un écart de ±1 CFA → écriture non équilibrée.
         if result and self.env.context.get('invoicing'):
+            _logger.info("POS INVOICE FIX: pré-calcul taxes sur %d lignes (commande %s)", len(result), self[:1].name)
             AccountTax = self.env['account.tax']
             company = self[:1].company_id or self.env.company
             AccountTax._add_tax_details_in_base_lines(result, company)
             AccountTax._round_base_lines_tax_details(result, company)
             AccountTax._fix_base_lines_tax_details_on_manual_tax_amounts(result, company)
+            for r in result:
+                _logger.info("  ligne %s: manual_tax_amounts=%s", r.get('record'), r.get('manual_tax_amounts'))
         return result
 
     def write(self, vals):
