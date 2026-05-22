@@ -261,8 +261,8 @@ class ProductCatalogueXlsx(models.AbstractModel):
 
         # ── DÉTAIL (prix mis en valeur)
         detail_fill = PatternFill("solid", fgColor=BLUE_LIGHT)
-        price_detail = product.price_unit_ttc if price_carton else 0
-        if price_carton:
+        price_detail = product.price_unit_ttc or 0
+        if price_detail:
             _cell(12, price_detail, "right", bold=True,
                   color=BLUE_DARK, fill=detail_fill, fmt="#,##0")
         else:
