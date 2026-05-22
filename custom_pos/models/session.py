@@ -71,8 +71,10 @@ class PosOrder(models.Model):
                 'rupture_details': [],
             }
 
-        # Vérification du stock
+        # Vérification du stock (uniquement produits stockables)
         for product in products:
+            if product.type != 'consu':
+                continue
             if product.qty_available <= 0:
                 code = product.default_code or ''
                 label = f"[{code}] {product.name}" if code else product.name

@@ -37,71 +37,6 @@ class ProductTemplateImport(models.Model):
     # POINTS D'ENTRÉE
     # =========================================================================
 
-    # def normalize_taxes_all_companies(self):
-    #     _logger.info("🚀 Début normalisation des taxes multi-sociétés")
-
-    #     Tax = self.env['account.tax'].sudo()
-    #     Company = self.env['res.company'].sudo()
-    #     products = self.env['product.template'].with_context(active_test=False).search([])
-
-    #     total = len(products)
-    #     batch_size = 200
-
-    #     for i in range(0, total, batch_size):
-    #         batch = products[i:i + batch_size]
-
-    #         for product in batch:
-    #             try:
-    #                 taxes = product.taxes_id
-
-    #                 # 🚫 Aucun taxe → skip
-    #                 if not taxes:
-    #                     continue
-
-    #                 # 🎯 On prend la première taxe (hypothèse : une seule taxe principale)
-    #                 base_tax = taxes[0]
-    #                 amount = base_tax.amount
-
-    #                 if not amount:
-    #                     product.write({'taxes_id': [(6, 0, [])]})
-    #                     continue
-
-    #                 new_tax_ids = []
-
-    #                 # 🔁 Boucle sur toutes les sociétés
-    #                 for company in Company.search([]):
-    #                     tax = Tax.with_company(company).search([
-    #                         ('amount', '=', amount),
-    #                         ('amount_type', '=', 'percent'),
-    #                         ('type_tax_use', '=', 'sale'),
-    #                         ('company_id', '=', company.id),
-    #                     ], limit=1)
-
-    #                     # ➕ Création si n'existe pas
-    #                     if not tax:
-    #                         tax = Tax.with_company(company).create({
-    #                             'name': f"TVA {amount}%",
-    #                             'amount': amount,
-    #                             'amount_type': 'percent',
-    #                             'type_tax_use': 'sale',
-    #                             'company_id': company.id,
-    #                         })
-
-    #                     new_tax_ids.append(tax.id)
-
-    #                 # 🔥 Appliquer toutes les taxes (multi société clean)
-    #                 product.write({
-    #                     'taxes_id': [(6, 0, new_tax_ids)]
-    #                 })
-
-    #             except Exception as e:
-    #                 _logger.error("❌ Erreur produit %s : %s", product.default_code, str(e))
-
-    #         self.env.cr.commit()
-    #         _logger.info("💾 Batch %s / %s traité", i, total)
-
-    #     _logger.info("✅ Normalisation terminée")
-
 
     def _normalize_taxes_for_field(self, field_name, is_airsi):
         """Normalise les taxes TVA ou AIRSI sur toutes les sociétés."""
@@ -609,12 +544,12 @@ class ProductTemplateImport(models.Model):
             "is_square":         self._verify_boolean(item.get("yafsQ_0")),
             "is_bassam":         self._verify_boolean(item.get("yafbsM_0")),
             "is_koumassi":       self._verify_boolean(item.get("yafkouM_0")),
-            "is_abobo":       self._verify_boolean(item.get("yafdoK_0")),
+            "is_abobo":          self._verify_boolean(item.get("yafdoK_0")),
             "allowed_company_ids": self._get_allowed_company_ids(item),
             "family_categ_id":   family_id,
             "categ_id":          family_id,
             "actif_x3":          self._safe_string(item.get("itmstA_0")),
-            "type":              "consu",
+            "type":              "consu" if item.get("yG5TYPE_0") == "TS" else "service",
             "active":            True,
             "sale_ok":           True,
             "purchase_ok":       True,
