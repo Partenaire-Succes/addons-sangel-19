@@ -319,7 +319,7 @@
 
                                         <!-- DETAIL : Prix vente – mis en valeur -->
                                         <td class="tr">
-                                            <t t-if="product.price_carton">
+                                            <t t-if="product.price_unit_ttc">
                                                 <t t-esc="'{:,.0f}'.format(product.price_unit_ttc).replace(',', ' ')"/>
                                             </t>
                                             <t t-else="">
