@@ -396,7 +396,7 @@ class PosHistoryImportWizard(models.TransientModel):
                 'qty':        line.qty,
                 'price_ht':   line.price_ht,
                 'price_unit': line.price_unit,
-                'margin':     line.margin if line.margin != 0.0 else None,
+                'margin':     line.margin,
                 'note':       line.note,
             })
 
@@ -603,11 +603,10 @@ class PosHistoryImportWizard(models.TransientModel):
             amount_tax   += (subi - sub)
 
             # Coût total déduit depuis la marge du fichier source
-            line_margin = line_data.get('margin')
-            if line_margin is not None:
-                total_cost = sub - line_margin
-            else:
-                total_cost = 0.0
+            # On force toujours is_total_cost_computed=True pour que la marge
+            # remonte correctement sur la commande. Si marge absente → 0.
+            line_margin = line_data.get('margin') or 0.0
+            total_cost  = sub - line_margin
 
             lv = {
                 'product_id':             product.id,
@@ -618,7 +617,7 @@ class PosHistoryImportWizard(models.TransientModel):
                 'price_subtotal':         sub,
                 'price_subtotal_incl':    subi,
                 'total_cost':             total_cost,
-                'is_total_cost_computed': line_margin is not None,
+                'is_total_cost_computed': True,
             }
             if line_data.get('note'):
                 lv['note'] = line_data['note']
