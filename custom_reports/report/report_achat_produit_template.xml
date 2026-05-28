@@ -29,10 +29,10 @@
                         border: 1px solid #aaa;
                     }
                     /* Sous-lignes */
-                    tr.sl-both   td { background-color: #EBF5FB; }
-                    tr.sl-both-alt td { background-color: #FFFFFF; }
-                    tr.sl-po     td { background-color: #D5D8DC; }
-                    tr.sl-rec    td { background-color: #FAD7A0; }
+                    tr.sl-both     td { background-color: #D6EAF8; color: #000; }
+                    tr.sl-both-alt td { background-color: #EBF5FB; color: #000; }
+                    tr.sl-po       td { background-color: #EAECEE; color: #000; }
+                    tr.sl-rec      td { background-color: #FDEBD0; color: #000; }
                     /* Séparateur entre produits */
                     tr.spacer td { background-color: #fff; border: none; height: 4px; }
                     /* Total */
@@ -191,9 +191,9 @@
 
                 <!-- Légende -->
                 <div style="margin-top: 8px; font-size: 7pt;">
-                    <span style="background:#EBF5FB; border:1px solid #ccc; padding:1px 6px;">■</span> Commandé + Réceptionné&#160;&#160;
-                    <span style="background:#D5D8DC; border:1px solid #ccc; padding:1px 6px;">■</span> Commandé sans réception&#160;&#160;
-                    <span style="background:#FAD7A0; border:1px solid #ccc; padding:1px 6px;">■</span> Réception directe
+                    <span style="background:#D6EAF8; border:1px solid #aaa; padding:1px 6px;">■</span> Commandé + Réceptionné&#160;&#160;
+                    <span style="background:#EAECEE; border:1px solid #aaa; padding:1px 6px;">■</span> Commandé sans réception&#160;&#160;
+                    <span style="background:#FDEBD0; border:1px solid #aaa; padding:1px 6px;">■</span> Réception directe
                 </div>
 
                 <div class="footer-info">

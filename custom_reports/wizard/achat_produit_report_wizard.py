@@ -230,12 +230,13 @@ class AchatProduitReportWizard(models.TransientModel):
         ws.title = "Cmdes & Réceptions Produits"
 
         # ── Palette ───────────────────────────────────────────────────────────
-        BLUE    = "1A5276"
-        GRAY    = "D5D8DC"   # sous-ligne sans réception
-        LBLUE   = "EBF5FB"   # alternance lignes paires
-        WHITE   = "FFFFFF"
-        ORANGE  = "FAD7A0"   # réception directe (sans commande)
-        thin    = Side(style='thin', color="BBBBBB")
+        BLUE    = "1A5276"   # header produit + colonnes
+        WHITE   = "FFFFFF"   # texte sur fond bleu
+        SL_A    = "D6EAF8"   # sous-ligne cmd+rec, impaires  (bleu moyen)
+        SL_B    = "EBF5FB"   # sous-ligne cmd+rec, paires    (bleu très clair)
+        SL_GRAY = "EAECEE"   # commandé sans réception        (gris clair)
+        SL_ORA  = "FDEBD0"   # réception directe              (orange clair)
+        thin    = Side(style='thin', color="AAAAAA")
         brd     = Border(left=thin, right=thin, top=thin, bottom=thin)
 
         def font(bold=False, color="000000", size=9):
@@ -332,11 +333,11 @@ class AchatProduitReportWizard(models.TransientModel):
                 has_po  = bool(sl['po_ref'])
                 has_rec = bool(sl['reception_ref'])
                 if has_po and has_rec:
-                    bg = LBLUE if i % 2 == 0 else WHITE
+                    bg = SL_A if i % 2 == 0 else SL_B   # bleu alternant
                 elif has_po:
-                    bg = GRAY   # commandé mais pas encore reçu
+                    bg = SL_GRAY                          # commandé sans réception
                 else:
-                    bg = ORANGE  # réception directe
+                    bg = SL_ORA                           # réception directe
 
                 ws.append([
                     '',
@@ -387,9 +388,9 @@ class AchatProduitReportWizard(models.TransientModel):
         ws.append(["Légende :"])
         ws.cell(ws.max_row, 1).font = font(bold=True, size=8)
         for txt, bg in [
-            ("Commandé + Réceptionné", LBLUE),
-            ("Commandé sans réception", GRAY),
-            ("Réception directe (sans commande)", ORANGE),
+            ("Commandé + Réceptionné", SL_A),
+            ("Commandé sans réception", SL_GRAY),
+            ("Réception directe (sans commande)", SL_ORA),
         ]:
             ws.append(["", txt])
             r = ws.max_row
