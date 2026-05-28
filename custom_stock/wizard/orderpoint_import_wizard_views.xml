@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_orderpoint_import_wizard_form" model="ir.ui.view">
+        <field name="name">orderpoint.import.wizard.form</field>
+        <field name="model">orderpoint.import.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Import Règles de Réassort (Min/Max)">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>Import Règles de Réassort</h1>
+                    </div>
+
+                    <group>
+                        <group string="Fichier">
+                            <field name="file" widget="binary" filename="file_name"
+                                   invisible="state == 'done'"/>
+                            <field name="file_name" invisible="1"/>
+                        </group>
+                        <group string="Paramètres">
+                            <field name="company_id"
+                                   options="{'no_create': True, 'no_open': True}"
+                                   readonly="1"/>
+                            <field name="warehouse_id"
+                                   options="{'no_create': True}"/>
+                            <field name="location_id"
+                                   options="{'no_create': True}"/>
+                        </group>
+                    </group>
+
+                    <!-- Aperçu des lignes après chargement -->
+                    <notebook invisible="state == 'draft'">
+                        <page string="Aperçu des données">
+                            <field name="line_ids" readonly="1">
+                                <list decoration-danger="not found"
+                                      decoration-warning="found and not rule_exists"
+                                      decoration-success="found and rule_exists">
+                                    <field name="product_code" string="Code Art."/>
+                                    <field name="product_name" string="Désignation"/>
+                                    <field name="qty_on_hand" string="Stock actuel"
+                                           digits="[12,2]"/>
+                                    <field name="current_min" string="Min actuel"
+                                           digits="[12,2]"/>
+                                    <field name="current_max" string="Max actuel"
+                                           digits="[12,2]"/>
+                                    <field name="qty_min" string="Nv Min"
+                                           digits="[12,2]"/>
+                                    <field name="qty_max" string="Nv Max"
+                                           digits="[12,2]"/>
+                                    <field name="action_label" string="Action"/>
+                                    <field name="rule_exists" column_invisible="1"/>
+                                    <field name="found" column_invisible="1"/>
+                                </list>
+                            </field>
+                            <div class="row mt-2" invisible="state != 'loaded'">
+                                <div class="col-12">
+                                    <span class="badge bg-success me-2">■</span> Règle existante — sera mise à jour
+                                    <span class="badge bg-warning text-dark ms-3 me-2">■</span> Nouvelle règle — sera créée
+                                    <span class="badge bg-danger ms-3 me-2">■</span> Produit introuvable — ignoré
+                                </div>
+                            </div>
+                        </page>
+                    </notebook>
+
+                    <!-- Info format attendu -->
+                    <div class="alert alert-info" invisible="state != 'draft'">
+                        <strong>Format du fichier Excel (ligne 1 = en-têtes) :</strong><br/>
+                        Les noms suivants sont acceptés :<br/>
+                        - Code article : <em>Code Article, product_code, Code, Reference</em><br/>
+                        - Quantité min : <em>Quantité min, qty_min, Qte min, Min</em><br/>
+                        - Quantité max : <em>Quantité max, qty_max, Qte max, Max</em><br/>
+                        <br/>
+                        <strong>Emplacement</strong> : non obligatoire si toutes les règles existent déjà.
+                        Sinon, l'emplacement stock principal de l'entrepôt est utilisé automatiquement.
+                    </div>
+
+                    <field name="state" invisible="1"/>
+                </sheet>
+                <footer>
+                    <button string="Charger le fichier"
+                            name="action_load_file"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state != 'draft'"/>
+                    <button string="Confirmer l'import"
+                            name="action_confirm"
+                            type="object"
+                            class="btn-success"
+                            invisible="state != 'loaded'"
+                            confirm="Confirmer la mise à jour des règles de réassort ?"/>
+                    <button string="Annuler"
+                            class="btn-secondary"
+                            special="cancel"
+                            invisible="state == 'done'"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_orderpoint_import_wizard" model="ir.actions.act_window">
+        <field name="name">Import Règles de Réassort</field>
+        <field name="res_model">orderpoint.import.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_orderpoint_import_wizard"
+              name="Import Règles de Réassort (Min/Max)"
+              parent="stock.menu_stock_procurement"
+              action="action_orderpoint_import_wizard"
+              sequence="30"/>
+</odoo>

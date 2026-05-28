@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_achat_produit_document">
+        <t t-call="web.external_layout">
+            <t t-set="o" t-value="doc"/>
+            <div class="page">
+                <style>
+                    .page { font-family: Arial, sans-serif; font-size: 9pt; }
+                    .header-section {
+                        margin-bottom: 15px;
+                        border-bottom: 2px solid #000;
+                        padding-bottom: 8px;
+                    }
+                    .company-name { font-size: 13pt; font-weight: bold; text-transform: uppercase; }
+                    .date-range { text-align: right; font-weight: bold; }
+                    .report-title {
+                        text-align: center;
+                        font-size: 12pt;
+                        font-weight: bold;
+                        margin: 15px 0;
+                        padding: 8px;
+                        background-color: #1A5276;
+                        color: #fff;
+                    }
+                    table.main-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        font-size: 8pt;
+                        margin-top: 10px;
+                    }
+                    table.main-table th {
+                        background-color: #1A5276;
+                        color: #fff;
+                        border: 1px solid #888;
+                        padding: 5px 4px;
+                        font-weight: bold;
+                        text-align: center;
+                    }
+                    table.main-table td {
+                        border: 1px solid #ccc;
+                        padding: 3px 4px;
+                        vertical-align: top;
+                    }
+                    tr.even-row { background-color: #EBF5FB; }
+                    tr.total-row {
+                        background-color: #1A5276;
+                        color: #fff;
+                        font-weight: bold;
+                        font-size: 9pt;
+                    }
+                    .text-right { text-align: right; }
+                    .text-center { text-align: center; }
+                    .refs-cell { font-size: 7pt; color: #333; }
+                    .footer-info { margin-top: 20px; font-size: 8pt; }
+                </style>
+
+                <!-- En-tête -->
+                <div class="header-section">
+                    <div class="row">
+                        <div class="col-8">
+                            <div class="company-name">
+                                <span t-field="o.company_id.name"/>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="date-range">
+                                Du <span t-esc="o.date_debut.strftime('%d/%m/%Y')"/>
+                                au <span t-esc="o.date_fin.strftime('%d/%m/%Y')"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-title">COMMANDES &amp; RÉCEPTIONS PAR PRODUIT</div>
+
+                <t t-set="data" t-value="o._get_report_data()"/>
+                <t t-set="total_cmdes" t-value="0"/>
+                <t t-set="total_qty_cmd" t-value="0.0"/>
+                <t t-set="total_rec" t-value="0"/>
+                <t t-set="total_qty_rec" t-value="0.0"/>
+
+                <table class="main-table">
+                    <thead>
+                        <tr>
+                            <th style="width:8%;">Réf.</th>
+                            <th style="width:20%;">Désignation</th>
+                            <th style="width:6%;">Nb Cmdes</th>
+                            <th style="width:9%;">Qté Cmdée</th>
+                            <th style="width:22%;">Réf. Commandes</th>
+                            <th style="width:6%;">Nb Réc.</th>
+                            <th style="width:9%;">Qté Réc.</th>
+                            <th style="width:20%;">Réf. Réceptions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <t t-foreach="data" t-as="row">
+                            <t t-set="total_cmdes" t-value="total_cmdes + row['nb_commandes']"/>
+                            <t t-set="total_qty_cmd" t-value="total_qty_cmd + row['qty_commandee']"/>
+                            <t t-set="total_rec" t-value="total_rec + row['nb_receptions']"/>
+                            <t t-set="total_qty_rec" t-value="total_qty_rec + row['qty_receptionnee']"/>
+                            <tr t-att-class="'' if row_odd else 'even-row'">
+                                <td class="text-center"><span t-esc="row['ref']"/></td>
+                                <td><span t-esc="row['name']"/></td>
+                                <td class="text-center"><span t-esc="row['nb_commandes']"/></td>
+                                <td class="text-right">
+                                    <span t-esc="'{:,.2f}'.format(row['qty_commandee']).replace(',', ' ')"/>
+                                </td>
+                                <td class="refs-cell"><span t-esc="row['po_refs']"/></td>
+                                <td class="text-center"><span t-esc="row['nb_receptions']"/></td>
+                                <td class="text-right">
+                                    <span t-esc="'{:,.2f}'.format(row['qty_receptionnee']).replace(',', ' ')"/>
+                                </td>
+                                <td class="refs-cell"><span t-esc="row['reception_refs']"/></td>
+                            </tr>
+                        </t>
+                        <tr class="total-row">
+                            <td colspan="2" class="text-right"
+                                style="border:1px solid #aaa; padding:4px;">TOTAL</td>
+                            <td class="text-center"
+                                style="border:1px solid #aaa; padding:4px;">
+                                <span t-esc="total_cmdes"/>
+                            </td>
+                            <td class="text-right"
+                                style="border:1px solid #aaa; padding:4px;">
+                                <span t-esc="'{:,.2f}'.format(total_qty_cmd).replace(',', ' ')"/>
+                            </td>
+                            <td style="border:1px solid #aaa;"></td>
+                            <td class="text-center"
+                                style="border:1px solid #aaa; padding:4px;">
+                                <span t-esc="total_rec"/>
+                            </td>
+                            <td class="text-right"
+                                style="border:1px solid #aaa; padding:4px;">
+                                <span t-esc="'{:,.2f}'.format(total_qty_rec).replace(',', ' ')"/>
+                            </td>
+                            <td style="border:1px solid #aaa;"></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="footer-info">
+                    <div class="row">
+                        <div class="col-6">
+                            <strong>Nombre de produits :</strong>
+                            <span t-esc="len(data)"/>
+                        </div>
+                        <div class="col-6 text-right">
+                            <strong>Date d'impression :</strong>
+                            <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y %H:%M')"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <template id="report_achat_produit">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="custom_reports.report_achat_produit_document"/>
+            </t>
+        </t>
+    </template>
+
+    <record id="action_report_achat_produit" model="ir.actions.report">
+        <field name="name">Rapport Commandes &amp; Réceptions par Produit</field>
+        <field name="model">achat.produit.report.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">custom_reports.report_achat_produit</field>
+        <field name="report_file">custom_reports.report_achat_produit</field>
+        <field name="binding_model_id" ref="model_achat_produit_report_wizard"/>
+        <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="base.paperformat_euro"/>
+        <field name="print_report_name">
+            'Commandes_Receptions_Produits_%s_%s' % (
+                object.date_debut.strftime('%d%m%Y'),
+                object.date_fin.strftime('%d%m%Y')
+            )
+        </field>
+    </record>
+</odoo>

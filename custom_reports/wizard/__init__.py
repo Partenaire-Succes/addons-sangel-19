@@ -13,5 +13,6 @@ from . import (
     recap_caisses_wizard,
     catalogue_excel,
     stock_product_report_wizard,
+    achat_produit_report_wizard,
     # livraison_report_wizard,
 )
