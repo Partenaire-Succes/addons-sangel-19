@@ -5,62 +5,53 @@
             <t t-set="o" t-value="doc"/>
             <div class="page">
                 <style>
-                    .page { font-family: Arial, sans-serif; font-size: 9pt; }
-                    .header-section {
-                        margin-bottom: 15px;
-                        border-bottom: 2px solid #000;
-                        padding-bottom: 8px;
-                    }
-                    .company-name { font-size: 13pt; font-weight: bold; text-transform: uppercase; }
-                    .date-range { text-align: right; font-weight: bold; }
+                    .page { font-family: Arial, sans-serif; font-size: 8pt; }
+                    .header-section { margin-bottom: 12px; border-bottom: 2px solid #000; padding-bottom: 6px; }
+                    .company-name { font-size: 12pt; font-weight: bold; text-transform: uppercase; }
+                    .date-range { text-align: right; font-weight: bold; font-size: 9pt; }
                     .report-title {
-                        text-align: center;
-                        font-size: 12pt;
-                        font-weight: bold;
-                        margin: 15px 0;
-                        padding: 8px;
-                        background-color: #1A5276;
-                        color: #fff;
+                        text-align: center; font-size: 11pt; font-weight: bold;
+                        margin: 10px 0; padding: 6px;
+                        background-color: #1A5276; color: #fff;
                     }
-                    table.main-table {
-                        width: 100%;
-                        border-collapse: collapse;
-                        font-size: 8pt;
-                        margin-top: 10px;
+                    /* Table principale */
+                    table.main { width: 100%; border-collapse: collapse; font-size: 7.5pt; }
+                    table.main th {
+                        background-color: #1A5276; color: #fff;
+                        border: 1px solid #888; padding: 4px 3px;
+                        font-weight: bold; text-align: center;
                     }
-                    table.main-table th {
-                        background-color: #1A5276;
-                        color: #fff;
-                        border: 1px solid #888;
-                        padding: 5px 4px;
-                        font-weight: bold;
-                        text-align: center;
+                    table.main td { border: 1px solid #ccc; padding: 2px 3px; vertical-align: middle; }
+                    /* Ligne produit header */
+                    tr.prod-hdr td {
+                        background-color: #1A5276; color: #fff;
+                        font-weight: bold; font-size: 8pt;
+                        border: 1px solid #aaa;
                     }
-                    table.main-table td {
-                        border: 1px solid #ccc;
-                        padding: 3px 4px;
-                        vertical-align: top;
+                    /* Sous-lignes */
+                    tr.sl-both   td { background-color: #EBF5FB; }
+                    tr.sl-both-alt td { background-color: #FFFFFF; }
+                    tr.sl-po     td { background-color: #D5D8DC; }
+                    tr.sl-rec    td { background-color: #FAD7A0; }
+                    /* Séparateur entre produits */
+                    tr.spacer td { background-color: #fff; border: none; height: 4px; }
+                    /* Total */
+                    tr.total-row td {
+                        background-color: #1A5276; color: #fff;
+                        font-weight: bold; font-size: 9pt;
+                        border: 1px solid #aaa;
                     }
-                    tr.even-row { background-color: #EBF5FB; }
-                    tr.total-row {
-                        background-color: #1A5276;
-                        color: #fff;
-                        font-weight: bold;
-                        font-size: 9pt;
-                    }
-                    .text-right { text-align: right; }
-                    .text-center { text-align: center; }
-                    .refs-cell { font-size: 7pt; color: #333; }
-                    .footer-info { margin-top: 20px; font-size: 8pt; }
+                    .r { text-align: right; }
+                    .c { text-align: center; }
+                    .indent { padding-left: 8px; color: #555; }
+                    .footer-info { margin-top: 12px; font-size: 7pt; }
                 </style>
 
                 <!-- En-tête -->
                 <div class="header-section">
                     <div class="row">
                         <div class="col-8">
-                            <div class="company-name">
-                                <span t-field="o.company_id.name"/>
-                            </div>
+                            <div class="company-name"><span t-field="o.company_id.name"/></div>
                         </div>
                         <div class="col-4">
                             <div class="date-range">
@@ -74,78 +65,144 @@
                 <div class="report-title">COMMANDES &amp; RÉCEPTIONS PAR PRODUIT</div>
 
                 <t t-set="data" t-value="o._get_report_data()"/>
-                <t t-set="total_cmdes" t-value="0"/>
-                <t t-set="total_qty_cmd" t-value="0.0"/>
-                <t t-set="total_rec" t-value="0"/>
-                <t t-set="total_qty_rec" t-value="0.0"/>
+                <t t-set="tot_qty_cmd"  t-value="0.0"/>
+                <t t-set="tot_mnt_cmd"  t-value="0.0"/>
+                <t t-set="tot_qty_rec"  t-value="0.0"/>
+                <t t-set="tot_mnt_rec"  t-value="0.0"/>
 
-                <table class="main-table">
+                <table class="main">
                     <thead>
                         <tr>
-                            <th style="width:8%;">Réf.</th>
-                            <th style="width:20%;">Désignation</th>
-                            <th style="width:6%;">Nb Cmdes</th>
-                            <th style="width:9%;">Qté Cmdée</th>
-                            <th style="width:22%;">Réf. Commandes</th>
-                            <th style="width:6%;">Nb Réc.</th>
-                            <th style="width:9%;">Qté Réc.</th>
-                            <th style="width:20%;">Réf. Réceptions</th>
+                            <th style="width:6%;">Réf.</th>
+                            <th style="width:16%;">Désignation / Réf. Commande</th>
+                            <th style="width:8%;">Date Cmd</th>
+                            <th style="width:7%;">Qté Cmdée</th>
+                            <th style="width:8%;">Prix Unit Cmd</th>
+                            <th style="width:9%;">Montant Cmdé</th>
+                            <th style="width:10%;">Réf. Réception</th>
+                            <th style="width:8%;">Date Réc.</th>
+                            <th style="width:7%;">Qté Réc.</th>
+                            <th style="width:8%;">Prix Unit Réc.</th>
+                            <th style="width:9%;">Montant Réc.</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <t t-foreach="data" t-as="row">
-                            <t t-set="total_cmdes" t-value="total_cmdes + row['nb_commandes']"/>
-                            <t t-set="total_qty_cmd" t-value="total_qty_cmd + row['qty_commandee']"/>
-                            <t t-set="total_rec" t-value="total_rec + row['nb_receptions']"/>
-                            <t t-set="total_qty_rec" t-value="total_qty_rec + row['qty_receptionnee']"/>
-                            <tr t-att-class="'' if row_odd else 'even-row'">
-                                <td class="text-center"><span t-esc="row['ref']"/></td>
-                                <td><span t-esc="row['name']"/></td>
-                                <td class="text-center"><span t-esc="row['nb_commandes']"/></td>
-                                <td class="text-right">
-                                    <span t-esc="'{:,.2f}'.format(row['qty_commandee']).replace(',', ' ')"/>
+                        <t t-foreach="data" t-as="prod">
+                            <t t-set="tot_qty_cmd" t-value="tot_qty_cmd + prod['qty_commandee']"/>
+                            <t t-set="tot_mnt_cmd" t-value="tot_mnt_cmd + prod['montant_commande']"/>
+                            <t t-set="tot_qty_rec" t-value="tot_qty_rec + prod['qty_receptionnee']"/>
+                            <t t-set="tot_mnt_rec" t-value="tot_mnt_rec + prod['montant_reception']"/>
+
+                            <!-- Ligne produit -->
+                            <tr class="prod-hdr">
+                                <td><span t-esc="prod['ref']"/></td>
+                                <td><span t-esc="prod['name']"/></td>
+                                <td class="c">
+                                    <span t-esc="str(prod['nb_commandes']) + ' cmde(s)'"/>
                                 </td>
-                                <td class="refs-cell"><span t-esc="row['po_refs']"/></td>
-                                <td class="text-center"><span t-esc="row['nb_receptions']"/></td>
-                                <td class="text-right">
-                                    <span t-esc="'{:,.2f}'.format(row['qty_receptionnee']).replace(',', ' ')"/>
+                                <td class="r">
+                                    <span t-esc="'{:,.2f}'.format(prod['qty_commandee']).replace(',', ' ')"/>
                                 </td>
-                                <td class="refs-cell"><span t-esc="row['reception_refs']"/></td>
+                                <td></td>
+                                <td class="r">
+                                    <span t-esc="'{:,.0f}'.format(prod['montant_commande']).replace(',', ' ')"/>
+                                </td>
+                                <td class="c">
+                                    <span t-esc="str(prod['nb_receptions']) + ' réc.'"/>
+                                </td>
+                                <td></td>
+                                <td class="r">
+                                    <span t-esc="'{:,.2f}'.format(prod['qty_receptionnee']).replace(',', ' ')"/>
+                                </td>
+                                <td></td>
+                                <td class="r">
+                                    <span t-esc="'{:,.0f}'.format(prod['montant_reception']).replace(',', ' ')"/>
+                                </td>
                             </tr>
+
+                            <!-- Sous-lignes -->
+                            <t t-foreach="prod['sub_lines']" t-as="sl">
+                                <t t-set="has_po"  t-value="bool(sl['po_ref'])"/>
+                                <t t-set="has_rec" t-value="bool(sl['reception_ref'])"/>
+                                <t t-set="sl_class"
+                                   t-value="'sl-both' if (has_po and has_rec and sl_odd) else 'sl-both-alt' if (has_po and has_rec) else 'sl-po' if has_po else 'sl-rec'"/>
+                                <tr t-att-class="sl_class">
+                                    <td></td>
+                                    <td class="indent">
+                                        <span t-esc="sl['po_ref']"/>
+                                    </td>
+                                    <td class="c">
+                                        <span t-esc="sl['date_commande'].strftime('%d/%m/%Y') if sl['date_commande'] else ''"/>
+                                    </td>
+                                    <td class="r">
+                                        <span t-esc="'{:,.2f}'.format(sl['qty_commandee']).replace(',', ' ') if sl['qty_commandee'] else ''"/>
+                                    </td>
+                                    <td class="r">
+                                        <span t-esc="'{:,.2f}'.format(sl['prix_commande']).replace(',', ' ') if sl['prix_commande'] else ''"/>
+                                    </td>
+                                    <td class="r">
+                                        <span t-esc="'{:,.0f}'.format(sl['montant_commande']).replace(',', ' ') if sl['montant_commande'] else ''"/>
+                                    </td>
+                                    <td class="indent">
+                                        <span t-esc="sl['reception_ref']"/>
+                                    </td>
+                                    <td class="c">
+                                        <span t-esc="sl['date_reception'].strftime('%d/%m/%Y') if sl['date_reception'] else ''"/>
+                                    </td>
+                                    <td class="r">
+                                        <span t-esc="'{:,.2f}'.format(sl['qty_receptionnee']).replace(',', ' ') if sl['qty_receptionnee'] else ''"/>
+                                    </td>
+                                    <td class="r">
+                                        <span t-esc="'{:,.2f}'.format(sl['prix_reception']).replace(',', ' ') if sl['prix_reception'] else ''"/>
+                                    </td>
+                                    <td class="r">
+                                        <span t-esc="'{:,.0f}'.format(sl['montant_reception']).replace(',', ' ') if sl['montant_reception'] else ''"/>
+                                    </td>
+                                </tr>
+                            </t>
+
+                            <!-- Ligne de séparation entre produits -->
+                            <tr class="spacer"><td colspan="11"></td></tr>
                         </t>
+
+                        <!-- Total général -->
                         <tr class="total-row">
-                            <td colspan="2" class="text-right"
-                                style="border:1px solid #aaa; padding:4px;">TOTAL</td>
-                            <td class="text-center"
-                                style="border:1px solid #aaa; padding:4px;">
-                                <span t-esc="total_cmdes"/>
+                            <td colspan="2">TOTAL GÉNÉRAL</td>
+                            <td></td>
+                            <td class="r">
+                                <span t-esc="'{:,.2f}'.format(tot_qty_cmd).replace(',', ' ')"/>
                             </td>
-                            <td class="text-right"
-                                style="border:1px solid #aaa; padding:4px;">
-                                <span t-esc="'{:,.2f}'.format(total_qty_cmd).replace(',', ' ')"/>
+                            <td></td>
+                            <td class="r">
+                                <span t-esc="'{:,.0f}'.format(tot_mnt_cmd).replace(',', ' ')"/>
                             </td>
-                            <td style="border:1px solid #aaa;"></td>
-                            <td class="text-center"
-                                style="border:1px solid #aaa; padding:4px;">
-                                <span t-esc="total_rec"/>
+                            <td></td>
+                            <td></td>
+                            <td class="r">
+                                <span t-esc="'{:,.2f}'.format(tot_qty_rec).replace(',', ' ')"/>
                             </td>
-                            <td class="text-right"
-                                style="border:1px solid #aaa; padding:4px;">
-                                <span t-esc="'{:,.2f}'.format(total_qty_rec).replace(',', ' ')"/>
+                            <td></td>
+                            <td class="r">
+                                <span t-esc="'{:,.0f}'.format(tot_mnt_rec).replace(',', ' ')"/>
                             </td>
-                            <td style="border:1px solid #aaa;"></td>
                         </tr>
                     </tbody>
                 </table>
 
+                <!-- Légende -->
+                <div style="margin-top: 8px; font-size: 7pt;">
+                    <span style="background:#EBF5FB; border:1px solid #ccc; padding:1px 6px;">■</span> Commandé + Réceptionné&#160;&#160;
+                    <span style="background:#D5D8DC; border:1px solid #ccc; padding:1px 6px;">■</span> Commandé sans réception&#160;&#160;
+                    <span style="background:#FAD7A0; border:1px solid #ccc; padding:1px 6px;">■</span> Réception directe
+                </div>
+
                 <div class="footer-info">
                     <div class="row">
                         <div class="col-6">
-                            <strong>Nombre de produits :</strong>
-                            <span t-esc="len(data)"/>
+                            <strong>Nb produits :</strong> <span t-esc="len(data)"/>
                         </div>
                         <div class="col-6 text-right">
-                            <strong>Date d'impression :</strong>
+                            <strong>Imprimé le :</strong>
                             <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y %H:%M')"/>
                         </div>
                     </div>

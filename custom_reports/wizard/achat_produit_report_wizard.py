@@ -39,10 +39,15 @@ class AchatProduitReportWizard(models.TransientModel):
                 raise UserError("La date de début doit être antérieure à la date de fin.")
 
     def _get_report_data(self):
-        """Regroupe commandes d'achat confirmées et réceptions validées par produit."""
+        """
+        Retourne pour chaque produit :
+          - les totaux (header)
+          - des sous-lignes (une par couple commande/réception liés)
+        """
         self.ensure_one()
+        from datetime import datetime as _dt
 
-        # ── Lignes de commandes d'achat confirmées / clôturées ────────────────
+        # ── Lignes de commandes d'achat ───────────────────────────────────────
         po_domain = [
             ('order_id.state', 'in', ['purchase', 'done']),
             ('order_id.date_order', '>=', str(self.date_debut) + ' 00:00:00'),
@@ -51,11 +56,25 @@ class AchatProduitReportWizard(models.TransientModel):
         ]
         if self.fournisseur_ids:
             po_domain.append(('order_id.partner_id', 'in', self.fournisseur_ids.ids))
-
         po_lines = self.env['purchase.order.line'].search(po_domain)
 
-        # ── Mouvements de stock des réceptions validées ───────────────────────
-        move_domain = [
+        # ── Mouvements réceptions liés aux lignes PO (par date de réception) ──
+        moves_by_po_line = {}
+        if po_lines:
+            linked_moves = self.env['stock.move'].search([
+                ('purchase_line_id', 'in', po_lines.ids),
+                ('state', '=', 'done'),
+                ('picking_id.picking_type_code', '=', 'incoming'),
+                ('picking_id.date_done', '>=', self.date_debut),
+                ('picking_id.date_done', '<=', self.date_fin),
+                ('location_id.usage', 'in', ['supplier', 'transit']),
+            ])
+            for m in linked_moves:
+                moves_by_po_line.setdefault(m.purchase_line_id.id, []).append(m)
+
+        # ── Réceptions directes (sans lien commande) ──────────────────────────
+        standalone_domain = [
+            ('purchase_line_id', '=', False),
             ('picking_id.picking_type_code', '=', 'incoming'),
             ('state', '=', 'done'),
             ('picking_id.date_done', '>=', self.date_debut),
@@ -64,15 +83,15 @@ class AchatProduitReportWizard(models.TransientModel):
             ('location_id.usage', 'in', ['supplier', 'transit']),
         ]
         if self.fournisseur_ids:
-            move_domain.append(('picking_id.partner_id', 'in', self.fournisseur_ids.ids))
+            standalone_domain.append(('picking_id.partner_id', 'in', self.fournisseur_ids.ids))
+        standalone_moves = self.env['stock.move'].search(standalone_domain)
 
-        moves = self.env['stock.move'].search(move_domain)
-
-        if not po_lines and not moves:
+        if not po_lines and not standalone_moves:
             raise UserError("Aucune donnée trouvée pour la période et les filtres sélectionnés.")
 
         products_data = {}
 
+        # ── Traitement lignes PO ──────────────────────────────────────────────
         for line in po_lines:
             product = line.product_id
             if not product:
@@ -81,15 +100,58 @@ class AchatProduitReportWizard(models.TransientModel):
             if key not in products_data:
                 products_data[key] = {
                     'product': product,
-                    'po_order_ids': set(),
-                    'qty_commandee': 0.0,
+                    'po_ids': set(),
                     'reception_ids': set(),
+                    'qty_commandee': 0.0,
+                    'montant_commande': 0.0,
                     'qty_receptionnee': 0.0,
+                    'montant_reception': 0.0,
+                    'sub_lines': [],
                 }
             products_data[key]['qty_commandee'] += line.product_qty
-            products_data[key]['po_order_ids'].add(line.order_id.name)
+            products_data[key]['montant_commande'] += line.product_qty * line.price_unit
+            products_data[key]['po_ids'].add(line.order_id.name)
 
-        for move in moves:
+            linked = moves_by_po_line.get(line.id, [])
+            if linked:
+                for move in linked:
+                    qty_done = (
+                        sum(move.move_line_ids.mapped('quantity'))
+                        or move.product_uom_qty
+                    )
+                    prix_rec = move.price_unit or line.price_unit
+                    products_data[key]['qty_receptionnee'] += qty_done
+                    products_data[key]['montant_reception'] += qty_done * prix_rec
+                    products_data[key]['reception_ids'].add(move.picking_id.name)
+                    products_data[key]['sub_lines'].append({
+                        'po_ref':           line.order_id.name,
+                        'date_commande':    line.order_id.date_order,
+                        'qty_commandee':    line.product_qty,
+                        'prix_commande':    line.price_unit,
+                        'montant_commande': line.product_qty * line.price_unit,
+                        'reception_ref':    move.picking_id.name,
+                        'date_reception':   move.picking_id.date_done,
+                        'qty_receptionnee': qty_done,
+                        'prix_reception':   prix_rec,
+                        'montant_reception': qty_done * prix_rec,
+                    })
+            else:
+                # Commande sans réception dans la période
+                products_data[key]['sub_lines'].append({
+                    'po_ref':           line.order_id.name,
+                    'date_commande':    line.order_id.date_order,
+                    'qty_commandee':    line.product_qty,
+                    'prix_commande':    line.price_unit,
+                    'montant_commande': line.product_qty * line.price_unit,
+                    'reception_ref':    '',
+                    'date_reception':   None,
+                    'qty_receptionnee': 0.0,
+                    'prix_reception':   0.0,
+                    'montant_reception': 0.0,
+                })
+
+        # ── Réceptions directes ───────────────────────────────────────────────
+        for move in standalone_moves:
             product = move.product_id
             if not product:
                 continue
@@ -97,30 +159,52 @@ class AchatProduitReportWizard(models.TransientModel):
             if key not in products_data:
                 products_data[key] = {
                     'product': product,
-                    'po_order_ids': set(),
-                    'qty_commandee': 0.0,
+                    'po_ids': set(),
                     'reception_ids': set(),
+                    'qty_commandee': 0.0,
+                    'montant_commande': 0.0,
                     'qty_receptionnee': 0.0,
+                    'montant_reception': 0.0,
+                    'sub_lines': [],
                 }
             qty_done = (
                 sum(move.move_line_ids.mapped('quantity'))
                 or move.product_uom_qty
             )
+            prix_rec = move.price_unit
             products_data[key]['qty_receptionnee'] += qty_done
+            products_data[key]['montant_reception'] += qty_done * prix_rec
             if move.picking_id:
                 products_data[key]['reception_ids'].add(move.picking_id.name)
+            products_data[key]['sub_lines'].append({
+                'po_ref':           '',
+                'date_commande':    None,
+                'qty_commandee':    0.0,
+                'prix_commande':    0.0,
+                'montant_commande': 0.0,
+                'reception_ref':    move.picking_id.name if move.picking_id else '',
+                'date_reception':   move.picking_id.date_done if move.picking_id else None,
+                'qty_receptionnee': qty_done,
+                'prix_reception':   prix_rec,
+                'montant_reception': qty_done * prix_rec,
+            })
 
         result = []
         for data in products_data.values():
+            sub = sorted(
+                data['sub_lines'],
+                key=lambda x: x['date_commande'] or x['date_reception'] or _dt.min,
+            )
             result.append({
-                'ref': data['product'].default_code or '',
-                'name': data['product'].name,
-                'nb_commandes': len(data['po_order_ids']),
-                'qty_commandee': data['qty_commandee'],
-                'po_refs': ', '.join(sorted(data['po_order_ids'])),
-                'nb_receptions': len(data['reception_ids']),
-                'qty_receptionnee': data['qty_receptionnee'],
-                'reception_refs': ', '.join(sorted(data['reception_ids'])),
+                'ref':               data['product'].default_code or '',
+                'name':              data['product'].name,
+                'nb_commandes':      len(data['po_ids']),
+                'qty_commandee':     data['qty_commandee'],
+                'montant_commande':  data['montant_commande'],
+                'nb_receptions':     len(data['reception_ids']),
+                'qty_receptionnee':  data['qty_receptionnee'],
+                'montant_reception': data['montant_reception'],
+                'sub_lines':         sub,
             })
 
         result.sort(key=lambda x: (x['ref'].lower() if x['ref'] else x['name'].lower()))
@@ -145,110 +229,179 @@ class AchatProduitReportWizard(models.TransientModel):
         ws = wb.active
         ws.title = "Cmdes & Réceptions Produits"
 
-        BLUE  = "1A5276"
-        WHITE = "FFFFFF"
-        thin  = Side(style='thin', color="AAAAAA")
-        brd   = Border(left=thin, right=thin, top=thin, bottom=thin)
+        # ── Palette ───────────────────────────────────────────────────────────
+        BLUE    = "1A5276"
+        GRAY    = "D5D8DC"   # sous-ligne sans réception
+        LBLUE   = "EBF5FB"   # alternance lignes paires
+        WHITE   = "FFFFFF"
+        ORANGE  = "FAD7A0"   # réception directe (sans commande)
+        thin    = Side(style='thin', color="BBBBBB")
+        brd     = Border(left=thin, right=thin, top=thin, bottom=thin)
 
-        def hdr_font():
-            return Font(name="Arial", bold=True, color=WHITE, size=10)
-
-        def cell_font(bold=False):
-            return Font(name="Arial", bold=bold, size=9)
+        def font(bold=False, color="000000", size=9):
+            return Font(name="Arial", bold=bold, color=color, size=size)
 
         def fill(c):
             return PatternFill("solid", fgColor=c)
 
-        def aln(h="left", v="center"):
-            return Alignment(horizontal=h, vertical=v, wrap_text=True)
+        def aln(h="left", v="center", wrap=False):
+            return Alignment(horizontal=h, vertical=v, wrap_text=wrap)
 
-        # Ligne société
-        ws.merge_cells("A1:H1")
+        def fmt_date(d):
+            return d.strftime('%d/%m/%Y') if d else ''
+
+        # ── En-tête société / titre ───────────────────────────────────────────
+        NCOLS = 11
+        ws.merge_cells("A1:K1")
         ws["A1"] = self.company_id.name
-        ws["A1"].font = Font(name="Arial", bold=True, size=11)
+        ws["A1"].font = font(bold=True, size=11)
 
-        # Ligne titre
-        ws.merge_cells("A2:H2")
+        ws.merge_cells("A2:K2")
         ws["A2"] = (
             f"COMMANDES & RÉCEPTIONS PAR PRODUIT — "
             f"Du {self.date_debut.strftime('%d/%m/%Y')} au {self.date_fin.strftime('%d/%m/%Y')}"
         )
-        ws["A2"].font = Font(name="Arial", bold=True, color=WHITE, size=11)
+        ws["A2"].font = font(bold=True, color=WHITE, size=11)
         ws["A2"].fill = fill(BLUE)
-        ws["A2"].alignment = Alignment(horizontal="center", vertical="center")
+        ws["A2"].alignment = aln("center")
         ws.row_dimensions[2].height = 18
         ws.append([])
 
-        # En-têtes colonnes
-        headers = [
-            "Réf. Produit", "Désignation",
-            "Nb Cmdes", "Qté Commandée", "Réf. Commandes",
-            "Nb Réceptions", "Qté Réceptionnée", "Réf. Réceptions",
+        # ── En-têtes colonnes ─────────────────────────────────────────────────
+        #  A          B               C          D          E             F
+        #  Réf.  | Désignation  | Date Cmd | Qté Cmd | Prix Unit | Montant Cmd
+        #  G               H         I         J             K
+        #  Réf. Réception | Date Réc | Qté Réc | Prix Unit | Montant Réc
+        hdrs = [
+            "Réf. Produit", "Désignation / Réf. Commande",
+            "Date Commande", "Qté Commandée", "Prix Unit. Cmd", "Montant Cmdé",
+            "Réf. Réception", "Date Réception", "Qté Réceptionnée",
+            "Prix Unit. Réc.", "Montant Réc.",
         ]
-        ws.append(headers)
-        hdr_row = ws.max_row
-        for col in range(1, len(headers) + 1):
-            c = ws.cell(row=hdr_row, column=col)
-            c.font = hdr_font()
+        ws.append(hdrs)
+        hr = ws.max_row
+        for col in range(1, NCOLS + 1):
+            c = ws.cell(row=hr, column=col)
+            c.font = font(bold=True, color=WHITE, size=9)
             c.fill = fill(BLUE)
             c.alignment = aln("center")
             c.border = brd
-        ws.row_dimensions[hdr_row].height = 20
+        ws.row_dimensions[hr].height = 22
 
-        # Données
-        nb_cmdes_total = 0
-        qty_cmd_total  = 0.0
-        nb_rec_total   = 0
-        qty_rec_total  = 0.0
+        # ── Données ───────────────────────────────────────────────────────────
+        tot_qty_cmd = 0.0
+        tot_mnt_cmd = 0.0
+        tot_qty_rec = 0.0
+        tot_mnt_rec = 0.0
 
-        for i, row_data in enumerate(data):
-            bg = "FFFFFF" if i % 2 == 0 else "EBF5FB"
-            row = [
-                row_data['ref'],
-                row_data['name'],
-                row_data['nb_commandes'],
-                row_data['qty_commandee'],
-                row_data['po_refs'],
-                row_data['nb_receptions'],
-                row_data['qty_receptionnee'],
-                row_data['reception_refs'],
-            ]
-            ws.append(row)
+        for prod in data:
+            # ── Ligne produit (header) ────────────────────────────────────────
+            ws.append([
+                prod['ref'],
+                prod['name'],
+                f"{prod['nb_commandes']} cmde(s)",
+                prod['qty_commandee'],
+                '',
+                prod['montant_commande'],
+                f"{prod['nb_receptions']} réc.",
+                '',
+                prod['qty_receptionnee'],
+                '',
+                prod['montant_reception'],
+            ])
             r = ws.max_row
-            for col in range(1, 9):
+            for col in range(1, NCOLS + 1):
                 c = ws.cell(row=r, column=col)
-                c.font = cell_font()
-                c.fill = fill(bg)
+                c.font = font(bold=True, color=WHITE, size=9)
+                c.fill = fill(BLUE)
                 c.border = brd
-                c.alignment = aln(
-                    "right" if col in (3, 4, 6, 7) else
-                    "center" if col == 1 else "left"
-                )
+                c.alignment = aln("right" if col in (4, 6, 9, 11) else "center" if col == 3 else "left")
             ws.cell(row=r, column=4).number_format = '#,##0.##'
-            ws.cell(row=r, column=7).number_format = '#,##0.##'
+            ws.cell(row=r, column=6).number_format = '#,##0'
+            ws.cell(row=r, column=9).number_format = '#,##0.##'
+            ws.cell(row=r, column=11).number_format = '#,##0'
+            ws.row_dimensions[r].height = 16
 
-            nb_cmdes_total += row_data['nb_commandes']
-            qty_cmd_total  += row_data['qty_commandee']
-            nb_rec_total   += row_data['nb_receptions']
-            qty_rec_total  += row_data['qty_receptionnee']
+            tot_qty_cmd += prod['qty_commandee']
+            tot_mnt_cmd += prod['montant_commande']
+            tot_qty_rec += prod['qty_receptionnee']
+            tot_mnt_rec += prod['montant_reception']
 
-        # Ligne total
-        ws.append(["", "TOTAL", nb_cmdes_total, qty_cmd_total, "", nb_rec_total, qty_rec_total, ""])
+            # ── Sous-lignes ───────────────────────────────────────────────────
+            for i, sl in enumerate(prod['sub_lines']):
+                has_po  = bool(sl['po_ref'])
+                has_rec = bool(sl['reception_ref'])
+                if has_po and has_rec:
+                    bg = LBLUE if i % 2 == 0 else WHITE
+                elif has_po:
+                    bg = GRAY   # commandé mais pas encore reçu
+                else:
+                    bg = ORANGE  # réception directe
+
+                ws.append([
+                    '',
+                    sl['po_ref'],
+                    fmt_date(sl['date_commande']),
+                    sl['qty_commandee'] or '',
+                    sl['prix_commande'] or '',
+                    sl['montant_commande'] or '',
+                    sl['reception_ref'],
+                    fmt_date(sl['date_reception']),
+                    sl['qty_receptionnee'] or '',
+                    sl['prix_reception'] or '',
+                    sl['montant_reception'] or '',
+                ])
+                r = ws.max_row
+                for col in range(1, NCOLS + 1):
+                    c = ws.cell(row=r, column=col)
+                    c.font = font(size=8)
+                    c.fill = fill(bg)
+                    c.border = brd
+                    c.alignment = aln("right" if col in (4, 5, 6, 9, 10, 11) else "center" if col == 3 else "left")
+                for col in (4, 9):
+                    ws.cell(row=r, column=col).number_format = '#,##0.##'
+                for col in (5, 10):
+                    ws.cell(row=r, column=col).number_format = '#,##0.00'
+                for col in (6, 11):
+                    ws.cell(row=r, column=col).number_format = '#,##0'
+                ws.row_dimensions[r].height = 14
+
+        # ── Ligne grand total ─────────────────────────────────────────────────
+        ws.append(["", "TOTAL GÉNÉRAL", "", tot_qty_cmd, "", tot_mnt_cmd,
+                   "", "", tot_qty_rec, "", tot_mnt_rec])
         r = ws.max_row
-        for col in range(1, 9):
+        for col in range(1, NCOLS + 1):
             c = ws.cell(row=r, column=col)
-            c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
+            c.font = font(bold=True, color=WHITE, size=10)
             c.fill = fill(BLUE)
             c.border = brd
-            c.alignment = aln("right" if col in (3, 4, 6, 7) else "left")
+            c.alignment = aln("right" if col in (4, 6, 9, 11) else "left")
         ws.cell(row=r, column=4).number_format = '#,##0.##'
-        ws.cell(row=r, column=7).number_format = '#,##0.##'
+        ws.cell(row=r, column=6).number_format = '#,##0'
+        ws.cell(row=r, column=9).number_format = '#,##0.##'
+        ws.cell(row=r, column=11).number_format = '#,##0'
         ws.row_dimensions[r].height = 18
 
-        # Largeurs colonnes
-        for col, w in enumerate([14, 36, 10, 14, 42, 12, 16, 42], 1):
+        # ── Légende ───────────────────────────────────────────────────────────
+        ws.append([])
+        ws.append(["Légende :"])
+        ws.cell(ws.max_row, 1).font = font(bold=True, size=8)
+        for txt, bg in [
+            ("Commandé + Réceptionné", LBLUE),
+            ("Commandé sans réception", GRAY),
+            ("Réception directe (sans commande)", ORANGE),
+        ]:
+            ws.append(["", txt])
+            r = ws.max_row
+            ws.cell(r, 2).font = font(size=8)
+            ws.cell(r, 2).fill = fill(bg)
+            ws.cell(r, 2).border = brd
+
+        # ── Largeurs colonnes ─────────────────────────────────────────────────
+        for col, w in enumerate([12, 32, 14, 12, 13, 14, 18, 14, 14, 13, 14], 1):
             ws.column_dimensions[chr(64 + col)].width = w
 
+        # ── Export ────────────────────────────────────────────────────────────
         buf = io.BytesIO()
         wb.save(buf)
         buf.seek(0)
