@@ -52,10 +52,10 @@
                     }
 
                     /* Couleurs sous-lignes — plus saturées pour PDF */
-                    tr.sl-a   td { background-color: #AED6F1; color: #000; }
-                    tr.sl-b   td { background-color: #D6EAF8; color: #000; }
-                    tr.sl-po  td { background-color: #D5D8DC; color: #333; }
-                    tr.sl-rec td { background-color: #FAD7A0; color: #000; }
+                    tr.sl-a   td { background-color: #AED6F1; color: #000 !important; }
+                    tr.sl-b   td { background-color: #D6EAF8; color: #000 !important; }
+                    tr.sl-po  td { background-color: #D5D8DC; color: #000 !important; }
+                    tr.sl-rec td { background-color: #FAD7A0; color: #000 !important; }
 
                     /* Séparateur */
                     tr.spacer td { height: 3px; background: #fff; border: none; }
