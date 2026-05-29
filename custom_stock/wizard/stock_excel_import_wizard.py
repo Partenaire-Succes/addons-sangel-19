@@ -65,6 +65,18 @@ class StockExcelImportWizard(models.TransientModel):
             return str(int(value)).strip()
         return str(value).strip()
 
+    @staticmethod
+    def _clean_cost(value):
+        """Parse un coût depuis Excel : gère le format français (virgule décimale) et les floats natifs."""
+        if value is None:
+            return 0.0
+        if isinstance(value, (int, float)):
+            return float(value)
+        try:
+            return float(str(value).replace(',', '.').strip())
+        except (ValueError, TypeError):
+            return 0.0
+
 
     def action_load_file(self):
         self.ensure_one()
@@ -94,6 +106,7 @@ class StockExcelImportWizard(models.TransientModel):
         product_index = headers.index("product_code")
         # status_index = headers.index("product_state")
         qty_index = headers.index("quantity")
+        cost_index = headers.index("Coût") if "Coût" in headers else None
 
         env = self.env(context=dict(
             self.env.context,
@@ -109,6 +122,7 @@ class StockExcelImportWizard(models.TransientModel):
             product_code = self._clean_code(row[product_index])
             # product_state = self._clean_code(row[status_index])
             quantity = float(row[qty_index] or 0.0)
+            cost = self._clean_cost(row[cost_index]) if cost_index is not None else 0.0
 
             if not product_code:
                 continue
@@ -122,6 +136,7 @@ class StockExcelImportWizard(models.TransientModel):
                 "product_id": product.id if product else False,
                 # "p_state": product_state,
                 "quantity": quantity,
+                "cost": cost,
                 "found": bool(product),
             }))
 
@@ -250,6 +265,12 @@ class StockExcelImportWizard(models.TransientModel):
                 #     allowed_company_ids=[self.company_id.id]
                 # ).with_company(self.company_id)
                 # prod.avg_cost = line.quantity
+
+            if line.cost > 0:
+                tmpl = product.product_tmpl_id.with_context(
+                    allowed_company_ids=[self.company_id.id]
+                ).with_company(self.company_id)
+                tmpl.standard_price = line.cost
 
             orderpoint = env["stock.warehouse.orderpoint"].search([
                 ("product_id", "=", product.id),
