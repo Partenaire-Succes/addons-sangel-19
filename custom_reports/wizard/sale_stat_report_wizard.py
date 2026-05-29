@@ -168,32 +168,35 @@ class SaleStatReportWizard(models.TransientModel):
         def make_group(name, gid):
             return {
                 'group_name': name, 'group_id': gid, 'items': {},
-                'total_p1_qty': 0.0, 'total_p1_ca': 0.0, 'total_p1_margin': 0.0,
-                'total_p2_qty': 0.0, 'total_p2_ca': 0.0, 'total_p2_margin': 0.0,
+                'total_p1_qty': 0.0, 'total_p1_ca': 0.0, 'total_p1_ca_ttc': 0.0, 'total_p1_margin': 0.0,
+                'total_p2_qty': 0.0, 'total_p2_ca': 0.0, 'total_p2_ca_ttc': 0.0, 'total_p2_margin': 0.0,
             }
 
         def make_item(name, ref=''):
             return {
                 'name': name, 'ref': ref,
-                'qty_p1': 0.0, 'ca_p1': 0.0, 'margin_p1': 0.0, 'margin_pct_p1': 0.0,
-                'qty_p2': 0.0, 'ca_p2': 0.0, 'margin_p2': 0.0, 'margin_pct_p2': 0.0,
+                'cost': 0.0,
+                'qty_p1': 0.0, 'ca_p1': 0.0, 'ca_ttc_p1': 0.0, 'margin_p1': 0.0, 'margin_pct_p1': 0.0,
+                'qty_p2': 0.0, 'ca_p2': 0.0, 'ca_ttc_p2': 0.0, 'margin_p2': 0.0, 'margin_pct_p2': 0.0,
                 'prog_qty': 0.0, 'prog_ca': 0.0, 'prog_ca_pct': 0.0,
                 'prog_margin': 0.0, 'prog_margin_pct': 0.0,
             }
 
-        def acc(gkey, gname, gid, ikey, iname, iref, qty, ca, margin, period):
+        def acc(gkey, gname, gid, ikey, iname, iref, qty, ca, ca_ttc, cost, margin, period):
             if gkey not in groups:
                 groups[gkey] = make_group(gname, gid)
             g = groups[gkey]
             if ikey not in g['items']:
                 g['items'][ikey] = make_item(iname, iref)
             it = g['items'][ikey]
+            if cost > 0 and it['cost'] == 0.0:
+                it['cost'] = cost
             if period == 1:
-                it['qty_p1'] += qty; it['ca_p1'] += ca; it['margin_p1'] += margin
-                g['total_p1_qty'] += qty; g['total_p1_ca'] += ca; g['total_p1_margin'] += margin
+                it['qty_p1'] += qty; it['ca_p1'] += ca; it['ca_ttc_p1'] += ca_ttc; it['margin_p1'] += margin
+                g['total_p1_qty'] += qty; g['total_p1_ca'] += ca; g['total_p1_ca_ttc'] += ca_ttc; g['total_p1_margin'] += margin
             else:
-                it['qty_p2'] += qty; it['ca_p2'] += ca; it['margin_p2'] += margin
-                g['total_p2_qty'] += qty; g['total_p2_ca'] += ca; g['total_p2_margin'] += margin
+                it['qty_p2'] += qty; it['ca_p2'] += ca; it['ca_ttc_p2'] += ca_ttc; it['margin_p2'] += margin
+                g['total_p2_qty'] += qty; g['total_p2_ca'] += ca; g['total_p2_ca_ttc'] += ca_ttc; g['total_p2_margin'] += margin
 
         # --- Stratégies de groupement ---
 
@@ -201,53 +204,59 @@ class SaleStatReportWizard(models.TransientModel):
             for src, orders in orders_dict.items():
                 for order in orders:
                     p = order.partner_id
-                    ca = (order.amount_total or 0.0) - (order.amount_tax or 0.0)
+                    ca     = (order.amount_total or 0.0) - (order.amount_tax or 0.0)
+                    ca_ttc = order.amount_total or 0.0
                     mg = getattr(order, 'margin', 0.0) or 0.0
                     cats = p.category_id
                     if self.category_ids:
                         cats = cats.filtered(lambda c: c.id in self.category_ids.ids)
                     if not cats:
                         acc('_no_cat', 'Sans Catégorie', 0,
-                            p.id, p.name or '', p.ref or '', 1, ca, mg, period)
+                            p.id, p.name or '', p.ref or '', 1, ca, ca_ttc, 0.0, mg, period)
                     else:
                         for cat in cats:
                             acc(cat.name, cat.name, cat.id,
-                                p.id, p.name or '', p.ref or '', 1, ca, mg, period)
+                                p.id, p.name or '', p.ref or '', 1, ca, ca_ttc, 0.0, mg, period)
 
         def by_customer(orders_dict, period):
             for src, orders in orders_dict.items():
                 for order in orders:
                     p = order.partner_id
-                    ca = (order.amount_total or 0.0) - (order.amount_tax or 0.0)
+                    ca     = (order.amount_total or 0.0) - (order.amount_tax or 0.0)
+                    ca_ttc = order.amount_total or 0.0
                     mg = getattr(order, 'margin', 0.0) or 0.0
                     gkey = p.id or 0
                     acc(gkey, p.name or 'Inconnu', gkey,
-                        gkey, p.name or 'Inconnu', p.ref or '', 1, ca, mg, period)
+                        gkey, p.name or 'Inconnu', p.ref or '', 1, ca, ca_ttc, 0.0, mg, period)
 
         def by_product_category(lines_list, period):
             for src, lines in lines_list:
                 for line in lines:
-                    prod = line.product_id
-                    cat  = prod.categ_id
-                    ca   = line.price_subtotal or 0.0
-                    mg   = getattr(line, 'margin', 0.0) or 0.0
-                    qty  = line.qty if src == 'pos' else line.product_uom_qty
+                    prod   = line.product_id
+                    cat    = prod.categ_id
+                    ca     = line.price_subtotal or 0.0
+                    ca_ttc = (line.price_subtotal_incl if src == 'pos' else line.price_total) or 0.0
+                    mg     = getattr(line, 'margin', 0.0) or 0.0
+                    cost   = prod.standard_price or 0.0
+                    qty    = line.qty if src == 'pos' else line.product_uom_qty
                     gkey  = cat.name if cat else '_no_cat'
                     gname = cat.name if cat else 'Sans Catégorie'
                     gid   = cat.id   if cat else 0
                     acc(gkey, gname, gid,
-                        prod.id, prod.name or '', prod.default_code or '', qty, ca, mg, period)
+                        prod.id, prod.name or '', prod.default_code or '', qty, ca, ca_ttc, cost, mg, period)
 
         def by_product(lines_list, period):
             for src, lines in lines_list:
                 for line in lines:
-                    prod = line.product_id
-                    ca   = line.price_subtotal or 0.0
-                    mg   = getattr(line, 'margin', 0.0) or 0.0
-                    qty  = line.qty if src == 'pos' else line.product_uom_qty
-                    gkey = prod.id or 0
+                    prod   = line.product_id
+                    ca     = line.price_subtotal or 0.0
+                    ca_ttc = (line.price_subtotal_incl if src == 'pos' else line.price_total) or 0.0
+                    mg     = getattr(line, 'margin', 0.0) or 0.0
+                    cost   = prod.standard_price or 0.0
+                    qty    = line.qty if src == 'pos' else line.product_uom_qty
+                    gkey   = prod.id or 0
                     acc(gkey, prod.name or 'Inconnu', gkey,
-                        gkey, prod.name or 'Inconnu', prod.default_code or '', qty, ca, mg, period)
+                        gkey, prod.name or 'Inconnu', prod.default_code or '', qty, ca, ca_ttc, cost, mg, period)
 
         # --- Exécution par période ---
 
@@ -332,13 +341,16 @@ class SaleStatReportWizard(models.TransientModel):
         if not data:
             raise UserError("Aucune donnée trouvée pour la période sélectionnée.")
 
+        # Libellés colonnes 1 et 2
         col_labels = {
             'customer_category': ('Catég. Client', 'Client'),
-            'customer':          ('Client',         'Réf.'),
+            'customer':          ('Client',         'Réf. Client'),
             'product_category':  ('Catég. Produit', 'Produit'),
-            'product':           ('Produit',        'Réf.'),
+            'product':           ('Produit',        'Code Article'),
         }
         col1_label, col2_label = col_labels.get(self.group_by, ('Groupe', 'Détail'))
+        # col2 = code/ref quand le libellé est orienté code (product et customer)
+        use_ref_col2 = self.group_by in ('product', 'customer')
 
         wb = Workbook(); ws = wb.active; ws.title = "Stats Ventes"
         BLUE = "1A5276"; LBLUE = "D6EAF8"; WHITE = "FFFFFF"
@@ -352,9 +364,26 @@ class SaleStatReportWizard(models.TransientModel):
             f"{self.date_start_period1.strftime('%d/%m/%Y')} → {self.date_end_period1.strftime('%d/%m/%Y')}"
             if self.date_start_period1 else "Période 1"
         )
-        last_col = 12 if is_comparison else 6
+
+        # Colonnes single  : Groupe|Code|Coût|Prix TTC|Qté|CA HT|CA TTC|Marge|% Marge  (9)
+        # Colonnes compar. : id. + P2(Qté|CA HT|CA TTC|Marge|% Marge) + Prog CA HT|% Prog (16)
+        if is_comparison:
+            last_col = 16
+            headers = [
+                col1_label, col2_label, "Coût", "Prix TTC",
+                "Qté P1", "CA HT P1", "CA TTC P1", "Marge P1", "% Marge P1",
+                "Qté P2", "CA HT P2", "CA TTC P2", "Marge P2", "% Marge P2",
+                "Prog CA HT", "% Prog CA",
+            ]
+            money_cols = (3, 4, 6, 7, 8, 11, 12, 13, 15)
+        else:
+            last_col = 9
+            headers = [col1_label, col2_label, "Coût", "Prix TTC", "Qté", "CA HT", "CA TTC", "Marge", "% Marge"]
+            money_cols = (3, 4, 6, 7, 8)
+
         last_col_letter = chr(64 + last_col)
 
+        # ── En-tête titre ──────────────────────────────────────────────────────
         ws.merge_cells(f"A1:{last_col_letter}1")
         ws["A1"] = self.company_id.name
         ws["A1"].font = Font(name="Arial", bold=True, size=11)
@@ -372,16 +401,7 @@ class SaleStatReportWizard(models.TransientModel):
         ws["A2"].fill = fill(BLUE); ws["A2"].alignment = aln("center")
         ws.row_dimensions[2].height = 18; ws.append([])
 
-        if is_comparison:
-            headers = [col1_label, col2_label,
-                       "Qté P1", "CA HT P1", "Marge P1", "% Marge P1",
-                       "Qté P2", "CA HT P2", "Marge P2", "% Marge P2",
-                       "Prog CA", "% Prog CA"]
-            money_cols = (4, 5, 8, 9, 11)
-        else:
-            headers = [col1_label, col2_label, "Qté", "CA HT", "Marge", "% Marge"]
-            money_cols = (4, 5)
-
+        # ── En-têtes colonnes ──────────────────────────────────────────────────
         ws.append(headers)
         hrow = ws.max_row
         for col in range(1, last_col + 1):
@@ -389,19 +409,27 @@ class SaleStatReportWizard(models.TransientModel):
             c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
             c.fill = fill(BLUE); c.alignment = aln("center"); c.border = brd
 
+        # ── Données ────────────────────────────────────────────────────────────
         for gdata in data.values():
             for item in gdata['items'].values():
+                col2_val = item['ref'] if use_ref_col2 else item['name']
+                prix_ttc = item['ca_ttc_p1'] / item['qty_p1'] if item['qty_p1'] else 0.0
                 if is_comparison:
                     row_data = [
-                        gdata['group_name'], item['name'],
-                        round(item['qty_p1'], 3), item['ca_p1'], item['margin_p1'], round(item['margin_pct_p1'], 2),
-                        round(item['qty_p2'], 3), item['ca_p2'], item['margin_p2'], round(item['margin_pct_p2'], 2),
+                        gdata['group_name'], col2_val,
+                        item['cost'], prix_ttc,
+                        round(item['qty_p1'], 3), item['ca_p1'], item['ca_ttc_p1'],
+                        item['margin_p1'], round(item['margin_pct_p1'], 2),
+                        round(item['qty_p2'], 3), item['ca_p2'], item['ca_ttc_p2'],
+                        item['margin_p2'], round(item['margin_pct_p2'], 2),
                         item['prog_ca'], round(item['prog_ca_pct'], 2),
                     ]
                 else:
                     row_data = [
-                        gdata['group_name'], item['name'],
-                        round(item['qty_p1'], 3), item['ca_p1'], item['margin_p1'], round(item['margin_pct_p1'], 2),
+                        gdata['group_name'], col2_val,
+                        item['cost'], prix_ttc,
+                        round(item['qty_p1'], 3), item['ca_p1'], item['ca_ttc_p1'],
+                        item['margin_p1'], round(item['margin_pct_p1'], 2),
                     ]
                 ws.append(row_data)
                 r = ws.max_row
@@ -412,20 +440,27 @@ class SaleStatReportWizard(models.TransientModel):
                 for col in money_cols:
                     ws.cell(row=r, column=col).number_format = '#,##0.00'
 
+            # ── Sous-total groupe ──────────────────────────────────────────────
+            prix_ttc_tot = (
+                gdata['total_p1_ca_ttc'] / gdata['total_p1_qty']
+                if gdata['total_p1_qty'] else 0.0
+            )
             if is_comparison:
                 sub_row = [
                     "Sous-total " + gdata['group_name'], "",
-                    round(gdata['total_p1_qty'], 3), gdata['total_p1_ca'], gdata['total_p1_margin'],
-                    round(gdata.get('total_p1_margin_pct', 0.0), 2),
-                    round(gdata['total_p2_qty'], 3), gdata['total_p2_ca'], gdata['total_p2_margin'],
-                    round(gdata.get('total_p2_margin_pct', 0.0), 2),
+                    0.0, prix_ttc_tot,
+                    round(gdata['total_p1_qty'], 3), gdata['total_p1_ca'], gdata['total_p1_ca_ttc'],
+                    gdata['total_p1_margin'], round(gdata.get('total_p1_margin_pct', 0.0), 2),
+                    round(gdata['total_p2_qty'], 3), gdata['total_p2_ca'], gdata['total_p2_ca_ttc'],
+                    gdata['total_p2_margin'], round(gdata.get('total_p2_margin_pct', 0.0), 2),
                     gdata.get('total_prog_ca', 0.0), round(gdata.get('total_prog_ca_pct', 0.0), 2),
                 ]
             else:
                 sub_row = [
                     "Sous-total " + gdata['group_name'], "",
-                    round(gdata['total_p1_qty'], 3), gdata['total_p1_ca'], gdata['total_p1_margin'],
-                    round(gdata.get('total_p1_margin_pct', 0.0), 2),
+                    0.0, prix_ttc_tot,
+                    round(gdata['total_p1_qty'], 3), gdata['total_p1_ca'], gdata['total_p1_ca_ttc'],
+                    gdata['total_p1_margin'], round(gdata.get('total_p1_margin_pct', 0.0), 2),
                 ]
             ws.append(sub_row)
             r = ws.max_row
@@ -437,7 +472,11 @@ class SaleStatReportWizard(models.TransientModel):
             for col in money_cols:
                 ws.cell(row=r, column=col).number_format = '#,##0.00'
 
-        col_widths = [22, 25, 8, 14, 14, 10, 8, 14, 14, 10, 14, 10] if is_comparison else [22, 25, 8, 14, 14, 10]
+        # ── Largeurs colonnes ──────────────────────────────────────────────────
+        if is_comparison:
+            col_widths = [22, 14, 10, 10, 8, 13, 13, 13, 9, 8, 13, 13, 13, 9, 13, 9]
+        else:
+            col_widths = [22, 14, 10, 10, 8, 13, 13, 13, 9]
         for col, width in enumerate(col_widths, 1):
             ws.column_dimensions[chr(64 + col)].width = width
 

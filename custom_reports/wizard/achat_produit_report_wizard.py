@@ -43,11 +43,37 @@ class AchatProduitReportWizard(models.TransientModel):
         Retourne pour chaque produit :
           - les totaux (header)
           - des sous-lignes (une par couple commande/réception liés)
+
+        Logique : on part des RÉCEPTIONS de la période (date_done) pour ne manquer
+        aucun mouvement, puis on fait l'union avec les BCs de la période (même sans
+        réception encore validée). Un BC passé avant la période mais reçu dans la
+        période apparaît donc bien dans le rapport.
         """
         self.ensure_one()
         from datetime import datetime as _dt
 
-        # ── Lignes de commandes d'achat ───────────────────────────────────────
+        # ── 1. Toutes les réceptions de la période (date effective) ──────────
+        reception_domain = [
+            ('state', '=', 'done'),
+            ('picking_id.picking_type_code', '=', 'incoming'),
+            ('picking_id.date_done', '>=', self.date_debut),
+            ('picking_id.date_done', '<=', self.date_fin),
+            ('picking_id.company_id', '=', self.company_id.id),
+            ('location_id.usage', 'in', ['supplier', 'transit']),
+        ]
+        if self.fournisseur_ids:
+            reception_domain.append(('picking_id.partner_id', 'in', self.fournisseur_ids.ids))
+        all_reception_moves = self.env['stock.move'].search(reception_domain)
+
+        moves_with_po   = all_reception_moves.filtered(lambda m: m.purchase_line_id)
+        moves_standalone = all_reception_moves.filtered(lambda m: not m.purchase_line_id)
+
+        # Index: po_line_id → liste de mouvements
+        moves_by_po_line = {}
+        for m in moves_with_po:
+            moves_by_po_line.setdefault(m.purchase_line_id.id, []).append(m)
+
+        # ── 2. Tous les BCs de la période (même sans réception encore validée) ─
         po_domain = [
             ('order_id.state', 'in', ['purchase', 'done']),
             ('order_id.date_order', '>=', str(self.date_debut) + ' 00:00:00'),
@@ -56,43 +82,21 @@ class AchatProduitReportWizard(models.TransientModel):
         ]
         if self.fournisseur_ids:
             po_domain.append(('order_id.partner_id', 'in', self.fournisseur_ids.ids))
-        po_lines = self.env['purchase.order.line'].search(po_domain)
+        po_lines_period = self.env['purchase.order.line'].search(po_domain)
 
-        # ── Mouvements réceptions liés aux lignes PO (par date de réception) ──
-        moves_by_po_line = {}
-        if po_lines:
-            linked_moves = self.env['stock.move'].search([
-                ('purchase_line_id', 'in', po_lines.ids),
-                ('state', '=', 'done'),
-                ('picking_id.picking_type_code', '=', 'incoming'),
-                ('picking_id.date_done', '>=', self.date_debut),
-                ('picking_id.date_done', '<=', self.date_fin),
-                ('location_id.usage', 'in', ['supplier', 'transit']),
-            ])
-            for m in linked_moves:
-                moves_by_po_line.setdefault(m.purchase_line_id.id, []).append(m)
+        # ── 3. Lignes PO liées aux réceptions (quel que soit leur date_order) ─
+        po_lines_from_receptions = moves_with_po.mapped('purchase_line_id')
 
-        # ── Réceptions directes (sans lien commande) ──────────────────────────
-        standalone_domain = [
-            ('purchase_line_id', '=', False),
-            ('picking_id.picking_type_code', '=', 'incoming'),
-            ('state', '=', 'done'),
-            ('picking_id.date_done', '>=', self.date_debut),
-            ('picking_id.date_done', '<=', self.date_fin),
-            ('picking_id.company_id', '=', self.company_id.id),
-            ('location_id.usage', 'in', ['supplier', 'transit']),
-        ]
-        if self.fournisseur_ids:
-            standalone_domain.append(('picking_id.partner_id', 'in', self.fournisseur_ids.ids))
-        standalone_moves = self.env['stock.move'].search(standalone_domain)
+        # Union des deux sources — pas de doublon grâce à l'opérateur | d'Odoo
+        all_po_lines = po_lines_period | po_lines_from_receptions
 
-        if not po_lines and not standalone_moves:
+        if not all_po_lines and not moves_standalone:
             raise UserError("Aucune donnée trouvée pour la période et les filtres sélectionnés.")
 
         products_data = {}
 
-        # ── Traitement lignes PO ──────────────────────────────────────────────
-        for line in po_lines:
+        # ── 4. Traitement lignes PO ───────────────────────────────────────────
+        for line in all_po_lines:
             product = line.product_id
             if not product:
                 continue
@@ -150,8 +154,8 @@ class AchatProduitReportWizard(models.TransientModel):
                     'montant_reception': 0.0,
                 })
 
-        # ── Réceptions directes ───────────────────────────────────────────────
-        for move in standalone_moves:
+        # ── 5. Réceptions directes (sans lien BC) ────────────────────────────
+        for move in moves_standalone:
             product = move.product_id
             if not product:
                 continue
