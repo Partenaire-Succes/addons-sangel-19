@@ -6,48 +6,77 @@
             <div class="page">
                 <style>
                     .page { font-family: Arial, sans-serif; font-size: 8pt; }
-                    .header-section { margin-bottom: 12px; border-bottom: 2px solid #000; padding-bottom: 6px; }
-                    .company-name { font-size: 12pt; font-weight: bold; text-transform: uppercase; }
-                    .date-range { text-align: right; font-weight: bold; font-size: 9pt; }
-                    .report-title {
+
+                    /* ── En-tête rapport ── */
+                    .header-section { margin-bottom: 10px; border-bottom: 2px solid #1A5276; padding-bottom: 6px; }
+                    .company-name   { font-size: 12pt; font-weight: bold; text-transform: uppercase; }
+                    .date-range     { text-align: right; font-weight: bold; font-size: 9pt; }
+                    .report-title   {
                         text-align: center; font-size: 11pt; font-weight: bold;
-                        margin: 10px 0; padding: 6px;
+                        margin: 8px 0 12px 0; padding: 6px;
                         background-color: #1A5276; color: #fff;
                     }
-                    /* Table principale */
-                    table.main { width: 100%; border-collapse: collapse; font-size: 7.5pt; }
-                    table.main th {
-                        background-color: #1A5276; color: #fff;
-                        border: 1px solid #888; padding: 4px 3px;
-                        font-weight: bold; text-align: center;
+
+                    /* ── Bloc par produit ── */
+                    .prod-block { margin-bottom: 8px; }
+
+                    /* Ligne produit — fond bleu foncé */
+                    table.prod-hdr-table {
+                        width: 100%; border-collapse: collapse;
+                        margin-bottom: 1px;
                     }
-                    table.main td { border: 1px solid #ccc; padding: 2px 3px; vertical-align: middle; }
-                    /* Ligne produit header */
-                    tr.prod-hdr td {
+                    table.prod-hdr-table td {
                         background-color: #1A5276; color: #fff;
-                        font-weight: bold; font-size: 8pt;
-                        border: 1px solid #aaa;
+                        font-weight: bold; font-size: 8.5pt;
+                        border: 1px solid #0E3460; padding: 4px 5px;
+                        vertical-align: middle;
                     }
-                    /* Sous-lignes */
-                    tr.sl-both     td { background-color: #D6EAF8; color: #000; }
-                    tr.sl-both-alt td { background-color: #EBF5FB; color: #000; }
-                    tr.sl-po       td { background-color: #EAECEE; color: #000; }
-                    tr.sl-rec      td { background-color: #FDEBD0; color: #000; }
-                    /* Séparateur entre produits */
-                    tr.spacer td { background-color: #fff; border: none; height: 4px; }
-                    /* Total */
-                    tr.total-row td {
+                    .prod-ref  { width: 7%; text-align: center; }
+                    .prod-name { width: 28%; }
+                    .prod-stat { width: 16%; font-size: 7.5pt; line-height: 1.4; }
+                    .prod-stat span.lbl { font-weight: normal; opacity: .85; }
+
+                    /* En-têtes colonnes sous-lignes */
+                    table.sub-table {
+                        width: 100%; border-collapse: collapse;
+                        font-size: 7pt;
+                    }
+                    table.sub-table th {
+                        background-color: #2E86C1; color: #fff;
+                        border: 1px solid #1A5276; padding: 3px 3px;
+                        text-align: center; font-weight: bold;
+                    }
+                    table.sub-table td {
+                        border: 1px solid #BDC3C7;
+                        padding: 2px 3px; vertical-align: middle;
+                    }
+
+                    /* Couleurs sous-lignes — plus saturées pour PDF */
+                    tr.sl-a   td { background-color: #AED6F1; color: #000; }
+                    tr.sl-b   td { background-color: #D6EAF8; color: #000; }
+                    tr.sl-po  td { background-color: #D5D8DC; color: #333; }
+                    tr.sl-rec td { background-color: #FAD7A0; color: #000; }
+
+                    /* Séparateur */
+                    tr.spacer td { height: 3px; background: #fff; border: none; }
+
+                    /* Total général */
+                    table.total-table {
+                        width: 60%; margin-left: 40%; border-collapse: collapse;
+                        margin-top: 6px;
+                    }
+                    table.total-table td {
                         background-color: #1A5276; color: #fff;
                         font-weight: bold; font-size: 9pt;
-                        border: 1px solid #aaa;
+                        border: 1px solid #0E3460; padding: 4px 6px;
                     }
+
                     .r { text-align: right; }
                     .c { text-align: center; }
-                    .indent { padding-left: 8px; color: #555; }
-                    .footer-info { margin-top: 12px; font-size: 7pt; }
+                    .footer-info { margin-top: 10px; font-size: 7pt; color: #555; }
                 </style>
 
-                <!-- En-tête -->
+                <!-- ── En-tête ─────────────────────────────────────────── -->
                 <div class="header-section">
                     <div class="row">
                         <div class="col-8">
@@ -64,143 +93,141 @@
 
                 <div class="report-title">COMMANDES &amp; RÉCEPTIONS PAR PRODUIT</div>
 
-                <t t-set="data" t-value="o._get_report_data()"/>
-                <t t-set="tot_qty_cmd"  t-value="0.0"/>
-                <t t-set="tot_mnt_cmd"  t-value="0.0"/>
-                <t t-set="tot_qty_rec"  t-value="0.0"/>
-                <t t-set="tot_mnt_rec"  t-value="0.0"/>
+                <t t-set="data"        t-value="o._get_report_data()"/>
+                <t t-set="tot_qty_cmd" t-value="0.0"/>
+                <t t-set="tot_mnt_cmd" t-value="0.0"/>
+                <t t-set="tot_qty_rec" t-value="0.0"/>
+                <t t-set="tot_mnt_rec" t-value="0.0"/>
 
-                <table class="main">
-                    <thead>
-                        <tr>
-                            <th style="width:6%;">Réf.</th>
-                            <th style="width:16%;">Désignation / Réf. Commande</th>
-                            <th style="width:8%;">Date Cmd</th>
-                            <th style="width:7%;">Qté Cmdée</th>
-                            <th style="width:8%;">Prix Unit Cmd</th>
-                            <th style="width:9%;">Montant Cmdé</th>
-                            <th style="width:10%;">Réf. Réception</th>
-                            <th style="width:8%;">Date Réc.</th>
-                            <th style="width:7%;">Qté Réc.</th>
-                            <th style="width:8%;">Prix Unit Réc.</th>
-                            <th style="width:9%;">Montant Réc.</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <t t-foreach="data" t-as="prod">
-                            <t t-set="tot_qty_cmd" t-value="tot_qty_cmd + prod['qty_commandee']"/>
-                            <t t-set="tot_mnt_cmd" t-value="tot_mnt_cmd + prod['montant_commande']"/>
-                            <t t-set="tot_qty_rec" t-value="tot_qty_rec + prod['qty_receptionnee']"/>
-                            <t t-set="tot_mnt_rec" t-value="tot_mnt_rec + prod['montant_reception']"/>
+                <!-- ── Un bloc par produit ──────────────────────────────── -->
+                <t t-foreach="data" t-as="prod">
+                    <t t-set="tot_qty_cmd" t-value="tot_qty_cmd + prod['qty_commandee']"/>
+                    <t t-set="tot_mnt_cmd" t-value="tot_mnt_cmd + prod['montant_commande']"/>
+                    <t t-set="tot_qty_rec" t-value="tot_qty_rec + prod['qty_receptionnee']"/>
+                    <t t-set="tot_mnt_rec" t-value="tot_mnt_rec + prod['montant_reception']"/>
 
-                            <!-- Ligne produit -->
-                            <tr class="prod-hdr">
-                                <td><span t-esc="prod['ref']"/></td>
-                                <td><span t-esc="prod['name']"/></td>
-                                <td class="c">
-                                    <span t-esc="str(prod['nb_commandes']) + ' cmde(s)'"/>
+                    <div class="prod-block">
+
+                        <!-- Ligne produit avec totaux étiquetés -->
+                        <table class="prod-hdr-table">
+                            <tr>
+                                <td class="prod-ref">
+                                    <span t-esc="prod['ref']"/>
                                 </td>
-                                <td class="r">
-                                    <span t-esc="'{:,.2f}'.format(prod['qty_commandee']).replace(',', ' ')"/>
+                                <td class="prod-name">
+                                    <span t-esc="prod['name']"/>
                                 </td>
-                                <td></td>
-                                <td class="r">
-                                    <span t-esc="'{:,.0f}'.format(prod['montant_commande']).replace(',', ' ')"/>
+                                <td class="prod-stat">
+                                    <span class="lbl">Nb cmdes :</span>
+                                    <strong t-esc="prod['nb_commandes']"/><br/>
+                                    <span class="lbl">Qté cmdée :</span>
+                                    <strong t-esc="'{:,.2f}'.format(prod['qty_commandee']).replace(',', ' ')"/>
                                 </td>
-                                <td class="c">
-                                    <span t-esc="str(prod['nb_receptions']) + ' réc.'"/>
+                                <td class="prod-stat r">
+                                    <span class="lbl">Mnt cmdé :</span><br/>
+                                    <strong t-esc="'{:,.0f}'.format(prod['montant_commande']).replace(',', ' ')"/>
                                 </td>
-                                <td></td>
-                                <td class="r">
-                                    <span t-esc="'{:,.2f}'.format(prod['qty_receptionnee']).replace(',', ' ')"/>
+                                <td class="prod-stat">
+                                    <span class="lbl">Nb réc. :</span>
+                                    <strong t-esc="prod['nb_receptions']"/><br/>
+                                    <span class="lbl">Qté réc. :</span>
+                                    <strong t-esc="'{:,.2f}'.format(prod['qty_receptionnee']).replace(',', ' ')"/>
                                 </td>
-                                <td></td>
-                                <td class="r">
-                                    <span t-esc="'{:,.0f}'.format(prod['montant_reception']).replace(',', ' ')"/>
+                                <td class="prod-stat r">
+                                    <span class="lbl">Mnt réc. :</span><br/>
+                                    <strong t-esc="'{:,.0f}'.format(prod['montant_reception']).replace(',', ' ')"/>
                                 </td>
                             </tr>
+                        </table>
 
-                            <!-- Sous-lignes -->
-                            <t t-foreach="prod['sub_lines']" t-as="sl">
-                                <t t-set="has_po"  t-value="bool(sl['po_ref'])"/>
-                                <t t-set="has_rec" t-value="bool(sl['reception_ref'])"/>
-                                <t t-set="sl_class"
-                                   t-value="'sl-both' if (has_po and has_rec and sl_odd) else 'sl-both-alt' if (has_po and has_rec) else 'sl-po' if has_po else 'sl-rec'"/>
-                                <tr t-att-class="sl_class">
-                                    <td></td>
-                                    <td class="indent">
-                                        <span t-esc="sl['po_ref']"/>
-                                    </td>
-                                    <td class="c">
-                                        <span t-esc="sl['date_commande'].strftime('%d/%m/%Y') if sl['date_commande'] else ''"/>
-                                    </td>
-                                    <td class="r">
-                                        <span t-esc="'{:,.2f}'.format(sl['qty_commandee']).replace(',', ' ') if sl['qty_commandee'] else ''"/>
-                                    </td>
-                                    <td class="r">
-                                        <span t-esc="'{:,.2f}'.format(sl['prix_commande']).replace(',', ' ') if sl['prix_commande'] else ''"/>
-                                    </td>
-                                    <td class="r">
-                                        <span t-esc="'{:,.0f}'.format(sl['montant_commande']).replace(',', ' ') if sl['montant_commande'] else ''"/>
-                                    </td>
-                                    <td class="indent">
-                                        <span t-esc="sl['reception_ref']"/>
-                                    </td>
-                                    <td class="c">
-                                        <span t-esc="sl['date_reception'].strftime('%d/%m/%Y') if sl['date_reception'] else ''"/>
-                                    </td>
-                                    <td class="r">
-                                        <span t-esc="'{:,.2f}'.format(sl['qty_receptionnee']).replace(',', ' ') if sl['qty_receptionnee'] else ''"/>
-                                    </td>
-                                    <td class="r">
-                                        <span t-esc="'{:,.2f}'.format(sl['prix_reception']).replace(',', ' ') if sl['prix_reception'] else ''"/>
-                                    </td>
-                                    <td class="r">
-                                        <span t-esc="'{:,.0f}'.format(sl['montant_reception']).replace(',', ' ') if sl['montant_reception'] else ''"/>
-                                    </td>
+                        <!-- Sous-lignes des commandes/réceptions -->
+                        <table class="sub-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:12%;">Réf. Commande</th>
+                                    <th style="width:9%;">Date Cmd</th>
+                                    <th style="width:8%;">Qté Cmdée</th>
+                                    <th style="width:9%;">Prix Unit Cmd</th>
+                                    <th style="width:10%;">Mnt Cmdé</th>
+                                    <th style="width:14%;">Réf. Réception</th>
+                                    <th style="width:9%;">Date Réc.</th>
+                                    <th style="width:8%;">Qté Réc.</th>
+                                    <th style="width:9%;">Prix Unit Réc.</th>
+                                    <th style="width:10%;">Mnt Réc.</th>
                                 </tr>
-                            </t>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="prod['sub_lines']" t-as="sl">
+                                    <t t-set="has_po"  t-value="bool(sl['po_ref'])"/>
+                                    <t t-set="has_rec" t-value="bool(sl['reception_ref'])"/>
+                                    <t t-set="sl_cls"
+                                       t-value="('sl-a' if sl_odd else 'sl-b') if (has_po and has_rec) else ('sl-po' if has_po else 'sl-rec')"/>
+                                    <tr t-att-class="sl_cls">
+                                        <td><span t-esc="sl['po_ref']"/></td>
+                                        <td class="c">
+                                            <span t-esc="sl['date_commande'].strftime('%d/%m/%Y') if sl['date_commande'] else '—'"/>
+                                        </td>
+                                        <td class="r">
+                                            <span t-esc="'{:,.2f}'.format(sl['qty_commandee']).replace(',', ' ') if sl['qty_commandee'] else '—'"/>
+                                        </td>
+                                        <td class="r">
+                                            <span t-esc="'{:,.2f}'.format(sl['prix_commande']).replace(',', ' ') if sl['prix_commande'] else '—'"/>
+                                        </td>
+                                        <td class="r">
+                                            <span t-esc="'{:,.0f}'.format(sl['montant_commande']).replace(',', ' ') if sl['montant_commande'] else '—'"/>
+                                        </td>
+                                        <td><span t-esc="sl['reception_ref'] or '—'"/></td>
+                                        <td class="c">
+                                            <span t-esc="sl['date_reception'].strftime('%d/%m/%Y') if sl['date_reception'] else '—'"/>
+                                        </td>
+                                        <td class="r">
+                                            <span t-esc="'{:,.2f}'.format(sl['qty_receptionnee']).replace(',', ' ') if sl['qty_receptionnee'] else '—'"/>
+                                        </td>
+                                        <td class="r">
+                                            <span t-esc="'{:,.2f}'.format(sl['prix_reception']).replace(',', ' ') if sl['prix_reception'] else '—'"/>
+                                        </td>
+                                        <td class="r">
+                                            <span t-esc="'{:,.0f}'.format(sl['montant_reception']).replace(',', ' ') if sl['montant_reception'] else '—'"/>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                </t>
 
-                            <!-- Ligne de séparation entre produits -->
-                            <tr class="spacer"><td colspan="11"></td></tr>
-                        </t>
-
-                        <!-- Total général -->
-                        <tr class="total-row">
-                            <td colspan="2">TOTAL GÉNÉRAL</td>
-                            <td></td>
-                            <td class="r">
-                                <span t-esc="'{:,.2f}'.format(tot_qty_cmd).replace(',', ' ')"/>
-                            </td>
-                            <td></td>
-                            <td class="r">
-                                <span t-esc="'{:,.0f}'.format(tot_mnt_cmd).replace(',', ' ')"/>
-                            </td>
-                            <td></td>
-                            <td></td>
-                            <td class="r">
-                                <span t-esc="'{:,.2f}'.format(tot_qty_rec).replace(',', ' ')"/>
-                            </td>
-                            <td></td>
-                            <td class="r">
-                                <span t-esc="'{:,.0f}'.format(tot_mnt_rec).replace(',', ' ')"/>
-                            </td>
-                        </tr>
-                    </tbody>
+                <!-- ── Total général ────────────────────────────────────── -->
+                <table class="total-table">
+                    <tr>
+                        <td style="width:35%;">TOTAL GÉNÉRAL</td>
+                        <td class="r" style="width:22%;">
+                            Qté Cmd : <span t-esc="'{:,.2f}'.format(tot_qty_cmd).replace(',', ' ')"/>
+                        </td>
+                        <td class="r" style="width:22%;">
+                            Mnt Cmd : <span t-esc="'{:,.0f}'.format(tot_mnt_cmd).replace(',', ' ')"/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td class="r">
+                            Qté Réc : <span t-esc="'{:,.2f}'.format(tot_qty_rec).replace(',', ' ')"/>
+                        </td>
+                        <td class="r">
+                            Mnt Réc : <span t-esc="'{:,.0f}'.format(tot_mnt_rec).replace(',', ' ')"/>
+                        </td>
+                    </tr>
                 </table>
 
-                <!-- Légende -->
-                <div style="margin-top: 8px; font-size: 7pt;">
-                    <span style="background:#D6EAF8; border:1px solid #aaa; padding:1px 6px;">■</span> Commandé + Réceptionné&#160;&#160;
-                    <span style="background:#EAECEE; border:1px solid #aaa; padding:1px 6px;">■</span> Commandé sans réception&#160;&#160;
-                    <span style="background:#FDEBD0; border:1px solid #aaa; padding:1px 6px;">■</span> Réception directe
+                <!-- ── Légende ──────────────────────────────────────────── -->
+                <div style="margin-top: 10px; font-size: 7pt;">
+                    <span style="background:#AED6F1; border:1px solid #888; padding:1px 5px;">■</span> Commandé + Réceptionné&#160;&#160;
+                    <span style="background:#D5D8DC; border:1px solid #888; padding:1px 5px;">■</span> Commandé sans réception&#160;&#160;
+                    <span style="background:#FAD7A0; border:1px solid #888; padding:1px 5px;">■</span> Réception directe (sans commande)
                 </div>
 
                 <div class="footer-info">
                     <div class="row">
-                        <div class="col-6">
-                            <strong>Nb produits :</strong> <span t-esc="len(data)"/>
-                        </div>
+                        <div class="col-6"><strong>Nb produits :</strong> <span t-esc="len(data)"/></div>
                         <div class="col-6 text-right">
                             <strong>Imprimé le :</strong>
                             <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y %H:%M')"/>
