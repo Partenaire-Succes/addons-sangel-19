@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_fix_price_inventory_wizard_form" model="ir.ui.view">
+        <field name="name">fix.price.inventory.wizard.form</field>
+        <field name="model">fix.price.inventory.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Correction Prix PMP — Inventaire">
+
+                <header>
+                    <button string="Télécharger le modèle Excel"
+                            name="action_download_template"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="state != 'draft'"/>
+                    <button string="Confirmer la correction"
+                            name="action_confirm"
+                            type="object"
+                            class="btn-success"
+                            invisible="state != 'loaded'"/>
+                </header>
+
+                <group>
+                    <group>
+                        <field name="file" widget="binary" filename="file_name"/>
+                        <field name="file_name" invisible="1"/>
+                        <field name="company_id"/>
+                        <field name="state" invisible="1"/>
+                    </group>
+                    <group>
+                        <button string="Charger le fichier"
+                                name="action_load_file"
+                                type="object"
+                                class="btn-primary"
+                                invisible="state == 'done'"/>
+                    </group>
+                </group>
+
+                <!-- Info colonnes attendues -->
+                <div class="alert alert-info" invisible="state != 'draft'" role="alert">
+                    <strong>Colonnes requises dans le fichier Excel :</strong><br/>
+                    <code>product_code</code> — code article du produit<br/>
+                    <code>cost</code> ou <code>Coût</code> — prix PMP à appliquer<br/>
+                    <br/>
+                    <strong>Ce que fait ce wizard :</strong>
+                    <ul style="margin-bottom:0">
+                        <li>Corrige uniquement le champ <strong>Prix unitaire (PMP)</strong> sur les <strong>lignes d'inventaire passées</strong> où ce prix est à 0.</li>
+                        <li><strong>Ne modifie pas</strong> le coût standard (standard_price) du produit — utilisez "Fiche article → Mettre à jour le coût" pour cela.</li>
+                        <li>Les lignes d'inventaire dont le prix est déjà renseigné ne sont pas touchées.</li>
+                    </ul>
+                </div>
+
+                <!-- Résumé après chargement -->
+                <div class="alert alert-success" invisible="state != 'loaded'" role="alert">
+                    Fichier chargé. Vérifiez les lignes avant de confirmer.<br/>
+                    <strong style="color:#155724">Vert</strong> = sera corrigé ·
+                    <strong style="color:#856404">Orange</strong> = ignoré (prix déjà renseigné) ·
+                    <strong style="color:#721c24">Rouge</strong> = produit introuvable
+                </div>
+
+                <notebook invisible="state == 'draft'">
+                    <page string="Lignes à traiter">
+                        <field name="line_ids" readonly="1">
+                            <list decoration-success="action == 'fix'"
+                                  decoration-warning="action == 'skip'"
+                                  decoration-danger="action == 'not_found'">
+                                <field name="product_code"      string="Code Article"/>
+                                <field name="product_tmpl_id"   string="Produit trouvé"/>
+                                <field name="product_name"      string="Désignation"/>
+                                <field name="current_std_price" string="Prix PMP actuel"/>
+                                <field name="inv_lines_count"   string="Lignes inv. à 0"/>
+                                <field name="cost_excel"        string="Prix à appliquer"/>
+                                <field name="action"            string="Statut"/>
+                            </list>
+                        </field>
+                    </page>
+                </notebook>
+
+                <footer>
+                    <button name="action_confirm"
+                            type="object"
+                            string="Confirmer"
+                            class="btn-success"
+                            invisible="state != 'loaded'"/>
+                    <button string="Fermer" special="cancel"/>
+                </footer>
+
+            </form>
+        </field>
+    </record>
+
+    <record id="action_fix_price_inventory_wizard" model="ir.actions.act_window">
+        <field name="name">Correction Prix PMP Inventaire</field>
+        <field name="res_model">fix.price.inventory.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_fix_price_inventory_wizard"
+              name="Correction Prix 0 Inventaire"
+              parent="stock.menu_stock_adjustments"
+              action="action_fix_price_inventory_wizard"
+              sequence="3"/>
+
+</odoo>

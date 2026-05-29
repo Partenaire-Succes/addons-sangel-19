@@ -70,6 +70,7 @@
         'wizard/rapport_retours_receptions_wizard_views.xml',
         'wizard/reception_correction_info_wizard_views.xml',
         'wizard/orderpoint_import_wizard_views.xml',
+        'wizard/fix_price_inventory_wizard_views.xml',
         'wizard/stock_picking_return_views.xml',
         'views/physical_inventory_retour_views.xml',
         'views/pos_session_views.xml',
