@@ -235,14 +235,23 @@ class FixPriceInventoryWizard(models.TransientModel):
         count_inv_lines = 0
 
         for line in self.line_ids.filtered(lambda l: l.action == "fix"):
-            # Corriger price sur toutes les lignes d'inventaire à 0 pour ce produit
             inv_lines = self.env["physical.inventory.line"].search([
                 ("product_tmpl_id", "=", line.product_tmpl_id.id),
                 ("price",           "=", 0.0),
             ])
-            if inv_lines:
-                inv_lines.write({"price": line.cost_excel})
-                count_inv_lines += len(inv_lines)
+            if not inv_lines:
+                continue
+
+            # 1) Écrire price — déclenchera automatiquement le recalcul
+            #    des champs computed stockés qty_diff et valorisation via @api.depends
+            inv_lines.write({"price": line.cost_excel})
+
+            # 2) Forcer le recalcul explicite immédiatement en base de données.
+            #    valorisation = price * qty_diff — ne jamais écrire valorisation
+            #    directement (computed field), toujours passer par price.
+            inv_lines.compute_qty_dif()
+
+            count_inv_lines += len(inv_lines)
 
         self.state = "done"
         return {
@@ -251,7 +260,7 @@ class FixPriceInventoryWizard(models.TransientModel):
             "params": {
                 "title":   _("Correction terminée — %d ligne(s) d'inventaire mises à jour") % count_inv_lines,
                 "message": _(
-                    "Le champ Prix unitaire (PMP) des lignes d'inventaire à 0 a été corrigé. "
+                    "Prix unitaire (PMP) et valorisation corrigés sur les lignes d'inventaire. "
                     "Le standard_price du produit reste inchangé."
                 ),
                 "type":   "success",
