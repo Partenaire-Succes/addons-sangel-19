@@ -59,7 +59,7 @@
                                 <field name="line_ids" readonly="state == 'done'">
                                     <list editable="bottom" create="1" edit="1" delete="1">
                                         <field name="food_id" column_invisible="True"/>
-                                        <field name="partner_id" string='Client' column_invisible="True"/>
+                                        <field name="partner_id" string='Client' column_invisible="0"/>
                                         <field name="customer_id" string='ID Client' />
                                         <field name="partner_name" string='Client' />
                                         <field name="start" string='Date Debut' optional="hide"/>

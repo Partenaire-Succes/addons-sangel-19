@@ -25,7 +25,7 @@ _PRODUCT_UPDATE_FIELDS = (
     'price_negoce', 'price_ecom', 'price_gm', 'price_rh', 'price_st',
     'is_yop_demi_gros', 'is_yop_detail', 'is_synacass_ci', 'is_square',
     'is_bassam', 'is_koumassi', 'is_abobo', 'allowed_company_ids', 'family_categ_id',
-    'categ_id', 'actif_x3', 'type',
+    'categ_id', 'actif_x3', 'type', 's_family_id', 'radius_id', 's_radius_id'
 )
 
 
@@ -837,20 +837,20 @@ class ProductTemplateImport(models.Model):
     def _get_sub_family_id(self, name):
         if not name:
             return False
-        rec = self.env["sub.family.inventory"].search([("name", "=", name)], limit=1)
-        return rec.id or self.env["sub.family.inventory"].create({"name": name}).id
+        rec = self.env["sub.family.inventory"].search([("code", "=", name)], limit=1)
+        return rec.id or self.env["sub.family.inventory"].create({"name": name, "code": name}).id
 
     def _get_radius_id(self, name):
         if not name:
             return False
-        rec = self.env["radius.inventory"].search([("name", "=", name)], limit=1)
-        return rec.id or self.env["radius.inventory"].create({"name": name}).id
+        rec = self.env["radius.inventory"].search([("code", "=", name)], limit=1)
+        return rec.id or self.env["radius.inventory"].create({"name": name, "code": name}).id
 
     def _get_sub_radius_id(self, name):
         if not name:
             return False
-        rec = self.env["sub.radius.inventory"].search([("name", "=", name)], limit=1)
-        return rec.id or self.env["sub.radius.inventory"].create({"name": name}).id
+        rec = self.env["sub.radius.inventory"].search([("code", "=", name)], limit=1)
+        return rec.id or self.env["sub.radius.inventory"].create({"name": name, "code": name}).id
 
     def _get_prod_gestion_id(self, name):
         if not name:

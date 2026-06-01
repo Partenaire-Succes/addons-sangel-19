@@ -14,3 +14,4 @@ access_recap_caisses_wizard_user,recap.caisses.wizard_user,model_recap_caisses_w
 access_recap_caisses_wizard_manager,recap.caisses.wizard_manager,model_recap_caisses_wizard,point_of_sale.group_pos_manager,1,1,1,1
 access_stock_magasin_report_wizard,stock.magasin.report.wizard,model_stock_magasin_report_wizard,,1,1,1,1
 access_achat_produit_report_wizard,achat.produit.report.wizard,model_achat_produit_report_wizard,,1,1,1,1
+access_sale_vte_x3_report_wizard,sale.vte.x3.report.wizard,model_sale_vte_x3_report_wizard,,1,1,1,1

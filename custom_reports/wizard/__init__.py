@@ -1,4 +1,5 @@
 from . import (
+    sale_vte_x3_report_wizard,
     cumul_inventary_report_wizard,
     reception_fournisseur_wizard,
     report_daily_sales_wizard,

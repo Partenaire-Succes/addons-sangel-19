@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <template id="report_sale_vte_x3_document">
+        <t t-call="web.html_container">
+            <t t-call="web.basic_layout">
+
+                <div class="page" style="font-family: DejaVu Sans, Arial, sans-serif; font-size: 8pt; color: #1a1a2e;">
+
+                    <!-- EN-TÊTE SOCIÉTÉ -->
+                    <div style="margin-bottom: 6px; font-size: 9pt; color: #555;">
+                        <strong><t t-esc="company.name"/></strong>
+                        <t t-if="company.street"> - <t t-esc="company.street"/></t>
+                        <t t-if="company.city">, <t t-esc="company.city"/></t>
+                    </div>
+
+                    <!-- HEADER -->
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 8px;">
+                        <tr>
+                            <td style="width: 140px; border: 2px solid #1a1a2e; padding: 6px 10px; text-align: center;">
+                                <t t-if="company.logo">
+                                    <img t-att-src="image_data_uri(company.logo)" style="max-height: 46px; max-width: 120px;"/>
+                                </t>
+                                <t t-else="">
+                                    <span style="font-size: 14pt; font-weight: 900;">
+                                        <t t-esc="(company.name or '')[:6].upper()"/>
+                                    </span>
+                                </t>
+                            </td>
+                            <td style="background: #1A5276; border: 2px solid #1a1a2e; border-left: none; text-align: center; padding: 8px;">
+                                <span style="font-size: 14pt; font-weight: 900; letter-spacing: 2px; color: white;">
+                                    RAPPORT DE VENTES X3
+                                </span><br/>
+                                <span style="font-size: 9pt; color: #D6EAF8;">
+                                    Du <t t-esc="date_from.strftime('%d/%m/%Y')"/>
+                                    au <t t-esc="date_to.strftime('%d/%m/%Y')"/>
+                                    <t t-if="doc.source != 'both'">
+                                        &#160;—&#160;Source :
+                                        <t t-esc="'Ventes' if doc.source == 'sale' else 'POS'"/>
+                                    </t>
+                                    <t t-if="doc.cat_gestion_ids">
+                                        &#160;—&#160;Catég. gest. :
+                                        <t t-foreach="doc.cat_gestion_ids" t-as="cg">
+                                            <t t-esc="cg.description or cg.name"/><t t-if="not cg_last">, </t>
+                                        </t>
+                                    </t>
+                                </span><br/>
+                                <span style="font-size: 8pt; color: #AED6F1;">
+                                    Date d'impression :
+                                    <t t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y %H:%M')"/>
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <t t-if="not groups">
+                        <p style="text-align: center; margin-top: 20px; color: #888;">
+                            Aucune donnée pour les critères sélectionnés.
+                        </p>
+                    </t>
+
+                    <t t-set="grand_qte"    t-value="0.0"/>
+                    <t t-set="grand_mt_ht"  t-value="0.0"/>
+                    <t t-set="grand_mt_ttc" t-value="0.0"/>
+                    <t t-set="grand_marge"  t-value="0.0"/>
+
+                    <t t-foreach="groups" t-as="grp">
+                        <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #1a1a2e; margin-bottom: 8px; table-layout: fixed;">
+                            <colgroup>
+                                <col style="width:4%;"/>   <!-- DATE -->
+                                <col style="width:8%;"/>   <!-- PIÈCE -->
+                                <col style="width:3%;"/>   <!-- TYPE -->
+                                <col style="width:5%;"/>   <!-- CODE CLI -->
+                                <col style="width:10%;"/>  <!-- CLIENT -->
+                                <col style="width:4%;"/>   <!-- CATG CLI -->
+                                <col style="width:4%;"/>   <!-- CODE CATG -->
+                                <col style="width:5%;"/>   <!-- CODE ART -->
+                                <col style="width:12%;"/>  <!-- DÉSIGNATION -->
+                                <col style="width:4%;"/>   <!-- S-FAM -->
+                                <col style="width:4%;"/>   <!-- QTÉ -->
+                                <col style="width:5%;"/>   <!-- P.NET -->
+                                <col style="width:5%;"/>   <!-- PUMP -->
+                                <col style="width:7%;"/>   <!-- MT HT -->
+                                <col style="width:7%;"/>   <!-- MT TTC -->
+                                <col style="width:6%;"/>   <!-- MARGE -->
+                                <col style="width:3%;"/>   <!-- RAYON -->
+                                <col style="width:4%;"/>   <!-- SRAYON -->
+                            </colgroup>
+                            <thead>
+                                <tr style="background: #1A5276; color: white;">
+                                    <th colspan="18" style="padding: 5px 8px; text-align: left; font-size: 9pt; letter-spacing: 1px;">
+                                        ▶&#160;<t t-esc="grp['cat_art']"/>&#160;—&#160;<t t-esc="grp['name']"/>
+                                    </th>
+                                </tr>
+                                <tr style="background: #2471A3; color: white;">
+                                    <th style="padding: 3px 2px; text-align: center; font-size: 6.5pt; border: 1px solid #1A5276;">DATE</th>
+                                    <th style="padding: 3px 2px; text-align: left;   font-size: 6.5pt; border: 1px solid #1A5276;">PIÈCE</th>
+                                    <th style="padding: 3px 2px; text-align: center; font-size: 6.5pt; border: 1px solid #1A5276;">TYPE</th>
+                                    <th style="padding: 3px 2px; text-align: center; font-size: 6.5pt; border: 1px solid #1A5276;">CODE CLI</th>
+                                    <th style="padding: 3px 2px; text-align: left;   font-size: 6.5pt; border: 1px solid #1A5276;">CLIENT</th>
+                                    <th style="padding: 3px 2px; text-align: center; font-size: 6.5pt; border: 1px solid #1A5276;">CATG</th>
+                                    <th style="padding: 3px 2px; text-align: center; font-size: 6.5pt; border: 1px solid #1A5276;">C.CATG</th>
+                                    <th style="padding: 3px 2px; text-align: center; font-size: 6.5pt; border: 1px solid #1A5276;">CODE ART</th>
+                                    <th style="padding: 3px 2px; text-align: left;   font-size: 6.5pt; border: 1px solid #1A5276;">DÉSIGNATION</th>
+                                    <th style="padding: 3px 2px; text-align: center; font-size: 6.5pt; border: 1px solid #1A5276;">S-FAM</th>
+                                    <th style="padding: 3px 2px; text-align: right;  font-size: 6.5pt; border: 1px solid #1A5276;">QTÉ</th>
+                                    <th style="padding: 3px 2px; text-align: right;  font-size: 6.5pt; border: 1px solid #1A5276;">P.NET</th>
+                                    <th style="padding: 3px 2px; text-align: right;  font-size: 6.5pt; border: 1px solid #1A5276;">PUMP</th>
+                                    <th style="padding: 3px 2px; text-align: right;  font-size: 6.5pt; border: 1px solid #1A5276;">MT HT</th>
+                                    <th style="padding: 3px 2px; text-align: right;  font-size: 6.5pt; border: 1px solid #1A5276;">MT TTC</th>
+                                    <th style="padding: 3px 2px; text-align: right;  font-size: 6.5pt; border: 1px solid #1A5276;">MARGE</th>
+                                    <th style="padding: 3px 2px; text-align: center; font-size: 6.5pt; border: 1px solid #1A5276;">RAY</th>
+                                    <th style="padding: 3px 2px; text-align: center; font-size: 6.5pt; border: 1px solid #1A5276;">SRAY</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="grp['lines']" t-as="line">
+                                    <tr style="border-bottom: 0.5px solid #e0e0e0;">
+                                        <td style="padding: 2px; text-align: center; font-size: 6.5pt; border: 1px solid #ddd;">
+                                            <t t-esc="line['date'].strftime('%d/%m/%y') if line['date'] else ''"/>
+                                        </td>
+                                        <td style="padding: 2px 3px; text-align: left; font-size: 6.5pt; border: 1px solid #ddd; word-wrap: break-word;">
+                                            <t t-esc="line['piece']"/>
+                                        </td>
+                                        <td style="padding: 2px; text-align: center; font-size: 6.5pt; border: 1px solid #ddd;">
+                                            <t t-if="line['type_facture'] == 'AVOIR'">
+                                                <span style="color: #E74C3C; font-weight: bold;">AV</span>
+                                            </t>
+                                            <t t-else="">FA</t>
+                                        </td>
+                                        <td style="padding: 2px; text-align: center; font-size: 6.5pt; border: 1px solid #ddd;"><t t-esc="line['code_client']"/></td>
+                                        <td style="padding: 2px 3px; text-align: left; font-size: 6.5pt; border: 1px solid #ddd; word-wrap: break-word;"><t t-esc="line['libelle_client']"/></td>
+                                        <td style="padding: 2px; text-align: center; font-size: 6.5pt; border: 1px solid #ddd;"><t t-esc="line['catg_client']"/></td>
+                                        <td style="padding: 2px; text-align: center; font-size: 6.5pt; border: 1px solid #ddd;"><t t-esc="line['code_catg_client']"/></td>
+                                        <td style="padding: 2px; text-align: center; font-size: 6.5pt; border: 1px solid #ddd;"><t t-esc="line['code_art']"/></td>
+                                        <td style="padding: 2px 3px; text-align: left; font-size: 6.5pt; border: 1px solid #ddd; word-wrap: break-word;"><t t-esc="line['designation_art']"/></td>
+                                        <td style="padding: 2px; text-align: center; font-size: 6.5pt; border: 1px solid #ddd;"><t t-esc="line['sousfam_art']"/></td>
+                                        <td style="padding: 2px; text-align: right; font-size: 6.5pt; border: 1px solid #ddd;"><t t-esc="'%g' % round(line['qte_signe'], 3)"/></td>
+                                        <td style="padding: 2px; text-align: right; font-size: 6.5pt; border: 1px solid #ddd;"><t t-esc="'{:,.0f}'.format(line['prix_net']).replace(',', ' ')"/></td>
+                                        <td style="padding: 2px; text-align: right; font-size: 6.5pt; border: 1px solid #ddd;"><t t-esc="'{:,.0f}'.format(line['pump']).replace(',', ' ')"/></td>
+                                        <td style="padding: 2px; text-align: right; font-size: 6.5pt; border: 1px solid #ddd;"><t t-esc="'{:,.0f}'.format(line['mtht_signe']).replace(',', ' ')"/></td>
+                                        <td style="padding: 2px; text-align: right; font-size: 6.5pt; border: 1px solid #ddd;"><t t-esc="'{:,.0f}'.format(line['mt_ttc']).replace(',', ' ')"/></td>
+                                        <td style="padding: 2px; text-align: right; font-size: 6.5pt; border: 1px solid #ddd;"><t t-esc="'{:,.0f}'.format(line['marge']).replace(',', ' ')"/></td>
+                                        <td style="padding: 2px; text-align: center; font-size: 6.5pt; border: 1px solid #ddd;"><t t-esc="line['rayon']"/></td>
+                                        <td style="padding: 2px; text-align: center; font-size: 6.5pt; border: 1px solid #ddd;"><t t-esc="line['srayon']"/></td>
+                                    </tr>
+                                </t>
+                                <tr style="background: #D6EAF8;">
+                                    <td colspan="10" style="padding: 3px 6px; font-weight: bold; font-size: 8pt; border: 1px solid #aaa;">
+                                        ▶ Sous-total&#160;<t t-esc="grp['name']"/>
+                                    </td>
+                                    <td style="padding: 3px 2px; text-align: right; font-weight: bold; font-size: 8pt; border: 1px solid #aaa;">
+                                        <t t-esc="'%g' % round(grp['total_qte'], 3)"/>
+                                    </td>
+                                    <td colspan="2" style="border: 1px solid #aaa;"></td>
+                                    <td style="padding: 3px 2px; text-align: right; font-weight: bold; font-size: 8pt; border: 1px solid #aaa;">
+                                        <t t-esc="'{:,.0f}'.format(grp['total_mt_ht']).replace(',', ' ')"/>
+                                    </td>
+                                    <td style="padding: 3px 2px; text-align: right; font-weight: bold; font-size: 8pt; border: 1px solid #aaa;">
+                                        <t t-esc="'{:,.0f}'.format(grp['total_mt_ttc']).replace(',', ' ')"/>
+                                    </td>
+                                    <td style="padding: 3px 2px; text-align: right; font-weight: bold; font-size: 8pt; border: 1px solid #aaa;">
+                                        <t t-esc="'{:,.0f}'.format(grp['total_marge']).replace(',', ' ')"/>
+                                    </td>
+                                    <td colspan="2" style="border: 1px solid #aaa;"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <t t-set="grand_qte"    t-value="grand_qte    + grp['total_qte']"/>
+                        <t t-set="grand_mt_ht"  t-value="grand_mt_ht  + grp['total_mt_ht']"/>
+                        <t t-set="grand_mt_ttc" t-value="grand_mt_ttc + grp['total_mt_ttc']"/>
+                        <t t-set="grand_marge"  t-value="grand_marge  + grp['total_marge']"/>
+                    </t>
+
+                    <t t-if="groups">
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 6px;">
+                            <tr style="background: #1A5276; color: white;">
+                                <td colspan="10" style="padding: 5px 8px; font-weight: bold; font-size: 9pt; border: 1px solid #1A5276; width: 59%;">TOTAL GÉNÉRAL</td>
+                                <td style="padding: 5px 2px; text-align: right; font-weight: bold; font-size: 9pt; border: 1px solid #1A5276; width: 4%;"><t t-esc="'%g' % round(grand_qte, 3)"/></td>
+                                <td colspan="2" style="border: 1px solid #1A5276; width: 10%;"></td>
+                                <td style="padding: 5px 2px; text-align: right; font-weight: bold; font-size: 9pt; border: 1px solid #1A5276; width: 7%;"><t t-esc="'{:,.0f}'.format(grand_mt_ht).replace(',', ' ')"/></td>
+                                <td style="padding: 5px 2px; text-align: right; font-weight: bold; font-size: 9pt; border: 1px solid #1A5276; width: 7%;"><t t-esc="'{:,.0f}'.format(grand_mt_ttc).replace(',', ' ')"/></td>
+                                <td style="padding: 5px 2px; text-align: right; font-weight: bold; font-size: 9pt; border: 1px solid #1A5276; width: 6%;"><t t-esc="'{:,.0f}'.format(grand_marge).replace(',', ' ')"/></td>
+                                <td colspan="2" style="border: 1px solid #1A5276; width: 7%;"></td>
+                            </tr>
+                        </table>
+                    </t>
+
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <!-- FORMAT PAPIER A3 PAYSAGE -->
+    <record id="paperformat_vte_x3" model="report.paperformat">
+        <field name="name">VTE X3 A3 Paysage</field>
+        <field name="default" eval="False"/>
+        <field name="format">A3</field>
+        <field name="orientation">Landscape</field>
+        <field name="margin_top">10</field>
+        <field name="margin_bottom">10</field>
+        <field name="margin_left">5</field>
+        <field name="margin_right">5</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">10</field>
+        <field name="dpi">96</field>
+    </record>
+
+    <record id="action_report_sale_vte_x3" model="ir.actions.report">
+        <field name="name">Rapport de Ventes X3</field>
+        <field name="model">sale.vte.x3.report.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">custom_reports.report_sale_vte_x3_document</field>
+        <field name="report_file">custom_reports.report_sale_vte_x3_document</field>
+        <field name="print_report_name">'VTE_X3_%s_%s' % (object.date_from.strftime('%d%m%Y'), object.date_to.strftime('%d%m%Y'))</field>
+        <field name="paperformat_id" ref="paperformat_vte_x3"/>
+        <field name="attachment_use">False</field>
+    </record>
+
+</odoo>

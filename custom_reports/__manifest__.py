@@ -49,6 +49,8 @@
         'wizard/stock_product_report_wizard_view.xml',
         'wizard/achat_produit_report_wizard_views.xml',
         'report/report_achat_produit_template.xml',
+        'wizard/sale_vte_x3_report_wizard_views.xml',
+        'report/report_sale_vte_x3_template.xml',
         # 'wizard/livraison_report_wizard_views.xml',
         # 'report/report_livraison_template.xml',
     ],

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sale_vte_x3_report_wizard_form" model="ir.ui.view">
+        <field name="name">sale.vte.x3.report.wizard.form</field>
+        <field name="model">sale.vte.x3.report.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Rapport de Ventes X3">
+                <sheet>
+                    <group string="Période">
+                        <group>
+                            <label for="date_from" string="Période"/>
+                            <div>
+                                <field name="date_from" class="oe_inline" required="1"/>
+                                —
+                                <field name="date_to" class="oe_inline" required="1"/>
+                            </div>
+                        </group>
+                        <group>
+                            <field name="source" widget="radio" options="{'horizontal': true}"/>
+                            <field name="company_id"
+                                   options="{'no_create': True, 'no_open': True}"
+                                   readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Filtres">
+                        <group>
+                            <field name="cat_gestion_ids"
+                                   widget="many2many_tags"
+                                   placeholder="Toutes les catégories de gestion…"/>
+                            <field name="categ_ids"
+                                   widget="many2many_tags"
+                                   placeholder="Toutes les catégories client…"/>
+                        </group>
+                        <group>
+                            <field name="customer_ids"
+                                   widget="many2many_tags"
+                                   options="{'no_create': True}"
+                                   placeholder="Tous les clients…"/>
+                            <field name="default_code"
+                                   placeholder="Ex : 4021  (recherche partielle)"/>
+                        </group>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_print_report"
+                            string="Imprimer PDF"
+                            type="object"
+                            class="btn-primary"/>
+                    <button name="action_export_excel"
+                            string="Télécharger Excel"
+                            type="object"
+                            class="btn-success"
+                            icon="fa-file-excel-o"/>
+                    <button string="Annuler" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_sale_vte_x3_report_wizard" model="ir.actions.act_window">
+        <field name="name">Rapport de Ventes X3</field>
+        <field name="res_model">sale.vte.x3.report.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_sale_vte_x3_report"
+              name="Rapport de Ventes X3"
+              parent="custom_reports.menu_reports_sale"
+              action="action_sale_vte_x3_report_wizard"
+              sequence="60"/>
+</odoo>

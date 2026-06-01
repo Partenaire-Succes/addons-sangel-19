@@ -93,7 +93,7 @@ class StockAvcoImportWizard(models.TransientModel):
 
             moves = self.env['stock.move'].search([
                 ('product_id', '=', product.id),
-                ('is_in', '=', True),
+                ('is_out', '=', True),
                 ('picking_id', '!=', False),
                 ('state', '=', 'done'),
                 ('company_id', '=', self.company_id.id),
@@ -173,7 +173,7 @@ class StockAvcoImportWizard(models.TransientModel):
 
             moves = self.env['stock.move'].search([
                 ('product_id', '=', line.product_id.id),
-                ('is_in', '=', True),
+                ('is_out', '=', True),
                 ('picking_id', '!=', False),
                 ('state', '=', 'done'),
                 ('company_id', '=', company.id),
