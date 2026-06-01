@@ -223,7 +223,7 @@ class SaleVteX3ReportWizard(models.TransientModel):
         return rows
 
     def _get_grouped_lines(self):
-        """Lignes détaillées groupées par CATÉGORIE DE GESTION pour le PDF."""
+        """Lignes détaillées groupées par CATÉGORIE DE GESTION (pour usage interne)."""
         groups = {}
         for row in self._get_report_data():
             gkey = row['categorie_gestion'] or row['cat_art'] or 'Non défini'
@@ -244,6 +244,56 @@ class SaleVteX3ReportWizard(models.TransientModel):
             groups[gkey]['total_mt_ttc'] += row['mt_ttc'] * sign
             groups[gkey]['total_marge'] += row['marge']
         return list(groups.values())
+
+    def _get_summary_data(self):
+        """Résumé agrégé par CATÉGORIE DE GESTION → CLIENT pour le PDF."""
+        groups = {}
+        for row in self._get_report_data():
+            gkey = row['categorie_gestion'] or row['cat_art'] or 'Non défini'
+            if gkey not in groups:
+                groups[gkey] = {
+                    'name': gkey,
+                    'cat_art': row['cat_art'],
+                    'clients': {},
+                    'total_qte': 0.0,
+                    'total_mt_ht': 0.0,
+                    'total_mt_ttc': 0.0,
+                    'total_marge': 0.0,
+                }
+            ckey = row['code_client'] or row['libelle_client'] or 'Client Comptoir'
+            if ckey not in groups[gkey]['clients']:
+                groups[gkey]['clients'][ckey] = {
+                    'code_client': row['code_client'],
+                    'libelle_client': row['libelle_client'],
+                    'catg_client': row['catg_client'],
+                    'code_catg_client': row['code_catg_client'],
+                    'qte': 0.0,
+                    'mt_ht': 0.0,
+                    'mt_ttc': 0.0,
+                    'marge': 0.0,
+                }
+            sign = 1 if row['type_facture'] == 'FACTURE' else -1
+            groups[gkey]['clients'][ckey]['qte']    += row['qte_signe']
+            groups[gkey]['clients'][ckey]['mt_ht']  += row['mtht_signe']
+            groups[gkey]['clients'][ckey]['mt_ttc'] += row['mt_ttc'] * sign
+            groups[gkey]['clients'][ckey]['marge']  += row['marge']
+            groups[gkey]['total_qte']    += row['qte_signe']
+            groups[gkey]['total_mt_ht']  += row['mtht_signe']
+            groups[gkey]['total_mt_ttc'] += row['mt_ttc'] * sign
+            groups[gkey]['total_marge']  += row['marge']
+
+        result = []
+        for g in groups.values():
+            result.append({
+                'name': g['name'],
+                'cat_art': g['cat_art'],
+                'clients': sorted(g['clients'].values(), key=lambda c: c['libelle_client']),
+                'total_qte': g['total_qte'],
+                'total_mt_ht': g['total_mt_ht'],
+                'total_mt_ttc': g['total_mt_ttc'],
+                'total_marge': g['total_marge'],
+            })
+        return result
 
     # ------------------------------------------------------------------
     # Actions
@@ -423,7 +473,7 @@ class ReportSaleVteX3(models.AbstractModel):
     @api.model
     def _get_report_values(self, docids, data=None):
         wizard = self.env['sale.vte.x3.report.wizard'].browse(docids)
-        groups = wizard._get_grouped_lines()
+        groups = wizard._get_summary_data()
         return {
             'doc': wizard,
             'company': wizard.company_id,

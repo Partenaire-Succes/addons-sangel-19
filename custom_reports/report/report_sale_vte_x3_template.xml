@@ -67,102 +67,61 @@
                     <t t-foreach="groups" t-as="grp">
                         <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #1a1a2e; margin-bottom: 8px; table-layout: fixed;">
                             <colgroup>
-                                <col style="width:4%;"/>   <!-- DATE -->
-                                <col style="width:8%;"/>   <!-- PIÈCE -->
-                                <col style="width:3%;"/>   <!-- TYPE -->
-                                <col style="width:5%;"/>   <!-- CODE CLI -->
-                                <col style="width:10%;"/>  <!-- CLIENT -->
-                                <col style="width:4%;"/>   <!-- CATG CLI -->
-                                <col style="width:4%;"/>   <!-- CODE CATG -->
-                                <col style="width:5%;"/>   <!-- CODE ART -->
-                                <col style="width:12%;"/>  <!-- DÉSIGNATION -->
-                                <col style="width:4%;"/>   <!-- S-FAM -->
-                                <col style="width:4%;"/>   <!-- QTÉ -->
-                                <col style="width:5%;"/>   <!-- P.NET -->
-                                <col style="width:5%;"/>   <!-- PUMP -->
-                                <col style="width:7%;"/>   <!-- MT HT -->
-                                <col style="width:7%;"/>   <!-- MT TTC -->
-                                <col style="width:6%;"/>   <!-- MARGE -->
-                                <col style="width:3%;"/>   <!-- RAYON -->
-                                <col style="width:4%;"/>   <!-- SRAYON -->
+                                <col style="width:8%;"/>   <!-- CODE CLI -->
+                                <col style="width:22%;"/>  <!-- CLIENT -->
+                                <col style="width:12%;"/>  <!-- CATG CLI -->
+                                <col style="width:8%;"/>   <!-- C.CATG -->
+                                <col style="width:8%;"/>   <!-- QTÉ -->
+                                <col style="width:14%;"/>  <!-- MT HT -->
+                                <col style="width:14%;"/>  <!-- MT TTC -->
+                                <col style="width:14%;"/>  <!-- MARGE -->
                             </colgroup>
                             <thead>
                                 <tr style="background: #1A5276; color: white;">
-                                    <th colspan="18" style="padding: 5px 8px; text-align: left; font-size: 9pt; letter-spacing: 1px;">
+                                    <th colspan="8" style="padding: 5px 8px; text-align: left; font-size: 9pt; letter-spacing: 1px;">
                                         ▶&#160;<t t-esc="grp['cat_art']"/>&#160;—&#160;<t t-esc="grp['name']"/>
                                     </th>
                                 </tr>
                                 <tr style="background: #2471A3; color: white;">
-                                    <th style="padding: 3px 2px; text-align: center; font-size: 6.5pt; border: 1px solid #1A5276;">DATE</th>
-                                    <th style="padding: 3px 2px; text-align: left;   font-size: 6.5pt; border: 1px solid #1A5276;">PIÈCE</th>
-                                    <th style="padding: 3px 2px; text-align: center; font-size: 6.5pt; border: 1px solid #1A5276;">TYPE</th>
-                                    <th style="padding: 3px 2px; text-align: center; font-size: 6.5pt; border: 1px solid #1A5276;">CODE CLI</th>
-                                    <th style="padding: 3px 2px; text-align: left;   font-size: 6.5pt; border: 1px solid #1A5276;">CLIENT</th>
-                                    <th style="padding: 3px 2px; text-align: center; font-size: 6.5pt; border: 1px solid #1A5276;">CATG</th>
-                                    <th style="padding: 3px 2px; text-align: center; font-size: 6.5pt; border: 1px solid #1A5276;">C.CATG</th>
-                                    <th style="padding: 3px 2px; text-align: center; font-size: 6.5pt; border: 1px solid #1A5276;">CODE ART</th>
-                                    <th style="padding: 3px 2px; text-align: left;   font-size: 6.5pt; border: 1px solid #1A5276;">DÉSIGNATION</th>
-                                    <th style="padding: 3px 2px; text-align: center; font-size: 6.5pt; border: 1px solid #1A5276;">S-FAM</th>
-                                    <th style="padding: 3px 2px; text-align: right;  font-size: 6.5pt; border: 1px solid #1A5276;">QTÉ</th>
-                                    <th style="padding: 3px 2px; text-align: right;  font-size: 6.5pt; border: 1px solid #1A5276;">P.NET</th>
-                                    <th style="padding: 3px 2px; text-align: right;  font-size: 6.5pt; border: 1px solid #1A5276;">PUMP</th>
-                                    <th style="padding: 3px 2px; text-align: right;  font-size: 6.5pt; border: 1px solid #1A5276;">MT HT</th>
-                                    <th style="padding: 3px 2px; text-align: right;  font-size: 6.5pt; border: 1px solid #1A5276;">MT TTC</th>
-                                    <th style="padding: 3px 2px; text-align: right;  font-size: 6.5pt; border: 1px solid #1A5276;">MARGE</th>
-                                    <th style="padding: 3px 2px; text-align: center; font-size: 6.5pt; border: 1px solid #1A5276;">RAY</th>
-                                    <th style="padding: 3px 2px; text-align: center; font-size: 6.5pt; border: 1px solid #1A5276;">SRAY</th>
+                                    <th style="padding: 4px 3px; text-align: center; font-size: 8pt; border: 1px solid #1A5276;">CODE CLI</th>
+                                    <th style="padding: 4px 3px; text-align: left;   font-size: 8pt; border: 1px solid #1A5276;">CLIENT</th>
+                                    <th style="padding: 4px 3px; text-align: center; font-size: 8pt; border: 1px solid #1A5276;">CATG. CLI</th>
+                                    <th style="padding: 4px 3px; text-align: center; font-size: 8pt; border: 1px solid #1A5276;">C.CATG</th>
+                                    <th style="padding: 4px 3px; text-align: right;  font-size: 8pt; border: 1px solid #1A5276;">QTÉ</th>
+                                    <th style="padding: 4px 3px; text-align: right;  font-size: 8pt; border: 1px solid #1A5276;">MT HT</th>
+                                    <th style="padding: 4px 3px; text-align: right;  font-size: 8pt; border: 1px solid #1A5276;">MT TTC</th>
+                                    <th style="padding: 4px 3px; text-align: right;  font-size: 8pt; border: 1px solid #1A5276;">MARGE</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <t t-foreach="grp['lines']" t-as="line">
+                                <t t-foreach="grp['clients']" t-as="cli">
                                     <tr style="border-bottom: 0.5px solid #e0e0e0;">
-                                        <td style="padding: 2px; text-align: center; font-size: 6.5pt; border: 1px solid #ddd;">
-                                            <t t-esc="line['date'].strftime('%d/%m/%y') if line['date'] else ''"/>
-                                        </td>
-                                        <td style="padding: 2px 3px; text-align: left; font-size: 6.5pt; border: 1px solid #ddd; word-wrap: break-word;">
-                                            <t t-esc="line['piece']"/>
-                                        </td>
-                                        <td style="padding: 2px; text-align: center; font-size: 6.5pt; border: 1px solid #ddd;">
-                                            <t t-if="line['type_facture'] == 'AVOIR'">
-                                                <span style="color: #E74C3C; font-weight: bold;">AV</span>
-                                            </t>
-                                            <t t-else="">FA</t>
-                                        </td>
-                                        <td style="padding: 2px; text-align: center; font-size: 6.5pt; border: 1px solid #ddd;"><t t-esc="line['code_client']"/></td>
-                                        <td style="padding: 2px 3px; text-align: left; font-size: 6.5pt; border: 1px solid #ddd; word-wrap: break-word;"><t t-esc="line['libelle_client']"/></td>
-                                        <td style="padding: 2px; text-align: center; font-size: 6.5pt; border: 1px solid #ddd;"><t t-esc="line['catg_client']"/></td>
-                                        <td style="padding: 2px; text-align: center; font-size: 6.5pt; border: 1px solid #ddd;"><t t-esc="line['code_catg_client']"/></td>
-                                        <td style="padding: 2px; text-align: center; font-size: 6.5pt; border: 1px solid #ddd;"><t t-esc="line['code_art']"/></td>
-                                        <td style="padding: 2px 3px; text-align: left; font-size: 6.5pt; border: 1px solid #ddd; word-wrap: break-word;"><t t-esc="line['designation_art']"/></td>
-                                        <td style="padding: 2px; text-align: center; font-size: 6.5pt; border: 1px solid #ddd;"><t t-esc="line['sousfam_art']"/></td>
-                                        <td style="padding: 2px; text-align: right; font-size: 6.5pt; border: 1px solid #ddd;"><t t-esc="'%g' % round(line['qte_signe'], 3)"/></td>
-                                        <td style="padding: 2px; text-align: right; font-size: 6.5pt; border: 1px solid #ddd;"><t t-esc="'{:,.0f}'.format(line['prix_net']).replace(',', ' ')"/></td>
-                                        <td style="padding: 2px; text-align: right; font-size: 6.5pt; border: 1px solid #ddd;"><t t-esc="'{:,.0f}'.format(line['pump']).replace(',', ' ')"/></td>
-                                        <td style="padding: 2px; text-align: right; font-size: 6.5pt; border: 1px solid #ddd;"><t t-esc="'{:,.0f}'.format(line['mtht_signe']).replace(',', ' ')"/></td>
-                                        <td style="padding: 2px; text-align: right; font-size: 6.5pt; border: 1px solid #ddd;"><t t-esc="'{:,.0f}'.format(line['mt_ttc']).replace(',', ' ')"/></td>
-                                        <td style="padding: 2px; text-align: right; font-size: 6.5pt; border: 1px solid #ddd;"><t t-esc="'{:,.0f}'.format(line['marge']).replace(',', ' ')"/></td>
-                                        <td style="padding: 2px; text-align: center; font-size: 6.5pt; border: 1px solid #ddd;"><t t-esc="line['rayon']"/></td>
-                                        <td style="padding: 2px; text-align: center; font-size: 6.5pt; border: 1px solid #ddd;"><t t-esc="line['srayon']"/></td>
+                                        <td style="padding: 3px; text-align: center; font-size: 8pt; border: 1px solid #ddd;"><t t-esc="cli['code_client']"/></td>
+                                        <td style="padding: 3px 5px; text-align: left; font-size: 8pt; border: 1px solid #ddd; word-wrap: break-word;"><t t-esc="cli['libelle_client']"/></td>
+                                        <td style="padding: 3px; text-align: center; font-size: 8pt; border: 1px solid #ddd;"><t t-esc="cli['catg_client']"/></td>
+                                        <td style="padding: 3px; text-align: center; font-size: 8pt; border: 1px solid #ddd;"><t t-esc="cli['code_catg_client']"/></td>
+                                        <td style="padding: 3px; text-align: right;  font-size: 8pt; border: 1px solid #ddd;"><t t-esc="'%g' % round(cli['qte'], 3)"/></td>
+                                        <td style="padding: 3px; text-align: right;  font-size: 8pt; border: 1px solid #ddd;"><t t-esc="'{:,.0f}'.format(cli['mt_ht']).replace(',', ' ')"/></td>
+                                        <td style="padding: 3px; text-align: right;  font-size: 8pt; border: 1px solid #ddd;"><t t-esc="'{:,.0f}'.format(cli['mt_ttc']).replace(',', ' ')"/></td>
+                                        <td style="padding: 3px; text-align: right;  font-size: 8pt; border: 1px solid #ddd;"><t t-esc="'{:,.0f}'.format(cli['marge']).replace(',', ' ')"/></td>
                                     </tr>
                                 </t>
                                 <tr style="background: #D6EAF8;">
-                                    <td colspan="10" style="padding: 3px 6px; font-weight: bold; font-size: 8pt; border: 1px solid #aaa;">
+                                    <td colspan="4" style="padding: 4px 6px; font-weight: bold; font-size: 8pt; border: 1px solid #aaa;">
                                         ▶ Sous-total&#160;<t t-esc="grp['name']"/>
                                     </td>
-                                    <td style="padding: 3px 2px; text-align: right; font-weight: bold; font-size: 8pt; border: 1px solid #aaa;">
+                                    <td style="padding: 4px 3px; text-align: right; font-weight: bold; font-size: 8pt; border: 1px solid #aaa;">
                                         <t t-esc="'%g' % round(grp['total_qte'], 3)"/>
                                     </td>
-                                    <td colspan="2" style="border: 1px solid #aaa;"></td>
-                                    <td style="padding: 3px 2px; text-align: right; font-weight: bold; font-size: 8pt; border: 1px solid #aaa;">
+                                    <td style="padding: 4px 3px; text-align: right; font-weight: bold; font-size: 8pt; border: 1px solid #aaa;">
                                         <t t-esc="'{:,.0f}'.format(grp['total_mt_ht']).replace(',', ' ')"/>
                                     </td>
-                                    <td style="padding: 3px 2px; text-align: right; font-weight: bold; font-size: 8pt; border: 1px solid #aaa;">
+                                    <td style="padding: 4px 3px; text-align: right; font-weight: bold; font-size: 8pt; border: 1px solid #aaa;">
                                         <t t-esc="'{:,.0f}'.format(grp['total_mt_ttc']).replace(',', ' ')"/>
                                     </td>
-                                    <td style="padding: 3px 2px; text-align: right; font-weight: bold; font-size: 8pt; border: 1px solid #aaa;">
+                                    <td style="padding: 4px 3px; text-align: right; font-weight: bold; font-size: 8pt; border: 1px solid #aaa;">
                                         <t t-esc="'{:,.0f}'.format(grp['total_marge']).replace(',', ' ')"/>
                                     </td>
-                                    <td colspan="2" style="border: 1px solid #aaa;"></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -176,15 +135,16 @@
                     <t t-if="groups">
                         <table style="width: 100%; border-collapse: collapse; margin-top: 6px;">
                             <tr style="background: #1A5276; color: white;">
-                                <td colspan="10" style="padding: 5px 8px; font-weight: bold; font-size: 9pt; border: 1px solid #1A5276; width: 59%;">TOTAL GÉNÉRAL</td>
-                                <td style="padding: 5px 2px; text-align: right; font-weight: bold; font-size: 9pt; border: 1px solid #1A5276; width: 4%;"><t t-esc="'%g' % round(grand_qte, 3)"/></td>
-                                <td colspan="2" style="border: 1px solid #1A5276; width: 10%;"></td>
-                                <td style="padding: 5px 2px; text-align: right; font-weight: bold; font-size: 9pt; border: 1px solid #1A5276; width: 7%;"><t t-esc="'{:,.0f}'.format(grand_mt_ht).replace(',', ' ')"/></td>
-                                <td style="padding: 5px 2px; text-align: right; font-weight: bold; font-size: 9pt; border: 1px solid #1A5276; width: 7%;"><t t-esc="'{:,.0f}'.format(grand_mt_ttc).replace(',', ' ')"/></td>
-                                <td style="padding: 5px 2px; text-align: right; font-weight: bold; font-size: 9pt; border: 1px solid #1A5276; width: 6%;"><t t-esc="'{:,.0f}'.format(grand_marge).replace(',', ' ')"/></td>
-                                <td colspan="2" style="border: 1px solid #1A5276; width: 7%;"></td>
+                                <td colspan="4" style="padding: 5px 8px; font-weight: bold; font-size: 9pt; border: 1px solid #1A5276; width: 50%;">TOTAL GÉNÉRAL</td>
+                                <td style="padding: 5px 3px; text-align: right; font-weight: bold; font-size: 9pt; border: 1px solid #1A5276; width: 8%;"><t t-esc="'%g' % round(grand_qte, 3)"/></td>
+                                <td style="padding: 5px 3px; text-align: right; font-weight: bold; font-size: 9pt; border: 1px solid #1A5276; width: 14%;"><t t-esc="'{:,.0f}'.format(grand_mt_ht).replace(',', ' ')"/></td>
+                                <td style="padding: 5px 3px; text-align: right; font-weight: bold; font-size: 9pt; border: 1px solid #1A5276; width: 14%;"><t t-esc="'{:,.0f}'.format(grand_mt_ttc).replace(',', ' ')"/></td>
+                                <td style="padding: 5px 3px; text-align: right; font-weight: bold; font-size: 9pt; border: 1px solid #1A5276; width: 14%;"><t t-esc="'{:,.0f}'.format(grand_marge).replace(',', ' ')"/></td>
                             </tr>
                         </table>
+                        <p style="font-size: 7pt; color: #888; margin-top: 8px; text-align: center;">
+                            Résumé par client et catégorie de gestion — pour le détail ligne par ligne, utiliser l'export Excel.
+                        </p>
                     </t>
 
                 </div>
@@ -192,11 +152,11 @@
         </t>
     </template>
 
-    <!-- FORMAT PAPIER A3 PAYSAGE -->
+    <!-- FORMAT PAPIER A4 PAYSAGE -->
     <record id="paperformat_vte_x3" model="report.paperformat">
-        <field name="name">VTE X3 A3 Paysage</field>
+        <field name="name">VTE X3 A4 Paysage</field>
         <field name="default" eval="False"/>
-        <field name="format">A3</field>
+        <field name="format">A4</field>
         <field name="orientation">Landscape</field>
         <field name="margin_top">10</field>
         <field name="margin_bottom">10</field>
