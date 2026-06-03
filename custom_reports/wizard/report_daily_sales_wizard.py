@@ -212,7 +212,7 @@ class ReportDailySalesWizard(models.TransientModel):
                     for order in orders
                 ) - refund_ht
                 ca_ttc = sum(orders.mapped('amount_total')) - refund_ttc
-                marge = sum(orders.mapped('margin'))
+                marge = sum(order_lines.mapped('margin'))
                 remises = sum(
                     l.price_unit * l.qty * (l.discount or 0.0) / 100.0
                     for l in order_lines
@@ -270,7 +270,7 @@ class ReportDailySalesWizard(models.TransientModel):
                     for order in pos_orders
                 )
                 pos_ca_ttc = sum(pos_orders.mapped('amount_total'))
-                pos_marge = sum(pos_orders.mapped('margin'))
+                pos_marge = sum(pos_order_lines.mapped('margin'))
                 pos_remises = sum(
                     l.price_unit * l.qty * (l.discount or 0.0) / 100.0
                     for l in pos_order_lines

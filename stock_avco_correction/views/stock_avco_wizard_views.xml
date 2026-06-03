@@ -37,6 +37,8 @@
                         <group string="Fichier et Société">
                             <field name="company_id" options="{'no_create': True}"
                                    string="Société à corriger"/>
+                            <field name="move_type" widget="radio"
+                                   options="{'horizontal': true}"/>
                             <field name="excel_file" filename="excel_filename"
                                    widget="binary" string="Fichier (.xlsx / .xls)"/>
                             <field name="excel_filename" invisible="1"/>

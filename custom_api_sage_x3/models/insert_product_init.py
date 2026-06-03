@@ -25,7 +25,8 @@ _PRODUCT_UPDATE_FIELDS = (
     'price_negoce', 'price_ecom', 'price_gm', 'price_rh', 'price_st',
     'is_yop_demi_gros', 'is_yop_detail', 'is_synacass_ci', 'is_square',
     'is_bassam', 'is_koumassi', 'is_abobo', 'allowed_company_ids', 'family_categ_id',
-    'categ_id', 'actif_x3', 'type', 's_family_id', 'radius_id', 's_radius_id'
+    'categ_id', 'actif_x3', 'type', 's_family_id', 'radius_id', 's_radius_id',
+    'uom_ids',
 )
 
 
@@ -555,11 +556,12 @@ class ProductTemplateImport(models.Model):
             "purchase_ok":       True,
             "available_in_pos":  True,
             "is_storable":       True,
+            "uom_ids":           [(5, 0, 0)],
         }
 
-        uom_ids = self._get_uom_ids(item.get("ypcB1_0"), item.get("saU_0"))
-        if uom_ids is not None:
-            vals["uom_ids"] = uom_ids
+        # uom_ids = self._get_uom_ids(item.get("ypcB1_0"), item.get("saU_0"))
+        # if uom_ids is not None:
+        #     vals["uom_ids"] = uom_ids
 
         # Champs Many2one optionnels — non inclus si vide pour ne pas écraser la valeur existante
         for field, value in [

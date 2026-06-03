@@ -97,6 +97,7 @@ class SaleVteX3ReportWizard(models.TransientModel):
             ('order_id.date_order', '>=', self._dt_from()),
             ('order_id.date_order', '<=', self._dt_to()),
             ('product_id', '!=', False),
+            ('product_id.type', '=', 'consu'),
         ]
         if self.cat_gestion_ids:
             domain.append(('product_id.cat_gestion_id', 'in', self.cat_gestion_ids.ids))
@@ -156,6 +157,7 @@ class SaleVteX3ReportWizard(models.TransientModel):
             ('order_id.date_order', '>=', self._dt_from()),
             ('order_id.date_order', '<=', self._dt_to()),
             ('product_id', '!=', False),
+            ('product_id.type', '=', 'consu'),
         ]
         if self.cat_gestion_ids:
             domain.append(('product_id.cat_gestion_id', 'in', self.cat_gestion_ids.ids))

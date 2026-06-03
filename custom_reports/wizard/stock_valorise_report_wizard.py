@@ -14,7 +14,7 @@ class StockValoriseReport(models.TransientModel):
     date_report = fields.Datetime(
         string='Date de valorisation',
         required=True,
-        default=fields.Date.context_today
+        default=lambda self: dt.combine(fields.Date.context_today(self), t(23, 59, 59))
     )
 
     location_id = fields.Many2one(
@@ -99,14 +99,26 @@ class StockValoriseReport(models.TransientModel):
         total_qty = 0.0
         total_valorisation = 0.0
 
-        date_from = self.date_report
+        date_from = dt.combine(self.date_report.date(), t(0, 0, 0))
         date_at = dt.combine(self.date_report.date(), t(23, 59, 59))
 
         # Quantités à l'emplacement en batch
-        loc_qtys = self.product_ids.with_context(
-            location=self.location_id.id, to_date=date_from
-        ).mapped('qty_available')
-        qty_loc = {p.id: q for p, q in zip(self.product_ids, loc_qtys)}
+        # ANCIEN CODE : to_date ignoré par Odoo 19 (qty_available utilise stock.quant, pas stock.move.line)
+        # loc_qtys = self.product_ids.with_context(
+        #     location=self.location_id.id, to_date=self.date_report
+        # ).mapped('qty_available')
+        # qty_loc = {p.id: q for p, q in zip(self.product_ids, loc_qtys)}
+        self.env.cr.execute("""
+            SELECT product_id,
+                   SUM(CASE WHEN location_dest_id = %s THEN quantity ELSE -quantity END) AS qty
+            FROM stock_move_line
+            WHERE product_id = ANY(%s)
+              AND state = 'done'
+              AND date <= %s
+              AND (location_id = %s OR location_dest_id = %s)
+            GROUP BY product_id
+        """, [self.location_id.id, list(self.product_ids.ids), self.date_report, self.location_id.id, self.location_id.id])
+        qty_loc = {row[0]: row[1] for row in self.env.cr.fetchall()}
 
         # PMP du jour : mouvements entrants entre 00:00:00 et 23:59:59
         move_groups_day = self.env['stock.move'].read_group(

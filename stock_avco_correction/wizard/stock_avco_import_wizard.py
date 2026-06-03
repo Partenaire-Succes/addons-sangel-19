@@ -30,6 +30,12 @@ class StockAvcoImportWizard(models.TransientModel):
         default=lambda self: self.env.company,
     )
 
+    move_type = fields.Selection([
+        ('in',   'Réception'),
+        ('out',  'Retour'),
+        ('both', 'Les deux'),
+    ], string="Type de mouvement", required=True, default='in')
+
     excel_file     = fields.Binary(string="Fichier Excel", attachment=False)
     excel_filename = fields.Char(string="Nom du fichier")
 
@@ -44,6 +50,13 @@ class StockAvcoImportWizard(models.TransientModel):
     nb_products_updated  = fields.Integer(string="Produits mis à jour",    readonly=True)
     total_value_injected = fields.Float(string="Valeur totale (FCFA)",     readonly=True)
     nb_not_found         = fields.Integer(string="Codes non trouvés",      readonly=True)
+
+    def _move_type_domain(self):
+        if self.move_type == 'in':
+            return [('is_in', '=', True)]
+        if self.move_type == 'out':
+            return [('is_out', '=', True)]
+        return ['|', ('is_in', '=', True), ('is_out', '=', True)]
 
     # ------------------------------------------------------------------
     # ÉTAPE 1 — Analyser
@@ -93,11 +106,10 @@ class StockAvcoImportWizard(models.TransientModel):
 
             moves = self.env['stock.move'].search([
                 ('product_id', '=', product.id),
-                ('is_out', '=', True),
                 ('picking_id', '!=', False),
                 ('state', '=', 'done'),
                 ('company_id', '=', self.company_id.id),
-            ])
+            ] + self._move_type_domain())
 
             if not moves:
                 lines_vals.append({
@@ -173,11 +185,10 @@ class StockAvcoImportWizard(models.TransientModel):
 
             moves = self.env['stock.move'].search([
                 ('product_id', '=', line.product_id.id),
-                ('is_out', '=', True),
                 ('picking_id', '!=', False),
                 ('state', '=', 'done'),
                 ('company_id', '=', company.id),
-            ])
+            ] + self._move_type_domain())
             if not moves:
                 line.write({'state': 'done'})
                 continue
