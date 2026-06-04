@@ -1,4 +1,5 @@
 from . import product_select_wizard
+from . import fiche_comptage_wizard
 from . import stock_excel_import_wizard
 from . import reception_directe_wizard
 from . import retour_carton_wizard

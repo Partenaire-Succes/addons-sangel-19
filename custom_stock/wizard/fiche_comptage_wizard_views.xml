@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_fiche_comptage_wizard_form" model="ir.ui.view">
+        <field name="name">fiche.comptage.wizard.form</field>
+        <field name="model">fiche.comptage.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Fiche de Comptage">
+                <group>
+                    <group>
+                        <field name="company_id"/>
+                        <field name="date"/>
+                        <field name="inventory_mode" widget="radio"/>
+                    </group>
+                </group>
+
+                <!-- Mode normal -->
+                <group string="Filtres" invisible="inventory_mode == 'libre'">
+                    <field name="code_category_ids" widget="many2many_tags"/>
+                    <field name="code_inventory_ids" widget="many2many_tags"
+                           domain="[('code_category_id', 'in', code_category_ids)]"/>
+                </group>
+
+                <!-- Mode libre -->
+                <group string="Produits à compter" invisible="inventory_mode != 'libre'">
+                    <field name="product_ids" widget="many2many_tags" nolabel="1"/>
+                </group>
+
+                <footer>
+                    <button name="action_print_fiche_comptage"
+                            string="Imprimer"
+                            type="object"
+                            class="btn-primary"/>
+                    <button string="Annuler" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_fiche_comptage_wizard" model="ir.actions.act_window">
+        <field name="name">Fiche de Comptage</field>
+        <field name="res_model">fiche.comptage.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_fiche_comptage_wizard"
+              name="Fiche de Comptage"
+              parent="stock.menu_stock_adjustments"
+              action="action_fiche_comptage_wizard"
+              sequence="1"/>
+
+</odoo>

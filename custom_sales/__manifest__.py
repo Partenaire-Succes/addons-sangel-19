@@ -13,6 +13,7 @@
         'product',
         'point_of_sale',
         'custom_stock',
+        'custom_pos',
     ],
 
     'data': [

@@ -15,6 +15,7 @@
         'purchase',
         'custom_stock',
         'custom_sales',
+        'custom_pos',
         'dashboard_management_administration',
     ],
     'data': [

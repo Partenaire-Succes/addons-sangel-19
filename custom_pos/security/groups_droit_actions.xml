@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!-- ── Catégorie ──────────────────────────────────────────────────── -->
+        <record model="ir.module.category" id="module_category_droit_actions">
+            <field name="name">Droit des Actions</field>
+            <field name="sequence">100</field>
+        </record>
+
+        <!-- ── Import Produit X3 ──────────────────────────────────────────── -->
+        <record model="res.groups.privilege" id="privilege_import_produit_x3">
+            <field name="name">Import Produit X3</field>
+            <field name="sequence">10</field>
+            <field name="category_id" ref="module_category_droit_actions"/>
+        </record>
+        <record id="group_import_produit_x3" model="res.groups">
+            <field name="name">Activé</field>
+            <field name="privilege_id" ref="privilege_import_produit_x3"/>
+        </record>
+
+        <!-- ── Import Contact X3 ─────────────────────────────────────────── -->
+        <record model="res.groups.privilege" id="privilege_import_contact_x3">
+            <field name="name">Import Contact X3</field>
+            <field name="sequence">20</field>
+            <field name="category_id" ref="module_category_droit_actions"/>
+        </record>
+        <record id="group_import_contact_x3" model="res.groups">
+            <field name="name">Activé</field>
+            <field name="privilege_id" ref="privilege_import_contact_x3"/>
+        </record>
+
+        <!-- ── Validation Achat ───────────────────────────────────────────── -->
+        <record model="res.groups.privilege" id="privilege_validation_achat">
+            <field name="name">Validation Achat</field>
+            <field name="sequence">30</field>
+            <field name="category_id" ref="module_category_droit_actions"/>
+        </record>
+        <record id="group_validation_achat" model="res.groups">
+            <field name="name">Activé</field>
+            <field name="privilege_id" ref="privilege_validation_achat"/>
+        </record>
+
+        <!-- ── Validation Réception ───────────────────────────────────────── -->
+        <record model="res.groups.privilege" id="privilege_validation_reception">
+            <field name="name">Validation Réception</field>
+            <field name="sequence">40</field>
+            <field name="category_id" ref="module_category_droit_actions"/>
+        </record>
+        <record id="group_validation_reception" model="res.groups">
+            <field name="name">Activé</field>
+            <field name="privilege_id" ref="privilege_validation_reception"/>
+        </record>
+
+        <!-- ── Envoi Facture X3 ───────────────────────────────────────────── -->
+        <record model="res.groups.privilege" id="privilege_envoi_facture_x3">
+            <field name="name">Envoi Facture X3</field>
+            <field name="sequence">50</field>
+            <field name="category_id" ref="module_category_droit_actions"/>
+        </record>
+        <record id="group_envoi_facture_x3" model="res.groups">
+            <field name="name">Activé</field>
+            <field name="privilege_id" ref="privilege_envoi_facture_x3"/>
+        </record>
+
+        <!-- ── Impression des Rapports PDF ───────────────────────────────── -->
+        <record model="res.groups.privilege" id="privilege_impression_rapports_pdf">
+            <field name="name">Impression des Rapports PDF</field>
+            <field name="sequence">60</field>
+            <field name="category_id" ref="module_category_droit_actions"/>
+        </record>
+        <record id="group_impression_rapports_pdf" model="res.groups">
+            <field name="name">Activé</field>
+            <field name="privilege_id" ref="privilege_impression_rapports_pdf"/>
+        </record>
+
+        <!-- ── Import des Docs Excel ──────────────────────────────────────── -->
+        <record model="res.groups.privilege" id="privilege_import_docs_excel">
+            <field name="name">Import des Docs Excel</field>
+            <field name="sequence">70</field>
+            <field name="category_id" ref="module_category_droit_actions"/>
+        </record>
+        <record id="group_import_docs_excel" model="res.groups">
+            <field name="name">Activé</field>
+            <field name="privilege_id" ref="privilege_import_docs_excel"/>
+        </record>
+
+    </data>
+</odoo>

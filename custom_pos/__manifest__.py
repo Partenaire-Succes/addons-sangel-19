@@ -21,6 +21,7 @@
     'depends': ['sale', 'point_of_sale', 'account', 'pos_loyalty'],
     'data': [
         'security/groups.xml',
+        'security/groups_droit_actions.xml',
         'security/ir.model.access.csv',
         # 'security/security.xml',
         'security/pos_security.xml',

@@ -106,8 +106,6 @@
                                 <thead>
                                     <tr>
                                         <th rowspan="2" style="width: 14%;"><t t-esc="lbl_item"/></th>
-                                        <th rowspan="2" style="width: 6%;">Coût</th>
-                                        <th rowspan="2" style="width: 6%;">Prix TTC</th>
                                         <th colspan="5" class="col-period1">Période 1</th>
                                         <t t-if="doc.report_mode == 'comparison'">
                                             <th colspan="5" class="col-period2">Période 2</th>
@@ -147,8 +145,6 @@
                                                 </t>
                                                 <span t-esc="item['name']"/>
                                             </td>
-                                            <td class="text-right"><span t-esc="'{:,.2f}'.format(item['cost']).replace(',', ' ')"/></td>
-                                            <td class="text-right"><span t-esc="'{:,.2f}'.format(item['ca_ttc_p1'] / item['qty_p1'] if item['qty_p1'] else 0.0).replace(',', ' ')"/></td>
                                             <td class="text-right"><span t-esc="'%g' % round(item['qty_p1'], 3)"/></td>
                                             <td class="text-right"><span t-esc="'{:,.2f}'.format(item['ca_p1']).replace(',', ' ')"/></td>
                                             <td class="text-right"><span t-esc="'{:,.2f}'.format(item['ca_ttc_p1']).replace(',', ' ')"/></td>
@@ -174,8 +170,6 @@
                                     <!-- Sous-total groupe -->
                                     <tr class="total-row">
                                         <td class="text-left"><strong>Sous-total</strong></td>
-                                        <td></td><!-- Coût -->
-                                        <td></td><!-- Prix TTC -->
                                         <td class="text-right"><strong><span t-esc="'%g' % round(grp_data['total_p1_qty'], 3)"/></strong></td>
                                         <td class="text-right"><strong><span t-esc="'{:,.2f}'.format(grp_data['total_p1_ca']).replace(',', ' ')"/></strong></td>
                                         <td class="text-right"><strong><span t-esc="'{:,.2f}'.format(grp_data['total_p1_ca_ttc']).replace(',', ' ')"/></strong></td>
@@ -213,8 +207,6 @@
                         <table class="stat-table" style="margin-top: 20px;">
                             <tr class="grand-total-row">
                                 <td style="width: 14%;" class="text-left"><strong>TOTAL GÉNÉRAL</strong></td>
-                                <td></td><!-- Coût -->
-                                <td></td><!-- Prix TTC -->
                                 <td class="text-right"><strong><span t-esc="'%g' % round(grand_total_p1_qty, 3)"/></strong></td>
                                 <td class="text-right"><strong><span t-esc="'{:,.2f}'.format(grand_total_p1_ca).replace(',', ' ')"/></strong></td>
                                 <td class="text-right"><strong><span t-esc="'{:,.2f}'.format(grand_total_p1_ca_ttc).replace(',', ' ')"/></strong></td>

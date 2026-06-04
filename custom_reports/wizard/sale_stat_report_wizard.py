@@ -23,7 +23,7 @@ class SaleStatReportWizard(models.TransientModel):
         ('pos', 'Point de Vente (POS)'),
         ('sale', 'Ventes'),
         ('both', 'Les deux'),
-    ], string='Source', default='pos', required=True)
+    ], string='Source', default='both', required=True)
 
     group_by = fields.Selection([
         ('customer_category', 'Catégorie Client'),
@@ -74,6 +74,7 @@ class SaleStatReportWizard(models.TransientModel):
     # ------------------------------------------------------------------
 
     def _build_order_domain(self, period):
+        """Domaine pour POS — filtre par date_order."""
         date_start = self.date_start_period1 if period == 1 else self.date_start_period2
         date_end   = self.date_end_period1   if period == 1 else self.date_end_period2
         domain = [('company_id', '=', self.company_id.id)]
@@ -88,49 +89,93 @@ class SaleStatReportWizard(models.TransientModel):
             domain.append(('partner_id.category_id', 'in', self.category_ids.ids))
         return domain
 
+    def _build_invoice_domain(self, period):
+        """Domaine pour factures/avoirs vente — filtre par invoice_date."""
+        date_start = self.date_start_period1 if period == 1 else self.date_start_period2
+        date_end   = self.date_end_period1   if period == 1 else self.date_end_period2
+        domain = [('company_id', '=', self.company_id.id), ('state', '=', 'posted')]
+        if date_start:
+            domain.append(('invoice_date', '>=', date_start))
+        if date_end:
+            domain.append(('invoice_date', '<=', date_end))
+        if self.partner_ids:
+            domain.append(('partner_id', 'in', self.partner_ids.ids))
+        if self.category_ids:
+            domain.append(('partner_id.category_id', 'in', self.category_ids.ids))
+        return domain
+
     def _fetch_orders(self, period):
-        base = self._build_order_domain(period)
-        result = {'pos': self.env['pos.order'], 'sale': self.env['sale.order']}
+        result = {
+            'pos': self.env['pos.order'],
+            'sale': self.env['sale.order'],
+            'refund': self.env['account.move'],
+        }
+        inv_base = self._build_invoice_domain(period)
         if self.order_source in ('pos', 'both'):
+            base_pos = self._build_order_domain(period)
             result['pos'] = self.env['pos.order'].search(
-                [('state', 'in', ['paid', 'done', 'invoiced'])] + base
+                [('state', 'in', ['paid', 'done', 'invoiced'])] + base_pos
             )
         if self.order_source in ('sale', 'both'):
-            result['sale'] = self.env['sale.order'].search(
-                [('state', 'in', ['sale', 'done'])] + base
+            # Commandes de vente facturées et validées (hors POS)
+            invoices = self.env['account.move'].search(
+                inv_base + [('move_type', '=', 'out_invoice'), ('pos_order_ids', '=', False)]
             )
+            result['sale'] = self.env['sale.order'].search([('invoice_ids', 'in', invoices.ids)])
+        # Avoirs de vente (hors POS) toujours inclus quelle que soit la source :
+        # le rapport CA les soustrait du CA dans tous les modes (POS seul inclus)
+        result['refund'] = self.env['account.move'].search(
+            inv_base + [('move_type', '=', 'out_refund'), ('pos_order_ids', '=', False)]
+        )
         return result
 
     def _filter_orders_by_product(self, orders_dict):
-        """Garde uniquement les commandes contenant au moins un produit/catégorie filtrés."""
+        """Garde uniquement les commandes/avoirs contenant au moins un produit/catégorie filtrés."""
         result = {}
         for src, orders in orders_dict.items():
             if not orders:
                 result[src] = orders
                 continue
-            line_model = 'pos.order.line' if src == 'pos' else 'sale.order.line'
-            ld = [('order_id', 'in', orders.ids)]
-            if self.product_ids:
-                ld.append(('product_id', 'in', self.product_ids.ids))
-            if self.product_category_ids:
-                ld.append(('product_id.categ_id', 'child_of', self.product_category_ids.ids))
-            valid_ids = set(self.env[line_model].search(ld).mapped('order_id').ids)
-            result[src] = orders.filtered(lambda o: o.id in valid_ids)
+            if src == 'refund':
+                ld = [('move_id', 'in', orders.ids), ('product_id', '!=', False)]
+                if self.product_ids:
+                    ld.append(('product_id', 'in', self.product_ids.ids))
+                if self.product_category_ids:
+                    ld.append(('product_id.categ_id', 'child_of', self.product_category_ids.ids))
+                valid_ids = set(self.env['account.move.line'].search(ld).mapped('move_id').ids)
+                result[src] = orders.filtered(lambda o: o.id in valid_ids)
+            else:
+                line_model = 'pos.order.line' if src == 'pos' else 'sale.order.line'
+                ld = [('order_id', 'in', orders.ids)]
+                if self.product_ids:
+                    ld.append(('product_id', 'in', self.product_ids.ids))
+                if self.product_category_ids:
+                    ld.append(('product_id.categ_id', 'child_of', self.product_category_ids.ids))
+                valid_ids = set(self.env[line_model].search(ld).mapped('order_id').ids)
+                result[src] = orders.filtered(lambda o: o.id in valid_ids)
         return result
 
     def _fetch_lines(self, orders_dict):
-        """Retourne les lignes de commande filtrées par produit/catégorie produit."""
+        """Retourne les lignes filtrées par produit/catégorie. Les lignes d'avoirs sont incluses."""
         result = []
         for src, orders in orders_dict.items():
             if not orders:
                 continue
-            line_model = 'pos.order.line' if src == 'pos' else 'sale.order.line'
-            ld = [('order_id', 'in', orders.ids)]
-            if self.product_ids:
-                ld.append(('product_id', 'in', self.product_ids.ids))
-            if self.product_category_ids:
-                ld.append(('product_id.categ_id', 'child_of', self.product_category_ids.ids))
-            result.append((src, self.env[line_model].search(ld)))
+            if src == 'refund':
+                ld = [('move_id', 'in', orders.ids), ('product_id', '!=', False)]
+                if self.product_ids:
+                    ld.append(('product_id', 'in', self.product_ids.ids))
+                if self.product_category_ids:
+                    ld.append(('product_id.categ_id', 'child_of', self.product_category_ids.ids))
+                result.append(('refund', self.env['account.move.line'].search(ld)))
+            else:
+                line_model = 'pos.order.line' if src == 'pos' else 'sale.order.line'
+                ld = [('order_id', 'in', orders.ids)]
+                if self.product_ids:
+                    ld.append(('product_id', 'in', self.product_ids.ids))
+                if self.product_category_ids:
+                    ld.append(('product_id.categ_id', 'child_of', self.product_category_ids.ids))
+                result.append((src, self.env[line_model].search(ld)))
         return result
 
     # ------------------------------------------------------------------
@@ -140,27 +185,8 @@ class SaleStatReportWizard(models.TransientModel):
     def get_sale_data(self):
         """Retourne les données de vente groupées selon self.group_by.
 
-        Structure retournée :
-        {
-            group_key: {
-                'group_name': str,
-                'group_id': int,
-                'items': {
-                    item_key: {
-                        'name': str, 'ref': str,
-                        'qty_p1', 'ca_p1', 'margin_p1', 'margin_pct_p1',
-                        'qty_p2', 'ca_p2', 'margin_p2', 'margin_pct_p2',
-                        'prog_qty', 'prog_ca', 'prog_ca_pct',
-                        'prog_margin', 'prog_margin_pct',
-                    }
-                },
-                'total_p1_qty', 'total_p1_ca', 'total_p1_margin', 'total_p1_margin_pct',
-                'total_p2_qty', 'total_p2_ca', 'total_p2_margin', 'total_p2_margin_pct',
-                'total_prog_qty', 'total_prog_ca', 'total_prog_ca_pct', 'total_prog_margin',
-            }
-        }
-        - Groupements client/catégorie client : qty = nombre de commandes
-        - Groupements produit/catégorie produit : qty = quantité de la ligne
+        Les avoirs (remboursements) de vente sont intégrés avec des valeurs négatives.
+        POS : filtré par date_order. Ventes : filtré par invoice_date (factures validées).
         """
         self.ensure_one()
         groups = {}
@@ -175,22 +201,19 @@ class SaleStatReportWizard(models.TransientModel):
         def make_item(name, ref=''):
             return {
                 'name': name, 'ref': ref,
-                'cost': 0.0,
                 'qty_p1': 0.0, 'ca_p1': 0.0, 'ca_ttc_p1': 0.0, 'margin_p1': 0.0, 'margin_pct_p1': 0.0,
                 'qty_p2': 0.0, 'ca_p2': 0.0, 'ca_ttc_p2': 0.0, 'margin_p2': 0.0, 'margin_pct_p2': 0.0,
                 'prog_qty': 0.0, 'prog_ca': 0.0, 'prog_ca_pct': 0.0,
                 'prog_margin': 0.0, 'prog_margin_pct': 0.0,
             }
 
-        def acc(gkey, gname, gid, ikey, iname, iref, qty, ca, ca_ttc, cost, margin, period):
+        def acc(gkey, gname, gid, ikey, iname, iref, qty, ca, ca_ttc, margin, period):
             if gkey not in groups:
                 groups[gkey] = make_group(gname, gid)
             g = groups[gkey]
             if ikey not in g['items']:
                 g['items'][ikey] = make_item(iname, iref)
             it = g['items'][ikey]
-            if cost > 0 and it['cost'] == 0.0:
-                it['cost'] = cost
             if period == 1:
                 it['qty_p1'] += qty; it['ca_p1'] += ca; it['ca_ttc_p1'] += ca_ttc; it['margin_p1'] += margin
                 g['total_p1_qty'] += qty; g['total_p1_ca'] += ca; g['total_p1_ca_ttc'] += ca_ttc; g['total_p1_margin'] += margin
@@ -204,59 +227,83 @@ class SaleStatReportWizard(models.TransientModel):
             for src, orders in orders_dict.items():
                 for order in orders:
                     p = order.partner_id
-                    ca     = (order.amount_total or 0.0) - (order.amount_tax or 0.0)
-                    ca_ttc = order.amount_total or 0.0
-                    mg = getattr(order, 'margin', 0.0) or 0.0
+                    if src == 'refund':
+                        ca     = -(order.amount_untaxed or 0.0)
+                        ca_ttc = -(order.amount_total or 0.0)
+                        mg     = 0.0
+                        qty    = -1
+                    else:
+                        ca     = (order.amount_total or 0.0) - (order.amount_tax or 0.0)
+                        ca_ttc = order.amount_total or 0.0
+                        mg     = sum(l.margin for l in order.lines) if src == 'pos' else (getattr(order, 'margin', 0.0) or 0.0)
+                        qty    = 1
                     cats = p.category_id
                     if self.category_ids:
                         cats = cats.filtered(lambda c: c.id in self.category_ids.ids)
                     if not cats:
                         acc('_no_cat', 'Sans Catégorie', 0,
-                            p.id, p.name or '', p.ref or '', 1, ca, ca_ttc, 0.0, mg, period)
+                            p.id, p.name or '', p.ref or '', qty, ca, ca_ttc, mg, period)
                     else:
                         for cat in cats:
                             acc(cat.name, cat.name, cat.id,
-                                p.id, p.name or '', p.ref or '', 1, ca, ca_ttc, 0.0, mg, period)
+                                p.id, p.name or '', p.ref or '', qty, ca, ca_ttc, mg, period)
 
         def by_customer(orders_dict, period):
             for src, orders in orders_dict.items():
                 for order in orders:
                     p = order.partner_id
-                    ca     = (order.amount_total or 0.0) - (order.amount_tax or 0.0)
-                    ca_ttc = order.amount_total or 0.0
-                    mg = getattr(order, 'margin', 0.0) or 0.0
+                    if src == 'refund':
+                        ca     = -(order.amount_untaxed or 0.0)
+                        ca_ttc = -(order.amount_total or 0.0)
+                        mg     = 0.0
+                        qty    = -1
+                    else:
+                        ca     = (order.amount_total or 0.0) - (order.amount_tax or 0.0)
+                        ca_ttc = order.amount_total or 0.0
+                        mg     = sum(l.margin for l in order.lines) if src == 'pos' else (getattr(order, 'margin', 0.0) or 0.0)
+                        qty    = 1
                     gkey = p.id or 0
                     acc(gkey, p.name or 'Inconnu', gkey,
-                        gkey, p.name or 'Inconnu', p.ref or '', 1, ca, ca_ttc, 0.0, mg, period)
+                        gkey, p.name or 'Inconnu', p.ref or '', qty, ca, ca_ttc, mg, period)
 
         def by_product_category(lines_list, period):
             for src, lines in lines_list:
                 for line in lines:
-                    prod   = line.product_id
-                    cat    = prod.categ_id
-                    ca     = line.price_subtotal or 0.0
-                    ca_ttc = (line.price_subtotal_incl if src == 'pos' else line.price_total) or 0.0
-                    mg     = getattr(line, 'margin', 0.0) or 0.0
-                    cost   = prod.standard_price or 0.0
-                    qty    = line.qty if src == 'pos' else line.product_uom_qty
+                    prod = line.product_id
+                    cat  = prod.categ_id
+                    if src == 'refund':
+                        ca     = -(line.price_subtotal or 0.0)
+                        ca_ttc = -(line.price_total or 0.0)
+                        mg     = 0.0
+                        qty    = -(line.quantity or 0.0)
+                    else:
+                        ca     = line.price_subtotal or 0.0
+                        ca_ttc = (line.price_subtotal_incl if src == 'pos' else line.price_total) or 0.0
+                        mg     = getattr(line, 'margin', 0.0) or 0.0
+                        qty    = line.qty if src == 'pos' else line.product_uom_qty
                     gkey  = cat.name if cat else '_no_cat'
                     gname = cat.name if cat else 'Sans Catégorie'
                     gid   = cat.id   if cat else 0
                     acc(gkey, gname, gid,
-                        prod.id, prod.name or '', prod.default_code or '', qty, ca, ca_ttc, cost, mg, period)
+                        prod.id, prod.name or '', prod.default_code or '', qty, ca, ca_ttc, mg, period)
 
         def by_product(lines_list, period):
             for src, lines in lines_list:
                 for line in lines:
-                    prod   = line.product_id
-                    ca     = line.price_subtotal or 0.0
-                    ca_ttc = (line.price_subtotal_incl if src == 'pos' else line.price_total) or 0.0
-                    mg     = getattr(line, 'margin', 0.0) or 0.0
-                    cost   = prod.standard_price or 0.0
-                    qty    = line.qty if src == 'pos' else line.product_uom_qty
-                    gkey   = prod.id or 0
+                    prod = line.product_id
+                    if src == 'refund':
+                        ca     = -(line.price_subtotal or 0.0)
+                        ca_ttc = -(line.price_total or 0.0)
+                        mg     = 0.0
+                        qty    = -(line.quantity or 0.0)
+                    else:
+                        ca     = line.price_subtotal or 0.0
+                        ca_ttc = (line.price_subtotal_incl if src == 'pos' else line.price_total) or 0.0
+                        mg     = getattr(line, 'margin', 0.0) or 0.0
+                        qty    = line.qty if src == 'pos' else line.product_uom_qty
+                    gkey = prod.id or 0
                     acc(gkey, prod.name or 'Inconnu', gkey,
-                        gkey, prod.name or 'Inconnu', prod.default_code or '', qty, ca, ca_ttc, cost, mg, period)
+                        gkey, prod.name or 'Inconnu', prod.default_code or '', qty, ca, ca_ttc, mg, period)
 
         # --- Exécution par période ---
 
@@ -281,10 +328,10 @@ class SaleStatReportWizard(models.TransientModel):
         # --- Calcul des % et progressions ---
         for gdata in groups.values():
             for vals in gdata['items'].values():
-                if vals['ca_p1'] > 0:
+                if vals['ca_p1']:
                     vals['margin_pct_p1'] = vals['margin_p1'] / vals['ca_p1'] * 100
                 if self.report_mode == 'comparison':
-                    if vals['ca_p2'] > 0:
+                    if vals['ca_p2']:
                         vals['margin_pct_p2'] = vals['margin_p2'] / vals['ca_p2'] * 100
                     vals['prog_qty']    = vals['qty_p2']    - vals['qty_p1']
                     vals['prog_ca']     = vals['ca_p2']     - vals['ca_p1']
@@ -341,7 +388,6 @@ class SaleStatReportWizard(models.TransientModel):
         if not data:
             raise UserError("Aucune donnée trouvée pour la période sélectionnée.")
 
-        # Libellés colonnes 1 et 2
         col_labels = {
             'customer_category': ('Catég. Client', 'Client'),
             'customer':          ('Client',         'Réf. Client'),
@@ -349,7 +395,6 @@ class SaleStatReportWizard(models.TransientModel):
             'product':           ('Produit',        'Code Article'),
         }
         col1_label, col2_label = col_labels.get(self.group_by, ('Groupe', 'Détail'))
-        # col2 = code/ref quand le libellé est orienté code (product et customer)
         use_ref_col2 = self.group_by in ('product', 'customer')
 
         wb = Workbook(); ws = wb.active; ws.title = "Stats Ventes"
@@ -365,21 +410,21 @@ class SaleStatReportWizard(models.TransientModel):
             if self.date_start_period1 else "Période 1"
         )
 
-        # Colonnes single  : Groupe|Code|Coût|Prix TTC|Qté|CA HT|CA TTC|Marge|% Marge  (9)
-        # Colonnes compar. : id. + P2(Qté|CA HT|CA TTC|Marge|% Marge) + Prog CA HT|% Prog (16)
+        # Single  : Groupe|Code|Qté|CA HT|CA TTC|Marge|% Marge  (7)
+        # Compar. : id. + P2(Qté|CA HT|CA TTC|Marge|% Marge) + Prog CA HT|% Prog (14)
         if is_comparison:
-            last_col = 16
+            last_col = 14
             headers = [
-                col1_label, col2_label, "Coût", "Prix TTC",
+                col1_label, col2_label,
                 "Qté P1", "CA HT P1", "CA TTC P1", "Marge P1", "% Marge P1",
                 "Qté P2", "CA HT P2", "CA TTC P2", "Marge P2", "% Marge P2",
                 "Prog CA HT", "% Prog CA",
             ]
-            money_cols = (3, 4, 6, 7, 8, 11, 12, 13, 15)
+            money_cols = (4, 5, 6, 9, 10, 11, 13)
         else:
-            last_col = 9
-            headers = [col1_label, col2_label, "Coût", "Prix TTC", "Qté", "CA HT", "CA TTC", "Marge", "% Marge"]
-            money_cols = (3, 4, 6, 7, 8)
+            last_col = 7
+            headers = [col1_label, col2_label, "Qté", "CA HT", "CA TTC", "Marge", "% Marge"]
+            money_cols = (4, 5, 6)
 
         last_col_letter = chr(64 + last_col)
 
@@ -413,11 +458,9 @@ class SaleStatReportWizard(models.TransientModel):
         for gdata in data.values():
             for item in gdata['items'].values():
                 col2_val = item['ref'] if use_ref_col2 else item['name']
-                prix_ttc = item['ca_ttc_p1'] / item['qty_p1'] if item['qty_p1'] else 0.0
                 if is_comparison:
                     row_data = [
                         gdata['group_name'], col2_val,
-                        item['cost'], prix_ttc,
                         round(item['qty_p1'], 3), item['ca_p1'], item['ca_ttc_p1'],
                         item['margin_p1'], round(item['margin_pct_p1'], 2),
                         round(item['qty_p2'], 3), item['ca_p2'], item['ca_ttc_p2'],
@@ -427,7 +470,6 @@ class SaleStatReportWizard(models.TransientModel):
                 else:
                     row_data = [
                         gdata['group_name'], col2_val,
-                        item['cost'], prix_ttc,
                         round(item['qty_p1'], 3), item['ca_p1'], item['ca_ttc_p1'],
                         item['margin_p1'], round(item['margin_pct_p1'], 2),
                     ]
@@ -441,14 +483,9 @@ class SaleStatReportWizard(models.TransientModel):
                     ws.cell(row=r, column=col).number_format = '#,##0.00'
 
             # ── Sous-total groupe ──────────────────────────────────────────────
-            prix_ttc_tot = (
-                gdata['total_p1_ca_ttc'] / gdata['total_p1_qty']
-                if gdata['total_p1_qty'] else 0.0
-            )
             if is_comparison:
                 sub_row = [
                     "Sous-total " + gdata['group_name'], "",
-                    0.0, prix_ttc_tot,
                     round(gdata['total_p1_qty'], 3), gdata['total_p1_ca'], gdata['total_p1_ca_ttc'],
                     gdata['total_p1_margin'], round(gdata.get('total_p1_margin_pct', 0.0), 2),
                     round(gdata['total_p2_qty'], 3), gdata['total_p2_ca'], gdata['total_p2_ca_ttc'],
@@ -458,7 +495,6 @@ class SaleStatReportWizard(models.TransientModel):
             else:
                 sub_row = [
                     "Sous-total " + gdata['group_name'], "",
-                    0.0, prix_ttc_tot,
                     round(gdata['total_p1_qty'], 3), gdata['total_p1_ca'], gdata['total_p1_ca_ttc'],
                     gdata['total_p1_margin'], round(gdata.get('total_p1_margin_pct', 0.0), 2),
                 ]
@@ -474,9 +510,9 @@ class SaleStatReportWizard(models.TransientModel):
 
         # ── Largeurs colonnes ──────────────────────────────────────────────────
         if is_comparison:
-            col_widths = [22, 14, 10, 10, 8, 13, 13, 13, 9, 8, 13, 13, 13, 9, 13, 9]
+            col_widths = [22, 14, 8, 13, 13, 13, 9, 8, 13, 13, 13, 9, 13, 9]
         else:
-            col_widths = [22, 14, 10, 10, 8, 13, 13, 13, 9]
+            col_widths = [22, 14, 8, 13, 13, 13, 9]
         for col, width in enumerate(col_widths, 1):
             ws.column_dimensions[chr(64 + col)].width = width
 

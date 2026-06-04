@@ -20,7 +20,7 @@
                                 string="Actualiser Stock et Prix"
                                 class="btn-secondary"
                                 confirm="Cette action va écraser le stock et le prix de toutes les lignes avec les valeurs actuelles. Confirmer ?"
-                                invisible="state != 'in_progress'"/>
+                                invisible="1"/>
 
                         <button name="action_done" 
                                 type="object"
@@ -43,7 +43,7 @@
                                 type="object"
                                 class="btn-primary"
                                 icon="fa-print"
-                                invisible="state != 'draft'"
+                                invisible="1"
                         />
                         <field name="state" widget="statusbar" statusbar_visible="draft,in_progress,done"
                         />

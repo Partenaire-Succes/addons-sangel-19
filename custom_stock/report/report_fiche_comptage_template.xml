@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <template id="report_fiche_comptage_document">
+            <t t-call="web.external_layout">
+                <t t-set="wizard" t-value="doc"/>
+
+                <!-- ══════════════════════════════════════════════════════
+                     MODE NORMAL — une page par code inventaire
+                ═══════════════════════════════════════════════════════ -->
+                <t t-if="wizard.inventory_mode == 'normal'">
+                    <t t-set="quants" t-value="wizard._get_quants()"/>
+                    <t t-set="codes" t-value="quants.mapped('code_inventory_id')"/>
+
+                    <t t-if="codes">
+                        <t t-foreach="codes" t-as="code_inv">
+                            <t t-set="code_quants" t-value="quants.filtered(lambda q: q.code_inventory_id.id == code_inv.id)"/>
+                            <div class="page" t-att-style="'page-break-before: always;' if not code_inv_first else ''">
+                                <div class="oe_structure"/>
+
+                                <div class="row">
+                                    <div class="col-4">
+                                        <strong><t t-esc="wizard.company_id.name"/></strong>
+                                    </div>
+                                    <div class="col-4 text-center">
+                                        <strong>Code Inv. : <t t-esc="code_inv.name"/></strong>
+                                    </div>
+                                    <div class="col-4 text-right">
+                                        Date : <t t-esc="wizard.date.strftime('%d/%m/%Y')"/>
+                                    </div>
+                                </div>
+
+                                <div class="row mt-2">
+                                    <div class="col-12 text-center">
+                                        <h4>FICHE DE COMPTAGE — INVENTAIRE PHYSIQUE</h4>
+                                    </div>
+                                </div>
+
+                                <div class="row mt-3">
+                                    <div class="col-12" style="border: solid 1px #000; background: #f0f0f0; padding: 4px;">
+                                        <div class="row">
+                                            <div class="col-2"><strong>Code Article</strong></div>
+                                            <div class="col-5"><strong>Désignation</strong></div>
+                                            <div class="col-2 text-center"><strong>Emplacement</strong></div>
+                                            <div class="col-3 text-center"><strong>Qté Comptée</strong></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row mt-2">
+                                    <div class="col-12">
+                                        <t t-foreach="code_quants" t-as="quant">
+                                            <div class="row" style="border-bottom: 1px solid #ddd; padding: 8px 0; min-height: 32px;">
+                                                <div class="col-2" style="font-size: 9pt;">
+                                                    <t t-esc="quant.product_id.default_code or ''"/>
+                                                </div>
+                                                <div class="col-5" style="font-size: 9pt;">
+                                                    <t t-esc="quant.product_id.name"/>
+                                                </div>
+                                                <div class="col-2 text-center" style="font-size: 8pt; color: #555;">
+                                                    <t t-esc="quant.location_id.complete_name"/>
+                                                </div>
+                                                <div class="col-3 text-center">
+                                                    <strong>_______________</strong>
+                                                </div>
+                                            </div>
+                                        </t>
+                                    </div>
+                                </div>
+
+                                <div class="row mt-4">
+                                    <div class="col-4">Compteur : _______________________</div>
+                                    <div class="col-4 text-center">Vérificateur : _______________________</div>
+                                    <div class="col-4 text-right">
+                                        Nb articles : <strong><t t-esc="len(code_quants)"/></strong>
+                                    </div>
+                                </div>
+
+                                <div class="oe_structure"/>
+                            </div>
+                        </t>
+                    </t>
+
+                    <!-- Cas : aucun code (quants sans code_inventory_id) -->
+                    <t t-set="no_code_quants" t-value="quants.filtered(lambda q: not q.code_inventory_id)"/>
+                    <t t-if="no_code_quants">
+                        <div class="page" style="page-break-before: always;">
+                            <div class="oe_structure"/>
+                            <div class="row">
+                                <div class="col-6"><strong><t t-esc="wizard.company_id.name"/></strong></div>
+                                <div class="col-6 text-right">Date : <t t-esc="wizard.date.strftime('%d/%m/%Y')"/></div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-12 text-center">
+                                    <h4>FICHE DE COMPTAGE — SANS CODE INVENTAIRE</h4>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12" style="border: solid 1px #000; background: #f0f0f0; padding: 4px;">
+                                    <div class="row">
+                                        <div class="col-2"><strong>Code Article</strong></div>
+                                        <div class="col-5"><strong>Désignation</strong></div>
+                                        <div class="col-2 text-center"><strong>Emplacement</strong></div>
+                                        <div class="col-3 text-center"><strong>Qté Comptée</strong></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-12">
+                                    <t t-foreach="no_code_quants" t-as="quant">
+                                        <div class="row" style="border-bottom: 1px solid #ddd; padding: 8px 0; min-height: 32px;">
+                                            <div class="col-2" style="font-size: 9pt;"><t t-esc="quant.product_id.default_code or ''"/></div>
+                                            <div class="col-5" style="font-size: 9pt;"><t t-esc="quant.product_id.name"/></div>
+                                            <div class="col-2 text-center" style="font-size: 8pt; color: #555;"><t t-esc="quant.location_id.complete_name"/></div>
+                                            <div class="col-3 text-center"><strong>_______________</strong></div>
+                                        </div>
+                                    </t>
+                                </div>
+                            </div>
+                            <div class="row mt-4">
+                                <div class="col-4">Compteur : _______________________</div>
+                                <div class="col-4 text-center">Vérificateur : _______________________</div>
+                                <div class="col-4 text-right">Nb articles : <strong><t t-esc="len(no_code_quants)"/></strong></div>
+                            </div>
+                            <div class="oe_structure"/>
+                        </div>
+                    </t>
+                </t>
+
+                <!-- ══════════════════════════════════════════════════════
+                     MODE LIBRE — une seule page, produits librement choisis
+                ═══════════════════════════════════════════════════════ -->
+                <t t-if="wizard.inventory_mode == 'libre'">
+                    <t t-set="products" t-value="wizard._get_libre_products()"/>
+                    <div class="page">
+                        <div class="oe_structure"/>
+
+                        <div class="row">
+                            <div class="col-6"><strong><t t-esc="wizard.company_id.name"/></strong></div>
+                            <div class="col-6 text-right">Date : <t t-esc="wizard.date.strftime('%d/%m/%Y')"/></div>
+                        </div>
+
+                        <div class="row mt-2">
+                            <div class="col-12 text-center">
+                                <h4>FICHE DE COMPTAGE — INVENTAIRE LIBRE</h4>
+                            </div>
+                        </div>
+
+                        <div class="row mt-3">
+                            <div class="col-12" style="border: solid 1px #000; background: #f0f0f0; padding: 4px;">
+                                <div class="row">
+                                    <div class="col-2"><strong>Code Article</strong></div>
+                                    <div class="col-7"><strong>Désignation</strong></div>
+                                    <div class="col-3 text-center"><strong>Qté Comptée</strong></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <t t-foreach="products" t-as="product">
+                                    <div class="row" style="border-bottom: 1px solid #ddd; padding: 8px 0; min-height: 32px;">
+                                        <div class="col-2" style="font-size: 9pt;">
+                                            <t t-esc="product.default_code or ''"/>
+                                        </div>
+                                        <div class="col-7" style="font-size: 9pt;">
+                                            <t t-esc="product.name"/>
+                                        </div>
+                                        <div class="col-3 text-center">
+                                            <strong>_______________</strong>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+                        </div>
+
+                        <div class="row mt-4">
+                            <div class="col-4">Compteur : _______________________</div>
+                            <div class="col-4 text-center">Vérificateur : _______________________</div>
+                            <div class="col-4 text-right">
+                                Nb articles : <strong><t t-esc="len(products)"/></strong>
+                            </div>
+                        </div>
+
+                        <div class="oe_structure"/>
+                    </div>
+                </t>
+
+            </t>
+        </template>
+
+        <template id="report_fiche_comptage">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="doc">
+                    <t t-call="custom_stock.report_fiche_comptage_document"/>
+                </t>
+            </t>
+        </template>
+
+        <record id="action_report_fiche_comptage" model="ir.actions.report">
+            <field name="name">Fiche de Comptage</field>
+            <field name="model">fiche.comptage.wizard</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">custom_stock.report_fiche_comptage</field>
+            <field name="report_file">custom_stock.report_fiche_comptage</field>
+            <field name="print_report_name">'Fiche_Comptage_%s' % object.date.strftime('%d%m%Y')</field>
+            <field name="paperformat_id" ref="base.paperformat_euro"/>
+        </record>
+
+    </data>
+</odoo>

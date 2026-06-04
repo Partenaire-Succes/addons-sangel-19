@@ -208,6 +208,7 @@ class PhysicalInventory(models.Model):
         domain = [
             ('location_id.usage', 'in', ['internal', 'transit']),
             ('product_id.active', '=', True),
+            ('product_id.type', '=', 'consu'),
         ]
 
         if self.code_inventory_id:
