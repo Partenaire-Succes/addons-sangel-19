@@ -42,7 +42,6 @@
                                         <div class="row">
                                             <div class="col-2"><strong>Code Article</strong></div>
                                             <div class="col-5"><strong>Désignation</strong></div>
-                                            <div class="col-2 text-center"><strong>Emplacement</strong></div>
                                             <div class="col-3 text-center"><strong>Qté Comptée</strong></div>
                                         </div>
                                     </div>
@@ -57,9 +56,6 @@
                                                 </div>
                                                 <div class="col-5" style="font-size: 9pt;">
                                                     <t t-esc="quant.product_id.name"/>
-                                                </div>
-                                                <div class="col-2 text-center" style="font-size: 8pt; color: #555;">
-                                                    <t t-esc="quant.location_id.complete_name"/>
                                                 </div>
                                                 <div class="col-3 text-center">
                                                     <strong>_______________</strong>
