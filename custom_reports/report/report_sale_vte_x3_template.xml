@@ -29,7 +29,7 @@
                             </td>
                             <td style="background: #1A5276; border: 2px solid #1a1a2e; border-left: none; text-align: center; padding: 8px;">
                                 <span style="font-size: 14pt; font-weight: 900; letter-spacing: 2px; color: white;">
-                                    RAPPORT DE VENTES X3
+                                    Rapport Détaillé des Ventes
                                 </span><br/>
                                 <span style="font-size: 9pt; color: #D6EAF8;">
                                     Du <t t-esc="date_from.strftime('%d/%m/%Y')"/>
@@ -168,7 +168,7 @@
     </record>
 
     <record id="action_report_sale_vte_x3" model="ir.actions.report">
-        <field name="name">Rapport de Ventes X3</field>
+        <field name="name">Rapport Détaillé des Ventes</field>
         <field name="model">sale.vte.x3.report.wizard</field>
         <field name="report_type">qweb-pdf</field>
         <field name="report_name">custom_reports.report_sale_vte_x3_document</field>

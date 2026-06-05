@@ -4,7 +4,7 @@
         <field name="name">sale.vte.x3.report.wizard.form</field>
         <field name="model">sale.vte.x3.report.wizard</field>
         <field name="arch" type="xml">
-            <form string="Rapport de Ventes X3">
+            <form string="Rapport Détaillé des Ventes">
                 <sheet>
                     <group string="Période">
                         <group>
@@ -58,14 +58,14 @@
     </record>
 
     <record id="action_sale_vte_x3_report_wizard" model="ir.actions.act_window">
-        <field name="name">Rapport de Ventes X3</field>
+        <field name="name">Rapport Détaillé des Ventes</field>
         <field name="res_model">sale.vte.x3.report.wizard</field>
         <field name="view_mode">form</field>
         <field name="target">new</field>
     </record>
 
     <menuitem id="menu_sale_vte_x3_report"
-              name="Rapport de Ventes X3"
+              name="Rapport Détaillé des Ventes"
               parent="custom_reports.menu_reports_sale"
               action="action_sale_vte_x3_report_wizard"
               sequence="60"/>

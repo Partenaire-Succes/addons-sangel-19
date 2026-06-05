@@ -8,7 +8,7 @@ from odoo.exceptions import UserError
 
 class SaleVteX3ReportWizard(models.TransientModel):
     _name = 'sale.vte.x3.report.wizard'
-    _description = 'Rapport de Ventes X3'
+    _description = 'Rapport Détaillé des Ventes'
 
     date_from = fields.Date(string='Date début', required=True, default=fields.Date.context_today)
     date_to = fields.Date(string='Date fin', required=True, default=fields.Date.context_today)
@@ -97,7 +97,7 @@ class SaleVteX3ReportWizard(models.TransientModel):
             ('order_id.date_order', '>=', self._dt_from()),
             ('order_id.date_order', '<=', self._dt_to()),
             ('product_id', '!=', False),
-            ('product_id.type', '=', 'consu'),
+            ('product_id.default_code', '!=', False),
         ]
         if self.cat_gestion_ids:
             domain.append(('product_id.cat_gestion_id', 'in', self.cat_gestion_ids.ids))
@@ -157,7 +157,7 @@ class SaleVteX3ReportWizard(models.TransientModel):
             ('order_id.date_order', '>=', self._dt_from()),
             ('order_id.date_order', '<=', self._dt_to()),
             ('product_id', '!=', False),
-            ('product_id.type', '=', 'consu'),
+            ('product_id.default_code', '!=', False),
         ]
         if self.cat_gestion_ids:
             domain.append(('product_id.cat_gestion_id', 'in', self.cat_gestion_ids.ids))
@@ -470,7 +470,7 @@ class SaleVteX3ReportWizard(models.TransientModel):
 
 class ReportSaleVteX3(models.AbstractModel):
     _name = 'report.custom_reports.report_sale_vte_x3_document'
-    _description = 'Rapport de Ventes X3'
+    _description = 'Rapport Détaillé des Ventes'
 
     @api.model
     def _get_report_values(self, docids, data=None):
