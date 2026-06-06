@@ -20,6 +20,7 @@ class ProductCompanyStatus(models.Model):
     _description = 'Statut produit par société'
     _rec_name = 'product_id'
     _order = 'product_id, company_id'
+    _inherit = ['mail.thread', 'mail.activity.mixin']
 
     product_id = fields.Many2one(
         'product.template',
@@ -32,12 +33,14 @@ class ProductCompanyStatus(models.Model):
         'res.company',
         required=True,
         default=lambda self: self.env.company,
-        index=True
+        index=True,
+        tracking=True
     )
 
     status_id = fields.Many2one(
         'product.status',
-        required=True
+        required=True,
+        tracking=True
     )
 
     _sql_constraints = [
