@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <!--
+        Ajout du bouton Bixolon dans le dropdown de la navbar POS.
+        On hérite du template natif et on insère juste avant la fermeture
+        du bloc "status-buttons".
+    -->
+    <t t-inherit="point_of_sale.Navbar" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('status-buttons')]" position="inside">
+
+            <!-- Bouton visible uniquement si l'afficheur Bixolon est activé dans la config POS -->
+            <t t-if="hasBixolonDisplay">
+                <button
+                    class="btn btn-lg lh-lg"
+                    t-attf-class="btn-{{ bixolonConnected ? 'success' : 'outline-secondary' }}"
+                    t-on-click="onClickBixolonConnect"
+                    t-attf-title="{{ bixolonConnected ? 'Afficheur connecté — cliquer pour déconnecter' : 'Connecter l\'afficheur Bixolon BCD-2000' }}">
+                    <i class="fa fa-fw fa-television"/>
+                    <span t-if="!ui.isSmall" class="ms-1">
+                        <t t-if="bixolonConnected">Afficheur ✓</t>
+                        <t t-else="">Afficheur</t>
+                    </span>
+                </button>
+            </t>
+
+        </xpath>
+    </t>
+
+</templates>

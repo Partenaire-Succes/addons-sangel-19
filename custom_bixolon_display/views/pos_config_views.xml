@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_pos_config_bixolon_form" model="ir.ui.view">
+        <field name="name">pos.config.bixolon.form</field>
+        <field name="model">pos.config</field>
+        <field name="inherit_id" ref="point_of_sale.pos_config_view_form"/>
+        <field name="arch" type="xml">
+
+            <!--
+                On insère notre section après "other_devices" (ePos Printer)
+                qui est dans le bloc hardware de la vue POS config Odoo 19.
+                La vue utilise <setting> dans <div class="o_settings_container">,
+                pas de <notebook>.
+            -->
+            <xpath expr="//setting[@id='other_devices']" position="after">
+
+                <setting id="bixolon_display"
+                         string="Afficheur Client Bixolon BCD-2000"
+                         help="Active l'afficheur VFD Bixolon BCD-2000 via USB (Web Serial API — Edge/Chrome).">
+                    <field name="has_bixolon_display"/>
+                    <div class="content-group" invisible="not has_bixolon_display">
+                        <div class="alert alert-info mt8" role="alert">
+                            <strong>Configuration requise sur le PC caisse :</strong><br/>
+                            1. Brancher le BCD-2000 en USB.<br/>
+                            2. Vérifier dans <em>Gestionnaire de périphériques → Ports (COM &amp; LPT)</em>
+                               que le BCD-2000 apparaît (ex: COM3). Sinon, installer le driver Bixolon.<br/>
+                            3. Si Odoo tourne en HTTP, configurer dans Edge :<br/>
+                               <code>edge://flags/#unsafely-treat-insecure-origin-as-secure</code><br/>
+                               → Ajouter l'URL Odoo → Enabled → Relaunch.<br/>
+                            4. Dans le POS, cliquer le bouton <strong>"Afficheur"</strong>
+                               dans la barre du haut pour connecter le port COM.
+                        </div>
+                    </div>
+                </setting>
+
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>
