@@ -68,6 +68,14 @@
                             </div>
                         </div>
 
+                        <!-- Filtre fournisseurs appliqué -->
+                        <div class="row mb16" t-if="doc.partner_ids">
+                            <div class="col-12 text-left">
+                                <strong>Fournisseur(s) filtré(s) :</strong>
+                                <span t-esc="', '.join(doc.partner_ids.mapped('name'))"/>
+                            </div>
+                        </div>
+
                         <!-- Statistiques globales -->
                         <h3>Résumé</h3>
                         <table class="table table-sm table-bordered">

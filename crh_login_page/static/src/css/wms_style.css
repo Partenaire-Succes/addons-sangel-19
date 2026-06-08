@@ -1,0 +1,117 @@
+#wrapwrap>main {
+    -webkit-box-flex: 1;
+    -webkit-flex: 1 0 auto;
+    flex: 1 0 auto;
+    background-color: #fff;
+}
+
+/* .ml-auto,
+.mx-auto,
+.o_portal_security_body {
+    margin-left: 46px !important;
+} */
+
+.container,
+.o_container_small {
+    width: 65%;
+    padding-right: 0px !important;
+    padding-left: 0px !important;
+    margin-right: -26px !important;
+    position: fixed;
+    right: 0;
+    bottom: -3rem;
+    top: -3rem;
+
+    /* margin-left: 0 !important; */
+
+    height: auto;
+    float: inline-end;
+    /* background-color: #00F !important; */
+
+    /* background-image: url('/crh_login_page/static/src/img/bg.jpg');
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center; */
+}
+
+.c_login_container {
+    background: #FFF !important;
+    margin-left: -133%;
+}
+
+.ml-auto,
+.mx-auto,
+.o_portal_security_body {
+    margin-left: -33% !important;
+    margin-top: -32%;
+    position: fixed;
+}
+
+
+.bg-100 {
+    background-color: #00F0 !important;
+    color: #212529;
+}
+
+
+form label {
+    font-weight: bold;
+    font-size: 11px;
+    color: #000;
+}
+
+.form-control {
+    border-radius: 0px !important;
+    border-color: #d4d4d4 !important;
+    background-color: none;
+    border-radius: 10px !important;
+    height: auto;
+}
+
+.btn-primary {
+    background-color: #ff7826 !important;
+    border-color: #ff7826 !important;
+    color: #FFF !important;
+}
+
+.border-top {
+    border-top: 1px solid #FFF !important;
+}
+
+small,
+.small {
+    font-size: 80%;
+    font-weight: 400;
+    display: none;
+}
+
+.wms-login{
+    height: auto !important;
+    border-radius: 10px !important;
+    border-color: #ff7826 !important;
+    font-size: 26px !important;
+    font-weight: bold !important;
+    width: 80% !important;
+    margin: auto !important;
+}
+
+.border-bottom {
+    border-bottom: 1px solid #FFF !important;
+}
+
+.row {
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: flex;
+    -webkit-flex-wrap: wrap;
+    flex-wrap: wrap;
+    margin-right: -15px;
+    /* margin-left: 0px; */
+    margin-top: -10px;
+    margin-bottom: 30px;
+}
+
+a,
+.btn-link {
+    color: #000 !important;
+}
