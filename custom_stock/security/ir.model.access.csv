@@ -34,10 +34,5 @@ access_retour_fournisseur_wizard_line,retour.fournisseur.wizard.line,model_retou
 access_rapport_retours_receptions_wizard,rapport.retours.receptions.wizard,model_rapport_retours_receptions_wizard,,1,1,1,1
 access_reception_correction_info_wizard,reception.correction.info.wizard,model_reception_correction_info_wizard,,1,1,1,1
 access_fiche_comptage_wizard,fiche.comptage.wizard,model_fiche_comptage_wizard,,1,1,1,1
-<<<<<<< HEAD
 access_stock_move_avco_read,stock.move.avco.read,model_stock_move,stock.group_stock_manager,1,0,0,0
-=======
-access_fix_price_inventory_line,fix.price.inventory.line,model_fix_price_inventory_line,,1,1,1,1
-access_stock_move_avco_read,stock.move.avco.read,model_stock_move,stock.group_stock_manager,1,0,0,0
-access_stock_move_product_report_wizard,stock.move.product.report.wizard,model_stock_move_product_report_wizard,,1,1,1,1
->>>>>>> marcel_dev
+

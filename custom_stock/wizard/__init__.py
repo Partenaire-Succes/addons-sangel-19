@@ -6,9 +6,6 @@ from . import retour_inventaire_wizard
 from . import retour_fournisseur_wizard
 from . import rapport_retours_receptions_wizard
 from . import reception_correction_info_wizard
-<<<<<<< HEAD
-=======
 from . import orderpoint_import_wizard
 from . import fix_price_inventory_wizard
 from . import stock_move_product_report_wizard
->>>>>>> marcel_dev
