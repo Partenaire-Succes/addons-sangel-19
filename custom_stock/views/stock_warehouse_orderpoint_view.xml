@@ -26,7 +26,7 @@
             </xpath>
 
             <xpath expr="//notebook/page[@name='operations']/field[@name='move_ids']//field[@name='quantity']" position="after">
-                <field name="standard_price" invisible="1" string="Cout"/>
+                <field name="standard_price" column_invisible="1" string="Cout"/>
                 <field name="price_unit" string="Prix unitaire" sum="Total amount"/>
             </xpath>
             <xpath expr="//notebook/page[@name='operations']/field[@name='move_ids']//field[@name='product_uom']" position="after">

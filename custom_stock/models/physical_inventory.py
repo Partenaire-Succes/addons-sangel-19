@@ -233,17 +233,42 @@ class PhysicalInventory(models.Model):
             return
 
         self.physical_line_ids.unlink()
-        
+
         if self.inventory_mode == 'normal':
-            # Normal mode: generate from stock quants
+            company = self.company_id
+
+            # Batch : templates avec statut 'C' pour la société de l'inventaire
+            valid_tmpl_ids = set(
+                self.env['product.company.status'].search([
+                    ('company_id', '=', company.id),
+                    ('status_id.code', '=', 'C'),
+                ]).mapped('product_id').ids
+            )
+
+            # Batch : templates dont la société est dans allowed_company_ids (si le champ existe)
+            has_allowed = bool(self.env['product.template']._fields.get('allowed_company_ids'))
+            if has_allowed:
+                allowed_tmpl_ids = set(
+                    self.env['product.template'].search([
+                        '|',
+                        ('allowed_company_ids', '=', False),
+                        ('allowed_company_ids', 'in', [company.id]),
+                    ]).ids
+                )
+
             for stck in self.line_quant_ids:
+                tmpl_id = stck.product_tmpl_id.id
+                if tmpl_id not in valid_tmpl_ids:
+                    continue
+                if has_allowed and tmpl_id not in allowed_tmpl_ids:
+                    continue
                 self.env['physical.inventory.line'].create({
                     'inventory_physical_id': self.id,
                     'quant_id': stck.id,
-                    'product_tmpl_id' : stck.product_tmpl_id.id,
-                    'product_id' : stck.product_id.id,
-                    'location_id' : stck.location_id.id,
-                    'quantity' : stck.quantity,
+                    'product_tmpl_id': tmpl_id,
+                    'product_id': stck.product_id.id,
+                    'location_id': stck.location_id.id,
+                    'quantity': stck.quantity,
                     'price': stck.product_tmpl_id.standard_price,
                     'lot_id': stck.lot_id.id if stck.lot_id else False,
                     'product_uom_id': stck.product_uom_id.id,
@@ -284,8 +309,7 @@ class PhysicalInventory(models.Model):
         lines = self.physical_line_ids.filtered(
             lambda l: l.active
             and l.location_id.usage == 'internal'
-            and l.product_tmpl_id.current_company_status_id.code == 'C'
-            and l.company_id in l.product_tmpl_id.allowed_company_ids
+            and l.is_inventoriable
         )
         return lines
 
@@ -364,7 +388,36 @@ class PhysicalInventoryLine(models.Model):
     lot_id = fields.Many2one('stock.lot', string='Numéro de Lot', domain="[('product_id', '=', product_id)]")
     company_id = fields.Many2one('res.company', string='Société', related='inventory_physical_id.company_id')
     code_article = fields.Char(string='Code Article', related='product_tmpl_id.code_article')
-                
+
+    is_inventoriable = fields.Boolean(
+        string='Article inventoriable',
+        compute='_compute_is_inventoriable',
+        store=True,
+        depends=[
+            'product_tmpl_id',
+            'product_tmpl_id.company_status_ids',
+            'product_tmpl_id.company_status_ids.status_id',
+            'product_tmpl_id.company_status_ids.company_id',
+            'inventory_physical_id.company_id',
+        ]
+    )
+
+    def _compute_is_inventoriable(self):
+        CompanyStatus = self.env['product.company.status']
+        for line in self:
+            product = line.product_tmpl_id
+            company = line.inventory_physical_id.company_id
+            if not product or not company:
+                line.is_inventoriable = False
+                continue
+            status_ok = CompanyStatus.search_count([
+                ('product_id', '=', product.id),
+                ('company_id', '=', company.id),
+                ('status_id.code', '=', 'C'),
+            ]) > 0
+            allowed_companies = getattr(product, 'allowed_company_ids', False)
+            company_ok = not allowed_companies or company in allowed_companies
+            line.is_inventoriable = status_ok and company_ok
 
     def unlink(self):
         for line in self:

@@ -23,3 +23,13 @@ class ProductTemplate(models.Model):
                 ('allowed_company_ids', 'in', user_companies)
             ] + list(args)
         return super(ProductTemplate, self).search(args, **kwargs)
+
+    def write(self, vals):
+        res = super().write(vals)
+        if 'allowed_company_ids' in vals:
+            lines = self.env['physical.inventory.line'].sudo().search([
+                ('product_tmpl_id', 'in', self.ids)
+            ])
+            if lines:
+                lines._compute_is_inventoriable()
+        return res

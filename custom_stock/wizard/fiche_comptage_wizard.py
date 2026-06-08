@@ -57,9 +57,10 @@ class FicheComptageWizard(models.TransientModel):
 
     def _get_quants(self):
         """Retourne les quants filtrés (mode normal)."""
+        company = self.company_id
         domain = [
             ('location_id.usage', '=', 'internal'),
-            ('company_id', '=', self.company_id.id),
+            ('company_id', '=', company.id),
             ('product_id.active', '=', True),
             ('product_id.type', '=', 'consu'),
         ]
@@ -67,6 +68,22 @@ class FicheComptageWizard(models.TransientModel):
             domain.append(('code_inventory_id', 'in', self.code_inventory_ids.ids))
         if self.code_category_ids:
             domain.append(('code_inventory_id.code_category_id', 'in', self.code_category_ids.ids))
+
+        # Filtre statut 'C' pour la société sélectionnée (en SQL via les IDs valides)
+        valid_tmpl_ids = self.env['product.company.status'].search([
+            ('company_id', '=', company.id),
+            ('status_id.code', '=', 'C'),
+        ]).mapped('product_id').ids
+        domain.append(('product_tmpl_id', 'in', valid_tmpl_ids))
+
+        # Filtre allowed_company_ids si le champ existe
+        if self.env['product.template']._fields.get('allowed_company_ids'):
+            domain += [
+                '|',
+                ('product_tmpl_id.allowed_company_ids', '=', False),
+                ('product_tmpl_id.allowed_company_ids', 'in', [company.id]),
+            ]
+
         return self.env['stock.quant'].search(domain, order='code_inventory_id, product_id')
 
     def _get_libre_products(self):
