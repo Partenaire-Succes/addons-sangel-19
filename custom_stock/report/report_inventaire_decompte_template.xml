@@ -40,7 +40,7 @@
 
                             <div class="row mt-4">
                                 <div class="col-12">
-                                    <t t-set="filtered_lines" t-value="doc.physical_line_ids.filtered(lambda l: l.code_inventory_id.id == code_inv.id)"/>
+                                    <t t-set="filtered_lines" t-value="doc.physical_line_ids.filtered(lambda l: l.code_inventory_id.id == code_inv.id and l.location_id.usage == 'internal' and l.product_tmpl_id.current_company_status_id.code == 'C' and l.company_id in l.product_tmpl_id.allowed_company_ids)"/>
                                     <t t-if="filtered_lines">
                                         <t t-foreach="filtered_lines" t-as="line">
                                             <div class="row" style="margin-bottom: 15px;">
@@ -99,7 +99,7 @@
                         <div class="row mt-4">
                             <div class="col-12">
                                 <t t-if="doc.physical_line_ids">
-                                    <t t-foreach="doc.physical_line_ids" t-as="line">
+                                    <t t-foreach="doc.physical_line_ids.filtered(lambda l: l.location_id.usage == 'internal' and l.product_tmpl_id.current_company_status_id.code == 'C' and l.company_id in l.product_tmpl_id.allowed_company_ids)" t-as="line">
                                         <div class="row" style="margin-bottom: 15px;">
                                             <div class="col-2">
                                                 <span t-field="line.product_tmpl_id.code_article"/>

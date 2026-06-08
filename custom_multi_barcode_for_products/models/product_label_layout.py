@@ -10,6 +10,14 @@ class ProductLabelLayout(models.TransientModel):
         string="Prix à imprimer",
         compute='_compute_price_info',
     )
+    is_grame = fields.Boolean(string='Prix au grammage')
+    unit_grame = fields.Float(string='Grammage (g)', default=100.0)
+
+    def _prepare_report_data(self):
+        xml_id, data = super()._prepare_report_data()
+        data['is_grame'] = self.is_grame
+        data['unit_grame'] = self.unit_grame if self.is_grame else 0.0
+        return xml_id, data
 
     @api.depends('product_ids', 'product_tmpl_ids', 'pricelist_id')
     def _compute_price_info(self):

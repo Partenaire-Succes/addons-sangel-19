@@ -190,7 +190,7 @@ class PhysicalInventory(models.Model):
                 line.quantity = quant.quantity
             line.price = line.product_tmpl_id.standard_price
 
-    @api.constrains('inventory_mode', 'code_inventory_id', 'code_category_id', 'team_inventory_id')
+    @api.constrains('inventory_mode', 'code_inventory_id', 'code_category_id')
     def _check_required_fields_for_normal_mode(self):
         """Validate that required fields are set based on inventory mode"""
         for record in self:
@@ -199,8 +199,6 @@ class PhysicalInventory(models.Model):
                     raise UserError(_("Au moins un 'Code Inventaire' est obligatoire en mode 'Inventaire'."))
                 if not record.code_category_id:
                     raise UserError(_("La 'Categorie Code Inventaire' est obligatoire en mode 'Inventaire'."))
-                if not record.team_inventory_id:
-                    raise UserError(_("L'équipe est obligatoire en mode 'Inventaire'."))
 
     @api.onchange('code_inventory_id')
     def get_products_quants(self):
@@ -283,9 +281,12 @@ class PhysicalInventory(models.Model):
 
     def _get_filtered_lines(self):
         """Méthode pour filtrer les lignes selon vos critères"""
-        lines = self.physical_line_ids.filtered(lambda l: l.active)    
-        if self.is_negative_stock:
-            lines = lines.filtered(lambda l: l.qty_diff < 0)        
+        lines = self.physical_line_ids.filtered(
+            lambda l: l.active
+            and l.location_id.usage == 'internal'
+            and l.product_tmpl_id.current_company_status_id.code == 'C'
+            and l.company_id in l.product_tmpl_id.allowed_company_ids
+        )
         return lines
 
     def _log_print_action(self):

@@ -6,6 +6,11 @@
         <field name="inherit_id" ref="product.product_label_layout_form"/>
         <field name="arch" type="xml">
             <xpath expr="//footer" position="before">
+                <group string="Grammage">
+                    <field name="is_grame"/>
+                    <field name="unit_grame" invisible="not is_grame" required="is_grame"
+                           string="Grammage (g)"/>
+                </group>
                 <group string="Prix à imprimer" col="1"
                        invisible="not product_ids and not product_tmpl_ids">
                     <field name="price_info" nolabel="1" readonly="1"/>

@@ -42,6 +42,19 @@ class FicheComptageWizard(models.TransientModel):
         domain=[('type', '=', 'consu'), ('active', '=', True)],
     )
 
+    article_count = fields.Integer(
+        string="Nombre d'articles",
+        compute='_compute_article_count',
+    )
+
+    @api.depends('inventory_mode', 'company_id', 'code_inventory_ids', 'code_category_ids', 'product_ids')
+    def _compute_article_count(self):
+        for rec in self:
+            if rec.inventory_mode == 'normal':
+                rec.article_count = len(rec._get_quants())
+            else:
+                rec.article_count = len(rec.product_ids)
+
     def _get_quants(self):
         """Retourne les quants filtrés (mode normal)."""
         domain = [

@@ -12,6 +12,9 @@
                         <field name="date"/>
                         <field name="inventory_mode" widget="radio"/>
                     </group>
+                    <group>
+                        <field name="article_count" readonly="1"/>
+                    </group>
                 </group>
 
                 <!-- Mode normal -->

@@ -70,11 +70,11 @@
                                        domain="[('code_category_id', '=', code_category_id)]"
                                        readonly="state == 'done'"
                                        options="{'no_create': True}"/>
-                                <field name="team_inventory_id"
+                                <!-- <field name="team_inventory_id"
                                        invisible="inventory_mode == 'libre'"
                                        required="inventory_mode == 'normal'"
                                        readonly="state == 'done'"
-                                       options="{'no_create': True}"/>
+                                       options="{'no_create': True}"/> -->
                             </group>
                             <group>
                                 <field name="date" readonly="state == 'done'"/>

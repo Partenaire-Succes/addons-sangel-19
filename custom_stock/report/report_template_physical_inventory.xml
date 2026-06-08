@@ -46,7 +46,7 @@
                             <h4>Détail des articles inventoriés</h4>
 
                             <!-- Filtrer les lignes selon les besoins -->
-                            <t t-set="filtered_lines" t-value="doc.physical_line_ids"/>
+                            <t t-set="filtered_lines" t-value="doc.physical_line_ids.filtered(lambda l: l.location_id.usage == 'internal' and l.product_tmpl_id.current_company_status_id.code == 'C' and l.company_id in l.product_tmpl_id.allowed_company_ids)"/>
 
                             <t t-if="filtered_lines">
                                 <table class="table table-sm table-bordered">
