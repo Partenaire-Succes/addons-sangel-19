@@ -4,9 +4,11 @@
  * BixolonDisplayManager — communication série avec le Bixolon BCD-2000
  * via Web Serial API (Edge/Chrome 89+).
  *
- * Protocole VFD Bixolon BCD-2000 (2 lignes × 20 caractères) :
+ * Protocole VFD Bixolon BCD-2000 (2 lignes × 20 caractères, ASCII/CP437) :
  *   0x0C              = Effacer l'écran + curseur en ligne 1, col 1
- *   \x1B[2;1H         = Positionner curseur en ligne 2, col 1 (séquence ANSI)
+ *   (pas de séquences ANSI/VT100 — le BCD-2000 les affiche comme du texte
+ *    brut ; le passage à la ligne 2 se fait via le retour-ligne automatique
+ *    du VFD après 20 caractères)
  *   Baud : 9600, 8 bits, pas de parité, 1 stop bit
  */
 
@@ -162,18 +164,23 @@ class BixolonDisplayManager {
     }
 
     /**
-     * Envoie 2 lignes sur l'afficheur avec positionnement ANSI explicite.
-     * Plus fiable que l'auto-wrap qui dépend de la config interne du BCD-2000.
+     * Envoie 2 lignes sur l'afficheur.
      *
-     * Séquence : 0x0C (clear) + ligne1 (20 chars) + ESC[2;1H (cursor→ligne2) + ligne2 (20 chars)
+     * Le BCD-2000 ne comprend pas les séquences ANSI/VT100 (ESC[2;1H...) :
+     * il les affiche telles quelles comme du texte brut (ex. "←[2;1H1x …"),
+     * ce qui pollue l'écran. On compte donc sur le retour à la ligne
+     * automatique du VFD après 20 caractères (comportement standard d'un
+     * afficheur 2×20), sans tenter de positionner le curseur explicitement.
+     *
+     * Séquence envoyée : 0x0C (clear + curseur ligne 1 col 1)
+     *                    + ligne1 (20 caractères) + ligne2 (20 caractères)
      */
     async sendDisplay(line1, line2) {
         if (!this.isConnected) return;
         const l1  = this._formatLine(line1);
         const l2  = this._formatLine(line2);
         const enc = new TextEncoder();
-        // ESC [ 2 ; 1 H = positionne le curseur en ligne 2, colonne 1
-        const cmd = '\x0C' + l1 + '\x1B[2;1H' + l2;
+        const cmd = '\x0C' + l1 + l2;
         await this._write(enc.encode(cmd));
     }
 
