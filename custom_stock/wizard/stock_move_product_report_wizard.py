@@ -19,9 +19,9 @@ class StockMoveProductReportWizard(models.TransientModel):
     product_ids = fields.Many2many(
         comodel_name='product.product',
         string='Produits',
-        required=True,
-        help="Sélectionnez un ou plusieurs articles : le rapport sortira "
-             "tous les mouvements de stock validés pour chacun d'eux.",
+        help="Sélectionnez un ou plusieurs articles pour limiter le rapport. "
+             "Laisser vide pour inclure tous les articles ayant eu des "
+             "mouvements de stock validés sur la période.",
     )
     date_debut = fields.Date(string='Date de début')
     date_fin = fields.Date(string='Date de fin')
@@ -59,17 +59,19 @@ class StockMoveProductReportWizard(models.TransientModel):
         return 'internal', _('Interne')
 
     def _get_report_data(self):
-        """Retourne, pour chaque produit sélectionné : ses mouvements détaillés
-        (date, type d'opération, sens entrée/sortie, référence, quantité, prix,
-        valeur) ainsi que les sommes globales et les sommes séparées par sens
-        (entrées / sorties / internes), pour une vue professionnelle claire."""
+        """Retourne, pour chaque produit (sélectionné, ou tous si aucun choisi) :
+        ses mouvements détaillés (date, type d'opération, sens entrée/sortie,
+        référence, quantité, prix, valeur) ainsi que les sommes globales et les
+        sommes séparées par sens (entrées / sorties / internes), pour une vue
+        professionnelle claire."""
         self.ensure_one()
 
         domain = [
-            ('product_id', 'in', self.product_ids.ids),
             ('state', '=', 'done'),
             ('company_id', '=', self.company_id.id),
         ]
+        if self.product_ids:
+            domain.append(('product_id', 'in', self.product_ids.ids))
         if self.date_debut:
             domain.append(('date', '>=', str(self.date_debut) + ' 00:00:00'))
         if self.date_fin:
@@ -79,8 +81,12 @@ class StockMoveProductReportWizard(models.TransientModel):
         if not moves:
             raise UserError(_("Aucun mouvement trouvé pour les articles et la période sélectionnés."))
 
+        # Si aucun article n'est choisi, on couvre tous ceux qui ont bougé,
+        # triés par nom pour une lecture stable.
+        products = self.product_ids or moves.mapped('product_id').sorted(key=lambda p: p.display_name)
+
         result = []
-        for product in self.product_ids:
+        for product in products:
             product_moves = moves.filtered(lambda m: m.product_id.id == product.id)
             if not product_moves:
                 continue

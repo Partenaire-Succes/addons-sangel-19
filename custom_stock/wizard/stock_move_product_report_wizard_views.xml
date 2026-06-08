@@ -26,7 +26,7 @@
                             <field name="product_ids"
                                    widget="many2many_tags"
                                    options="{'no_create': True}"
-                                   placeholder="Sélectionnez un ou plusieurs articles…"/>
+                                   placeholder="Laisser vide pour inclure tous les articles…"/>
                         </group>
                         <group string="Filtres">
                             <field name="company_id"

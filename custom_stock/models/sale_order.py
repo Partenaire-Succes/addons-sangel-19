@@ -17,12 +17,13 @@ class SaleOrder(models.Model):
                 line._compute_pack_carton_equiv()
         return res
 
-    def _create_invoices(self, grouped=False, final=False, date=None):
-        """Override : interdit de facturer une commande tant que ses
-        livraisons/réceptions liées ne sont pas validées (état "Fait").
-        N'impacte pas les acomptes (méthodes 'percentage'/'fixed'), qui ne
-        passent pas par cette surcharge — voir sale.advance.payment.inv._create_invoices.
-        """
+    def _check_pickings_validated_for_invoicing(self):
+        """Lève une exception (avec message clair et drôle) si une commande a
+        des transferts liés (réceptions/livraisons) qui ne sont pas encore à
+        l'état "Fait". Centralise la vérification afin qu'elle s'applique à
+        TOUTES les voies de facturation : facture classique, acompte en
+        pourcentage et acompte à montant fixe — voir _create_invoices ci-dessous
+        et SaleAdvancePaymentInv._create_invoices."""
         for order in self:
             pickings_en_attente = order.picking_ids.filtered(
                 lambda p: p.state not in ('done', 'cancel')
@@ -37,7 +38,26 @@ class SaleOrder(models.Model):
                     order=order.name,
                     pickings=", ".join(pickings_en_attente.mapped('name')),
                 ))
+
+    def _create_invoices(self, grouped=False, final=False, date=None):
+        """Override : interdit de facturer une commande tant que ses
+        livraisons/réceptions liées ne sont pas validées (état "Fait")."""
+        self._check_pickings_validated_for_invoicing()
         return super()._create_invoices(grouped=grouped, final=final, date=date)
+
+
+class SaleAdvancePaymentInv(models.TransientModel):
+    _inherit = 'sale.advance.payment.inv'
+
+    def _create_invoices(self, sale_orders):
+        """Override : applique le même garde-fou aux acomptes (pourcentage et
+        montant fixe), qui ne passaient pas par sale.order._create_invoices et
+        échappaient donc au contrôle. La méthode 'delivered' route déjà vers
+        sale_orders._create_invoices (qui fait le contrôle) — pas besoin de le
+        refaire ici, on éviterait juste un message en double."""
+        if self.advance_payment_method != 'delivered':
+            sale_orders._check_pickings_validated_for_invoicing()
+        return super()._create_invoices(sale_orders)
 
 
 class SaleOrderLine(models.Model):
