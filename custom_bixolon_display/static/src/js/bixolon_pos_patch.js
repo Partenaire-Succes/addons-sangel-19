@@ -36,6 +36,10 @@ patch(Navbar.prototype, {
         this.bixolonState = useState({ connected: false });
 
         if (this.pos.config?.has_bixolon_display) {
+            // Nom affiché sur l'écran d'accueil : société du point de vente
+            // (avec repli sur le nom du point de vente si absent).
+            bixolonDisplay.setStoreName(this.pos.company?.name || this.pos.config?.name);
+
             // Tentative de reconnexion automatique (port déjà autorisé)
             bixolonDisplay.tryAutoConnect().then((connected) => {
                 this.bixolonState.connected = connected;
