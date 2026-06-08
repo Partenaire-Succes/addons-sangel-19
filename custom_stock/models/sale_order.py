@@ -17,6 +17,28 @@ class SaleOrder(models.Model):
                 line._compute_pack_carton_equiv()
         return res
 
+    def _create_invoices(self, grouped=False, final=False, date=None):
+        """Override : interdit de facturer une commande tant que ses
+        livraisons/réceptions liées ne sont pas validées (état "Fait").
+        N'impacte pas les acomptes (méthodes 'percentage'/'fixed'), qui ne
+        passent pas par cette surcharge — voir sale.advance.payment.inv._create_invoices.
+        """
+        for order in self:
+            pickings_en_attente = order.picking_ids.filtered(
+                lambda p: p.state not in ('done', 'cancel')
+            )
+            if pickings_en_attente:
+                raise UserError(_(
+                    "🎭 Alerte facture prématurée !\n\n"
+                    "Vous voulez facturer la commande %(order)s alors que sa marchandise\n"
+                    "est encore en train de faire du tourisme dans l'entrepôt... 🧳\n\n"
+                    "Le client va recevoir une facture... et un courant d'air ? 🌬️\n\n"
+                    "👉 Validez d'abord la réception/livraison (%(pickings)s), et tout ira bien !",
+                    order=order.name,
+                    pickings=", ".join(pickings_en_attente.mapped('name')),
+                ))
+        return super()._create_invoices(grouped=grouped, final=final, date=date)
+
 
 class SaleOrderLine(models.Model):
     _inherit = 'sale.order.line'

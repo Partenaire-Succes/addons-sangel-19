@@ -101,7 +101,8 @@
         <field name="model">stock.picking</field>
         <field name="arch" type="xml">
             <list string="Historique retours fournisseur"
-                  default_order="scheduled_date desc">
+                  default_order="scheduled_date desc"
+                  create="0">
                 <field name="name" string="Référence"/>
                 <field name="scheduled_date" string="Date"/>
                 <field name="partner_id" string="Fournisseur"/>
@@ -149,6 +150,7 @@
         parent="custom_stock.menu_retour_carton_root"
         action="action_retour_fournisseur_wizard"
         sequence="20"
+        active="False"
         groups="custom_pos.group_superviseur,custom_pos.group_assistant_magasin,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
     />
     <menuitem

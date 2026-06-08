@@ -14,6 +14,9 @@
                         -
                         <field name="date_to" class="oe_inline" required="('period_type', '!=', False)"/>
                     </div>
+                    <field name="partner_ids" widget="many2many_tags"
+                           placeholder="Tous les fournisseurs"
+                           options="{'no_create': True}"/>
                 </group>
                 <footer>
                     <button name="action_generate_report" type="object"

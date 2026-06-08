@@ -34,6 +34,8 @@
                                     -
                                     <field name="date_to" class="oe_inline" readonly="1"/>
                                 </div>
+                                <field name="partner_ids" widget="many2many_tags" readonly="1"
+                                       placeholder="Tous les fournisseurs"/>
                             </group>
                             <group>
                                 <field name="created_by" readonly="1"/>

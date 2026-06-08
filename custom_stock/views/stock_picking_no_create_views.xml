@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         INTERDICTION DE CRÉATION MANUELLE — Réceptions
+         Les réceptions doivent provenir des bons de commande ou de la
+         "Réception directe" (wizard dédié) — pas d'un clic sur "Nouveau"
+         dans la liste/kanban des transferts.
+         On clone les vues natives (kanban/list/form) avec create="0" en
+         vue "primary" — elles deviennent des vues indépendantes qui ne
+         modifient PAS les vues natives partagées par les autres types
+         d'opérations (livraisons, transferts internes…), puis on les
+         attache uniquement à l'action native "Receipts"
+         (stock.action_picking_tree_incoming, utilisée aussi par le menu
+         custom Receptions/sorties > Réceptions).
+         ══════════════════════════════════════════════════════════════════════ -->
+
+    <record id="view_picking_form_nocreate" model="ir.ui.view">
+        <field name="name">stock.picking.form.nocreate</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="mode">primary</field>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="attributes">
+                <attribute name="create">0</attribute>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_picking_incoming_kanban_nocreate" model="ir.ui.view">
+        <field name="name">stock.picking.incoming.kanban.nocreate</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.stock_picking_kanban"/>
+        <field name="mode">primary</field>
+        <field name="arch" type="xml">
+            <xpath expr="//kanban" position="attributes">
+                <attribute name="create">0</attribute>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_picking_incoming_tree_nocreate" model="ir.ui.view">
+        <field name="name">stock.picking.incoming.list.nocreate</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.vpicktree"/>
+        <field name="mode">primary</field>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="attributes">
+                <attribute name="create">0</attribute>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Rattachement à l'action native "Receipts" (stock.action_picking_tree_incoming)
+         Liste en première position (vue par défaut à l'ouverture), puis kanban,
+         puis formulaire — ordre demandé par l'utilisateur. -->
+    <record id="action_picking_tree_incoming_view_list_nocreate" model="ir.actions.act_window.view">
+        <field name="sequence">1</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_picking_incoming_tree_nocreate"/>
+        <field name="act_window_id" ref="stock.action_picking_tree_incoming"/>
+    </record>
+    <record id="action_picking_tree_incoming_view_kanban_nocreate" model="ir.actions.act_window.view">
+        <field name="sequence">2</field>
+        <field name="view_mode">kanban</field>
+        <field name="view_id" ref="view_picking_incoming_kanban_nocreate"/>
+        <field name="act_window_id" ref="stock.action_picking_tree_incoming"/>
+    </record>
+    <record id="action_picking_tree_incoming_view_form_nocreate" model="ir.actions.act_window.view">
+        <field name="sequence">3</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_picking_form_nocreate"/>
+        <field name="act_window_id" ref="stock.action_picking_tree_incoming"/>
+    </record>
+
+    <!-- Rattachement de la vue formulaire sans création à l'historique des
+         retours fournisseurs (action_retour_fournisseur_list) — la vue liste
+         dédiée porte déjà create="0" directement dans son arch.
+         IMPORTANT : on enregistre aussi explicitement la vue liste en
+         séquence 1 — sinon Odoo place la vue formulaire en première
+         position (vue par défaut à l'ouverture du menu) dès qu'une seule
+         entrée "form" est ajoutée à view_ids. -->
+    <record id="action_retour_fournisseur_list_view_list_nocreate" model="ir.actions.act_window.view">
+        <field name="sequence">1</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_retour_fournisseur_picking_list"/>
+        <field name="act_window_id" ref="action_retour_fournisseur_list"/>
+    </record>
+    <record id="action_retour_fournisseur_list_view_form_nocreate" model="ir.actions.act_window.view">
+        <field name="sequence">2</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_picking_form_nocreate"/>
+        <field name="act_window_id" ref="action_retour_fournisseur_list"/>
+    </record>
+
+</odoo>

@@ -22,6 +22,13 @@ class ReliquatReportWizard(models.TransientModel):
     date_from = fields.Date(string='Date de début')
     date_to = fields.Date(string='Date de fin')
 
+    partner_ids = fields.Many2many(
+        comodel_name='res.partner',
+        string='Fournisseurs',
+        domain="[('supplier_rank', '>', 0)]",
+        help="Laisser vide pour inclure tous les fournisseurs.",
+    )
+
 
     def action_generate_report(self):
         """Crée le rapport avec un nom formaté jj/mm/aaaa"""
@@ -43,6 +50,7 @@ class ReliquatReportWizard(models.TransientModel):
             'date_from': self.date_from,
             'date_to': self.date_to or self.date_from,
             'period_type': self.period_type,
+            'partner_ids': [(6, 0, self.partner_ids.ids)],
         })
 
         if hasattr(report, 'generate_report_data'):

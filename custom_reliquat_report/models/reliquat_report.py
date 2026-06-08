@@ -98,6 +98,14 @@ class ReliquatReport(models.Model):
         default=lambda self: self.env.company
     )
 
+    partner_ids = fields.Many2many(
+        comodel_name='res.partner',
+        string='Fournisseurs filtrés',
+        help="Filtre appliqué à la génération du rapport : si vide, tous les "
+             "fournisseurs sont inclus. Pris en compte aussi à l'impression "
+             "puisque les lignes (line_ids) sont générées selon ce filtre."
+    )
+
     @api.model
     def _get_default_name(self):
         """Construit le nom par défaut avec les dates en jj/mm/aaaa"""
@@ -148,12 +156,16 @@ class ReliquatReport(models.Model):
         # Supprimer les anciennes lignes
         self.line_ids.unlink()
 
-        # Rechercher les commandes d'achat dans la période
-        purchase_orders = self.env['purchase.order'].search([
+        # Rechercher les commandes d'achat dans la période (+ filtre fournisseurs)
+        domain = [
             ('date_order', '>=', self.date_from),
             ('date_order', '<=', self.date_to),
             ('state', 'in', ['purchase', 'done'])
-        ])
+        ]
+        if self.partner_ids:
+            domain.append(('partner_id', 'in', self.partner_ids.ids))
+
+        purchase_orders = self.env['purchase.order'].search(domain)
 
         lines_data = []
         for order in purchase_orders:

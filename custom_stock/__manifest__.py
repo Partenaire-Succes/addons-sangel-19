@@ -68,6 +68,7 @@
         'wizard/retour_carton_wizard_views.xml',
         'wizard/retour_inventaire_wizard_views.xml',
         'wizard/retour_fournisseur_wizard_views.xml',
+        'views/stock_picking_no_create_views.xml',
         'wizard/rapport_retours_receptions_wizard_views.xml',
         'wizard/reception_correction_info_wizard_views.xml',
         'wizard/orderpoint_import_wizard_views.xml',
