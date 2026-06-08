@@ -96,10 +96,5 @@
         <field name="target">new</field>
     </record>
 
-    <menuitem id="menu_fix_price_inventory_wizard"
-              name="Correction Prix 0 Inventaire"
-              parent="stock.menu_stock_adjustments"
-              action="action_fix_price_inventory_wizard"
-              sequence="3"/>
 
 </odoo>

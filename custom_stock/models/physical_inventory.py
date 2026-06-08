@@ -206,7 +206,7 @@ class PhysicalInventory(models.Model):
     def get_products_quants(self):
         quants = self.env['stock.quant']
         domain = [
-            ('location_id.usage', 'in', ['internal', 'transit']),
+            ('location_id.usage', '=', 'internal'),
             ('product_id.active', '=', True),
             ('product_id.type', '=', 'consu'),
         ]
@@ -336,6 +336,7 @@ class PhysicalInventoryLine(models.Model):
     location_id = fields.Many2one(
         'stock.location',
         'Emplacement',
+        domain=[('usage', '=', 'internal')],
         default=lambda self: self.env['stock.location'].search([('usage', '=', 'internal')], limit=1)
     )
  

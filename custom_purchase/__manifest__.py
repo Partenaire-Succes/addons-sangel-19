@@ -14,7 +14,6 @@
     'data': [
         'security/ir.model.access.csv',
         'views/purchase_order_inherit_views.xml',
-        'wizard/supplier_price_import_wizard_views.xml',
         'wizard/replenishment_supplier_wizard_views.xml',
         'views/stock_orderpoint_inherit_views.xml',
     ],

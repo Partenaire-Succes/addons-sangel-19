@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ══ Racine ══════════════════════════════════════════════════════════ -->
+    <menuitem id="menu_import_excel_root"
+              name="Import Excel"
+              action="action_import_excel_dashboard"
+              sequence="100"/>
+
+    <!-- ══ Toutes les mises à jour ════════════════════════════════════════ -->
+    <menuitem id="menu_import_excel_home"
+              name="Toutes les mises à jour"
+              parent="menu_import_excel_root"
+              action="action_import_excel_dashboard"
+              sequence="1"/>
+
+    <!-- ══ Stock & Inventaire ══════════════════════════════════════════════ -->
+    <menuitem id="menu_import_excel_cat_stock"
+              name="Stock &amp; Inventaire"
+              parent="menu_import_excel_root"
+              sequence="10"/>
+
+    <menuitem id="menu_import_excel_stock_import"
+              name="Import Stock"
+              parent="menu_import_excel_cat_stock"
+              action="action_stock_excel_import"
+              sequence="10"/>
+
+    <menuitem id="menu_import_excel_fix_price"
+              name="Correction Prix PMP Inventaire"
+              parent="menu_import_excel_cat_stock"
+              action="action_fix_price_inventory_wizard"
+              sequence="20"/>
+
+    <menuitem id="menu_import_excel_orderpoint"
+              name="Règles de Réassort (Min/Max)"
+              parent="menu_import_excel_cat_stock"
+              action="action_orderpoint_import_wizard"
+              sequence="30"/>
+
+    <menuitem id="menu_import_excel_barcodes"
+              name="Codes-Barres Produits"
+              parent="menu_import_excel_cat_stock"
+              action="action_import_barcodes_wizard"
+              groups="stock.group_stock_manager"
+              sequence="40"/>
+
+    <!-- ══ Achats ══════════════════════════════════════════════════════════ -->
+    <menuitem id="menu_import_excel_cat_purchase"
+              name="Achats"
+              parent="menu_import_excel_root"
+              sequence="20"/>
+
+    <menuitem id="menu_import_excel_supplier_price"
+              name="Prix Fournisseurs"
+              parent="menu_import_excel_cat_purchase"
+              action="action_supplier_price_import_wizard"
+              sequence="10"/>
+
+    <!-- ══ Point de Vente ══════════════════════════════════════════════════ -->
+    <menuitem id="menu_import_excel_cat_pos"
+              name="Point de Vente"
+              parent="menu_import_excel_root"
+              sequence="30"/>
+
+    <menuitem id="menu_import_excel_loyalty"
+              name="Points Fidélité"
+              parent="menu_import_excel_cat_pos"
+              action="action_import_loyalty_points_wizard"
+              groups="point_of_sale.group_pos_manager"
+              sequence="10"/>
+
+    <menuitem id="menu_import_excel_pos_history"
+              name="Historique des Ventes POS"
+              parent="menu_import_excel_cat_pos"
+              action="action_pos_history_import_wizard"
+              groups="custom_pos.group_dsi_it"
+              sequence="20"/>
+
+    <menuitem id="menu_import_excel_pos_margin"
+              name="Correction coûts/marges POS"
+              parent="menu_import_excel_cat_pos"
+              action="action_pos_margin_cost_wizard"
+              groups="custom_pos.group_dsi_it"
+              sequence="30"/>
+
+    <!-- ══ Ventes / Crédit ══════════════════════════════════════════════════ -->
+    <menuitem id="menu_import_excel_cat_sales"
+              name="Ventes / Crédit"
+              parent="menu_import_excel_root"
+              sequence="40"/>
+
+    <menuitem id="menu_import_excel_limit_credit"
+              name="Limite Crédit Consommée"
+              parent="menu_import_excel_cat_sales"
+              action="action_import_limit_credit_wizard"
+              sequence="10"/>
+
+    <!-- ══ Technique (DSI/IT) ══════════════════════════════════════════════ -->
+    <menuitem id="menu_import_excel_cat_tech"
+              name="Technique"
+              parent="menu_import_excel_root"
+              groups="custom_pos.group_dsi_it"
+              sequence="50"/>
+
+    <menuitem id="menu_import_excel_avco"
+              name="Correction AVCO"
+              parent="menu_import_excel_cat_tech"
+              action="action_stock_avco_import_wizard"
+              groups="custom_pos.group_dsi_it"
+              sequence="10"/>
+
+    <menuitem id="menu_import_excel_product_status"
+              name="Statuts Magasin"
+              parent="menu_import_excel_cat_tech"
+              action="action_product_status_import_wizard"
+              groups="custom_pos.group_dsi_it"
+              sequence="20"/>
+
+</odoo>

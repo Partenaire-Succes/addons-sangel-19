@@ -17,7 +17,6 @@
         'views/report_product_label_custom.xml',
         'views/product_label_layout_views.xml',
         'views/stock_picking_views.xml',
-        'wizard/import_barcodes_wizard_views.xml',
     ],
 
     'assets': {

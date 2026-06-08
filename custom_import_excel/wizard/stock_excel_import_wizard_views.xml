@@ -95,10 +95,5 @@
         <field name="target">new</field>
     </record>
 
-    <menuitem id="menu_stock_excel_import" 
-              name="Import Stock Excel" 
-              parent="stock.menu_stock_adjustments" 
-              action="action_stock_excel_import"
-              sequence="100"/>
 
 </odoo>

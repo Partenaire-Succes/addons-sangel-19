@@ -23,8 +23,6 @@ access_stock_product_multicompany,stock.product.multicompany,model_stock_product
 access_stock_product_multicompany_line,stock.product.multicompany.line,model_stock_product_multicompany_line,,1,1,1,1
 access_product_status_user,product.status user,model_product_status,base.group_user,1,1,1,0
 access_product_company_status_user,product.company.status user,model_product_company_status,base.group_user,1,1,1,0
-access_stock_excel_import_wizard,stock.excel.import.wizard,model_stock_excel_import_wizard,,1,1,1,1
-access_stock_excel_import_line,stock.excel.import.line,model_stock_excel_import_line,,1,1,1,1
 access_reception_directe_wizard,reception.directe.wizard,model_reception_directe_wizard,,1,1,1,1
 access_reception_directe_wizard_line,reception.directe.wizard.line,model_reception_directe_wizard_line,,1,1,1,1
 access_retour_carton_wizard,retour.carton.wizard,model_retour_carton_wizard,,1,1,1,1
@@ -35,9 +33,5 @@ access_retour_fournisseur_wizard,retour.fournisseur.wizard,model_retour_fourniss
 access_retour_fournisseur_wizard_line,retour.fournisseur.wizard.line,model_retour_fournisseur_wizard_line,,1,1,1,1
 access_rapport_retours_receptions_wizard,rapport.retours.receptions.wizard,model_rapport_retours_receptions_wizard,,1,1,1,1
 access_reception_correction_info_wizard,reception.correction.info.wizard,model_reception_correction_info_wizard,,1,1,1,1
-access_orderpoint_import_wizard,orderpoint.import.wizard,model_orderpoint_import_wizard,,1,1,1,1
-access_orderpoint_import_wizard_line,orderpoint.import.wizard.line,model_orderpoint_import_wizard_line,,1,1,1,1
-access_fix_price_inventory_wizard,fix.price.inventory.wizard,model_fix_price_inventory_wizard,,1,1,1,1
 access_fiche_comptage_wizard,fiche.comptage.wizard,model_fiche_comptage_wizard,,1,1,1,1
-access_fix_price_inventory_line,fix.price.inventory.line,model_fix_price_inventory_line,,1,1,1,1
 access_stock_move_avco_read,stock.move.avco.read,model_stock_move,stock.group_stock_manager,1,0,0,0

@@ -28,7 +28,6 @@
         'wizard/generate_credit_food_views.xml',
         'wizard/generate_invoice_credit_food_views.xml',
         'wizard/update_limit_credit_views.xml',
-        'wizard/import_limit_credit_wizard_views.xml',
         'wizard/limit_credit_report_wizard_views.xml',
         'wizard/account_payment_register_inherit_views.xml',
         

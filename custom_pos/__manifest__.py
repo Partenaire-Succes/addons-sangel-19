@@ -43,7 +43,6 @@
         'views/pos_session_inherit_views.xml',
         'views/pos_order_promo_report_views.xml',
         'views/product_template_inherit_views.xml',
-        'wizard/import_loyalty_points_wizard_views.xml',
         'wizard/avoir_journee_wizard_views.xml',
         'wizard/rapport_validation_wizard_views.xml',
     ],

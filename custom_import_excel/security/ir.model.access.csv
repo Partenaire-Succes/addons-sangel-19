@@ -1,0 +1,30 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_import_excel_dashboard,import.excel.dashboard,model_import_excel_dashboard,base.group_user,1,1,1,1
+access_import_loyalty_points_wizard_manager,import_loyalty_points_wizard_manager,model_import_loyalty_points_wizard,point_of_sale.group_pos_manager,1,1,1,1
+access_import_loyalty_points_line_manager,import_loyalty_points_line_manager,model_import_loyalty_points_line,point_of_sale.group_pos_manager,1,1,1,1
+access_import_loyalty_points_wizard_user,import_loyalty_points_wizard_user,model_import_loyalty_points_wizard,point_of_sale.group_pos_user,1,1,1,1
+access_import_loyalty_points_line_user,import_loyalty_points_line_user,model_import_loyalty_points_line,point_of_sale.group_pos_user,1,1,1,1
+access_import_barcodes_wizard,access.import.barcodes.wizard,model_import_barcodes_wizard,base.group_user,1,1,1,1
+access_import_barcodes_wizard_line,access.import.barcodes.wizard.line,model_import_barcodes_wizard_line,base.group_user,1,1,1,1
+access_supplier_price_import_wizard,supplier.price.import.wizard,model_supplier_price_import_wizard,,1,1,1,1
+access_supplier_price_import_line,supplier.price.import.line,model_supplier_price_import_line,,1,1,1,1
+access_stock_excel_import_wizard,stock.excel.import.wizard,model_stock_excel_import_wizard,,1,1,1,1
+access_stock_excel_import_line,stock.excel.import.line,model_stock_excel_import_line,,1,1,1,1
+access_orderpoint_import_wizard,orderpoint.import.wizard,model_orderpoint_import_wizard,,1,1,1,1
+access_orderpoint_import_wizard_line,orderpoint.import.wizard.line,model_orderpoint_import_wizard_line,,1,1,1,1
+access_fix_price_inventory_wizard,fix.price.inventory.wizard,model_fix_price_inventory_wizard,,1,1,1,1
+access_fix_price_inventory_line,fix.price.inventory.line,model_fix_price_inventory_line,,1,1,1,1
+access_import_limit_credit_wizard,access_import_limit_credit_wizard,model_import_limit_credit_wizard,,1,1,1,1
+access_import_limit_credit_line,access_import_limit_credit_line,model_import_limit_credit_line,,1,1,1,1
+access_pos_history_import_wizard_manager,pos.history.import.wizard manager,model_pos_history_import_wizard,point_of_sale.group_pos_manager,1,1,1,1
+access_pos_history_import_wizard_user,pos.history.import.wizard user,model_pos_history_import_wizard,point_of_sale.group_pos_user,1,0,0,0
+access_pos_import_preview_line_manager,pos.import.preview.line manager,model_pos_import_preview_line,point_of_sale.group_pos_manager,1,1,1,1
+access_pos_import_preview_line_user,pos.import.preview.line user,model_pos_import_preview_line,point_of_sale.group_pos_user,1,0,0,0
+access_stock_avco_import_wizard,stock.avco.import.wizard,model_stock_avco_import_wizard,stock.group_stock_manager,1,1,1,1
+access_stock_avco_import_wizard_user,stock.avco.import.wizard.user,model_stock_avco_import_wizard,stock.group_stock_user,1,1,1,1
+access_stock_avco_import_wizard_line,stock.avco.import.wizard.line,model_stock_avco_import_wizard_line,stock.group_stock_manager,1,1,1,1
+access_stock_avco_import_wizard_line_user,stock.avco.import.wizard.line.user,model_stock_avco_import_wizard_line,stock.group_stock_user,1,1,1,1
+access_pos_margin_cost_wizard,pos.margin.cost.wizard,model_pos_margin_cost_wizard,stock.group_stock_manager,1,1,1,1
+access_pos_margin_cost_wizard_line,pos.margin.cost.wizard.line,model_pos_margin_cost_wizard_line,stock.group_stock_manager,1,1,1,1
+access_product_status_import_wizard,product.status.import.wizard,model_product_status_import_wizard,stock.group_stock_manager,1,1,1,1
+access_product_status_import_wizard_line,product.status.import.wizard.line,model_product_status_import_wizard_line,stock.group_stock_manager,1,1,1,1

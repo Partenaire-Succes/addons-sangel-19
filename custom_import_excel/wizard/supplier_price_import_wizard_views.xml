@@ -80,10 +80,5 @@
         <field name="target">new</field>
     </record>
 
-    <menuitem id="menu_supplier_price_import"
-              name="Import Prix Fournisseurs"
-              parent="purchase.menu_purchase_config"
-              action="action_supplier_price_import_wizard"
-              sequence="50"/>
 
 </odoo>

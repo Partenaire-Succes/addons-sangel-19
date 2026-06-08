@@ -104,9 +104,4 @@
         <field name="target">new</field>
     </record>
 
-    <menuitem id="menu_orderpoint_import_wizard"
-              name="Import Règles de Réassort (Min/Max)"
-              parent="stock.menu_stock_procurement"
-              action="action_orderpoint_import_wizard"
-              sequence="30"/>
 </odoo>

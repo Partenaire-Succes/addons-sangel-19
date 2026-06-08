@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_import_excel_dashboard_form" model="ir.ui.view">
+        <field name="name">import.excel.dashboard.form</field>
+        <field name="model">import.excel.dashboard</field>
+        <field name="arch" type="xml">
+            <form string="Import Excel — Mises à jour">
+                <sheet>
+
+                    <div class="oe_title" style="margin-bottom: 28px;">
+                        <h1 style="color: #1F4E79; font-size: 24px;">
+                            Import Excel — Mises à jour
+                        </h1>
+                        <p class="text-muted" style="font-size: 14px; margin-top: 4px;">
+                            Sélectionnez le type de mise à jour à effectuer.
+                        </p>
+                    </div>
+
+                    <!-- ══ Stock & Inventaire ══════════════════════════════════ -->
+                    <div style="margin-bottom: 24px;">
+                        <h4 style="color: #1F4E79; border-bottom: 2px solid #1F4E79;
+                                   padding-bottom: 6px; margin-bottom: 16px;">
+                            Stock &amp; Inventaire
+                        </h4>
+                        <div class="row g-3">
+
+                            <div class="col-xl-3 col-lg-4 col-md-6">
+                                <button name="action_open_stock_import" type="object"
+                                        class="btn btn-primary w-100"
+                                        style="padding: 18px 12px; font-size: 13px;
+                                               display: flex; flex-direction: column;
+                                               align-items: center; gap: 8px; height: 80px;">
+                                    <i class="fa fa-upload fa-lg"/>
+                                    Import Stock
+                                </button>
+                            </div>
+
+                            <div class="col-xl-3 col-lg-4 col-md-6">
+                                <button name="action_open_fix_price" type="object"
+                                        class="btn btn-primary w-100"
+                                        style="padding: 18px 12px; font-size: 13px;
+                                               display: flex; flex-direction: column;
+                                               align-items: center; gap: 8px; height: 80px;">
+                                    <i class="fa fa-wrench fa-lg"/>
+                                    Correction Prix PMP
+                                </button>
+                            </div>
+
+                            <div class="col-xl-3 col-lg-4 col-md-6">
+                                <button name="action_open_orderpoint" type="object"
+                                        class="btn btn-primary w-100"
+                                        style="padding: 18px 12px; font-size: 13px;
+                                               display: flex; flex-direction: column;
+                                               align-items: center; gap: 8px; height: 80px;">
+                                    <i class="fa fa-sliders fa-lg"/>
+                                    Règles de Réassort
+                                </button>
+                            </div>
+
+                            <div class="col-xl-3 col-lg-4 col-md-6"
+                                 groups="stock.group_stock_manager">
+                                <button name="action_open_barcodes" type="object"
+                                        class="btn btn-primary w-100"
+                                        style="padding: 18px 12px; font-size: 13px;
+                                               display: flex; flex-direction: column;
+                                               align-items: center; gap: 8px; height: 80px;">
+                                    <i class="fa fa-barcode fa-lg"/>
+                                    Codes-Barres Produits
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- ══ Achats ═════════════════════════════════════════════ -->
+                    <div style="margin-bottom: 24px;">
+                        <h4 style="color: #217346; border-bottom: 2px solid #217346;
+                                   padding-bottom: 6px; margin-bottom: 16px;">
+                            Achats
+                        </h4>
+                        <div class="row g-3">
+
+                            <div class="col-xl-3 col-lg-4 col-md-6">
+                                <button name="action_open_supplier_price" type="object"
+                                        class="btn w-100"
+                                        style="padding: 18px 12px; font-size: 13px;
+                                               display: flex; flex-direction: column;
+                                               align-items: center; gap: 8px; height: 80px;
+                                               background-color: #217346; color: white;">
+                                    <i class="fa fa-tags fa-lg"/>
+                                    Prix Fournisseurs
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- ══ Point de Vente ════════════════════════════════════ -->
+                    <div style="margin-bottom: 24px;">
+                        <h4 style="color: #8B4513; border-bottom: 2px solid #8B4513;
+                                   padding-bottom: 6px; margin-bottom: 16px;">
+                            Point de Vente
+                        </h4>
+                        <div class="row g-3">
+
+                            <div class="col-xl-3 col-lg-4 col-md-6"
+                                 groups="point_of_sale.group_pos_manager">
+                                <button name="action_open_loyalty" type="object"
+                                        class="btn w-100"
+                                        style="padding: 18px 12px; font-size: 13px;
+                                               display: flex; flex-direction: column;
+                                               align-items: center; gap: 8px; height: 80px;
+                                               background-color: #8B4513; color: white;">
+                                    <i class="fa fa-star fa-lg"/>
+                                    Points Fidélité
+                                </button>
+                            </div>
+
+                            <div class="col-xl-3 col-lg-4 col-md-6"
+                                 groups="custom_pos.group_dsi_it">
+                                <button name="action_open_pos_history" type="object"
+                                        class="btn w-100"
+                                        style="padding: 18px 12px; font-size: 13px;
+                                               display: flex; flex-direction: column;
+                                               align-items: center; gap: 8px; height: 80px;
+                                               background-color: #8B4513; color: white;">
+                                    <i class="fa fa-history fa-lg"/>
+                                    Historique des Ventes POS
+                                </button>
+                            </div>
+
+                            <div class="col-xl-3 col-lg-4 col-md-6"
+                                 groups="custom_pos.group_dsi_it">
+                                <button name="action_open_pos_margin" type="object"
+                                        class="btn w-100"
+                                        style="padding: 18px 12px; font-size: 13px;
+                                               display: flex; flex-direction: column;
+                                               align-items: center; gap: 8px; height: 80px;
+                                               background-color: #8B4513; color: white;">
+                                    <i class="fa fa-percent fa-lg"/>
+                                    Correction coûts/marges POS
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- ══ Ventes / Crédit ════════════════════════════════════ -->
+                    <div style="margin-bottom: 24px;">
+                        <h4 style="color: #C0392B; border-bottom: 2px solid #C0392B;
+                                   padding-bottom: 6px; margin-bottom: 16px;">
+                            Ventes / Crédit
+                        </h4>
+                        <div class="row g-3">
+
+                            <div class="col-xl-3 col-lg-4 col-md-6">
+                                <button name="action_open_limit_credit" type="object"
+                                        class="btn w-100"
+                                        style="padding: 18px 12px; font-size: 13px;
+                                               display: flex; flex-direction: column;
+                                               align-items: center; gap: 8px; height: 80px;
+                                               background-color: #C0392B; color: white;">
+                                    <i class="fa fa-credit-card fa-lg"/>
+                                    Limite Crédit Consommée
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- ══ Technique (DSI/IT) ════════════════════════════════ -->
+                    <div groups="custom_pos.group_dsi_it">
+                        <h4 style="color: #6C757D; border-bottom: 2px solid #6C757D;
+                                   padding-bottom: 6px; margin-bottom: 16px;">
+                            Technique
+                        </h4>
+                        <div class="row g-3">
+
+                            <div class="col-xl-3 col-lg-4 col-md-6">
+                                <button name="action_open_avco" type="object"
+                                        class="btn btn-secondary w-100"
+                                        style="padding: 18px 12px; font-size: 13px;
+                                               display: flex; flex-direction: column;
+                                               align-items: center; gap: 8px; height: 80px;">
+                                    <i class="fa fa-database fa-lg"/>
+                                    Correction AVCO
+                                </button>
+                            </div>
+
+                            <div class="col-xl-3 col-lg-4 col-md-6">
+                                <button name="action_open_product_status" type="object"
+                                        class="btn btn-secondary w-100"
+                                        style="padding: 18px 12px; font-size: 13px;
+                                               display: flex; flex-direction: column;
+                                               align-items: center; gap: 8px; height: 80px;">
+                                    <i class="fa fa-toggle-on fa-lg"/>
+                                    Statuts Magasin
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_import_excel_dashboard" model="ir.actions.act_window">
+        <field name="name">Import Excel</field>
+        <field name="res_model">import.excel.dashboard</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_import_excel_dashboard_form"/>
+        <field name="target">main</field>
+    </record>
+
+</odoo>

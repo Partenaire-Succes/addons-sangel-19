@@ -45,7 +45,7 @@ class FicheComptageWizard(models.TransientModel):
     def _get_quants(self):
         """Retourne les quants filtrés (mode normal)."""
         domain = [
-            ('location_id.usage', 'in', ['internal', 'transit']),
+            ('location_id.usage', '=', 'internal'),
             ('company_id', '=', self.company_id.id),
             ('product_id.active', '=', True),
             ('product_id.type', '=', 'consu'),

@@ -63,11 +63,5 @@
             <field name="target">new</field>
         </record>
 
-        <menuitem id="menu_import_limit_credit"
-                  name="Import Excel Limite Crédit"
-                  parent="sale.menu_sale_config"
-                  action="action_import_limit_credit_wizard"
-                  sequence="14"/>
-
     </data>
 </odoo>
