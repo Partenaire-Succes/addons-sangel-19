@@ -9,6 +9,26 @@
  *   \x1B[2;1H         = Positionner curseur en ligne 2, col 1 (séquence ANSI)
  *   Baud : 9600, 8 bits, pas de parité, 1 stop bit
  */
+
+// Caractères Unicode fréquents dans les montants formatés par Odoo (espaces
+// insécables utilisées comme séparateurs de milliers, symbole de devise,
+// guillemets/tirets typographiques…) que le VFD ne sait pas afficher. On les
+// convertit en équivalents ASCII *avant* le remplacement générique par '?',
+// pour éviter que les prix s'affichent du genre "5?893?F?CFA".
+// Couples [code Unicode, remplacement ASCII] — on passe par String.fromCharCode
+// pour éviter d'écrire des caractères invisibles en dur dans le code source.
+const CHAR_REPLACEMENTS = Object.fromEntries([
+    [0x00A0, ' '],     // espace insecable (NBSP)
+    [0x202F, ' '],     // espace fine insecable (separateur de milliers fr)
+    [0x2009, ' '],     // espace fine
+    [0x2007, ' '],     // espace tabulaire
+    [0x20AC, 'EUR'],   // symbole euro
+    [0x2018, "'"], [0x2019, "'"],   // guillemets simples typographiques
+    [0x201C, '"'], [0x201D, '"'],   // guillemets doubles typographiques
+    [0x2013, '-'], [0x2014, '-'],   // tirets demi-cadratin / cadratin
+    [0x2026, '...'],                 // points de suspension
+].map(([code, repl]) => [String.fromCharCode(code), repl]));
+
 class BixolonDisplayManager {
     constructor() {
         this.port        = null;
@@ -17,6 +37,17 @@ class BixolonDisplayManager {
         this._writing    = false;   // verrou : évite les écritures concurrentes
         this.BAUD_RATE   = 9600;
         this.WIDTH       = 20;
+        this.storeName   = 'SANGEL YOP SARL';   // valeur par défaut, écrasée via setStoreName()
+    }
+
+    /**
+     * Définit le nom affiché sur la 2e ligne de l'écran d'accueil
+     * (nom de la société ou du point de vente, fourni par le POS).
+     */
+    setStoreName(name) {
+        if (name) {
+            this.storeName = String(name).trim();
+        }
     }
 
     // ── Compatibilité ─────────────────────────────────────────────────────────
@@ -147,30 +178,43 @@ class BixolonDisplayManager {
     }
 
     async sendWelcome() {
-        await this.sendDisplay('   BIENVENUE !      ', '   SANGEL YOP SARL  ');
+        await this.sendDisplay(
+            this._centerLine('BIENVENUE !'),
+            this._centerLine(this.storeName)
+        );
     }
 
     // ── Formatage (ASCII propre pour VFD) ────────────────────────────────────
 
     /**
-     * Formate une chaîne en exactement WIDTH caractères ASCII.
-     * Supprime les diacritiques (accents) incompatibles avec la plupart des VFD.
+     * Nettoie une chaîne pour l'afficheur VFD (ASCII strict) :
+     *  1. translittère les caractères Unicode courants des montants/textes
+     *     formatés par Odoo (espaces insécables, symbole €, guillemets…)
+     *     en équivalents ASCII via CHAR_REPLACEMENTS — évite les '?' parasites
+     *     dans les prix (ex. "5 893 F CFA" au lieu de "5?893?F?CFA") ;
+     *  2. supprime les diacritiques (accents) via décomposition NFD ;
+     *  3. remplace tout caractère non-ASCII restant par '?'.
      */
-    _formatLine(text) {
-        if (!text) return ' '.repeat(this.WIDTH);
-        const ascii = String(text)
+    _sanitizeText(text) {
+        let cleaned = String(text);
+        for (const [from, to] of Object.entries(CHAR_REPLACEMENTS)) {
+            cleaned = cleaned.split(from).join(to);
+        }
+        return cleaned
             .normalize('NFD')
-            .replace(/[̀-ͯ]/g, '')   // supprime les combining diacritical marks
+            .replace(/[\u0300-\u036F]/g, '')   // supprime les combining diacritical marks
             .replace(/[^\x00-\x7F]/g, '?');    // remplace tout caractère non-ASCII restant
-        return ascii.substring(0, this.WIDTH).padEnd(this.WIDTH);
     }
 
+    /** Formate une chaîne en exactement WIDTH caractères ASCII, alignée à gauche. */
+    _formatLine(text) {
+        if (!text) return ' '.repeat(this.WIDTH);
+        return this._sanitizeText(text).substring(0, this.WIDTH).padEnd(this.WIDTH);
+    }
+
+    /** Formate une chaîne en exactement WIDTH caractères ASCII, centrée. */
     _centerLine(text) {
-        const clean = String(text)
-            .normalize('NFD')
-            .replace(/[̀-ͯ]/g, '')
-            .replace(/[^\x00-\x7F]/g, '?')
-            .substring(0, this.WIDTH);
+        const clean = this._sanitizeText(text).substring(0, this.WIDTH);
         const pad = Math.floor((this.WIDTH - clean.length) / 2);
         return (' '.repeat(pad) + clean).padEnd(this.WIDTH);
     }
