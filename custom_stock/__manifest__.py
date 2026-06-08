@@ -75,6 +75,8 @@
         'wizard/fix_price_inventory_wizard_views.xml',
         'wizard/fiche_comptage_wizard_views.xml',
         'wizard/stock_picking_return_views.xml',
+        'report/report_stock_move_product_template.xml',
+        'wizard/stock_move_product_report_wizard_views.xml',
         'views/physical_inventory_retour_views.xml',
         'views/pos_session_views.xml',
         'views/fournisseur_shortcuts_views.xml',

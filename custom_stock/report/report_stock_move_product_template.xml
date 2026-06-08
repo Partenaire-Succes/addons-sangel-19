@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_stock_move_product_document">
+        <t t-call="web.external_layout">
+            <t t-set="o" t-value="doc"/>
+            <div class="page">
+                <style>
+                    .page { font-family: Arial, sans-serif; font-size: 8pt; }
+
+                    .header-section { margin-bottom: 10px; border-bottom: 2px solid #1A5276; padding-bottom: 6px; }
+                    .company-name   { font-size: 12pt; font-weight: bold; text-transform: uppercase; }
+                    .date-range     { text-align: right; font-weight: bold; font-size: 9pt; }
+                    .report-title   {
+                        text-align: center; font-size: 11pt; font-weight: bold;
+                        margin: 8px 0 12px 0; padding: 6px;
+                        background-color: #1A5276; color: #fff;
+                    }
+
+                    .prod-block { margin-bottom: 10px; }
+
+                    table.prod-hdr-table {
+                        width: 100%; border-collapse: collapse;
+                        margin-bottom: 1px;
+                    }
+                    table.prod-hdr-table td {
+                        background-color: #1A5276; color: #fff;
+                        font-weight: bold; font-size: 8.5pt;
+                        border: 1px solid #0E3460; padding: 4px 5px;
+                        vertical-align: middle;
+                    }
+                    .prod-ref  { width: 10%; text-align: center; }
+                    .prod-name { width: 38%; }
+                    .prod-stat { width: 17%; font-size: 7.5pt; line-height: 1.4; text-align: right; }
+                    .prod-stat span.lbl { font-weight: normal; opacity: .85; }
+
+                    table.recap-table {
+                        width: 100%; border-collapse: collapse; margin-bottom: 1px;
+                    }
+                    table.recap-table td {
+                        font-size: 7.5pt; font-weight: bold;
+                        border: 1px solid #AAAAAA; padding: 3px 6px;
+                    }
+                    .recap-in    { width: 38%; background-color: #D5F5E3; color: #1E8449; }
+                    .recap-out   { width: 38%; background-color: #FADBD8; color: #B03A2E; }
+                    .recap-solde { width: 24%; background-color: #D6EAF8; color: #1A5276; text-align: right; }
+
+                    table.sub-table { width: 100%; border-collapse: collapse; }
+                    table.sub-table th {
+                        background-color: #D6EAF8; font-size: 7.5pt; font-weight: bold;
+                        border: 1px solid #AAAAAA; padding: 3px 5px; text-align: center;
+                    }
+                    table.sub-table td {
+                        font-size: 7.5pt; border: 1px solid #AAAAAA; padding: 3px 5px;
+                    }
+                    tr.dir-in td  { background-color: #D5F5E3; }
+                    tr.dir-out td { background-color: #FADBD8; }
+                    tr.dir-internal td { background-color: #F2F3F4; }
+
+                    .badge-dir {
+                        display: inline-block; padding: 1px 6px; border-radius: 3px;
+                        font-size: 7pt; font-weight: bold; color: #fff;
+                    }
+                    .badge-in       { background-color: #1E8449; }
+                    .badge-out      { background-color: #B03A2E; }
+                    .badge-internal { background-color: #7B7D7D; }
+
+                    .r { text-align: right; }
+                    .c { text-align: center; }
+                    .footer-info { margin-top: 10px; font-size: 7pt; color: #555; }
+                </style>
+
+                <!-- ── En-tête ─────────────────────────────────────────── -->
+                <div class="header-section">
+                    <div class="row">
+                        <div class="col-8">
+                            <div class="company-name"><span t-field="o.company_id.name"/></div>
+                        </div>
+                        <div class="col-4">
+                            <div class="date-range"
+                                 t-if="o.date_debut or o.date_fin">
+                                <t t-if="o.date_debut">Du <span t-esc="o.date_debut.strftime('%d/%m/%Y')"/></t>
+                                <t t-if="o.date_fin"> au <span t-esc="o.date_fin.strftime('%d/%m/%Y')"/></t>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-title">MOUVEMENTS PAR PRODUIT</div>
+
+                <t t-set="data" t-value="o._get_report_data()"/>
+
+                <!-- ── Un bloc par article ───────────────────────────────── -->
+                <t t-foreach="data" t-as="prod">
+                    <div class="prod-block">
+
+                        <table class="prod-hdr-table">
+                            <tr>
+                                <td class="prod-ref">
+                                    <span t-esc="prod['product'].default_code or ''"/>
+                                </td>
+                                <td class="prod-name">
+                                    <span t-esc="prod['product'].display_name"/>
+                                </td>
+                                <td class="prod-stat">
+                                    <span class="lbl">Nb mouvements :</span>
+                                    <strong t-esc="prod['nb_mouvements']"/>
+                                </td>
+                                <td class="prod-stat">
+                                    <span class="lbl">Qté totale :</span>
+                                    <strong t-esc="'{:,.2f}'.format(prod['qty_total']).replace(',', ' ')"/>
+                                </td>
+                                <td class="prod-stat">
+                                    <span class="lbl">Valeur totale :</span>
+                                    <strong t-esc="'{:,.2f}'.format(prod['value_total']).replace(',', ' ')"/>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- Récap Entrées / Sorties / Solde — pour distinguer clairement
+                             ce qui entre de ce qui sort, lecture professionnelle directe -->
+                        <table class="recap-table">
+                            <tr>
+                                <td class="recap-in">
+                                    Entrées : <span t-esc="'{:,.2f}'.format(prod['in_qty']).replace(',', ' ')"/>
+                                    (<span t-esc="prod['in_count']"/>)
+                                    — Valeur : <span t-esc="'{:,.2f}'.format(prod['in_value']).replace(',', ' ')"/>
+                                </td>
+                                <td class="recap-out">
+                                    Sorties : <span t-esc="'{:,.2f}'.format(prod['out_qty']).replace(',', ' ')"/>
+                                    (<span t-esc="prod['out_count']"/>)
+                                    — Valeur : <span t-esc="'{:,.2f}'.format(prod['out_value']).replace(',', ' ')"/>
+                                </td>
+                                <td class="recap-solde">
+                                    Solde : <span t-esc="'{:,.2f}'.format(prod['solde_qty']).replace(',', ' ')"/>
+                                    / <span t-esc="'{:,.2f}'.format(prod['solde_value']).replace(',', ' ')"/>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <table class="sub-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 12%;">Date</th>
+                                    <th style="width: 19%;">Type d'opération</th>
+                                    <th style="width: 9%;">Sens</th>
+                                    <th style="width: 18%;">Référence</th>
+                                    <th style="width: 14%;">Quantité</th>
+                                    <th style="width: 14%;">Prix unitaire</th>
+                                    <th style="width: 14%;">Valeur</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="prod['lines']" t-as="line">
+                                    <tr t-att-class="'dir-%s' % line['direction']">
+                                        <td><span t-esc="line['date'].strftime('%d/%m/%Y %H:%M') if line['date'] else ''"/></td>
+                                        <td><span t-esc="line['operation']"/></td>
+                                        <td class="c">
+                                            <span t-attf-class="badge-dir badge-#{line['direction']}"
+                                                  t-esc="line['direction_label']"/>
+                                        </td>
+                                        <td><span t-esc="line['reference']"/></td>
+                                        <td class="r">
+                                            <span t-esc="'{:,.2f}'.format(line['qty']).replace(',', ' ')"/>
+                                            <span t-esc="line['uom']"/>
+                                        </td>
+                                        <td class="r"><span t-esc="'{:,.2f}'.format(line['price_unit']).replace(',', ' ')"/></td>
+                                        <td class="r"><span t-esc="'{:,.2f}'.format(line['value']).replace(',', ' ')"/></td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                </t>
+
+                <div class="footer-info">
+                    <div class="row">
+                        <div class="col-6"><strong>Nb produits :</strong> <span t-esc="len(data)"/></div>
+                        <div class="col-6 text-right">
+                            <strong>Imprimé le :</strong>
+                            <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y %H:%M')"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <template id="report_stock_move_product">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="custom_stock.report_stock_move_product_document"/>
+            </t>
+        </t>
+    </template>
+
+    <record id="action_report_stock_move_product" model="ir.actions.report">
+        <field name="name">Rapport Mouvements par produit</field>
+        <field name="model">stock.move.product.report.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">custom_stock.report_stock_move_product</field>
+        <field name="report_file">custom_stock.report_stock_move_product</field>
+        <field name="binding_model_id" ref="model_stock_move_product_report_wizard"/>
+        <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="base.paperformat_euro"/>
+        <field name="print_report_name">'Mouvements_par_produit_%s' % (object.create_date.strftime('%d%m%Y'))</field>
+    </record>
+</odoo>

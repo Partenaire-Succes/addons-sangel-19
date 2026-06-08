@@ -41,3 +41,4 @@ access_fix_price_inventory_wizard,fix.price.inventory.wizard,model_fix_price_inv
 access_fiche_comptage_wizard,fiche.comptage.wizard,model_fiche_comptage_wizard,,1,1,1,1
 access_fix_price_inventory_line,fix.price.inventory.line,model_fix_price_inventory_line,,1,1,1,1
 access_stock_move_avco_read,stock.move.avco.read,model_stock_move,stock.group_stock_manager,1,0,0,0
+access_stock_move_product_report_wizard,stock.move.product.report.wizard,model_stock_move_product_report_wizard,,1,1,1,1

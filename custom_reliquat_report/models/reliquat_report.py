@@ -1,7 +1,10 @@
-from odoo import models, fields, api
+import io
+import base64
+
+from odoo import models, fields, api, _
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
-from odoo.exceptions import ValidationError
+from odoo.exceptions import ValidationError, UserError
 
 
 class ReliquatReport(models.Model):
@@ -199,6 +202,142 @@ class ReliquatReport(models.Model):
     def action_print(self):
         self.state = 'printed'
         return self.env.ref('custom_reliquat_report.action_report_reliquat').report_action(self)
+
+    def action_export_excel(self):
+        """Exporte le rapport de non livrés en Excel — même modèle que le
+        rapport « Mouvements par produit » (custom_stock) : openpyxl,
+        ir.attachment, téléchargement via ir.actions.act_url."""
+        self.ensure_one()
+        try:
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        except ImportError:
+            raise UserError(_("La bibliothèque openpyxl est requise."))
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Non livrés"
+
+        BLUE  = "1A5276"
+        WHITE = "FFFFFF"
+        ROW_A = "D6EAF8"
+        ROW_B = "EBF5FB"
+        thin  = Side(style='thin', color="AAAAAA")
+        brd   = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+        def font(bold=False, color="000000", size=9):
+            return Font(name="Arial", bold=bold, color=color, size=size)
+
+        def fill(c):
+            return PatternFill("solid", fgColor=c)
+
+        def aln(h="left", v="center"):
+            return Alignment(horizontal=h, vertical=v)
+
+        NCOLS = 8
+
+        ws.merge_cells("A1:H1")
+        ws["A1"] = self.company_id.name
+        ws["A1"].font = font(bold=True, size=11)
+
+        ws.merge_cells("A2:H2")
+        ws["A2"] = "%s — Du %s au %s" % (
+            self.name,
+            self.date_from.strftime('%d/%m/%Y'),
+            self.date_to.strftime('%d/%m/%Y'),
+        )
+        ws["A2"].font = font(bold=True, color=WHITE, size=11)
+        ws["A2"].fill = fill(BLUE)
+        ws["A2"].alignment = aln("center")
+        ws.row_dimensions[2].height = 18
+
+        if self.partner_ids:
+            ws.merge_cells("A3:H3")
+            ws["A3"] = "Fournisseur(s) filtré(s) : %s" % ', '.join(self.partner_ids.mapped('name'))
+            ws["A3"].font = font(size=8)
+        ws.append([])
+
+        # Récap statistiques globales
+        ws.append([
+            "Total commandes", self.total_orders,
+            "Qté commandée", "%.2f" % self.total_qty_ordered,
+            "Qté reçue", "%.2f" % self.total_qty_received,
+            "Qté en attente", "%.2f" % self.total_qty_pending,
+        ])
+        r = ws.max_row
+        for col in range(1, NCOLS + 1):
+            c = ws.cell(row=r, column=col)
+            odd = col % 2 == 1
+            c.font = font(bold=True, color=WHITE if odd else BLUE, size=9)
+            c.fill = fill(BLUE if odd else ROW_A)
+            c.border = brd
+            c.alignment = aln("left" if odd else "right")
+        ws.row_dimensions[r].height = 16
+
+        ws.append(["Taux de satisfaction global : %.2f %%" % (self.satisfaction_rate * 100)])
+        r = ws.max_row
+        ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=NCOLS)
+        c = ws.cell(row=r, column=1)
+        c.font = font(bold=True, size=9)
+        c.alignment = aln("center")
+        ws.append([])
+
+        hdrs = ["Date", "Commande", "Fournisseur", "Produit",
+                "Qté Cdée", "Qté Reçue", "Reliquat", "Taux Sat. (%)"]
+        ws.append(hdrs)
+        r = ws.max_row
+        for col in range(1, NCOLS + 1):
+            c = ws.cell(row=r, column=col)
+            c.font = font(bold=True, size=9)
+            c.fill = fill(ROW_A)
+            c.border = brd
+            c.alignment = aln("center")
+
+        for i, line in enumerate(self.line_ids):
+            ws.append([
+                line.order_date.strftime('%d/%m/%Y') if line.order_date else '',
+                line.purchase_order_id.name or '',
+                line.partner_name or '',
+                line.product_name or '',
+                line.qty_ordered,
+                line.qty_received,
+                line.qty_pending,
+                round(line.satisfaction_rate * 100, 2),
+            ])
+            r = ws.max_row
+            bg = ROW_A if i % 2 == 0 else ROW_B
+            for col in range(1, NCOLS + 1):
+                c = ws.cell(row=r, column=col)
+                c.font = font(size=8)
+                c.fill = fill(bg)
+                c.border = brd
+                c.alignment = aln("right" if col in (5, 6, 7, 8) else "left")
+            for col in (5, 6, 7):
+                ws.cell(row=r, column=col).number_format = '#,##0.##'
+            ws.cell(row=r, column=8).number_format = '#,##0.00'
+
+        for col, w in enumerate([12, 18, 22, 28, 12, 12, 12, 14], 1):
+            ws.column_dimensions[chr(64 + col)].width = w
+
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        xlsx_data = base64.b64encode(buf.read()).decode()
+
+        fname = "Rapport_non_livres_%s.xlsx" % fields.Date.context_today(self).strftime('%d%m%Y')
+        att = self.env['ir.attachment'].create({
+            'name': fname,
+            'type': 'binary',
+            'datas': xlsx_data,
+            'mimetype': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'res_model': self._name,
+            'res_id': self.id,
+        })
+        return {
+            'type': 'ir.actions.act_url',
+            'url': '/web/content/%s?download=true' % att.id,
+            'target': 'new',
+        }
 
 
 
