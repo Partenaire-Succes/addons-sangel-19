@@ -241,7 +241,7 @@ class BixolonDisplayManager {
             const change = data.change || '';
             this.sendDisplay(
                 this._centerLine('*** MERCI ! ***'),
-                this._formatLine('Rendu : ' + change)
+                this._formatLine('Monnaie : ' + change)
             );
             return;
         }

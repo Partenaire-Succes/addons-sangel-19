@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <template id="wms_login_layout" inherit_id="web.login_layout" name="Login Layout">
+      <xpath expr="//div[@class='container py-5']" position="replace">
+        <div class="container py-5">
+          <img class="" src="/crh_login_page/static/src/img/login_1.jpeg" style="max-width: 100%; display: none;"/>
+          <div t-attf-class="card border-0 mx-auto {{login_card_classes}} o_database_list" style="width: 287px;margin-top: 15%;">
+              <div class="card-body">
+                  <!-- <div t-attf-class="text-center pb-3 border-bottom {{'mb-3' if form_small else 'mb-4'}}">
+                      <img t-attf-src="/web/binary/company_logo{{ '?dbname='+db if db else '' }}" alt="Logo" style="max-width: 100%; height: 100%;display: block; margin: auto;"/>
+                  </div> -->
+                  <t t-out="0"/>
+                  <div class="text-center small mt-4 pt-3 border-top" t-if="not disable_footer">
+                      <!-- <t t-if="not disable_database_manager">
+                          <a class="border-right pr-2 mr-1" href="/web/database/manager">Manage Databases lite</a>
+                      </t> -->
+                      <a href="https://www.odoo.com?utm_source=db&amp;utm_medium=auth" target="_blank">Powered by <span>Sangel</span></a>
+                      <a href="https://www.odoo.com?utm_source=db&amp;utm_medium=auth" target="_blank">Fait par <span>S.G.A</span></a>
+                  </div>
+
+              </div>
+          </div>
+        </div>
+      </xpath>
+    </template>
+
+    <template id="wms_page_login" inherit_id="web.login" name="Login Layout">
+      <t t-call="web.login_layout"/>
+      <xpath expr="//form" position="replace">
+        <form class="oe_login_form" role="form" t-attf-action="/web/login" method="post" onsubmit="this.action = '/web/login' + location.hash">
+            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+            <h1 style="text-align: center; font-weight: bold; font-size: 36px;color: #5579ac;">Sangel</h1>
+            <div class="form-group field-login">
+                <label for="login"><i class="fa fa-user"></i> Compte</label>
+                <!-- <input type="text" placeholder="Cuid" name="login" t-att-value="login" id="login" t-attf-class="form-control #{'form-control-sm' if form_small else ''}" required="required" autofocus="autofocus" autocapitalize="off" style="border-radius: 10px !important;"/> -->
+                <!-- <input type="text" placeholder="jfgd467" name="login" t-att-value="login" id="login" t-attf-class="form-control #{'form-control-sm' if form_small else ''}" required="required" autofocus="autofocus" autocapitalize="off" style="border-radius: 10px !important;"/> -->
+                <!-- <label for="login"><i class="fa fa-user"></i> Email</label> -->
+                <input type="text" placeholder="sangel.test" name="login" t-att-value="login" id="login" t-attf-class="form-control #{'form-control-sm' if form_small else ''}" required="required" autofocus="autofocus" autocapitalize="off" style="border-radius: 10px !important;"/>
+            </div>
+
+            <div class="form-group field-password">
+                <label for="password"><i class="fa fa-unlock-alt"></i> Mot de passe</label>
+                <input type="password" placeholder="xxxxxxxxxxxxxxx" name="password" id="password" t-attf-class="form-control #{'form-control-sm' if form_small else ''}" required="required" autocomplete="current-password" t-att-autofocus="'autofocus' if login else None" maxlength="4096" style="border-radius: 10px !important;"/>
+            </div>
+
+            <p class="alert alert-danger" t-if="error" role="alert">
+                <t t-esc="error"/>
+            </p>
+            <p class="alert alert-success" t-if="message and message != 'session_expired'" role="status">
+                <t t-esc="message"/>
+            </p>
+            <div class="alert alert-warning text-center" t-if="message == 'session_expired'" role="alert"
+                 style="padding: 20px; border-left: 5px solid #5579ac; background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%); box-shadow: 0 3px 5px rgba(0,0,0,0.1);">
+                <div style="margin-bottom: 15px;">
+                    <i class="fa fa-clock-o fa-3x" style="color: #5579ac;"/>
+                </div>
+                <h4 style="font-weight: bold; color: #5579ac; margin-bottom: 10px;">
+                    VOTRE SESSION A EXPIRÉ
+                </h4>
+                <p style="margin-bottom: 10px; color: #555; line-height: 1.6;">
+                    Pour des raisons de sécurité, votre session a été automatiquement fermée après une période d'inactivité.
+                </p>
+                <div style="background: white; padding: 10px; border-radius: 5px; margin-top: 15px;">
+                    <p style="font-weight: bold; color: #333; margin: 0;">
+                        <i class="fa fa-arrow-down" style="color: #5579ac; margin-right: 5px;"/>
+                        Veuillez saisir vos identifiants ci-dessous pour vous reconnecter
+                    </p>
+                </div>
+            </div>
+            <div t-attf-class="clearfix oe_login_buttons text-center mb-1 {{'pt-2' if form_small else 'pt-3'}}">
+                <button type="submit" class="btn btn-primary btn-block wms-login" style="background-color: #5579ac !important;border-radius: 10px;">Je me connecte</button>
+                <t t-if="debug">
+                    <button type="submit" name="redirect" value="/web/become" class="btn btn-link btn-sm btn-block">Log in as superuser</button>
+                </t>
+                <div class="o_login_auth"/>
+            </div>
+            <input type="hidden" name="redirect" t-att-value="redirect"/>
+        </form>
+      </xpath>
+
+    </template>
+
+</odoo>

@@ -13,6 +13,8 @@
                                 class="btn-primary" invisible="1"/>
                         <button name="action_print" type="object" string="Imprimer"
                                 class="btn-primary" icon="fa-print"/>
+                        <button name="action_export_excel" type="object" string="Télécharger Excel"
+                                class="btn-success" icon="fa-file-excel-o"/>
                         <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,printed"
                                invisible="1"/>
                     </header>
@@ -34,6 +36,8 @@
                                     -
                                     <field name="date_to" class="oe_inline" readonly="1"/>
                                 </div>
+                                <field name="partner_ids" widget="many2many_tags" readonly="1"
+                                       placeholder="Tous les fournisseurs"/>
                             </group>
                             <group>
                                 <field name="created_by" readonly="1"/>

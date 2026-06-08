@@ -1,0 +1,44 @@
+.bg-100 {
+  background-color: #5579ac !important;
+  color: #212529;
+  background-image: url('/crh_login_page/static/src/img/sangel_2_h.jpg');
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  margin: auto;
+  width: 54% !important;
+  border-radius: 15px;
+  margin-top: 8% !important;
+
+}
+
+.c_login_container {
+  background: #FFF !important;
+  width: 65% !important;
+  border-radius: 15px;
+}
+
+.btn-block {
+  display: block;
+  width: 80%;
+  margin: auto;
+}
+
+.border-bottom {
+    border-bottom: 1px solid #DEE2E6 !important;
+    display: none;
+}
+
+.border-right {
+  /* border-right: 1px solid #DEE2E6 !important; */
+  display: none !important;
+}
+
+.border-top {
+  border-top: 1px solid #DEE2E6 !important;
+  display: none;
+}
+
+.card{
+   margin-top: 0% !important;
+}

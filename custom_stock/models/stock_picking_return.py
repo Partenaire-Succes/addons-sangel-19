@@ -22,7 +22,11 @@ class StockReturnPickingCustom(models.TransientModel):
 
     def _prepare_stock_return_picking_line_vals_from_move(self, stock_move):
         vals = super()._prepare_stock_return_picking_line_vals_from_move(stock_move)
-        vals['price_unit'] = stock_move.price_unit
+        # Le prix unitaire du retour est obligatoire (cf. vue héritée) : si le
+        # mouvement d'origine n'a pas de prix (price_unit = 0), on retombe sur
+        # le coût actuel de l'article plutôt que d'afficher 0 — ainsi le champ
+        # n'est jamais vide/à zéro à l'ouverture du wizard.
+        vals['price_unit'] = stock_move.price_unit or stock_move.product_id.standard_price
         return vals
 
     def _create_return(self):
