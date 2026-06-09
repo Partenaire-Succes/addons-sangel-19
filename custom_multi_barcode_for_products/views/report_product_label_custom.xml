@@ -63,7 +63,7 @@
 
                             <!-- GAUCHE : prix + unite + ref -->
                             <td style="vertical-align:top;
-                                       padding:0.5mm 1mm 1mm 3mm;
+                                       padding:0.5mm 1mm 0mm 3mm;
                                        text-align:center;">
 
                                 <div class="o_label_extra_data"
@@ -87,32 +87,34 @@
                                 </t>
 
                                 <!-- REF + DATE -->
-                                <div style="font-size:7pt;font-weight:700;color:#111;margin-top:1mm;text-align:left;letter-spacing:0.5px;line-height:1.2;">
-                                    <t t-out="product.default_code"/>&#160;&#160;<t t-out="datetime.date.today().strftime('%d/%m/%Y')"/>
+                                <div style="font-size:7pt;font-weight:700;color:#111;margin-top:0.5mm;text-align:left;letter-spacing:0.5px;line-height:1.2;">
+                                    <span style="font-size:7pt;font-weight:700;"><t t-out="product.default_code"/></span>&#160;&#160;Imprim&#233; le&#160;<t t-out="datetime.date.today().strftime('%d/%m/%Y')"/>
                                 </div>
 
                             </td>
 
-                            <!-- DROITE : logo collé à droite, pleine hauteur -->
+                            <!-- DROITE : logo sans déformation (wkhtmltopdf ne supporte pas object-fit) -->
                             <td style="width:30mm;
                                        padding:0;
-                                       vertical-align:top;">
+                                       vertical-align:middle;
+                                       text-align:right;
+                                       overflow:hidden;">
                                 <img t-if="logo_bin"
                                      t-att-src="image_data_uri(logo_bin)"
                                      style="display:block;
-                                            width:30mm;
                                             height:23mm;
-                                            object-fit:cover;
-                                            object-position:right center;
-                                            margin-left:auto;"/>
+                                            width:auto;
+                                            max-width:30mm;
+                                            margin-left:auto;
+                                            margin-right:0;"/>
                                 <img t-else=""
                                      src="/custom_multi_barcode_for_products/static/img/etiquette.png"
                                      style="display:block;
-                                            width:30mm;
                                             height:23mm;
-                                            object-fit:cover;
-                                            object-position:right center;
-                                            margin-left:auto;"/>
+                                            width:auto;
+                                            max-width:30mm;
+                                            margin-left:auto;
+                                            margin-right:0;"/>
                             </td>
 
                         </tr>
