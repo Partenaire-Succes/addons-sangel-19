@@ -16,6 +16,22 @@
         <field name="context">{'default_picking_type_code': 'incoming'}</field>
     </record>
 
+    <!-- Pas de création manuelle depuis ce raccourci : on réutilise les vues
+         liste/formulaire "sans création" déjà définies dans
+         stock_picking_no_create_views.xml (chargé avant ce fichier). -->
+    <record id="action_receptions_fournisseur_stock_view_list_nocreate" model="ir.actions.act_window.view">
+        <field name="sequence">1</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_picking_incoming_tree_nocreate"/>
+        <field name="act_window_id" ref="action_receptions_fournisseur_stock"/>
+    </record>
+    <record id="action_receptions_fournisseur_stock_view_form_nocreate" model="ir.actions.act_window.view">
+        <field name="sequence">2</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_picking_form_nocreate"/>
+        <field name="act_window_id" ref="action_receptions_fournisseur_stock"/>
+    </record>
+
     <!-- Menu parent Fournisseurs -->
     <menuitem
         id="menu_fournisseur_root"
