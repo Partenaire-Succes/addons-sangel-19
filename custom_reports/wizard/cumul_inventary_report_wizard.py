@@ -40,8 +40,8 @@ class CumulInventaryReportWizard(models.TransientModel):
     def _compute_physical_lines_ids(self):
         for record in self:
             domain = [
-                ('create_date', '>=', record.date_from),
-                ('create_date', '<=', record.date_to),
+                ('inventory_physical_id.date_done', '>=', record.date_from),
+                ('inventory_physical_id.date_done', '<=', record.date_to),
                 ('company_id', '=', record.company_id.id),
                 ('active', '=', True),
             ]
@@ -50,9 +50,17 @@ class CumulInventaryReportWizard(models.TransientModel):
             if record.code_article_filter:
                 domain.append(('code_article', 'ilike', record.code_article_filter))
 
+            # Filtrer les produits autorisés pour la société
+            if self.env['product.template']._fields.get('allowed_company_ids'):
+                domain += [
+                    '|',
+                    ('product_tmpl_id.allowed_company_ids', '=', False),
+                    ('product_tmpl_id.allowed_company_ids', 'in', [record.company_id.id]),
+                ]
+
             record.physical_lines_ids = self.env['physical.inventory.line'].search(
                 domain,
-                order='code_article, create_date'
+                order='code_article, inventory_physical_id.date_done'
             )
 
     @api.depends('physical_lines_ids')
