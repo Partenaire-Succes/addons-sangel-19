@@ -23,9 +23,9 @@
                         margin-bottom: 1px;
                     }
                     table.prod-hdr-table td {
-                        background-color: #1A5276; color: #fff;
+                        background-color: #D6EAF8; color: #1A5276;
                         font-weight: bold; font-size: 8.5pt;
-                        border: 1px solid #0E3460; padding: 4px 5px;
+                        border: 1px solid #AAAAAA; padding: 4px 5px;
                         vertical-align: middle;
                     }
                     .prod-ref  { width: 10%; text-align: center; }
