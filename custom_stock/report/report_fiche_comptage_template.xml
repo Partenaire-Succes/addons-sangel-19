@@ -10,12 +10,12 @@
                      MODE NORMAL — une page par code inventaire
                 ═══════════════════════════════════════════════════════ -->
                 <t t-if="wizard.inventory_mode == 'normal'">
-                    <t t-set="quants" t-value="wizard._get_quants()"/>
-                    <t t-set="codes" t-value="quants.mapped('code_inventory_id')"/>
+                    <t t-set="products" t-value="wizard._get_products()"/>
+                    <t t-set="codes" t-value="products.mapped('product_tmpl_id.code_inventory_id')"/>
 
                     <t t-if="codes">
                         <t t-foreach="codes" t-as="code_inv">
-                            <t t-set="code_quants" t-value="quants.filtered(lambda q: q.code_inventory_id.id == code_inv.id)"/>
+                            <t t-set="code_products" t-value="products.filtered(lambda p: p.product_tmpl_id.code_inventory_id.id == code_inv.id)"/>
                             <div class="page" t-att-style="'page-break-before: always;' if not code_inv_first else ''">
                                 <div class="oe_structure"/>
 
@@ -49,13 +49,13 @@
 
                                 <div class="row mt-2">
                                     <div class="col-12">
-                                        <t t-foreach="code_quants" t-as="quant">
+                                        <t t-foreach="code_products" t-as="product">
                                             <div class="row" style="border-bottom: 1px solid #ddd; padding: 8px 0; min-height: 32px;">
                                                 <div class="col-2" style="font-size: 9pt;">
-                                                    <t t-esc="quant.product_id.default_code or ''"/>
+                                                    <t t-esc="product.default_code or ''"/>
                                                 </div>
                                                 <div class="col-5" style="font-size: 9pt;">
-                                                    <t t-esc="quant.product_id.name"/>
+                                                    <t t-esc="product.name"/>
                                                 </div>
                                                 <div class="col-3 text-center">
                                                     <strong>_______________</strong>
@@ -69,7 +69,7 @@
                                     <div class="col-4">Compteur : _______________________</div>
                                     <div class="col-4 text-center">Vérificateur : _______________________</div>
                                     <div class="col-4 text-right">
-                                        Nb articles : <strong><t t-esc="len(code_quants)"/></strong>
+                                        Nb articles : <strong><t t-esc="len(code_products)"/></strong>
                                     </div>
                                 </div>
 
@@ -78,9 +78,9 @@
                         </t>
                     </t>
 
-                    <!-- Cas : aucun code (quants sans code_inventory_id) -->
-                    <t t-set="no_code_quants" t-value="quants.filtered(lambda q: not q.code_inventory_id)"/>
-                    <t t-if="no_code_quants">
+                    <!-- Cas : produits sans code_inventory_id -->
+                    <t t-set="no_code_products" t-value="products.filtered(lambda p: not p.product_tmpl_id.code_inventory_id)"/>
+                    <t t-if="no_code_products">
                         <div class="page" style="page-break-before: always;">
                             <div class="oe_structure"/>
                             <div class="row">
@@ -96,19 +96,17 @@
                                 <div class="col-12" style="border: solid 1px #000; background: #f0f0f0; padding: 4px;">
                                     <div class="row">
                                         <div class="col-2"><strong>Code Article</strong></div>
-                                        <div class="col-5"><strong>Désignation</strong></div>
-                                        <div class="col-2 text-center"><strong>Emplacement</strong></div>
+                                        <div class="col-7"><strong>Désignation</strong></div>
                                         <div class="col-3 text-center"><strong>Qté Comptée</strong></div>
                                     </div>
                                 </div>
                             </div>
                             <div class="row mt-2">
                                 <div class="col-12">
-                                    <t t-foreach="no_code_quants" t-as="quant">
+                                    <t t-foreach="no_code_products" t-as="product">
                                         <div class="row" style="border-bottom: 1px solid #ddd; padding: 8px 0; min-height: 32px;">
-                                            <div class="col-2" style="font-size: 9pt;"><t t-esc="quant.product_id.default_code or ''"/></div>
-                                            <div class="col-5" style="font-size: 9pt;"><t t-esc="quant.product_id.name"/></div>
-                                            <div class="col-2 text-center" style="font-size: 8pt; color: #555;"><t t-esc="quant.location_id.complete_name"/></div>
+                                            <div class="col-2" style="font-size: 9pt;"><t t-esc="product.default_code or ''"/></div>
+                                            <div class="col-7" style="font-size: 9pt;"><t t-esc="product.name"/></div>
                                             <div class="col-3 text-center"><strong>_______________</strong></div>
                                         </div>
                                     </t>
@@ -117,7 +115,7 @@
                             <div class="row mt-4">
                                 <div class="col-4">Compteur : _______________________</div>
                                 <div class="col-4 text-center">Vérificateur : _______________________</div>
-                                <div class="col-4 text-right">Nb articles : <strong><t t-esc="len(no_code_quants)"/></strong></div>
+                                <div class="col-4 text-right">Nb articles : <strong><t t-esc="len(no_code_products)"/></strong></div>
                             </div>
                             <div class="oe_structure"/>
                         </div>

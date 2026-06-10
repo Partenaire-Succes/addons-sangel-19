@@ -256,12 +256,17 @@ class PhysicalInventory(models.Model):
                     ]).ids
                 )
 
+            final_valid_ids = valid_tmpl_ids & allowed_tmpl_ids if has_allowed else set(valid_tmpl_ids)
+
+            # ── Boucle sur les quants existants (stock > 0) ──────────────────
+            tmpl_ids_with_quant = set()
             for stck in self.line_quant_ids:
                 tmpl_id = stck.product_tmpl_id.id
                 if tmpl_id not in valid_tmpl_ids:
                     continue
                 if has_allowed and tmpl_id not in allowed_tmpl_ids:
                     continue
+                tmpl_ids_with_quant.add(tmpl_id)
                 self.env['physical.inventory.line'].create({
                     'inventory_physical_id': self.id,
                     'quant_id': stck.id,
@@ -274,6 +279,32 @@ class PhysicalInventory(models.Model):
                     'product_uom_id': stck.product_uom_id.id,
                     'code_category_id': self.code_category_id.id,
                 })
+
+            # ── Produits sans quant (stock = 0) → ligne à zéro sur emplacement principal ──
+            missing_tmpl_ids = final_valid_ids - tmpl_ids_with_quant
+            if missing_tmpl_ids:
+                main_location = company.dest_warehouse_id.lot_stock_id
+                if main_location:
+                    zero_domain = [
+                        ('id', 'in', list(missing_tmpl_ids)),
+                        ('active', '=', True),
+                        ('type', '=', 'consu'),
+                    ]
+                    if self.code_inventory_id:
+                        zero_domain.append(('code_inventory_id', 'in', self.code_inventory_id.ids))
+                    for tmpl in self.env['product.template'].search(zero_domain):
+                        self.env['physical.inventory.line'].create({
+                            'inventory_physical_id': self.id,
+                            'quant_id': False,
+                            'product_tmpl_id': tmpl.id,
+                            'product_id': tmpl.product_variant_id.id,
+                            'location_id': main_location.id,
+                            'quantity': 0.0,
+                            'price': tmpl.standard_price,
+                            'lot_id': False,
+                            'product_uom_id': tmpl.uom_id.id,
+                            'code_category_id': self.code_category_id.id,
+                        })
 
     def action_print_inventaire_report(self):
         """Méthode principale pour imprimer le rapport d'inventaire"""
