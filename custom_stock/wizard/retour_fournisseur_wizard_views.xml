@@ -150,7 +150,7 @@
         parent="custom_stock.menu_retour_carton_root"
         action="action_retour_fournisseur_wizard"
         sequence="20"
-        active="False"
+        active="True"
         groups="custom_pos.group_superviseur,custom_pos.group_assistant_magasin,custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
     />
     <menuitem

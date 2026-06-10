@@ -3,9 +3,9 @@
 
     <template id="wms_login_layout" inherit_id="web.login_layout" name="Login Layout">
       <xpath expr="//div[@class='container py-5']" position="replace">
-        <div class="container py-5">
+        <div class="container py-5 sangel_login_bg">
           <img class="" src="/crh_login_page/static/src/img/login_1.jpeg" style="max-width: 100%; display: none;"/>
-          <div t-attf-class="card border-0 mx-auto {{login_card_classes}} o_database_list" style="width: 287px;margin-top: 15%;">
+          <div t-attf-class="card border-0 mx-auto sangel_login_card {{login_card_classes}} o_database_list" style="margin-top: 15%;">
               <div class="card-body">
                   <!-- <div t-attf-class="text-center pb-3 border-bottom {{'mb-3' if form_small else 'mb-4'}}">
                       <img t-attf-src="/web/binary/company_logo{{ '?dbname='+db if db else '' }}" alt="Logo" style="max-width: 100%; height: 100%;display: block; margin: auto;"/>
@@ -30,7 +30,7 @@
       <xpath expr="//form" position="replace">
         <form class="oe_login_form" role="form" t-attf-action="/web/login" method="post" onsubmit="this.action = '/web/login' + location.hash">
             <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-            <h1 style="text-align: center; font-weight: bold; font-size: 36px;color: #5579ac;">Sangel</h1>
+            <h1 style="text-align: center; font-weight: bold; font-size: 28px; margin-bottom: 1.25rem; line-height: 1.3; color: #5579ac;">Sangel Côte d'Ivoire</h1>
             <div class="form-group field-login">
                 <label for="login"><i class="fa fa-user"></i> Compte</label>
                 <!-- <input type="text" placeholder="Cuid" name="login" t-att-value="login" id="login" t-attf-class="form-control #{'form-control-sm' if form_small else ''}" required="required" autofocus="autofocus" autocapitalize="off" style="border-radius: 10px !important;"/> -->

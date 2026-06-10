@@ -42,3 +42,35 @@
 .card{
    margin-top: 0% !important;
 }
+
+/* Page de connexion : image en plein fond (toute la page), carte centrée
+   par-dessus. Ne touche pas à .bg-100 (utilisé ailleurs par Odoo) : on
+   utilise des classes dédiées posées uniquement sur notre template de login. */
+.sangel_login_bg {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  margin-left: calc(50% - 50vw) !important;
+  margin-right: calc(50% - 50vw) !important;
+  min-height: 100vh;
+  padding: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-image: url('/crh_login_page/static/src/img/sangel_2_h.jpg');
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+}
+
+.sangel_login_card {
+  background: rgba(255, 255, 255, 0.94) !important;
+  border-radius: 15px;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.25);
+  width: 430px !important;
+  max-width: 92vw;
+}
+
+.sangel_login_card .form-control {
+  height: calc(2.5em + 0.75rem + 2px);
+  font-size: 1.05rem;
+}
