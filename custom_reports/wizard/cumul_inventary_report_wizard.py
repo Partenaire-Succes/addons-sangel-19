@@ -58,9 +58,9 @@ class CumulInventaryReportWizard(models.TransientModel):
                     ('product_tmpl_id.allowed_company_ids', 'in', [record.company_id.id]),
                 ]
 
-            record.physical_lines_ids = self.env['physical.inventory.line'].search(
-                domain,
-                order='code_article, inventory_physical_id.date_done'
+            lines = self.env['physical.inventory.line'].search(domain)
+            record.physical_lines_ids = lines.sorted(
+                key=lambda l: (l.code_article or '', l.inventory_physical_id.date_done or '')
             )
 
     @api.depends('physical_lines_ids')
