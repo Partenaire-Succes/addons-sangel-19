@@ -36,6 +36,7 @@ class RetourFournisseurWizard(models.TransientModel):
         'stock.location',
         string='Emplacement source',
         required=True,
+        readonly=True,
         domain=[('usage', '=', 'internal')],
         default=lambda self: self._default_location(),
         help="Emplacement depuis lequel les articles seront retournés.",
