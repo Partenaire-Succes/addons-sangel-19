@@ -82,7 +82,7 @@
                                                 <span t-field="line.price"/>
                                             </td>
                                             <td class="text-end">
-                                                <span t-esc="'%.2f' % ((line.qty_diff or 0.0) * (line.price or 0.0))"/>
+                                                <span t-esc="'%.2f' % (round(line.qty_diff or 0.0, 2) * (line.price or 0.0))"/>
                                             </td>
                                         </tr>
                                     </t>
@@ -113,23 +113,29 @@
                         </table>
 
                         <!-- Grand Total -->
-                        <div class="row mt-4">
-                            <div class="col-12">
-                                <table class="table table-sm" style="width:auto; float:right;">
-                                    <tr style="background-color:#d0d0d0; font-weight:bold; font-size:1.1em;">
-                                        <td style="padding:10px;">
-                                            <strong>TOTAL GÉNÉRAL :</strong>
-                                        </td>
-                                        <td class="text-end" style="padding:10px; min-width:120px;">
-                                            <span t-esc="'%.2f' % grand_total_ecart"/>
-                                        </td>
-                                        <td class="text-end" style="padding:10px; min-width:150px;">
-                                            <span t-esc="'{:,.0f}'.format(grand_total_montant or 0).replace(',', ' ')"/>
-                                        </td>
-                                    </tr>
-                                </table>
-                            </div>
-                        </div>
+                        <table class="table table-sm table-bordered mt-2" style="table-layout:fixed; width:100%;">
+                            <colgroup>
+                                <col style="width:8%;"/>
+                                <col style="width:34%;"/>
+                                <col style="width:8%;"/>
+                                <col style="width:12%;"/>
+                                <col style="width:10%;"/>
+                                <col style="width:12%;"/>
+                                <col style="width:16%;"/>
+                            </colgroup>
+                            <tr style="background-color:#d0d0d0; font-weight:bold; font-size:1.1em;">
+                                <td colspan="4" style="padding:6px 10px;">
+                                    <strong>TOTAL GÉNÉRAL</strong>
+                                </td>
+                                <td class="text-end" style="padding:6px 10px;">
+                                    <span t-esc="'%.2f' % grand_total_ecart"/>
+                                </td>
+                                <td></td>
+                                <td class="text-end" style="padding:6px 10px;">
+                                    <span t-esc="'{:,.0f}'.format(grand_total_montant or 0).replace(',', ' ')"/>
+                                </td>
+                            </tr>
+                        </table>
                         </main>
                     </div>
                 </t>
