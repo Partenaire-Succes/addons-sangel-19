@@ -101,8 +101,14 @@ class StockMoveProductReportWizard(models.TransientModel):
             }
             for move in product_moves:
                 qty = sum(move.move_line_ids.mapped('quantity')) or move.product_uom_qty
-                price = move.price_unit
-                value = qty * price
+                # On utilise la valeur de valorisation réelle du mouvement
+                # (move.value, alimentée par les couches de valorisation FIFO/CMP
+                # et utilisée par le rapport stock.avco.report natif), plutôt que
+                # move.price_unit qu'Odoo marque comme obsolète et qui peut être
+                # à 0 même quand le mouvement a une valeur comptable réelle.
+                # Pour les transferts internes non valorisés, value=0 reste normal.
+                value = move.value
+                price = (value / qty) if qty else 0.0
                 qty_total += qty
                 value_total += value
 
