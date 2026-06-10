@@ -232,7 +232,7 @@ class PhysicalInventory(models.Model):
                     line.price = line.standard_price
             return
 
-        self.physical_line_ids.unlink()
+        self.physical_line_ids.with_context(from_generate_lines=True).unlink()
 
         if self.inventory_mode == 'normal':
             company = self.company_id
@@ -267,7 +267,7 @@ class PhysicalInventory(models.Model):
                 if has_allowed and tmpl_id not in allowed_tmpl_ids:
                     continue
                 tmpl_ids_with_quant.add(tmpl_id)
-                self.env['physical.inventory.line'].create({
+                self.env['physical.inventory.line'].with_context(from_generate_lines=True).create({
                     'inventory_physical_id': self.id,
                     'quant_id': stck.id,
                     'product_tmpl_id': tmpl_id,
@@ -293,7 +293,7 @@ class PhysicalInventory(models.Model):
                     if self.code_inventory_id:
                         zero_domain.append(('code_inventory_id', 'in', self.code_inventory_id.ids))
                     for tmpl in self.env['product.template'].search(zero_domain):
-                        self.env['physical.inventory.line'].create({
+                        self.env['physical.inventory.line'].with_context(from_generate_lines=True).create({
                             'inventory_physical_id': self.id,
                             'quant_id': False,
                             'product_tmpl_id': tmpl.id,
@@ -450,13 +450,28 @@ class PhysicalInventoryLine(models.Model):
             company_ok = not allowed_companies or company in allowed_companies
             line.is_inventoriable = status_ok and company_ok
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        if not self.env.context.get('from_generate_lines'):
+            for vals in vals_list:
+                inv_id = vals.get('inventory_physical_id')
+                if inv_id:
+                    inv = self.env['physical.inventory'].browse(inv_id)
+                    if inv.inventory_mode == 'normal':
+                        raise UserError(
+                            _("L'ajout manuel de lignes n'est pas autorisé en mode Inventaire normal.\n"
+                              "Utilisez le bouton \"Générer les articles\".")
+                        )
+        return super().create(vals_list)
+
     def unlink(self):
-        for line in self:
-            if line.inventory_physical_id and line.inventory_physical_id.inventory_mode == 'normal':
-                raise UserError(
-                    "La suppression de lignes n'est pas autorisée en mode Inventaire normal.\n"
-                    "Merci de valider votre inventaire."
-                )
+        if not self.env.context.get('from_generate_lines'):
+            for line in self:
+                if line.inventory_physical_id and line.inventory_physical_id.inventory_mode == 'normal':
+                    raise UserError(
+                        _("La suppression de lignes n'est pas autorisée en mode Inventaire normal.\n"
+                          "Merci de valider votre inventaire.")
+                    )
         return super().unlink()
 
     @api.depends('physical_qty', 'quantity', 'price')

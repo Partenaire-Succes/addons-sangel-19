@@ -94,7 +94,7 @@
                             <page string="Ligne Inventaire Physique">
                                 <field name="physical_line_ids" readonly="state == 'done'"
                                        domain="[('active', '=', True), ('is_inventoriable', '=', True)]">
-                                    <list editable="bottom" delete="inventory_mode != 'normal'">
+                                    <list editable="bottom" delete="inventory_mode != 'normal'" create="inventory_mode != 'normal'">
                                         <field name="inventory_mode" column_invisible="1"/>
                                         <field name="product_tmpl_id" column_invisible="False"/>
                                         <field name="code_inventory_id" column_invisible="False"/>
