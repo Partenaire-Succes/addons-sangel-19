@@ -101,6 +101,11 @@ class StockMoveProductReportWizard(models.TransientModel):
             }
             for move in product_moves:
                 qty = sum(move.move_line_ids.mapped('quantity')) or move.product_uom_qty
+                # Un mouvement à quantité 0 (ex. article non stocké inclus dans
+                # un ajustement d'inventaire) n'apporte aucune information utile
+                # et ne doit pas apparaître dans le rapport.
+                if not qty:
+                    continue
                 # On utilise la valeur de valorisation réelle du mouvement
                 # (move.value, alimentée par les couches de valorisation FIFO/CMP
                 # et utilisée par le rapport stock.avco.report natif), plutôt que
@@ -129,6 +134,9 @@ class StockMoveProductReportWizard(models.TransientModel):
                     'price_unit': price,
                     'value': value,
                 })
+
+            if not lines:
+                continue
 
             result.append({
                 'product': product,
