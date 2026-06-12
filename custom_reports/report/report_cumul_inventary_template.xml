@@ -124,14 +124,14 @@
                                 <col style="width:16%;"/>
                             </colgroup>
                             <tr style="background-color:#d0d0d0; font-weight:bold; font-size:1.1em;">
-                                <td colspan="4" style="padding:6px 10px;">
+                                <td colspan="3" style="padding:6px 10px;">
                                     <strong>TOTAL GÉNÉRAL</strong>
                                 </td>
-                                <td class="text-end" style="padding:6px 10px;">
+                                <td colspan="2" class="text-end" style="padding:6px 10px;">
                                     <span t-esc="'%.2f' % grand_total_ecart"/>
                                 </td>
                                 <td></td>
-                                <td class="text-end" style="padding:6px 10px;">
+                                <td colspan="2" class="text-end" style="padding:6px 10px;">
                                     <span t-esc="'{:,.0f}'.format(grand_total_montant or 0).replace(',', ' ')"/>
                                 </td>
                             </tr>
