@@ -14,7 +14,7 @@
                             <div class="col-4 text-end">
                                 <p>
                                     <strong>Date:</strong>
-                                    <span t-field="doc.date_to"/>
+                                    <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y %H:%M')"/>
                                 </p>
                             </div>
                         </div>

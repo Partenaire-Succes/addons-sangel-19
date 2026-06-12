@@ -244,8 +244,8 @@ class ProductTemplateImport(models.Model):
                             skipped += 1
                             continue
 
-                        existing = tmpl_model.search(
-                            [("default_code", "=", vals["default_code"])], limit=1
+                        existing = tmpl_model.with_context(active_test=True).search(
+                            [("default_code", "=", vals["default_code"]), ("active", "=", True)], limit=1
                         )
 
                         if existing:
@@ -501,10 +501,11 @@ class ProductTemplateImport(models.Model):
         if not barcode or barcode in invalid_barcodes:
             barcode = False
         else:
-            if len(barcode) == 13 and barcode.startswith('27') and barcode.endswith('0000000'):
-                old_barcode = barcode
-                barcode     = self.fix_gs1_barcode(barcode)
-                _logger.info("🔧 Code-barres GS1 corrigé : %s → %s", old_barcode, barcode)
+            if len(barcode) in (12, 13) and barcode.startswith('27'):
+                corrected = self.fix_gs1_barcode(barcode)
+                if corrected != barcode:
+                    _logger.info("🔧 Code-barres GS1 corrigé : %s → %s", barcode, corrected)
+                    barcode = corrected
 
             if barcode:
                 existing = self.search([("barcode", "=", barcode)], limit=1)
@@ -624,6 +625,42 @@ class ProductTemplateImport(models.Model):
 
         existing.write(update_vals)
 
+        # En Odoo 19, product.template.barcode est calculé depuis product.product.barcode.
+        # On écrit directement sur la variante pour garantir la persistance.
+        if update_vals.get('barcode'):
+            try:
+                self.env.cr.execute(
+                    "UPDATE product_product SET barcode = %s, write_date = now() WHERE product_tmpl_id = %s AND active = true",
+                    (update_vals['barcode'], existing.id)
+                )
+            except Exception:
+                pass
+
+        # Correction GS1 directe : uniquement sur les produits actifs.
+        if not existing.active:
+            return
+        current_barcode = existing.barcode
+        if current_barcode and len(current_barcode) in (12, 13) and current_barcode.startswith('27'):
+            corrected = self.fix_gs1_barcode(current_barcode)
+            if corrected != current_barcode:
+                conflict = self.env['product.template'].sudo().search([
+                    ('barcode', '=', corrected), ('id', '!=', existing.id),
+                ], limit=1)
+                conflict_pp = self.env['product.product'].sudo().search([
+                    ('barcode', '=', corrected), ('product_tmpl_id', '!=', existing.id),
+                ], limit=1)
+                if not conflict and not conflict_pp:
+                    self.env.cr.execute(
+                        "UPDATE product_product SET barcode = %s, write_date = now() WHERE product_tmpl_id = %s AND active = true",
+                        (corrected, existing.id)
+                    )
+                    _logger.info("✅ GS1 barcode corrigé sur produit existant %s : %s → %s",
+                                 existing.default_code, current_barcode, corrected)
+                else:
+                    blocker = conflict or conflict_pp
+                    _logger.warning("⚠️ GS1 correction %s → %s bloquée : barcode utilisé par %s",
+                                    current_barcode, corrected, blocker.default_code)
+
     def _update_product_suppliers(self, product, item):
         """Crée ou met à jour la ligne fournisseur d'un produit. Retourne le nombre de lignes ajoutées."""
         supplier_code = self._safe_string(item.get("yG5FRS_0"))
@@ -740,14 +777,79 @@ class ProductTemplateImport(models.Model):
     # GESTION DES CODES-BARRES GS1
     # =========================================================================
 
+    def fix_all_gs1_barcodes_direct(self):
+        """
+        Corrige directement tous les code-barres GS1 mal formés via SQL brut.
+        L'ORM ne persiste pas toujours barcode sur product_product (stored related) —
+        les UPDATE directs garantissent l'écriture en base.
+        """
+        cr = self.env.cr
+
+        cr.execute("""
+            SELECT pp.id, pp.barcode, pt.default_code
+            FROM product_product pp
+            JOIN product_template pt ON pt.id = pp.product_tmpl_id
+            WHERE pp.active = true
+              AND length(pp.barcode) IN (12, 13)
+              AND pp.barcode LIKE '27%%'
+        """)
+        rows = cr.fetchall()
+
+        fixed = skipped = errors = 0
+        for pp_id, barcode, default_code in rows:
+            corrected = self.fix_gs1_barcode(barcode)
+            if corrected == barcode:
+                continue
+
+            cr.execute(
+                "SELECT id FROM product_product WHERE barcode = %s AND id != %s LIMIT 1",
+                (corrected, pp_id)
+            )
+            if cr.fetchone():
+                _logger.warning("⚠️ GS1 fix bloqué %s (%s → %s) : conflit",
+                                default_code, barcode, corrected)
+                skipped += 1
+                continue
+
+            try:
+                cr.execute(
+                    "UPDATE product_product SET barcode = %s, write_date = now() WHERE id = %s",
+                    (corrected, pp_id)
+                )
+                fixed += 1
+                _logger.info("✅ GS1 fixed: %s (%s → %s)", default_code, barcode, corrected)
+            except Exception as e:
+                errors += 1
+                _logger.error("❌ GS1 fix error %s: %s", default_code, e)
+
+        _logger.info("GS1 fix terminé : %s corrigés, %s bloqués, %s erreurs", fixed, skipped, errors)
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Correction GS1 terminée',
+                'message': f'{fixed} barcode(s) corrigé(s), {skipped} bloqué(s) (conflit), {errors} erreur(s).',
+                'type': 'success' if not errors else 'warning',
+                'sticky': True,
+                'next': {'type': 'ir.actions.client', 'tag': 'reload'},
+            },
+        }
+
     def fix_gs1_barcode(self, current_barcode):
-        """Recalcule la clé de contrôle GS1 d'un EAN-13."""
+        """
+        Recalcule la clé de contrôle GS1.
+        - 13 chiffres : remplace le 13e par le chiffre correct.
+        - 12 chiffres : ajoute le chiffre de contrôle manquant.
+        """
         barcode_str = str(current_barcode).strip()
-        if len(barcode_str) != 13:
-            _logger.info("⚠️ Code %s : pas 13 caractères, ignoré", barcode_str)
+        if len(barcode_str) == 13:
+            base_code = barcode_str[:12]
+        elif len(barcode_str) == 12:
+            base_code = barcode_str
+        else:
+            _logger.info("⚠️ Code %s : longueur %s non supportée, ignoré", barcode_str, len(barcode_str))
             return barcode_str
 
-        base_code = barcode_str[:12]
         odd_sum = even_sum = 0
         for i, digit in enumerate(base_code):
             d = int(digit)
@@ -764,7 +866,7 @@ class ProductTemplateImport(models.Model):
         barcode = self._safe_string(item.get("saN_CB_0"))
         if not barcode or len(barcode) != 13:
             return
-        if not (barcode.startswith('27') and barcode.endswith('0000000')):
+        if not barcode.startswith('27'):
             return
 
         new_barcode = self.fix_gs1_barcode(barcode)

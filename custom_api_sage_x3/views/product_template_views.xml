@@ -29,11 +29,19 @@
                             invisible="1"
                             class="btn btn-secondary"/>
 
-                    <button name="reset_airsi_taxes_all_products" 
-                            string="Supprimer AIRSI" 
-                            type="object" 
+                    <button name="reset_airsi_taxes_all_products"
+                            string="Supprimer AIRSI"
+                            type="object"
                             invisible="1"
                             class="btn btn-secondary"/>
+
+                    <button name="fix_all_gs1_barcodes_direct"
+                            string="Corriger barcodes GS1"
+                            type="object"
+                            icon="fa-barcode"
+                            confirm="Cette action va corriger tous les code-barres GS1 (27...) sur tous les produits actifs. Continuer ?"
+                            class="btn btn-warning"
+                            groups="base.group_system"/>
                 </xpath>
 
             </field>
