@@ -1021,3 +1021,6 @@ class ProductProduct(models.Model):
 
     def reset_airsi_taxes_all_products(self):
         return self.product_tmpl_id.reset_airsi_taxes_all_products()
+
+    def fix_all_gs1_barcodes_direct(self):
+        return self.fix_all_gs1_barcodes_direct()
