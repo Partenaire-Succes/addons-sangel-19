@@ -47,6 +47,7 @@ class PurchaseOrderSageX3Optimized(models.Model):
     type_supplier = fields.Selection([
         ('vridi', 'VRIDI'),
         ('local', 'Local/Autres'),
+        ('negoce', 'Negoce'),
     ], string="Type de fournisseur", default='vridi', copy=False)
 
     # def action_verify_product(self):

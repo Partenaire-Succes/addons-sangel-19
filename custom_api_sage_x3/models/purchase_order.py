@@ -35,7 +35,7 @@ class PurchaseOrderSageX3(models.Model):
             ('sage_x3_submitted', '=',  False),
             ('sage_x3_validated', '=',  False),
             ('type_command',      '!=', 'urgent'),
-            ('type_supplier',     '!=', 'local'),
+            ('type_supplier',     'in', ['vridi', 'negoce']),
         ])
 
         if not pending_orders:
@@ -175,6 +175,7 @@ class PurchaseOrderSageX3(models.Model):
         if not self.partner_id or not self.order_line:
             raise UserError("Fournisseur et lignes de commande obligatoires")
 
+        site = self.company_id.site_company if self.type_supplier == 'negoce' else 'VRIDI'
         items = []
         for idx, line in enumerate(self.order_line, start=1):
             if not line.product_id.default_code:
@@ -188,7 +189,7 @@ class PurchaseOrderSageX3(models.Model):
 
         return {
             "commandes": [{
-                "siteVente":               "VRIDI",
+                "siteVente":               site,
                 "DateCommande":            (self.date_order or datetime.now()).isoformat(),
                 "Client":                  self.company_id.lib_company or "YOP01",
                 "Devise":                  self.currency_id.name or "XOF",

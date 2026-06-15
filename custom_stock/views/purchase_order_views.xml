@@ -36,7 +36,7 @@
                         string="Mettre en attente SAGE X3" 
                         type="object"
                         class="oe_highlight"
-                        invisible="state not in ['draft'] or sage_x3_validated == True or type_command != 'normal' or type_supplier != 'vridi'"/>
+                        invisible="state not in ['draft'] or sage_x3_validated == True or type_command != 'normal' or type_supplier not in ['vridi','negoce']"/>
 
                 <button name="button_confirm_local"
                         string="Confirmer"
