@@ -23,35 +23,22 @@ class LoyaltyCardInherit(models.Model):
     def _load_pos_data_domain(self, data, config):
         """
         Override to preload loyalty cards for offline code activation.
-
-        By default, pos_loyalty does NOT preload any loyalty.card records
-        (_load_pos_data_domain returns False), which causes code activation
-        to fail when offline.
-
-        This override preloads loyalty cards for:
-        - Programs configured for this POS config
-        - Gift cards and coupons with available balance
-        - Loyalty cards associated with known partners
         """
 
         # Get program IDs for this POS config
         program_ids = config._get_program_ids().ids
 
-        # if not program_ids:
-        #     return False  # No programs = no cards to load
+        if not program_ids:
+            return False  # No programs = no cards to load
 
         # Build domain to load relevant cards:
-        # - Cards belonging to POS programs
-        # - With positive balance
-        # - Not expired (or no expiration)
-        # return [
-        #     ('program_id', 'in', program_ids),
-        #     ('points', '>', 0),
-        #     '|',
-        #     ('expiration_date', '=', False),
-        #     ('expiration_date', '>=', fields.Date.today()),
-        # ]
-        return False
+        return [
+            ('program_id', 'in', program_ids),
+            ('points', '>', 0),
+            '|',
+            ('expiration_date', '=', False),
+            ('expiration_date', '>=', fields.Date.today()),
+        ]
 
     @api.model
     def _load_pos_data_fields(self, config):
