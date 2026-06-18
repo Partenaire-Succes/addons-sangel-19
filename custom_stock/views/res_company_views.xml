@@ -8,7 +8,7 @@
             <field name="arch" type="xml">
                 <xpath expr="//page[1]" position="after">
                     <page name="inter_company" string="Système d'affectation magasin">
-                        <group>
+                        <group name="config_magasin">
                             <group>
                                 <field name="dest_warehouse_id"
                                     domain="[('company_id', '=', id)]"/>
@@ -17,21 +17,28 @@
                             </group>
                             <group>
                                 <field name="code_company" required="1"/>
+                                <field name="site_company" required="0"/>
                             </group>
                         </group>
 
-                        <group>
-                            <div class="alert alert-info">
-                                <h4>📝 Instructions de configuration</h4>
-                                <ul>
-                                    <li><strong>YOP DEMI GROS </strong> Libelle: YOP01 Code: 01</li>
-                                    <li><strong>YOP DETAIL </strong> Libelle: YOP02 Code: 02</li>
-                                    <li><strong>YOP SYNACASSCI </strong> Libelle: SYNACASSCI Code: 03</li>
-                                    <li><strong>YOP SQUARE </strong> Libelle: SQUARE Code: 04</li>
-                                    <li><strong>YOP BASSAM </strong> Libelle: BASSAM Code: 05</li>
-                                    <li><strong>YOP KOUMASSI </strong> Libelle: KOUMASSI Code: 06</li>
-                                </ul>
-                            </div>
+                        <group name="info_magasin">
+                            <group name='info_logo' string="Ettiquete Article">
+                            </group>
+
+                            <group>
+                                <div class="alert alert-info">
+                                    <h4>📝 Instructions de configuration</h4>
+                                    <ul>
+                                        <li><strong>YOP DEMI GROS </strong> Libelle: YOP01 Code: 01</li>
+                                        <li><strong>YOP DETAIL </strong> Libelle: YOP02 Code: 02</li>
+                                        <li><strong>YOP SYNACASSCI </strong> Libelle: SYNACASSCI Code: 03</li>
+                                        <li><strong>YOP SQUARE </strong> Libelle: SQUARE Code: 04</li>
+                                        <li><strong>YOP BASSAM </strong> Libelle: BASSAM Code: 05</li>
+                                        <li><strong>YOP KOUMASSI </strong> Libelle: KOUMASSI Code: 06</li>
+                                    </ul>
+                                </div>
+                            </group>
+                            
                         </group>
                     </page>
                 </xpath>
@@ -91,7 +98,12 @@
                                 <field name="sage_x3_account_customer_default_id"
                                     options="{'no_create': True}"
                                     placeholder="41110000 - Client DIVERS"
-                                    required="1"/>
+                                    required="1"/> 
+
+                                <field name="sage_x3_account_customer_int_default_id"
+                                    options="{'no_create': True}"
+                                    placeholder="41120000 - Client Int DIVERS"
+                                    required="1"/> 
                                     
                                 <field name="sage_x3_account_caisse_id"
                                     options="{'no_create': True}"

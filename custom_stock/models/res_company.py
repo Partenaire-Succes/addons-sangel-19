@@ -18,10 +18,13 @@ class ResCompany(models.Model):
                          string='Affectation magasin',
                          help="Sélectionnez l'entrepôt de destination de l'entreprise.")
      lib_company = fields.Char(string='Libelle',
-                         help="Nom de l'entreprise à utiliser dans le numéro d'article du produit.",
+                         help="Nom du magasin à utiliser dans le numéro d'article du produit.",
                          copy=False)
      code_company = fields.Char(string='Code',
-                         help="Code de l'entreprise à utiliser dans les commandes magasin.",
+                         help="Code du magasin à utiliser dans les commandes magasin.",
+                         copy=False)
+     site_company = fields.Char(string='Site Magasin',
+                         help="Site du magasin pour les commandes negoce.",
                          copy=False)
      
      # Paramètres SAGE X3
@@ -65,16 +68,20 @@ class ResCompany(models.Model):
      sage_x3_account_sale_id = fields.Many2one(
           'account.account',
           string="Compte de vente",
-          # domain="[('account_type', '=', 'income'), ('company_id', '=', id)]",
           help="Compte 701xxxxx pour les ventes (unique par société)"
      )
      
      # Compte client par défaut (DIVERS)
      sage_x3_account_customer_default_id = fields.Many2one(
           'account.account',
-          string="Compte client par défaut",
-          # domain="[('account_type', '=', 'asset_receivable'), ('company_id', '=', id)]",
+          string="Compte client Abj par défaut",
           help="Compte 41110000 pour les clients DIVERS"
+     )
+
+     sage_x3_account_customer_int_default_id = fields.Many2one(
+          'account.account',
+          string="Compte client Int par défaut",
+          help="Compte 41120000 pour les clients DIVERS"
      )
 
      sage_x3_account_caisse_id = fields.Many2one(

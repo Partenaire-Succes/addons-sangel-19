@@ -18,10 +18,21 @@
             <field name="model">product.template</field>
             <field name="inherit_id" ref="stock.view_template_property_form"/>
             <field name="arch" type="xml">
-                <xpath 
-                    expr="//field[@name='qty_available'][not(@readonly) and @groups='stock.group_stock_manager']" 
+                <xpath
+                    expr="//field[@name='qty_available'][not(@readonly) and @groups='stock.group_stock_manager']"
                     position="attributes">
                     <attribute name="readonly">True</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_template_property_form_sage_x3" model="ir.ui.view">
+            <field name="name">product.template.stock.property.form.sage.x3</field>
+            <field name="model">product.template</field>
+            <field name="inherit_id" ref="stock.view_template_property_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='is_storable']" position="attributes">
+                    <attribute name="readonly">1</attribute>
                 </xpath>
             </field>
         </record>
@@ -191,7 +202,7 @@
         </record>
 
         <!-- Extend product catalog kanban view to include max qty and pending reception fields -->
-        <record id="product_view_kanban_catalog_custom_stock" model="ir.ui.view">
+        <!-- <record id="product_view_kanban_catalog_custom_stock" model="ir.ui.view">
             <field name="name">product.product.kanban.catalog.custom_stock</field>
             <field name="model">product.product</field>
             <field name="inherit_id" ref="product.product_view_kanban_catalog"/>
@@ -212,7 +223,7 @@
                     </div>
                 </xpath>
             </field>
-        </record>
+        </record> -->
 
     </data>
 </odoo>

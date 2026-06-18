@@ -21,6 +21,11 @@ class ResPartnerInherit(models.Model):
         help="Compte des personnel SANgel (ex: 42110001 pour le personnel de SANGEL).",
     )
 
+    type_location = fields.Selection([
+        ('abj', 'Abidjan'),
+        ('int', 'Interieur'),
+    ], string='Localite', default='abj',)
+
     discount_eligible = fields.Boolean(
         string="Éligible à la remise",
         default=False,

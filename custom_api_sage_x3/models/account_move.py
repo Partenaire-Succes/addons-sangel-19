@@ -24,7 +24,7 @@ class AccountMoveSageX3(models.Model):
     │          │  [4] Contrepartie caisse → 1 ligne (sens=-1)                     │
     ├──────────┼──────────────────────────────────────────────────────────────────┤
     │ DECAI    │ Récap journalier hors caisse :                                   │
-    │          │  is_food           → individuel, avec tiers,       sens=+1       │
+    │          │  is_food           → individuel, avec tiers,       sens=+1       │ƒ
     │          │  is_bank_card      → groupé par compte, sans tiers, sens=+1      │
     │          │  is_cheque         → groupé par compte, sans tiers, sens=+1      │
     │          │  is_titre_paiement → groupé par compte, sans tiers, sens=+1      │
@@ -36,7 +36,8 @@ class AccountMoveSageX3(models.Model):
         sage_x3_journal_caisse              ex: "CYL"
         sage_x3_journal_sale                ex: "VTE"
         sage_x3_account_sale_id             ex: 70116000  (compte vente)
-        sage_x3_account_customer_default_id ex: 41110000  (compte client)
+        sage_x3_account_customer_default_id ex: 41110000  (compte client Abj)
+        sage_x3_account_customer_int_default_id ex: 41120000  (compte client Int — FACLI/AVCLI uniquement)
         sage_x3_account_caisse_id           ex: 57110005  (compte caisse contrepartie)
         sage_x3_account_ecart_caisse_id     ex: 77820000  (compte écart de caisse)
     """
@@ -138,14 +139,31 @@ class AccountMoveSageX3(models.Model):
     # HELPERS TVA / HT
     # =========================================================================
 
-    def get_pos_lines_grouped_by_tva(self, pos_sessions):
+    def _get_eligible_pos_order_ids(self, pos_sessions):
+        """
+        Commandes ayant au moins UN paiement à la fois non-limite et non
+        encore envoyé (les deux conditions doivent porter sur le MÊME
+        paiement). Sans ça, une commande payée moitié cash (déjà envoyée)
+        moitié Mise en Compte (FACLI en échec) reste réincluse à l'infini
+        dans le CA recalculé, même après l'envoi de sa part cash.
+        """
         if not pos_sessions:
+            return []
+
+        payments = self.env['pos.payment'].search([
+            ('session_id', 'in', pos_sessions.ids),
+            ('sage_x3_sent', '=', False),
+            ('payment_method_id.is_limit', '=', False),
+        ])
+        return payments.mapped('pos_order_id').ids
+
+    def get_pos_lines_grouped_by_tva(self, pos_sessions):
+        order_ids = self._get_eligible_pos_order_ids(pos_sessions)
+        if not order_ids:
             return {}
 
         lines = self.env['pos.order.line'].search([
-            ('order_id.session_id', 'in', pos_sessions.ids),
-            ('order_id.payment_ids.sage_x3_sent', '=',  False),
-            ('order_id.payment_ids.payment_method_id.is_limit', '=', False),
+            ('order_id', 'in', order_ids),
             ('tax_ids', '!=', False),
         ])
 
@@ -165,13 +183,12 @@ class AccountMoveSageX3(models.Model):
         return grouped_tax
 
     def get_pos_lines_total_ht(self, pos_sessions):
-        if not pos_sessions:
+        order_ids = self._get_eligible_pos_order_ids(pos_sessions)
+        if not order_ids:
             return 0.0
 
         lines = self.env['pos.order.line'].search([
-            ('order_id.session_id', 'in', pos_sessions.ids),
-            ('order_id.payment_ids.sage_x3_sent', '=',  False),
-            ('order_id.payment_ids.payment_method_id.is_limit', '=', False),
+            ('order_id', 'in', order_ids),
         ])
 
         total_ht = 0.0
@@ -214,6 +231,19 @@ class AccountMoveSageX3(models.Model):
 
         # pos_sessions = sessions.filtered(lambda s: s.cash_register_balance_end > 0)
 
+        # FACLI/AVCLI : indépendant de pos_session.sage_x3_sent. Une session
+        # déjà marquée envoyée (ENCAI+DECAI ok) peut encore avoir un paiement
+        # is_limit resté en échec (FACLI à retenter) — il ne faut pas la
+        # perdre simplement parce qu'elle a disparu du filtre ci-dessus.
+        facli_payments = self.env['pos.payment'].search([
+            ('session_id.company_id',      '=',  company.id),
+            ('session_id.start_at',        '>=', dt_min),
+            ('session_id.start_at',        '<=', dt_max),
+            ('sage_x3_sent',                '=',  False),
+            ('payment_method_id.is_limit',  '=',  True),
+        ])
+        facli_sessions = facli_payments.mapped('session_id')
+
         account_payments = self.env['account.payment'].search([
             ('company_id',   '=',  company.id),
             ('payment_type', '=',  'inbound'),
@@ -226,12 +256,14 @@ class AccountMoveSageX3(models.Model):
             ('date',         '<=', target_date),
         ])
 
-        if not pos_sessions and not account_payments:
+        if not pos_sessions and not account_payments and not facli_sessions:
             return None
 
-        # Bloquer si session encore ouverte
-        if pos_sessions:
-            open_sessions = pos_sessions.filtered(lambda s: s.state != 'closed')
+        # Bloquer si session encore ouverte (y compris celles uniquement
+        # concernées par une FACLI en attente)
+        all_sessions = pos_sessions | facli_sessions
+        if all_sessions:
+            open_sessions = all_sessions.filtered(lambda s: s.state != 'closed')
             if open_sessions:
                 names = ', '.join(open_sessions.mapped('name'))
                 raise UserError(
@@ -535,7 +567,7 @@ class AccountMoveSageX3(models.Model):
             payment_map[idx] = decai_payment_ids   # food + grouped → DECAI
 
         # FACLI : 1 écriture par paiement is_limit → 1 ID par index
-        facli_result = self._ligne_ecritures_is_limit(pos_sessions, company)
+        facli_result = self._ligne_ecritures_is_limit(facli_sessions, company)
         if facli_result and facli_result.get("ecritures"):
             for ecriture, payment_id in zip(
                 facli_result["ecritures"],
@@ -559,7 +591,6 @@ class AccountMoveSageX3(models.Model):
     # =========================================================================
 
     def _ligne_ecritures_is_limit(self, sessions, company):
-        receivable  = company.sage_x3_account_customer_default_id
         sale_acct   = company.sage_x3_account_sale_id
         sale_tva_9  = company.sage_x3_account_sale_tva_9_id
         sale_tva_18 = company.sage_x3_account_sale_tva_18_id
@@ -590,6 +621,13 @@ class AccountMoveSageX3(models.Model):
 
                 partner_name = partner_name_c[:10]
                 ticket       = ticket_c[-6:]
+
+                receivable = self._get_receivable_account(company, partner)
+                if not receivable:
+                    raise UserError(
+                        f"Compte client SAGE X3 ({'Int' if partner and partner.type_location == 'int' else 'Abj'}) "
+                        f"non configuré pour {company.name}"
+                    )
 
                 customer_id = (partner.customer_id or "").strip() if partner else ""
                 if customer_id.startswith(("10", "20")):
@@ -745,6 +783,12 @@ class AccountMoveSageX3(models.Model):
         grouped_tax = {t: round(m, 2) for t, m in grouped_tax.items()}
         return lines_with_tax, round(total_ht, 2), grouped_tax
 
+    def _get_receivable_account(self, company, partner):
+        """Compte client SAGE X3 pour FACLI/AVCLI selon la localité du partenaire."""
+        if partner and partner.type_location == 'int':
+            return company.sage_x3_account_customer_int_default_id
+        return company.sage_x3_account_customer_default_id
+
     def _get_tva_compte_code(self, taux_int, sale_tva_9, sale_tva_18, sale_airsi, company_name):
         if taux_int == 18:
             compte_obj = sale_tva_18
@@ -795,21 +839,30 @@ class AccountMoveSageX3(models.Model):
         payment_map = accounting_data.get("payment_map", {})
 
         all_pieces   = []
-        all_messages = []
         errors       = []
 
+        # Suivi séparé ENCAI/DECAI : une FACLI/AVCLI en erreur ne doit plus
+        # bloquer le marquage de la session/des règlements du jour, sinon
+        # le CA et les règlements sont recalculés et renvoyés à l'identique
+        # à chaque nouvelle tentative (cf. doublons ENCAI observés sur X3).
+        encai_present = decai_present = False
+        encai_ok      = decai_ok      = True
+        encai_pieces  = encai_messages = []
+        decai_pieces  = decai_messages = []
+
         for idx, ecriture in enumerate(ecritures):
+            ecriture_type = ecriture.get("type")
             payload = {"ecritures": [ecriture]}
 
             _logger.info(
                 "📤 Envoi écriture [%s] index=%s (%s — %s)",
-                ecriture.get("type"), idx, company.name, target_date,
+                ecriture_type, idx, company.name, target_date,
             )
 
             try:
                 response   = self._safe_post(config['accounting_url'], headers, payload)
                 x3_results = self._extract_x3_results(
-                    response, f"{ecriture.get('type')}_{target_date}"
+                    response, f"{ecriture_type}_{target_date}"
                 )
 
                 ecriture_ok   = True
@@ -822,11 +875,11 @@ class AccountMoveSageX3(models.Model):
                         messages.append(res["message"])
                         _logger.info(
                             "✅ [%s] Pièce SAGE X3 : %s",
-                            ecriture.get("type"), res["piece"],
+                            ecriture_type, res["piece"],
                         )
                     else:
                         errors.append(
-                            f"{company.name} — {target_date} [{ecriture.get('type')}] "
+                            f"{company.name} — {target_date} [{ecriture_type}] "
                             f"{res['message']}"
                         )
                         ecriture_ok = False
@@ -836,7 +889,6 @@ class AccountMoveSageX3(models.Model):
                     message_str = "\n".join(messages)
 
                     all_pieces.extend(piece_numbers)
-                    all_messages.extend(messages)
 
                     # ✅ Marquer les pos.payment immédiatement + commit
                     # → protège contre le rollback en cas d'erreur ultérieure
@@ -846,35 +898,64 @@ class AccountMoveSageX3(models.Model):
                         self.env.cr.commit()
                         _logger.info(
                             "🔒 [%s] %s pos.payment(s) marqué(s) et commité(s) — pièce %s",
-                            ecriture.get("type"), len(pos_payment_ids), piece_str,
+                            ecriture_type, len(pos_payment_ids), piece_str,
                         )
+
+                if ecriture_type == "ENCAI":
+                    encai_present = True
+                    encai_ok      = ecriture_ok
+                    if ecriture_ok:
+                        encai_pieces, encai_messages = piece_numbers, messages
+                elif ecriture_type == "DECAI":
+                    decai_present = True
+                    decai_ok      = ecriture_ok
+                    if ecriture_ok:
+                        decai_pieces, decai_messages = piece_numbers, messages
 
             except Exception as e:
                 errors.append(
-                    f"{company.name} — {target_date} [{ecriture.get('type')}] "
+                    f"{company.name} — {target_date} [{ecriture_type}] "
                     f"Timeout ou erreur réseau : {str(e)}"
                 )
                 _logger.error(
-                    "❌ [%s] Échec envoi — %s", ecriture.get("type"), str(e)
+                    "❌ [%s] Échec envoi — %s", ecriture_type, str(e)
                 )
+                if ecriture_type == "ENCAI":
+                    encai_present, encai_ok = True, False
+                elif ecriture_type == "DECAI":
+                    decai_present, decai_ok = True, False
+
+        # ── Règlements hors-POS : dès que ENCAI a réussi, peu importe le ──
+        # ── sort des DECAI/FACLI/AVCLI du même jour                      ──
+        if encai_present and encai_ok:
+            self._mark_account_payments_as_sent(
+                company, target_date,
+                ", ".join(encai_pieces), "\n".join(encai_messages),
+            )
+            self.env.cr.commit()
+
+        # ── Session POS : dès que ENCAI et DECAI (s'ils existent) ont    ──
+        # ── réussi — une FACLI bloquée ne gèle plus toute la journée     ──
+        if (not encai_present or encai_ok) and (not decai_present or decai_ok):
+            session_pieces   = encai_pieces + decai_pieces
+            session_messages = encai_messages + decai_messages
+            self._mark_pos_sessions_as_sent(
+                company, target_date,
+                ", ".join(session_pieces), "\n".join(session_messages),
+            )
+            self.env.cr.commit()
 
         # ── Résultat final ──────────────────────────────────────────────────────
         piece_numbers_all = ", ".join(all_pieces)
-        full_message      = "\n".join(all_messages)
 
         if errors:
             _logger.warning(
                 "⚠️ %s écriture(s) en erreur sur %s :\n%s",
                 len(errors), target_date, "\n".join(errors),
             )
-            # ❌ Erreurs présentes → pos.session NON marquée
-            # Les pos.payment déjà commités restent marqués
             return {"errors": errors, "pieces": piece_numbers_all}
 
-        # ✅ Zéro erreur → on marque la session
         _logger.info("✅ SAGE X3 OK — Pièces : %s", piece_numbers_all)
-        self._mark_daily_as_sent(company, target_date, piece_numbers_all, full_message)
-        self.env.cr.commit()
         return {"errors": [], "pieces": piece_numbers_all}
 
 
@@ -908,37 +989,15 @@ class AccountMoveSageX3(models.Model):
 
     # =========================================================================
     # MARQUAGE FINAL — pos.session + account.payment
-    # Note : pos.payment déjà marqué par _mark_pos_payments écriture par écriture
+    # Note : pos.payment déjà marqué par _mark_pos_payments écriture par écriture.
+    # Les deux méthodes ci-dessous sont indépendantes : les règlements
+    # hors-POS sont liés à l'écriture ENCAI uniquement, tandis que la
+    # session POS dépend à la fois d'ENCAI et de DECAI. Aucune des deux
+    # n'attend le sort des FACLI/AVCLI (cf. _send_daily_to_sage_x3_api).
     # =========================================================================
 
-    def _mark_daily_as_sent(self, company, target_date, piece_numbers, message):
-        """
-        Marque comme envoyés :
-          - pos.session      : sessions du jour
-          - account.payment  : règlements clients hors POS
-
-        pos.payment est déjà marqué individuellement dans _mark_pos_payments.
-        """
-        dt_min = datetime.combine(target_date, datetime.min.time())
-        dt_max = datetime.combine(target_date, datetime.max.time())
-
-        # ── 1. POS SESSIONS ──────────────────────────────────────────────────
-        pos_sessions = self.env['pos.session'].search([
-            ('company_id', '=', company.id),
-            ('start_at',   '>=', dt_min),
-            ('start_at',   '<=', dt_max),
-        ])
-
-        if pos_sessions:
-            pos_sessions.write({
-                'sage_x3_sent':         True,
-                'sage_x3_sent_date':    fields.Datetime.now(),
-                'sage_x3_piece_number': piece_numbers,
-                'message':              message,
-            })
-            _logger.info("✅ %s session(s) POS marquée(s)", len(pos_sessions))
-
-        # ── 2. ACCOUNT PAYMENTS (hors POS) ───────────────────────────────────
+    def _mark_account_payments_as_sent(self, company, target_date, piece_numbers, message):
+        """Règlements clients hors POS (REGLT), inclus dans l'écriture ENCAI du jour."""
         account_payments = self.env['account.payment'].search([
             ('company_id',   '=',  company.id),
             ('payment_type', '=',  'inbound'),
@@ -956,6 +1015,26 @@ class AccountMoveSageX3(models.Model):
                 'message':              message,
             })
             _logger.info("✅ %s règlement(s) clients marqué(s)", len(account_payments))
+
+    def _mark_pos_sessions_as_sent(self, company, target_date, piece_numbers, message):
+        """Sessions POS du jour, une fois ENCAI et DECAI (s'ils existent) envoyés."""
+        dt_min = datetime.combine(target_date, datetime.min.time())
+        dt_max = datetime.combine(target_date, datetime.max.time())
+
+        pos_sessions = self.env['pos.session'].search([
+            ('company_id', '=', company.id),
+            ('start_at',   '>=', dt_min),
+            ('start_at',   '<=', dt_max),
+        ])
+
+        if pos_sessions:
+            pos_sessions.write({
+                'sage_x3_sent':         True,
+                'sage_x3_sent_date':    fields.Datetime.now(),
+                'sage_x3_piece_number': piece_numbers,
+                'message':              message,
+            })
+            _logger.info("✅ %s session(s) POS marquée(s)", len(pos_sessions))
 
     # =========================================================================
     # PARTIE 2 — FACLI / AVCLI (factures et avoirs hors POS, sélection manuelle)
@@ -992,7 +1071,14 @@ class AccountMoveSageX3(models.Model):
 
     @api.model
     def _get_pending_sale_invoices(self, date_from, date_to, company_id):
-        """Retourne les factures/avoirs clients liés à un sale.order, non encore envoyés."""
+        """
+        Retourne les factures/avoirs clients liés à un sale.order, non encore envoyés.
+
+        Exclut les pièces issues d'une commande POS (pos_order_ids non vide) :
+        celles-ci sont déjà couvertes par le circuit POS (FACLI/AVCLI via
+        _ligne_ecritures_is_limit) ; les renvoyer ici créerait un doublon
+        (ex : AVCLI-O CAP SUD vs AVCLI RFAC/... pour le même remboursement).
+        """
         return self.search([
             ('move_type',                      'in', ('out_invoice', 'out_refund')),
             ('state',                          '=',  'posted'),
@@ -1001,6 +1087,7 @@ class AccountMoveSageX3(models.Model):
             ('invoice_date',                   '>=', date_from),
             ('invoice_date',                   '<=', date_to),
             ('invoice_line_ids.sale_line_ids', '!=', False),
+            ('pos_order_ids',                  '=',  False),
         ])
 
     @api.model
@@ -1046,6 +1133,12 @@ class AccountMoveSageX3(models.Model):
             raise UserError("Seules les pièces validées peuvent être envoyées.")
         if self.move_type not in ('out_invoice', 'out_refund'):
             raise UserError("Seules les factures et avoirs clients sont acceptés.")
+        if self.pos_order_ids:
+            raise UserError(
+                f"{self.name} provient d'une commande POS ({', '.join(self.pos_order_ids.mapped('name'))}) "
+                f"et est déjà envoyée via le circuit POS (FACLI/AVCLI). "
+                f"L'envoyer ici créerait un doublon dans SAGE X3."
+            )
         if not self.partner_id.customer_id:
             raise UserError(
                 f"Le client {self.partner_id.name} n'a pas de code tiers SAGE X3.\n"
@@ -1126,7 +1219,7 @@ class AccountMoveSageX3(models.Model):
         sens_client = -1 if is_refund else  1
         sens_vente  =  1 if is_refund else -1
 
-        receivable  = company.sage_x3_account_customer_default_id
+        receivable  = self._get_receivable_account(company, self.partner_id)
         sale_acct   = company.sage_x3_account_sale_id
         sale_tva_9  = company.sage_x3_account_sale_tva_9_id
         sale_tva_18 = company.sage_x3_account_sale_tva_18_id
@@ -1134,8 +1227,11 @@ class AccountMoveSageX3(models.Model):
         site        = company.sage_x3_site
         journal     = company.sage_x3_journal_sale
 
+        compte_client_label = (
+            "Compte client Int" if self.partner_id.type_location == 'int' else "Compte client Abj"
+        )
         for label, val in [
-            ("Compte client",  receivable),
+            (compte_client_label,  receivable),
             ("Compte vente",   sale_acct),
             ("Site SAGE X3",   site),
             ("Journal vente",  journal),
