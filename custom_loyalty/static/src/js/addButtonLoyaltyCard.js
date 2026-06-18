@@ -114,6 +114,17 @@ patch(PosOrder.prototype, {
         this.initial_loyalty_won = this.initial_loyalty_won ?? null;
         this.initial_loyalty_payment = this.initial_loyalty_payment ?? 0;
     },
+    setPartner(partner) {
+        const oldPartner = this.getPartner();
+        super.setPartner(partner);
+        // Réinitialiser le solde capturé si le client change en cours de commande,
+        // afin que fetchLoyaltyCard le recapture pour le nouveau client.
+        if (oldPartner !== this.getPartner()) {
+            this.initial_loyalty_balance = null;
+            this.initial_loyalty_spent = null;
+            this.initial_loyalty_won = null;
+        }
+    },
     export_as_JSON() {
         const json = super.export_as_JSON(...arguments);
         json.rendu_monnaie = this.rendu_monnaie;

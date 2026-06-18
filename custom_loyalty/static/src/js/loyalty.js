@@ -1,4 +1,5 @@
 import { PosOrder } from "@point_of_sale/app/models/pos_order";
+import { PosStore } from "@point_of_sale/app/services/pos_store";
 import { roundPrecision } from "@web/core/utils/numbers";
 import { patch } from "@web/core/utils/patch";
 import OrderPaymentValidation from "@point_of_sale/app/utils/order_payment_validation";
@@ -257,5 +258,37 @@ patch(OrderPaymentValidation.prototype, {
             throw e;
         }
         return result;
+    },
+});
+
+// Capture le solde fidélité AVANT les changements du ticket courant.
+// fetchLoyaltyCard est appelé lors du premier updatePrograms de la commande
+// (quand un produit est ajouté avec un client sélectionné). À ce moment-là,
+// le serveur a encore le solde pré-transaction — c'est la valeur qu'on veut.
+patch(PosStore.prototype, {
+    async fetchLoyaltyCard(programId, partnerId) {
+        // Toujours faire un fetch serveur frais pour avoir le solde réel,
+        // et non la valeur potentiellement obsolète du modèle local.
+        const freshCards = await this.fetchCoupons([
+            ["partner_id", "=", partnerId],
+            ["program_id", "=", programId],
+        ]);
+
+        let card;
+        if (freshCards.length > 0) {
+            card = freshCards[0];
+        } else {
+            // Nouveau client sans carte — déléguer à la logique native (crée une carte temp)
+            card = await super.fetchLoyaltyCard(programId, partnerId);
+        }
+
+        // Capturer le solde sur la commande courante si pas encore fait
+        const order = this.getOrder();
+        if (order && card && (order.initial_loyalty_balance === null || order.initial_loyalty_balance === undefined)) {
+            order.initial_loyalty_balance = Math.floor(card.points || 0);
+            console.log('[LOYALTY fetchLoyaltyCard] Solde capturé:', order.initial_loyalty_balance, 'pts | partner:', partnerId);
+        }
+
+        return card;
     },
 });
