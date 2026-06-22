@@ -79,34 +79,34 @@ class ResPartnerImport(models.Model):
             # 2. Traitement contact par contact
             # -----------------------------------------------------------------
             created = updated = skipped = errors = 0
-            # On garde une référence stable au modèle pour les cas de rollback
             partner_model = self.env['res.partner']
 
             for idx, customer in enumerate(all_customers, start=1):
                 try:
-                    vals = partner_model.prepare_contact_values(customer)
+                    with self.env.cr.savepoint():
+                        vals = partner_model.prepare_contact_values(customer)
 
-                    if not vals.get("customer_id"):
-                        _logger.warning("⚠️ Contact ignoré sans code client : %s", vals.get("name"))
-                        skipped += 1
-                        continue
-                    if not vals.get("name"):
-                        _logger.warning("⚠️ Contact ignoré sans nom : %s", vals.get("customer_id"))
-                        skipped += 1
-                        continue
+                        if not vals.get("customer_id"):
+                            _logger.warning("⚠️ Contact ignoré sans code client : %s", vals.get("name"))
+                            skipped += 1
+                            continue
+                        if not vals.get("name"):
+                            _logger.warning("⚠️ Contact ignoré sans nom : %s", vals.get("customer_id"))
+                            skipped += 1
+                            continue
 
-                    existing = partner_model.search(
-                        [("customer_id", "=", vals["customer_id"])], limit=1
-                    )
+                        existing = partner_model.search(
+                            [("customer_id", "=", vals["customer_id"])], limit=1
+                        )
 
-                    if existing:
-                        partner_model._update_existing_contact(existing, vals)
-                        _logger.info("🔄 Mis à jour : %s (%s)", existing.name, existing.customer_id)
-                        updated += 1
-                    else:
-                        contact = partner_model.create(vals)
-                        _logger.info("✅ Créé : %s (%s)", contact.name, contact.customer_id)
-                        created += 1
+                        if existing:
+                            partner_model._update_existing_contact(existing, vals)
+                            _logger.info("🔄 Mis à jour : %s (%s)", existing.name, existing.customer_id)
+                            updated += 1
+                        else:
+                            contact = partner_model.create(vals)
+                            _logger.info("✅ Créé : %s (%s)", contact.name, contact.customer_id)
+                            created += 1
 
                     if idx % COMMIT_STEP == 0:
                         self.env.cr.commit()
@@ -116,17 +116,6 @@ class ResPartnerImport(models.Model):
                     errors += 1
                     _logger.exception("❌ Erreur contact %s : %s",
                                       customer.get("bpcnuM_0"), str(e))
-                    # Rollback de la transaction courante pour continuer proprement
-                    try:
-                        if not self.env.cr.closed:
-                            self.env.cr.rollback()
-                            self.env.invalidate_all()
-                        else:
-                            _logger.warning("⚠️ Curseur déjà fermé, rollback impossible")
-                        # Rafraîchir la référence au modèle après rollback
-                        partner_model = self.env['res.partner']
-                    except Exception as rollback_err:
-                        _logger.warning("⚠️ Rollback échoué : %s", str(rollback_err))
 
             # Commit final
             self.env.cr.commit()
