@@ -382,6 +382,8 @@ class PhysicalInventoryLine(models.Model):
         'product.template',
         'Produit'
     )
+    date = fields.Datetime(related='inventory_physical_id.date', string="Date de l'inventaire")
+    date_done = fields.Datetime(related='inventory_physical_id.date_done', string='Date de fin')
     product_id = fields.Many2one(
         'product.product',
         string='Produit',

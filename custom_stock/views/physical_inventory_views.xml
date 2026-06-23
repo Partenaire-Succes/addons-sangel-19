@@ -209,6 +209,8 @@
             <field name="model">physical.inventory.line</field>
             <field name="arch" type="xml">
                 <list string="Code inventaire">
+                    <field name="date"/>
+                    <field name="date_done"/>
                     <field name="product_tmpl_id"/>
                     <field name="code_inventory_id"/>
                     <field name="inventory_mode"/>
