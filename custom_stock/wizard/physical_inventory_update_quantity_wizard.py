@@ -73,9 +73,9 @@ class PhysicalInventoryUpdateQuantityWizard(models.TransientModel):
             ('quantity', '=', 0),
         ]
         if self.date_from:
-            domain.append(('inventory_physical_id.date', '>=', datetime.combine(self.date_from, time.min)))
+            domain.append(('inventory_physical_id.date_done', '>=', datetime.combine(self.date_from, time.min)))
         if self.date_to:
-            domain.append(('inventory_physical_id.date', '<=', datetime.combine(self.date_to, time.max)))
+            domain.append(('inventory_physical_id.date_done', '<=', datetime.combine(self.date_to, time.max)))
         if self.location_id:
             domain.append(('location_id', '=', self.location_id.id))
 
