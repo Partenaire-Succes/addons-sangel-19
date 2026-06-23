@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from collections import defaultdict
 from datetime import datetime, time
 
 from odoo import models, fields, api, _
@@ -8,10 +9,11 @@ from odoo.exceptions import UserError
 class PhysicalInventoryUpdateQuantityWizard(models.TransientModel):
     """
     Corrige le champ `quantity` (stock système) sur des physical.inventory.line
-    déjà créées, en le recalculant via le mécanisme natif Odoo de quantité
-    historique (`qty_available` avec contexte `to_date`/`location`), qui
-    rejoue les mouvements de stock plutôt que de relire le seul `stock.quant`
-    (qui ne reflète que l'instant présent).
+    déjà créées, en le recalculant par rejeu des stock.move.line validés
+    jusqu'à la date choisie (entrées - sorties sur l'emplacement de la ligne),
+    plutôt que de relire le seul `stock.quant` (qui ne reflète que l'instant
+    présent) ou `qty_available` (sensible aux mouvements postérieurs à la date
+    si on compare au stock du jour même).
 
     Utile notamment pour corriger les lignes où le système a enregistré
     `quantity = 0` à tort (produit sans quant au moment de la génération de
@@ -62,6 +64,23 @@ class PhysicalInventoryUpdateQuantityWizard(models.TransientModel):
             if rec.date_from and rec.date_to and rec.date_from > rec.date_to:
                 raise UserError(_("La date de début de la période doit être antérieure à la date de fin."))
 
+    def _get_quantity_at_date(self, location, product_ids, to_datetime):
+        """Quantité nette par produit sur `location`, calculée par rejeu des
+        stock.move.line validés jusqu'à `to_datetime` (entrées - sorties)."""
+        if not product_ids:
+            return {}
+        self.env.cr.execute("""
+            SELECT product_id,
+                   SUM(CASE WHEN location_dest_id = %s THEN quantity ELSE -quantity END) AS qty
+            FROM stock_move_line
+            WHERE product_id = ANY(%s)
+              AND state = 'done'
+              AND date <= %s
+              AND (location_id = %s OR location_dest_id = %s)
+            GROUP BY product_id
+        """, [location.id, list(product_ids), to_datetime, location.id, location.id])
+        return dict(self.env.cr.fetchall())
+
     def action_search_lines(self):
         """Recherche les lignes correspondant aux filtres et affiche un aperçu
         (ancienne/nouvelle quantité) avant toute écriture."""
@@ -81,33 +100,37 @@ class PhysicalInventoryUpdateQuantityWizard(models.TransientModel):
 
         inventory_lines = self.env['physical.inventory.line'].search(domain)
 
+        to_datetime = datetime.combine(self.date, time.max)
+        lines_by_location = defaultdict(list)
+        for inv_line in inventory_lines:
+            lines_by_location[inv_line.location_id].append(inv_line)
+
         self.line_ids.unlink()
         lines_vals = []
-        for inv_line in inventory_lines:
-            # Ne cible que les lignes où le stock système est réellement faux :
-            # quantity=0 alors que le stock actuel (en temps réel) est différent de 0.
-            # live_qty = inv_line.product_id.with_context(
-            #     location=inv_line.location_id.id,
-            # ).qty_available
-            # if not live_qty:
-            #     continue
-            new_qty = inv_line.product_id.with_context(
-                to_date=self.date,
-                location=inv_line.location_id.id,
-            ).qty_available
-            lines_vals.append((0, 0, {
-                'inventory_line_id': inv_line.id,
-                'inventory_physical_id': inv_line.inventory_physical_id.id,
-                'product_id': inv_line.product_id.id,
-                'location_id': inv_line.location_id.id,
-                'old_quantity': inv_line.quantity,
-                'new_quantity': new_qty,
-                'selected': True,
-            }))
+        for location, lines in lines_by_location.items():
+            location_lines = sum(lines, self.env['physical.inventory.line'])
+            qty_by_product = self._get_quantity_at_date(
+                location, location_lines.mapped('product_id').ids, to_datetime,
+            )
+            for inv_line in lines:
+                # Ne cible que les lignes où le stock système est réellement faux :
+                # quantity=0 alors que le stock reconstitué à la date choisie est différent de 0.
+                new_qty = qty_by_product.get(inv_line.product_id.id, 0.0)
+                if not new_qty:
+                    continue
+                lines_vals.append((0, 0, {
+                    'inventory_line_id': inv_line.id,
+                    'inventory_physical_id': inv_line.inventory_physical_id.id,
+                    'product_id': inv_line.product_id.id,
+                    'location_id': inv_line.location_id.id,
+                    'old_quantity': inv_line.quantity,
+                    'new_quantity': new_qty,
+                    'selected': True,
+                }))
         if not lines_vals:
             raise UserError(_(
                 "Aucune ligne trouvée : il faut quantity=0 sur la ligne ET un stock "
-                "actuel (aujourd'hui) différent de 0 pour ces filtres."
+                "reconstitué à la date choisie différent de 0 pour ces filtres."
             ))
         self.line_ids = lines_vals
 
