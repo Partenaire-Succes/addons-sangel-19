@@ -79,6 +79,7 @@
         'views/fournisseur_shortcuts_views.xml',
         'views/physical_inventory_archive.xml',
         'views/stock_avco_report_views.xml',
+        'wizard/physical_inventory_update_quantity_wizard_views.xml',
     ],
     'license': 'AGPL-3',
     'installable': True,

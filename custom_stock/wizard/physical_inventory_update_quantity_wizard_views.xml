@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         VUE FORMULAIRE — Assistant de correction des quantités d'inventaire
+         Recalcule `quantity` sur physical.inventory.line via la quantité
+         historique native Odoo (to_date), tous états confondus (y compris done).
+         ══════════════════════════════════════════════════════════════════════ -->
+
+    <record id="view_physical_inventory_update_quantity_wizard_form" model="ir.ui.view">
+        <field name="name">physical.inventory.update.quantity.wizard.form</field>
+        <field name="model">physical.inventory.update.quantity.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Corriger les quantités d'inventaire">
+                <header>
+                    <button
+                        name="action_search_lines"
+                        string="Rechercher les lignes"
+                        type="object"
+                        class="btn-secondary"
+                    />
+                    <button
+                        name="action_apply"
+                        string="Appliquer la correction"
+                        type="object"
+                        class="btn-primary"
+                        invisible="not line_ids"
+                        confirm="Confirmer la correction des quantités sélectionnées ?"
+                    />
+                    <button
+                        string="Annuler"
+                        class="btn-secondary"
+                        special="cancel"
+                    />
+                </header>
+
+                <sheet>
+                    <div class="oe_title">
+                        <h1>Corriger les quantités d'inventaire</h1>
+                    </div>
+
+                    <div class="alert alert-info" role="alert">
+                        <i class="fa fa-info-circle"/>
+                        Cible uniquement les lignes où la quantité système enregistrée
+                        (« Stock ») vaut <strong>0</strong> alors que le stock actuel (aujourd'hui)
+                        est différent de 0 — c'est-à-dire les lignes réellement erronées.
+                        La nouvelle quantité est recalculée à partir des mouvements de stock
+                        réels, à la date choisie. Fonctionne même sur des inventaires déjà
+                        « Terminé » — la correction ne rejoue pas le mouvement de stock déjà
+                        validé, elle corrige uniquement la donnée de référence et l'écart /
+                        la valorisation recalculés sur la ligne. Les lignes corrigées sont
+                        marquées « Corrigée » pour traçabilité.
+                    </div>
+
+                    <group>
+                        <group string="Société et emplacement">
+                            <field name="company_id" options="{'no_create': True}"/>
+                            <field name="location_id" options="{'no_create': True}"/>
+                        </group>
+                        <group string="Stock à recalculer">
+                            <field name="date"/>
+                        </group>
+                    </group>
+                    <group string="Période des inventaires à cibler">
+                        <field name="date_from"/>
+                        <field name="date_to"/>
+                    </group>
+
+                    <notebook>
+                        <page string="Lignes">
+                            <field name="line_ids">
+                                <list editable="bottom" decoration-muted="not selected">
+                                    <field name="selected" widget="boolean_toggle"/>
+                                    <field name="inventory_physical_id" readonly="1"/>
+                                    <field name="product_id" readonly="1"/>
+                                    <field name="location_id" readonly="1"/>
+                                    <field name="old_quantity" readonly="1"/>
+                                    <field name="new_quantity" readonly="1"/>
+                                    <field name="diff" readonly="1"
+                                           decoration-danger="diff &lt; 0"
+                                           decoration-success="diff &gt; 0"/>
+                                    <field name="inventory_line_id" column_invisible="1"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         ACTION + MENU
+         ══════════════════════════════════════════════════════════════════════ -->
+
+    <record id="action_physical_inventory_update_quantity_wizard" model="ir.actions.act_window">
+        <field name="name">Corriger les quantités d'inventaire</field>
+        <field name="res_model">physical.inventory.update.quantity.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="context">{}</field>
+    </record>
+
+    <menuitem id="menu_action_physical_inventory_update_quantity_wizard"
+              name="Corriger les quantités"
+              parent="stock.menu_stock_adjustments"
+              action="action_physical_inventory_update_quantity_wizard"
+              sequence="3"/>
+
+</odoo>

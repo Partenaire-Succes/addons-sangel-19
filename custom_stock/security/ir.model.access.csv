@@ -36,4 +36,6 @@ access_reception_correction_info_wizard,reception.correction.info.wizard,model_r
 access_fiche_comptage_wizard,fiche.comptage.wizard,model_fiche_comptage_wizard,,1,1,1,1
 access_stock_move_avco_read,stock.move.avco.read,model_stock_move,stock.group_stock_manager,1,0,0,0
 access_stock_move_product_report_wizard,stock.move.product.report.wizard,model_stock_move_product_report_wizard,,1,1,1,1
+access_physical_inventory_update_quantity_wizard,physical.inventory.update.quantity.wizard,model_physical_inventory_update_quantity_wizard,,1,1,1,1
+access_physical_inventory_update_quantity_wizard_line,physical.inventory.update.quantity.wizard.line,model_physical_inventory_update_quantity_wizard_line,,1,1,1,1
 

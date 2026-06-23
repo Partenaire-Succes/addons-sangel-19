@@ -7,3 +7,4 @@ from . import retour_fournisseur_wizard
 from . import rapport_retours_receptions_wizard
 from . import reception_correction_info_wizard
 from . import stock_move_product_report_wizard
+from . import physical_inventory_update_quantity_wizard

@@ -113,6 +113,8 @@
                                         <field name="price" string="Prix unitaire (PMP)"
                                                invisible="state == 'draft'"/>
                                         <field name="valorisation" string="Valorisation" invisible="state == 'draft'"/>
+                                        <field name="quantity_corrected" string="Corrigée" readonly="1"
+                                               invisible="state == 'draft'"/>
                                         <field name="active" column_invisible="1"/>
                                         <field name="standard_price" column_invisible="1"/>
                                         <field name="verified_by_id" column_invisible="0"/>
@@ -219,6 +221,7 @@
                     <field name="qty_diff"/>
                     <field name="price"/>
                     <field name="valorisation"/>
+                    <field name="quantity_corrected" string="Corrigée"/>
                 </list>
             </field>
         </record>

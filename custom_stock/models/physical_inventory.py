@@ -422,6 +422,15 @@ class PhysicalInventoryLine(models.Model):
     company_id = fields.Many2one('res.company', string='Société', related='inventory_physical_id.company_id')
     code_article = fields.Char(string='Code Article', related='product_tmpl_id.code_article')
 
+    quantity_corrected = fields.Boolean(
+        string='Quantité corrigée',
+        default=False,
+        copy=False,
+        tracking=True,
+        help="Coché automatiquement quand la quantité système (champ Stock) a été "
+             "corrigée via l'assistant de correction des quantités d'inventaire.",
+    )
+
     is_inventoriable = fields.Boolean(
         string='Article inventoriable',
         compute='_compute_is_inventoriable',
