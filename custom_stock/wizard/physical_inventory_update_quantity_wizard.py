@@ -57,12 +57,21 @@ class PhysicalInventoryUpdateQuantityWizard(models.TransientModel):
         'wizard_id',
         string='Lignes',
     )
+    selected_count = fields.Integer(
+        string='Lignes à mettre à jour',
+        compute='_compute_selected_count',
+    )
 
     @api.constrains('date_from', 'date_to')
     def _check_dates(self):
         for rec in self:
             if rec.date_from and rec.date_to and rec.date_from > rec.date_to:
                 raise UserError(_("La date de début de la période doit être antérieure à la date de fin."))
+
+    @api.depends('line_ids.selected')
+    def _compute_selected_count(self):
+        for wizard in self:
+            wizard.selected_count = len(wizard.line_ids.filtered('selected'))
 
     def _get_quantity_at_date(self, location, product_ids, to_datetime):
         """Quantité nette par produit sur `location`, calculée par rejeu des

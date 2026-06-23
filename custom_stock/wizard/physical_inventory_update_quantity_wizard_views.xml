@@ -68,6 +68,7 @@
 
                     <notebook>
                         <page string="Lignes">
+                            <field name="selected_count" readonly="1" string="Lignes à mettre à jour"/>
                             <field name="line_ids">
                                 <list editable="bottom" decoration-muted="not selected">
                                     <field name="selected" widget="boolean_toggle"/>
