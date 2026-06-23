@@ -86,11 +86,11 @@ class PhysicalInventoryUpdateQuantityWizard(models.TransientModel):
         for inv_line in inventory_lines:
             # Ne cible que les lignes où le stock système est réellement faux :
             # quantity=0 alors que le stock actuel (en temps réel) est différent de 0.
-            live_qty = inv_line.product_id.with_context(
-                location=inv_line.location_id.id,
-            ).qty_available
-            if not live_qty:
-                continue
+            # live_qty = inv_line.product_id.with_context(
+            #     location=inv_line.location_id.id,
+            # ).qty_available
+            # if not live_qty:
+            #     continue
             new_qty = inv_line.product_id.with_context(
                 to_date=self.date,
                 location=inv_line.location_id.id,
