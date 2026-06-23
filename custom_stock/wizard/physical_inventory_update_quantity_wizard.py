@@ -90,6 +90,7 @@ class PhysicalInventoryUpdateQuantityWizard(models.TransientModel):
             ('active', '=', True),
             ('inventory_physical_id.company_id', '=', self.company_id.id),
             ('quantity', '=', 0),
+            ('valorisation', '!=', 0),
         ]
         if self.date_from:
             domain.append(('inventory_physical_id.date_done', '>=', datetime.combine(self.date_from, time.min)))
@@ -116,8 +117,8 @@ class PhysicalInventoryUpdateQuantityWizard(models.TransientModel):
                 # Ne cible que les lignes où le stock système est réellement faux :
                 # quantity=0 alors que le stock reconstitué à la date choisie est différent de 0.
                 new_qty = qty_by_product.get(inv_line.product_id.id, 0.0)
-                if not new_qty:
-                    continue
+                # if not new_qty:
+                #     continue
                 lines_vals.append((0, 0, {
                     'inventory_line_id': inv_line.id,
                     'inventory_physical_id': inv_line.inventory_physical_id.id,
@@ -125,7 +126,7 @@ class PhysicalInventoryUpdateQuantityWizard(models.TransientModel):
                     'location_id': inv_line.location_id.id,
                     'old_quantity': inv_line.quantity,
                     'new_quantity': new_qty,
-                    'selected': True,
+                    'selected': bool(new_qty),
                 }))
         if not lines_vals:
             raise UserError(_(
