@@ -108,7 +108,7 @@ class AvoirJourneeWizard(models.TransientModel):
                 p.amount for p in order.payment_ids
                 if p.payment_method_id == self.mode_payment
             )
-            if food_amount <= 0:
+            if food_amount == 0:
                 continue
 
             partner    = order.partner_id
