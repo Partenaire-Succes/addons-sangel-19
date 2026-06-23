@@ -214,6 +214,7 @@
                     <field name="product_tmpl_id"/>
                     <field name="code_inventory_id"/>
                     <field name="inventory_mode"/>
+                    <field name="quantity"/>
                     <field name="physical_qty"/>
                     <field name="qty_diff"/>
                     <field name="price"/>
