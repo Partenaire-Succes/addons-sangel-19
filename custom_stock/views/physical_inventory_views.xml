@@ -203,6 +203,24 @@
             </field>
         </record>
 
+        <!-- Vue liste Inventaire physique line-->
+        <record id="view_physical_inventory_line_list" model="ir.ui.view">
+            <field name="name">physical.inventory.line.tree</field>
+            <field name="model">physical.inventory.line</field>
+            <field name="arch" type="xml">
+                <list string="Code inventaire">
+                    <field name="product_tmpl_id"/>
+                    <field name="code_inventory_id"/>
+                    <field name="inventory_mode"/>
+                    <field name="physical_qty"/>
+                    <field name="qty_diff"/>
+                    <field name="price"/>
+                    <field name="valorisation"/>
+                </list>
+            </field>
+        </record>
+
+
         <!-- Action Code Inventaire -->
         <record id="action_physical_inventory" model="ir.actions.act_window">
             <field name="name">Code Categorie inventaire</field>
@@ -218,6 +236,18 @@
         <record id="physical_inventory_company_rule" model="ir.rule">
             <field name="name">Physical Inventory: multi-company</field>
             <field name="model_id" ref="model_physical_inventory"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">
+                ['|',
+                    ('company_id', '=', False),
+                    ('company_id', 'in', company_ids)
+                ]
+            </field>
+        </record>
+
+        <record id="physical_inventory_line_company_rule" model="ir.rule">
+            <field name="name">Physical Inventory line: multi-company</field>
+            <field name="model_id" ref="model_physical_inventory_line"/>
             <field name="global" eval="True"/>
             <field name="domain_force">
                 ['|',
