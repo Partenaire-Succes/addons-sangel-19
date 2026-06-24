@@ -129,6 +129,13 @@
                             padding: 7px 7px;
                         }
 
+                        /* ── Montants négatifs (remboursements) ── */
+                        .neg { color: #c0392b; }
+                        tr.tr-remb td {
+                            background-color: #fdecea !important;
+                            color: #c0392b;
+                        }
+
                         /* ── Message vide ── */
                         .empty-msg {
                             color: #888;
@@ -210,7 +217,7 @@
                                 <!-- Lignes passages du client -->
                                 <tbody>
                                     <t t-foreach="client['lines']" t-as="line">
-                                        <tr>
+                                        <tr t-attf-class="{{ 'tr-remb' if line['amount'] &lt; 0 else '' }}">
                                             <td class="ctr">
                                                 <t t-esc="line['date'].strftime('%d/%m/%Y')"/>
                                             </td>
@@ -221,7 +228,7 @@
                                             <td class="ctr">
                                                 <t t-esc="line['order_name']"/>
                                             </td>
-                                            <td class="num">
+                                            <td t-attf-class="num {{ 'neg' if line['amount'] &lt; 0 else '' }}">
                                                 <t t-esc="'{:,.0f}'.format(line['amount']).replace(',', ' ')"/>
                                             </td>
                                         </tr>
@@ -236,7 +243,7 @@
                                                 <t t-esc="client['partner_name']"/>
                                                 &#160;(<t t-esc="len(client['lines'])"/> passage(s))
                                             </td>
-                                            <td class="num">
+                                            <td t-attf-class="num {{ 'neg' if client['subtotal'] &lt; 0 else '' }}">
                                                 <t t-esc="'{:,.0f}'.format(client['subtotal']).replace(',', ' ')"/>
                                             </td>
                                         </tr>
@@ -252,7 +259,7 @@
                                         &#160;(<t t-esc="sum(len(c['lines']) for c in cat['clients'])"/> passage(s)
                                         &#8212; <t t-esc="len(cat['clients'])"/> client(s))
                                     </td>
-                                    <td class="num">
+                                    <td t-attf-class="num {{ 'neg' if cat['total'] &lt; 0 else '' }}">
                                         <t t-esc="'{:,.0f}'.format(cat['total']).replace(',', ' ')"/>
                                     </td>
                                 </tr>
