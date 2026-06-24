@@ -67,7 +67,7 @@ class FicheComptageWizard(models.TransientModel):
         domain = [
             ('active', '=', True),
             ('type', '=', 'consu'),
-            ('product_tmpl_id.prod_type_x3_id.name', '=', 'TS')
+            ('product_tmpl_id.prod_type_x3_id.name', '=', 'TS'),
             ('product_tmpl_id', 'in', valid_tmpl_ids),
         ]
         if self.code_inventory_ids:
