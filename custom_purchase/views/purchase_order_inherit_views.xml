@@ -40,6 +40,9 @@
                 ]</attribute>
                 <attribute name="options">{"no_create": True, "no_create_edit": True}</attribute>
             </xpath>
+            <xpath expr="//field[@name='partner_id']" position="attributes">
+                <attribute name="options">{'no_create': True, 'no_create_edit': True}</attribute>
+            </xpath>
         </field>
     </record>
 

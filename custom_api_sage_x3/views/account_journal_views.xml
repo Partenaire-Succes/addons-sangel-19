@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="sage_account_journal_form_view" model="ir.ui.view">
+            <field name="name">account.journal.inherit.form</field>
+            <field name="model">account.journal</field>
+            <field name="inherit_id" ref="account.view_account_journal_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//group//field[@name='company_id']" position="after">
+                    <field name="is_payment_sage"/>
+                </xpath> 
+            </field>
+        </record>
+    </data>
+</odoo>

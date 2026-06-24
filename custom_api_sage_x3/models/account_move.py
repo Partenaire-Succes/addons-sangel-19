@@ -254,6 +254,7 @@ class AccountMoveSageX3(models.Model):
             ('sage_x3_sent', '=',  False),
             ('date',         '>=', target_date),
             ('date',         '<=', target_date),
+            ('is_payment_sage', '!=', False)
         ])
 
         if not pos_sessions and not account_payments and not facli_sessions:
@@ -356,7 +357,8 @@ class AccountMoveSageX3(models.Model):
                 elif method.is_food:
                     if not tiers_code:
                         pay_account = cust_account
-                        tiers_code  = divers
+                        parent = partner.parent_id.customer_id
+                        tiers_code  = parent if parent else divers
                     partner_name = partner.name if partner else ''
                     decai_individual_food.append({
                         "compte":  pay_account.code,

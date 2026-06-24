@@ -28,6 +28,7 @@
         'views/purchase_order_views.xml',
         'views/account_move_views.xml',
         'views/account_move_wizard_views.xml',
+        'views/account_journal_views.xml',
         'views/sage_x3_import_log_views.xml',
     ],
 
