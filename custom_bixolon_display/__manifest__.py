@@ -5,6 +5,7 @@
     'version': '1.0.0',
     'summary': 'Intégration afficheur VFD Bixolon BCD-2000 via Web Serial API',
     'depends': ['point_of_sale', 'custom_pos'],
+    'author': 'Manzo - Marcel NZORE <nzoremarcel@gmail.com> Partenaire Succes',
     'data': [
         'views/pos_config_views.xml',
     ],

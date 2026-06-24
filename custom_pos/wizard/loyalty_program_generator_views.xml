@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <record id="view_loyalty_program_generator_form" model="ir.ui.view">
+        <field name="name">loyalty.program.generator.form</field>
+        <field name="model">loyalty.program.generator</field>
+        <field name="arch" type="xml">
+            <form string="Générateur de remises multi-sociétés">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>Générateur de remises</h1>
+                        <h3 class="text-muted">MÉCANISME : X ACHETÉS Y OFFERT — Multi-sociétés</h3>
+                    </div>
+
+                    <group>
+                        <group string="Mécanisme">
+                            <field name="minimum_qty"/>
+                            <field name="reward_qty"/>
+                        </group>
+                        <group string="Période de validité">
+                            <field name="date_from"/>
+                            <field name="date_to"/>
+                        </group>
+                    </group>
+
+                    <group>
+                        <group string="Sociétés cibles">
+                            <field name="company_ids"
+                                   widget="many2many_tags"
+                                   options="{'no_create': True}"
+                                   placeholder="Sélectionnez les sociétés..."/>
+                        </group>
+                        <group string="Options">
+                            <field name="pos_ok"/>
+                            <field name="skip_existing"/>
+                        </group>
+                    </group>
+
+                    <separator string="Produits concernés"/>
+                    <field name="product_ids"
+                           widget="many2many_tags"
+                           options="{'no_create': True}"
+                           placeholder="Ajoutez les produits..."/>
+
+                    <div class="alert alert-info mt-3" role="alert" style="font-size:85%;">
+                        <i class="fa fa-info-circle"/>
+                        Pour chaque combinaison <strong>produit × société</strong>, un programme
+                        <em>Remise &amp; Fidélité</em> natif sera créé avec les règles et récompenses
+                        correspondantes. Le nom généré suit le format :
+                        <strong>MECANISME X ACHETES Y OFFERT - [code produit] [société]</strong>.
+                    </div>
+                </sheet>
+
+                <footer>
+                    <button name="action_generate"
+                            string="Générer les programmes"
+                            confirm="Êtes-vous sûr de vouloir générer les programmes ?"
+                            type="object"
+                            class="btn-primary"
+                            data-hotkey="q"/>
+                    <button string="Fermer"
+                            class="btn-secondary"
+                            special="cancel"
+                            data-hotkey="x"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_loyalty_program_generator" model="ir.actions.act_window">
+        <field name="name">Générateur de remises multi-sociétés</field>
+        <field name="res_model">loyalty.program.generator</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem
+        id="menu_loyalty_program_generator"
+        name="Générateur de remises"
+        parent="point_of_sale.menu_point_of_sale"
+        action="action_loyalty_program_generator"
+        sequence="26"
+        groups="custom_pos.group_responsable_magasin,custom_pos.group_dsi_it"
+    />
+
+</odoo>
