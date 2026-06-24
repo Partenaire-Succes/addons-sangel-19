@@ -30,3 +30,4 @@ access_pos_manager_code_superviseur,pos.manager.code.superviseur,model_pos_manag
 access_pos_manager_code_caissiere,pos.manager.code.caissiere,model_pos_manager_code,custom_pos.group_caissiere,1,0,0,0
 access_pos_access_log_superviseur,pos.access.log.superviseur,model_pos_access_log,custom_pos.group_superviseur,1,0,0,0
 access_pos_access_log_respo,pos.access.log.respo,model_pos_access_log,custom_pos.group_responsable_magasin,1,0,0,0
+access_loyalty_program_generator,loyalty.program.generator,model_loyalty_program_generator,,1,1,1,1
