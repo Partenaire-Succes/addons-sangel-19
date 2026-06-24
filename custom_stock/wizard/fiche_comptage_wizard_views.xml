@@ -25,8 +25,8 @@
                 </group>
 
                 <!-- Mode libre -->
-                <group string="Produits à compter" invisible="inventory_mode != 'libre'">
-                    <field name="product_ids" widget="many2many_tags" nolabel="1"/>
+                <group string="Liste des articles" invisible="inventory_mode != 'libre'">
+                    <field name="product_ids" widget="many2many_tags" string="Articles"/>
                 </group>
 
                 <footer>

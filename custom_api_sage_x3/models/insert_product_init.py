@@ -487,7 +487,15 @@ class ProductTemplateImport(models.Model):
             tax_cache[cache_key] = all_tax_ids
 
         return [(6, 0, all_tax_ids)]
-    
+
+    def _get_state_type(self, code, type):
+        """Indique si l'article doit être de type 'consu' (stockable) :
+        type X3 'TS', ou type 'NS' avec une référence contenant '-D'."""
+        if code == "TS":
+            return True
+        if code == "NS" and type and "-D" in type:
+            return True
+        return False
 
     # =========================================================================
     # PRÉPARATION DES VALEURS PRODUIT
@@ -551,7 +559,7 @@ class ProductTemplateImport(models.Model):
             "family_categ_id":   family_id,
             "categ_id":          family_id,
             "actif_x3":          self._safe_string(item.get("itmstA_0")),
-            "type":              "consu" if item.get("yG5TYPE_0") == "TS" else "service",
+            "type":              "consu" if self._get_state_type(item.get("yG5TYPE_0"), item.get("itmreF_0")) else "service",
             "active":            True,
             "sale_ok":           True,
             "purchase_ok":       True,

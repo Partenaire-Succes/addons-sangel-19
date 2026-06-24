@@ -53,6 +53,8 @@ class StockValoriseReport(models.TransientModel):
         for record in self:
             domain = [
                 ('allowed_company_ids', 'in', [record.company_id.id]),
+                ('product_id.type', '=', 'consu'),
+                ('product_id.product_tmpl_id.prod_type_x3_id.name', '=', 'TS'),
             ]
             if record.cat_gestion_ids:
                 domain.append(('cat_gestion_id', 'in', record.cat_gestion_ids.ids))

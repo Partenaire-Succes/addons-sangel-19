@@ -207,6 +207,7 @@ class PhysicalInventory(models.Model):
             ('location_id.usage', '=', 'internal'),
             ('product_id.active', '=', True),
             ('product_id.type', '=', 'consu'),
+            ('product_id.product_tmpl_id.prod_type_x3_id.name', '=', 'TS'),
         ]
 
         if self.code_inventory_id:
@@ -289,6 +290,7 @@ class PhysicalInventory(models.Model):
                         ('id', 'in', list(missing_tmpl_ids)),
                         ('active', '=', True),
                         ('type', '=', 'consu'),
+                        ('prod_type_x3_id.name', '=', 'TS')
                     ]
                     if self.code_inventory_id:
                         zero_domain.append(('code_inventory_id', 'in', self.code_inventory_id.ids))
@@ -380,7 +382,8 @@ class PhysicalInventoryLine(models.Model):
     inventory_mode = fields.Selection(related='inventory_physical_id.inventory_mode', string='Mode', store=False)
     product_tmpl_id = fields.Many2one(
         'product.template',
-        'Produit'
+        'Produit',
+        domain=[('prod_type_x3_id.name', '=', 'TS')],
     )
     date = fields.Datetime(related='inventory_physical_id.date', string="Date de l'inventaire")
     date_done = fields.Datetime(related='inventory_physical_id.date_done', string='Date de fin')
