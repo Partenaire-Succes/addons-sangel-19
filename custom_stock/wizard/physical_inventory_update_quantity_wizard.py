@@ -194,15 +194,17 @@ class PhysicalInventoryUpdateQuantityWizard(models.TransientModel):
         self.line_ids.unlink()
         lines_vals = []
         for inv_line in inventory_lines:
-            new_qty = qty_by_product.get(inv_line.product_id.id, 0.0)
+            product_id = inv_line.product_tmpl_id.product_variant_id
+            new_qty = qty_by_product.get(product_id.id, 0.0)
             lines_vals.append((0, 0, {
                 'inventory_line_id': inv_line.id,
                 'inventory_physical_id': inv_line.inventory_physical_id.id,
-                'product_id': inv_line.product_id.id,
+                'product_id': product_id.id,
                 'location_id': inv_line.location_id.id,
                 'old_quantity': inv_line.quantity,
                 'new_quantity': new_qty,
                 'selected': bool(new_qty),
+                'date_done': inv_line.date_done,
             }))
 
         if not lines_vals:
@@ -301,6 +303,7 @@ class PhysicalInventoryUpdateQuantityWizardLine(models.TransientModel):
         string='Corriger',
         default=True,
     )
+    date_done = fields.Datetime('Date de validation')
 
     @api.depends('old_quantity', 'new_quantity')
     def _compute_diff(self):
