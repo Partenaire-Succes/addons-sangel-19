@@ -36,21 +36,20 @@ class PhysicalInventoryUpdateQuantityWizard(models.TransientModel):
         domain=[('usage', '=', 'internal')],
         help="Laisser vide pour cibler tous les emplacements internes de la société.",
     )
-    date = fields.Date(
+    date = fields.Datetime(
         string='Date du stock à prendre',
         required=True,
         default=fields.Date.context_today,
         help="Quantité système reconstituée à cette date (rejoue les mouvements de stock "
              "faits après cette date) — pas seulement la quantité actuelle.",
     )
-    date_from = fields.Date(
+    date_from = fields.Datetime(
         string="Période — du",
         help="Sélectionne les lignes dont l'inventaire physique a une date dans cette période. "
              "Laisser vide pour ne pas borner la période.",
     )
-    date_to = fields.Date(
+    date_to = fields.Datetime(
         string="Période — au",
-        default=fields.Date.context_today,
     )
     line_ids = fields.One2many(
         'physical.inventory.update.quantity.wizard.line',
@@ -61,6 +60,12 @@ class PhysicalInventoryUpdateQuantityWizard(models.TransientModel):
         string='Lignes à mettre à jour',
         compute='_compute_selected_count',
     )
+
+    product_ids = fields.Many2many(
+        string='Produits',
+        comodel_name='product.template',
+    )
+    
 
     @api.constrains('date_from', 'date_to')
     def _check_dates(self):
@@ -102,15 +107,17 @@ class PhysicalInventoryUpdateQuantityWizard(models.TransientModel):
             ('valorisation', '!=', 0),
         ]
         if self.date_from:
-            domain.append(('inventory_physical_id.date_done', '>=', datetime.combine(self.date_from, time.min)))
+            domain.append(('inventory_physical_id.date_done', '>=', self.date_from))
         if self.date_to:
-            domain.append(('inventory_physical_id.date_done', '<=', datetime.combine(self.date_to, time.max)))
+            domain.append(('inventory_physical_id.date_done', '<=', self.date_to))
         if self.location_id:
             domain.append(('location_id', '=', self.location_id.id))
+        if self.product_ids:
+            domain.append(('product_tmpl_id', 'in', self.product_ids))
 
         inventory_lines = self.env['physical.inventory.line'].search(domain)
 
-        to_datetime = datetime.combine(self.date, time.max)
+        to_datetime = self.date
         lines_by_location = defaultdict(list)
         for inv_line in inventory_lines:
             lines_by_location[inv_line.location_id].append(inv_line)
