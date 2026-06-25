@@ -254,7 +254,7 @@ class AccountMoveSageX3(models.Model):
             ('sage_x3_sent', '=',  False),
             ('date',         '>=', target_date),
             ('date',         '<=', target_date),
-            ('is_payment_sage', '!=', False)
+            ('journal_id.is_payment_sage', '!=', False),
         ])
 
         if not pos_sessions and not account_payments and not facli_sessions:
@@ -1007,6 +1007,7 @@ class AccountMoveSageX3(models.Model):
             ('state',        '=',  'paid'),
             ('sage_x3_sent', '=',  False),
             ('date',         '=',  target_date),
+            ('journal_id.is_payment_sage', '!=', False),
         ])
 
         if account_payments:
