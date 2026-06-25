@@ -124,7 +124,9 @@ class PhysicalInventoryUpdateQuantityWizard(models.TransientModel):
 
         self.line_ids.unlink()
         lines_vals = []
-        for location, lines in lines_by_location.items():
+        location = self.location_id
+        # for location, lines in lines_by_location.items():
+        for lines in inventory_lines:
             location_lines = sum(lines, self.env['physical.inventory.line'])
             qty_by_product = self._get_quantity_at_date(
                 location, location_lines.mapped('product_id').ids, to_datetime,
