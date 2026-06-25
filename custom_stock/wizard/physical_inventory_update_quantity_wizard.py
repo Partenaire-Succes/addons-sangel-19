@@ -103,7 +103,7 @@ class PhysicalInventoryUpdateQuantityWizard(models.TransientModel):
         domain = [
             ('active', '=', True),
             ('inventory_physical_id.company_id', '=', self.company_id.id),
-            ('quantity', '=', 0),
+            # ('quantity', '=', 0),
             ('valorisation', '!=', 0),
         ]
         if self.date_from:
