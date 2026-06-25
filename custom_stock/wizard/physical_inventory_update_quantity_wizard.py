@@ -78,7 +78,7 @@ class PhysicalInventoryUpdateQuantityWizard(models.TransientModel):
         for wizard in self:
             wizard.selected_count = len(wizard.line_ids.filtered('selected'))
 
-    def _get_quantity_at_date(self, location, product_ids, to_datetime):
+    def _get_quantity_at_date(self, product_ids, to_datetime):
         """Quantité nette par produit sur `location`, calculée par rejeu des
         stock.move.line validés jusqu'à `to_datetime` (entrées - sorties)."""
         if not product_ids:
@@ -92,8 +92,73 @@ class PhysicalInventoryUpdateQuantityWizard(models.TransientModel):
               AND date <= %s
               AND (location_id = %s OR location_dest_id = %s)
             GROUP BY product_id
-        """, [location.id, list(product_ids), to_datetime, location.id, location.id])
+        """, [self.location_id.id, list(product_ids), to_datetime, self.location_id.id, self.location_id.id])
         return dict(self.env.cr.fetchall())
+
+    # def action_search_lines(self):
+    #     """Recherche les lignes correspondant aux filtres et affiche un aperçu
+    #     (ancienne/nouvelle quantité) avant toute écriture."""
+    #     self.ensure_one()
+
+    #     domain = [
+    #         ('active', '=', True),
+    #         ('inventory_physical_id.company_id', '=', self.company_id.id),
+    #         # ('quantity', '=', 0),
+    #         ('valorisation', '!=', 0),
+    #     ]
+    #     if self.date_from:
+    #         domain.append(('inventory_physical_id.date_done', '>=', self.date_from))
+    #     if self.date_to:
+    #         domain.append(('inventory_physical_id.date_done', '<=', self.date_to))
+    #     # if self.location_id:
+    #     #     domain.append(('location_id', '=', self.location_id.id))
+    #     if self.product_ids:
+    #         domain.append(('product_tmpl_id', 'in', self.product_ids))
+
+    #     inventory_lines = self.env['physical.inventory.line'].search(domain)
+
+    #     to_datetime = self.date
+    #     lines_by_location = defaultdict(list)
+    #     for inv_line in inventory_lines:
+    #         lines_by_location[inv_line.location_id].append(inv_line)
+
+    #     self.line_ids.unlink()
+    #     lines_vals = []
+    #     # for location, lines in lines_by_location.items():
+    #     for lines in inventory_lines:
+    #         location_lines = sum(lines, self.env['physical.inventory.line'])
+    #         qty_by_product = self._get_quantity_at_date(
+    #             location_lines.mapped('product_id').ids, to_datetime,
+    #         )
+    #         for inv_line in lines:
+    #             # Ne cible que les lignes où le stock système est réellement faux :
+    #             # quantity=0 alors que le stock reconstitué à la date choisie est différent de 0.
+    #             new_qty = qty_by_product.get(inv_line.product_id.id, 0.0)
+    #             # if not new_qty:
+    #             #     continue
+    #             lines_vals.append((0, 0, {
+    #                 'inventory_line_id': inv_line.id,
+    #                 'inventory_physical_id': inv_line.inventory_physical_id.id,
+    #                 'product_id': inv_line.product_id.id,
+    #                 'location_id': inv_line.location_id.id,
+    #                 'old_quantity': inv_line.quantity,
+    #                 'new_quantity': new_qty,
+    #                 'selected': bool(new_qty),
+    #             }))
+    #     if not lines_vals:
+    #         raise UserError(_(
+    #             "Aucune ligne trouvée : il faut quantity=0 sur la ligne ET un stock "
+    #             "reconstitué à la date choisie différent de 0 pour ces filtres."
+    #         ))
+    #     self.line_ids = lines_vals
+
+    #     return {
+    #         'type': 'ir.actions.act_window',
+    #         'res_model': self._name,
+    #         'res_id': self.id,
+    #         'view_mode': 'form',
+    #         'target': 'new',
+    #     }
 
     def action_search_lines(self):
         """Recherche les lignes correspondant aux filtres et affiche un aperçu
@@ -103,54 +168,49 @@ class PhysicalInventoryUpdateQuantityWizard(models.TransientModel):
         domain = [
             ('active', '=', True),
             ('inventory_physical_id.company_id', '=', self.company_id.id),
-            # ('quantity', '=', 0),
             ('valorisation', '!=', 0),
         ]
         if self.date_from:
             domain.append(('inventory_physical_id.date_done', '>=', self.date_from))
         if self.date_to:
             domain.append(('inventory_physical_id.date_done', '<=', self.date_to))
-        # if self.location_id:
-        #     domain.append(('location_id', '=', self.location_id.id))
         if self.product_ids:
-            domain.append(('product_tmpl_id', 'in', self.product_ids))
+            domain.append(('product_tmpl_id', 'in', self.product_ids.ids))
 
         inventory_lines = self.env['physical.inventory.line'].search(domain)
 
+        if not inventory_lines:
+            raise UserError(_(
+                "Aucune ligne trouvée pour ces filtres."
+            ))
+
         to_datetime = self.date
-        lines_by_location = defaultdict(list)
-        for inv_line in inventory_lines:
-            lines_by_location[inv_line.location_id].append(inv_line)
+
+        # Récupère toutes les quantités en une seule requête SQL (hors boucle)
+        qty_by_product = self._get_quantity_at_date(
+            inventory_lines.mapped('product_id').ids, to_datetime,
+        )
 
         self.line_ids.unlink()
         lines_vals = []
-        location = self.location_id
-        # for location, lines in lines_by_location.items():
-        for lines in inventory_lines:
-            location_lines = sum(lines, self.env['physical.inventory.line'])
-            qty_by_product = self._get_quantity_at_date(
-                location, location_lines.mapped('product_id').ids, to_datetime,
-            )
-            for inv_line in lines:
-                # Ne cible que les lignes où le stock système est réellement faux :
-                # quantity=0 alors que le stock reconstitué à la date choisie est différent de 0.
-                new_qty = qty_by_product.get(inv_line.product_id.id, 0.0)
-                # if not new_qty:
-                #     continue
-                lines_vals.append((0, 0, {
-                    'inventory_line_id': inv_line.id,
-                    'inventory_physical_id': inv_line.inventory_physical_id.id,
-                    'product_id': inv_line.product_id.id,
-                    'location_id': inv_line.location_id.id,
-                    'old_quantity': inv_line.quantity,
-                    'new_quantity': new_qty,
-                    'selected': bool(new_qty),
-                }))
+        for inv_line in inventory_lines:
+            new_qty = qty_by_product.get(inv_line.product_id.id, 0.0)
+            lines_vals.append((0, 0, {
+                'inventory_line_id': inv_line.id,
+                'inventory_physical_id': inv_line.inventory_physical_id.id,
+                'product_id': inv_line.product_id.id,
+                'location_id': inv_line.location_id.id,
+                'old_quantity': inv_line.quantity,
+                'new_quantity': new_qty,
+                'selected': bool(new_qty),
+            }))
+
         if not lines_vals:
             raise UserError(_(
-                "Aucune ligne trouvée : il faut quantity=0 sur la ligne ET un stock "
-                "reconstitué à la date choisie différent de 0 pour ces filtres."
+                "Aucune ligne trouvée : aucun stock reconstitué à la date choisie "
+                "pour ces filtres."
             ))
+
         self.line_ids = lines_vals
 
         return {
