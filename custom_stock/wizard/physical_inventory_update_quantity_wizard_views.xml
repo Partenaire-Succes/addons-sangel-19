@@ -64,6 +64,7 @@
                     <group string="Période des inventaires à cibler">
                         <field name="date_from"/>
                         <field name="date_to"/>
+                        <field name="product_ids" widget="many2many"/>
                     </group>
 
                     <notebook>
