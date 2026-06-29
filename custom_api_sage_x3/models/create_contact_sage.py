@@ -15,7 +15,7 @@ MAX_DURATION = 300  # 5 minutes
 
 # Champs mis à jour sur un contact existant (name et customer_id sont exclus intentionnellement)
 _CONTACT_UPDATE_FIELDS = (
-    'is_company', 'customer_rank', 'street', 'city', 'phone', 'vat',
+    'customer_rank', 'street', 'city', 'phone', 'vat',
     'company_registry', 'active', 'is_airsi_eligible', 'is_limit',
     'amount_credit_limit', 'code_family', 'category_id', 'currency_id',
     'primary_responsible_id', 'secondary_responsible_id',
