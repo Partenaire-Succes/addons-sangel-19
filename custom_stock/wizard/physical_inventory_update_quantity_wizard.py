@@ -171,9 +171,9 @@ class PhysicalInventoryUpdateQuantityWizard(models.TransientModel):
             ('valorisation', '!=', 0),
         ]
         if self.date_from:
-            domain.append(('inventory_physical_id.date', '>=', self.date_from))
+            domain.append(('inventory_physical_id.date_done', '>=', self.date_from))
         if self.date_to:
-            domain.append(('inventory_physical_id.date', '<=', self.date_to))
+            domain.append(('inventory_physical_id.date_done', '<=', self.date_to))
         if self.product_ids:
             domain.append(('product_tmpl_id', 'in', self.product_ids.ids))
 
