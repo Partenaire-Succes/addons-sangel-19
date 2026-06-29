@@ -61,6 +61,10 @@ class ProductReportWizard(models.TransientModel):
  
         # ── Même domaine que action_print_report ──────────────────────────────
         domain = []
+        # domain = [
+        #     ('type', '=', 'consu'),
+        #     ('prod_type_x3_id.name', '=', 'TS'),
+        # ]
         if self.active_products_only:
             domain.append(('active', '=', True))
         if self.company_id:

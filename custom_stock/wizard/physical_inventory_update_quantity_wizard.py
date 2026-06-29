@@ -203,7 +203,7 @@ class PhysicalInventoryUpdateQuantityWizard(models.TransientModel):
                 'location_id': inv_line.location_id.id,
                 'old_quantity': inv_line.quantity,
                 'new_quantity': new_qty,
-                'selected': bool(new_qty),
+                'selected': bool(inv_line.quantity - new_qty),
                 'date_done': inv_line.date_done,
             }))
 
