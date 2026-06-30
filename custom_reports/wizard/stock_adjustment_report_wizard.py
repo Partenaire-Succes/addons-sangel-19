@@ -164,7 +164,7 @@ class StockAdjustmentReportWizard(models.TransientModel):
             raise UserError("La bibliothèque openpyxl est requise.")
 
         wb = Workbook(); ws = wb.active; ws.title = "Ajustements Stock"
-        BLUE = "1A5276"; LBLUE = "D6EAF8"; WHITE = "FFFFFF"
+        BLUE = "1A5276"; WHITE = "FFFFFF"
         thin = Side(style='thin', color="AAAAAA")
         brd  = Border(left=thin, right=thin, top=thin, bottom=thin)
         def fill(h): return PatternFill("solid", fgColor=h)
@@ -179,47 +179,48 @@ class StockAdjustmentReportWizard(models.TransientModel):
         ws["A2"].fill = fill(BLUE); ws["A2"].alignment = aln("center")
         ws.row_dimensions[2].height = 18; ws.append([])
 
-        headers = ["Type", "Raison", "N° Document", "Date", "Opérateur", "Code Article", "Désignation", "Quantité", "Total PA"]
-        ws.append(headers)
-        hrow = ws.max_row
-        for col in range(1, 10):
-            c = ws.cell(row=hrow, column=col)
-            c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
-            c.fill = fill(BLUE); c.alignment = aln("center"); c.border = brd
-
         grouped = self.get_grouped_data()
-        grand_qty = grand_pa = 0.0
-        for adj_type, reasons in grouped.items():
-            for reason_data in reasons.values():
-                for line in reason_data['lines']:
-                    ws.append([adj_type, reason_data['reason_name'], line['document'],
-                                line['date'].strftime('%d/%m/%Y') if line['date'] else '',
-                                line['cashier'], line['article'], line['designation'],
-                                line['quantity'], line['total_pa']])
-                    r = ws.max_row
-                    for col in range(1, 10):
-                        c = ws.cell(row=r, column=col)
-                        c.font = Font(name="Arial", size=9); c.border = brd
-                        c.alignment = aln("right" if col >= 8 else "center" if col == 4 else "left")
-                    ws.cell(row=r, column=9).number_format = '#,##0.00'
-                    grand_qty += line['quantity']; grand_pa += line['total_pa']
+        if grouped:
+            headers = ["Type", "Raison", "N° Document", "Date", "Opérateur", "Code Article", "Désignation", "Quantité", "Total PA"]
+            ws.append(headers)
+            hrow = ws.max_row
+            for col in range(1, 10):
+                c = ws.cell(row=hrow, column=col)
+                c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
+                c.fill = fill(BLUE); c.alignment = aln("center"); c.border = brd
 
-        ws.append(["", "", "", "", "", "", "", "TOTAL GÉNÉRAL", grand_pa])
-        r = ws.max_row
-        for col in range(1, 10):
-            c = ws.cell(row=r, column=col)
-            c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
-            c.fill = fill(BLUE); c.border = brd
-            c.alignment = aln("right" if col >= 8 else "left")
-        ws.cell(row=r, column=9).number_format = '#,##0.00'
+            grand_qty = grand_pa = 0.0
+            for adj_type, reasons in grouped.items():
+                for reason_data in reasons.values():
+                    for line in reason_data['lines']:
+                        ws.append([adj_type, reason_data['reason_name'], line['document'],
+                                    line['date'].strftime('%d/%m/%Y') if line['date'] else '',
+                                    line['cashier'], line['article'], line['designation'],
+                                    line['quantity'], line['total_pa']])
+                        r = ws.max_row
+                        for col in range(1, 10):
+                            c = ws.cell(row=r, column=col)
+                            c.font = Font(name="Arial", size=9); c.border = brd
+                            c.alignment = aln("right" if col >= 8 else "center" if col == 4 else "left")
+                        ws.cell(row=r, column=9).number_format = '#,##0.00'
+                        grand_qty += line['quantity']; grand_pa += line['total_pa']
+
+            ws.append(["", "", "", "", "", "", grand_qty, "TOTAL GÉNÉRAL", grand_pa])
+            r = ws.max_row
+            for col in range(1, 10):
+                c = ws.cell(row=r, column=col)
+                c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
+                c.fill = fill(BLUE); c.border = brd
+                c.alignment = aln("right" if col >= 8 else "left")
+            ws.cell(row=r, column=9).number_format = '#,##0.00'
 
         # ── Section réceptions inventaire ───────────────────────────────────
         return_lines = self.get_return_scrap_data()
         if return_lines:
             ws.append([])
-            ws.merge_cells(f"A{ws.max_row + 1}:I{ws.max_row + 1}")
             ws.append(["RÉCEPTIONS INVENTAIRE"])
             r = ws.max_row
+            ws.merge_cells(f"A{r}:I{r}")
             ws.cell(row=r, column=1).font = Font(name="Arial", bold=True, color=WHITE, size=11)
             ws.cell(row=r, column=1).fill = fill(BLUE)
             ws.cell(row=r, column=1).alignment = aln("center")
