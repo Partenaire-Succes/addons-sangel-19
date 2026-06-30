@@ -26,7 +26,7 @@ _PRODUCT_UPDATE_FIELDS = (
     'is_yop_demi_gros', 'is_yop_detail', 'is_synacass_ci', 'is_square',
     'is_bassam', 'is_koumassi', 'is_abobo', 'allowed_company_ids', 'family_categ_id',
     'categ_id', 'actif_x3', 'type', 's_family_id', 'radius_id', 's_radius_id',
-    'uom_ids', 'name', 'description',
+    'uom_ids', 'name', 'description', 'is_storable'
 )
 
 
@@ -564,7 +564,7 @@ class ProductTemplateImport(models.Model):
             "sale_ok":           True,
             "purchase_ok":       True,
             "available_in_pos":  True,
-            "is_storable":       True,
+            "is_storable":       self._get_state_type(item.get("yG5TYPE_0"), item.get("itmreF_0")),
             "uom_ids":           [(5, 0, 0)],
         }
 

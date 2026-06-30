@@ -30,6 +30,11 @@ class StockAdjustmentReportWizard(models.TransientModel):
         string='Rébuts',
         compute='_compute_scrap_lines_ids'
     )
+    return_scrap_lines_ids = fields.Many2many(
+        'stock.move',
+        string='Rébuts',
+        compute='_compute_return_scrap_lines_ids'
+    )
 
     @api.depends('date_from', 'date_to', 'company_id')
     def _compute_scrap_lines_ids(self):
@@ -41,9 +46,38 @@ class StockAdjustmentReportWizard(models.TransientModel):
                 ('state', '=', 'done')
             ], order='date_done, name')
 
+    @api.depends('date_from', 'date_to', 'company_id')
+    def _compute_return_scrap_lines_ids(self):
+        for rec in self:
+            rec.return_scrap_lines_ids = self.env['stock.move'].search([
+                ('picking_id.date_done', '>=', rec.date_from),
+                ('picking_id.date_done', '<=', rec.date_to),
+                ('picking_id.company_id', '=', rec.company_id.id),
+                ('picking_id.location_id.usage', '=', 'inventory'),
+                ('picking_id.location_dest_id.usage', '=', 'internal'),
+                ('state', '=', 'done')
+            ], order='date, name')
+
+    def get_return_scrap_data(self):
+        """Lignes de stock.move : entrées depuis emplacement inventaire → interne."""
+        self.ensure_one()
+        lines = []
+        for move in self.return_scrap_lines_ids:
+            qty = move.quantity
+            lines.append({
+                'document':    move.picking_id.name or move.name,
+                'date':        move.picking_id.date_done,
+                'cashier':     move.picking_id.user_id.name or '',
+                'article':     move.product_id.code_article or '',
+                'designation': move.product_id.name,
+                'quantity':    qty,
+                'total_pa':    qty * move.product_id.standard_price,
+            })
+        return lines
+
     def action_print_report(self):
         self.ensure_one()
-        if not self.scrap_lines_ids:
+        if not self.scrap_lines_ids and not self.return_scrap_lines_ids:
             raise UserError("Aucune donnée trouvée pour la période sélectionnée.")
 
         return self.env.ref('custom_reports.action_report_stock_adjustment').report_action(self)
@@ -121,7 +155,7 @@ class StockAdjustmentReportWizard(models.TransientModel):
 
     def action_export_excel(self):
         self.ensure_one()
-        if not self.scrap_lines_ids:
+        if not self.scrap_lines_ids and not self.return_scrap_lines_ids:
             raise UserError("Aucune donnée trouvée pour la période sélectionnée.")
         try:
             from openpyxl import Workbook
@@ -178,6 +212,52 @@ class StockAdjustmentReportWizard(models.TransientModel):
             c.fill = fill(BLUE); c.border = brd
             c.alignment = aln("right" if col >= 8 else "left")
         ws.cell(row=r, column=9).number_format = '#,##0.00'
+
+        # ── Section réceptions inventaire ───────────────────────────────────
+        return_lines = self.get_return_scrap_data()
+        if return_lines:
+            ws.append([])
+            ws.merge_cells(f"A{ws.max_row + 1}:I{ws.max_row + 1}")
+            ws.append(["RÉCEPTIONS INVENTAIRE"])
+            r = ws.max_row
+            ws.cell(row=r, column=1).font = Font(name="Arial", bold=True, color=WHITE, size=11)
+            ws.cell(row=r, column=1).fill = fill(BLUE)
+            ws.cell(row=r, column=1).alignment = aln("center")
+            ws.row_dimensions[r].height = 18
+
+            ws.append(["N° Document", "Date", "Opérateur", "Code Article", "Désignation", "", "Quantité", "", "Total PA"])
+            hr = ws.max_row
+            for col in range(1, 10):
+                c = ws.cell(row=hr, column=col)
+                c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
+                c.fill = fill(BLUE); c.alignment = aln("center"); c.border = brd
+
+            ret_qty = ret_pa = 0.0
+            for line in return_lines:
+                ws.append([
+                    line['document'],
+                    line['date'].strftime('%d/%m/%Y') if line['date'] else '',
+                    line['cashier'],
+                    line['article'],
+                    line['designation'],
+                    '', line['quantity'], '', line['total_pa'],
+                ])
+                r = ws.max_row
+                for col in range(1, 10):
+                    c = ws.cell(row=r, column=col)
+                    c.font = Font(name="Arial", size=9); c.border = brd
+                    c.alignment = aln("right" if col in (7, 9) else "center" if col == 2 else "left")
+                ws.cell(row=r, column=9).number_format = '#,##0.00'
+                ret_qty += line['quantity']; ret_pa += line['total_pa']
+
+            ws.append(["", "", "", "", "", "", ret_qty, "", ret_pa])
+            r = ws.max_row
+            for col in range(1, 10):
+                c = ws.cell(row=r, column=col)
+                c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
+                c.fill = fill(BLUE); c.border = brd
+                c.alignment = aln("right" if col in (7, 9) else "left")
+            ws.cell(row=r, column=9).number_format = '#,##0.00'
 
         for col, width in enumerate([18, 20, 16, 13, 18, 14, 28, 10, 14], 1):
             ws.column_dimensions[chr(64 + col)].width = width

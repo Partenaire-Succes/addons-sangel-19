@@ -179,22 +179,66 @@
                                 <div class="section-spacing"></div>
                             </t>
 
-                            <!-- ====== Total général ====== -->
+                            <!-- ====== Total général rebuts ====== -->
                             <table style="margin-left: 40%;width: 60%;">
                                 <tbody>
                                     <tr class="grand-total-row">
                                         <td style="width:50%; font-size: 15pt;" class="text-right">
                                             CUMULS Sortie
                                         </td>
-                                        <td  style="width:25%; font-size: 15pt" class="text-right">
+                                        <td style="width:25%; font-size: 15pt" class="text-right">
                                             <strong><span t-esc="'%.2f' % grand_totals['quantity']"/></strong>
                                         </td>
-                                        <td  style="width:25%; font-size: 15pt" class="text-right">
+                                        <td style="width:25%; font-size: 15pt" class="text-right">
                                             <strong><span t-esc="'{:,.0f}'.format(grand_totals['total_pa'] or 0).replace(',', ' ')"/></strong>
                                         </td>
                                     </tr>
                                 </tbody>
                             </table>
+
+                            <!-- ====== Section réceptions inventaire ====== -->
+                            <t t-set="return_lines" t-value="o.get_return_scrap_data()"/>
+                            <t t-if="return_lines">
+                                <div class="section-spacing"/>
+                                <div style="background-color:#1A5276; color:#fff; font-weight:bold; font-size:13pt; padding:5px 8px; margin-bottom:6px;">
+                                    RÉCEPTIONS INVENTAIRE
+                                </div>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th style="width:14%">Document</th>
+                                            <th style="width:10%">Date</th>
+                                            <th style="width:14%">Opérateur</th>
+                                            <th style="width:12%">Article</th>
+                                            <th style="width:28%">Désignation</th>
+                                            <th style="width:11%" class="text-right">Quantité</th>
+                                            <th style="width:11%" class="text-right">Total P.A</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="return_lines" t-as="rl">
+                                            <tr>
+                                                <td><span t-esc="rl['document']"/></td>
+                                                <td><span t-esc="rl['date'].strftime('%d/%m/%Y') if rl['date'] else ''"/></td>
+                                                <td><span t-esc="rl['cashier']"/></td>
+                                                <td><span t-esc="rl['article']"/></td>
+                                                <td><span t-esc="rl['designation']"/></td>
+                                                <td class="text-right"><span t-esc="'%.2f' % rl['quantity']"/></td>
+                                                <td class="text-right"><span t-esc="'{:,.0f}'.format(rl['total_pa'] or 0).replace(',', ' ')"/></td>
+                                            </tr>
+                                        </t>
+                                        <tr class="grand-total-row">
+                                            <td colspan="5" class="text-right">CUMULS Entrée</td>
+                                            <td class="text-right">
+                                                <strong><span t-esc="'%.2f' % sum(l['quantity'] for l in return_lines)"/></strong>
+                                            </td>
+                                            <td class="text-right">
+                                                <strong><span t-esc="'{:,.0f}'.format(sum(l['total_pa'] for l in return_lines) or 0).replace(',', ' ')"/></strong>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </t>
                         </div>
                     </div>
                 </t>
