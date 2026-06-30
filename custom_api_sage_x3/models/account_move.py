@@ -1137,6 +1137,20 @@ class AccountMoveSageX3(models.Model):
         if self.move_type not in ('out_invoice', 'out_refund'):
             raise UserError("Seules les factures et avoirs clients sont acceptés.")
         if self.pos_order_ids:
+            # Les remboursements POS "mise en compte" (is_limit) sont envoyés en AVCLI
+            # par le circuit POS (Flux 1, _ligne_ecritures_is_limit) qui marque
+            # pos.payment.sage_x3_sent mais pas l'account.move. Si c'est déjà fait,
+            # on synchronise le move sans renvoyer (évite le doublon).
+            limit_payments = self.env['pos.payment'].search([
+                ('pos_order_id',               'in', self.pos_order_ids.ids),
+                ('payment_method_id.is_limit', '=',  True),
+            ])
+            if limit_payments and all(p.sage_x3_sent for p in limit_payments):
+                self.write({
+                    'sage_x3_sent':      True,
+                    'sage_x3_sent_date': fields.Datetime.now(),
+                })
+                return
             raise UserError(
                 f"{self.name} provient d'une commande POS ({', '.join(self.pos_order_ids.mapped('name'))}) "
                 f"et est déjà envoyée via le circuit POS (FACLI/AVCLI). "
