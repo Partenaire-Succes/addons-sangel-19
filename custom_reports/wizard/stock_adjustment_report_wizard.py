@@ -56,7 +56,7 @@ class StockAdjustmentReportWizard(models.TransientModel):
                 ('picking_id.location_id.usage', '=', 'inventory'),
                 ('picking_id.location_dest_id.usage', '=', 'internal'),
                 ('state', '=', 'done')
-            ], order='date, name')
+            ], order='date, id')
 
     def get_return_scrap_data(self):
         """Lignes de stock.move : entrées depuis emplacement inventaire → interne."""
