@@ -179,6 +179,7 @@ class StockAdjustmentReportWizard(models.TransientModel):
         ws["A2"].fill = fill(BLUE); ws["A2"].alignment = aln("center")
         ws.row_dimensions[2].height = 18; ws.append([])
 
+        grand_qty = grand_pa = 0.0
         grouped = self.get_grouped_data()
         if grouped:
             headers = ["Type", "Raison", "N° Document", "Date", "Opérateur", "Code Article", "Désignation", "Quantité", "Total PA"]
@@ -188,8 +189,6 @@ class StockAdjustmentReportWizard(models.TransientModel):
                 c = ws.cell(row=hrow, column=col)
                 c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
                 c.fill = fill(BLUE); c.alignment = aln("center"); c.border = brd
-
-            grand_qty = grand_pa = 0.0
             for adj_type, reasons in grouped.items():
                 for reason_data in reasons.values():
                     for line in reason_data['lines']:
@@ -218,7 +217,7 @@ class StockAdjustmentReportWizard(models.TransientModel):
         return_lines = self.get_return_scrap_data()
         if return_lines:
             ws.append([])
-            ws.append(["RÉCEPTIONS INVENTAIRE"])
+            ws.append(["Correction Casse"])
             r = ws.max_row
             ws.merge_cells(f"A{r}:I{r}")
             ws.cell(row=r, column=1).font = Font(name="Arial", bold=True, color=WHITE, size=11)
@@ -258,6 +257,17 @@ class StockAdjustmentReportWizard(models.TransientModel):
                 c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
                 c.fill = fill(BLUE); c.border = brd
                 c.alignment = aln("right" if col in (7, 9) else "left")
+            ws.cell(row=r, column=9).number_format = '#,##0.00'
+
+            # ── Cumul net final : Correction - Sortie ───────────────────────
+            ws.append([])
+            ws.append(["", "", "", "", "", "", ret_qty - grand_qty, "NET (Correction - Sortie)", ret_pa - grand_pa])
+            r = ws.max_row
+            for col in range(1, 10):
+                c = ws.cell(row=r, column=col)
+                c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
+                c.fill = fill(BLUE); c.border = brd
+                c.alignment = aln("right" if col >= 7 else "left")
             ws.cell(row=r, column=9).number_format = '#,##0.00'
 
         for col, width in enumerate([18, 20, 16, 13, 18, 14, 28, 10, 14], 1):

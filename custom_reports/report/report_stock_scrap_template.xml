@@ -196,12 +196,12 @@
                                 </tbody>
                             </table>
 
-                            <!-- ====== Section réceptions inventaire ====== -->
+                            <!-- ====== Section Correction Casse ====== -->
                             <t t-set="return_lines" t-value="o.get_return_scrap_data()"/>
                             <t t-if="return_lines">
                                 <div class="section-spacing"/>
                                 <div style="background-color:#1A5276; color:#fff; font-weight:bold; font-size:13pt; padding:5px 8px; margin-bottom:6px;">
-                                    RÉCEPTIONS INVENTAIRE
+                                    Correction Casse
                                 </div>
                                 <table>
                                     <thead>
@@ -228,12 +228,32 @@
                                             </tr>
                                         </t>
                                         <tr class="grand-total-row">
-                                            <td colspan="5" class="text-right">CUMULS Entrée</td>
+                                            <td colspan="5" class="text-right">CUMULS Correction Casse</td>
                                             <td class="text-right">
                                                 <strong><span t-esc="'%.2f' % sum(l['quantity'] for l in return_lines)"/></strong>
                                             </td>
                                             <td class="text-right">
                                                 <strong><span t-esc="'{:,.0f}'.format(sum(l['total_pa'] for l in return_lines) or 0).replace(',', ' ')"/></strong>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                <!-- ====== Cumul net final ====== -->
+                                <t t-set="ret_qty_total" t-value="sum(l['quantity'] for l in return_lines)"/>
+                                <t t-set="ret_pa_total"  t-value="sum(l['total_pa']  for l in return_lines)"/>
+                                <div class="section-spacing"/>
+                                <table style="margin-left: 40%; width: 60%;">
+                                    <tbody>
+                                        <tr class="grand-total-row">
+                                            <td style="width:50%; font-size:13pt;" class="text-right">
+                                                NET (Correction - Sortie)
+                                            </td>
+                                            <td style="width:25%; font-size:13pt;" class="text-right">
+                                                <strong><span t-esc="'%.2f' % (ret_qty_total - grand_totals['quantity'])"/></strong>
+                                            </td>
+                                            <td style="width:25%; font-size:13pt;" class="text-right">
+                                                <strong><span t-esc="'{:,.0f}'.format(ret_pa_total - grand_totals['total_pa']).replace(',', ' ')"/></strong>
                                             </td>
                                         </tr>
                                     </tbody>
