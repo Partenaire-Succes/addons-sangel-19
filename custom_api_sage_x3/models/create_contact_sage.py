@@ -159,6 +159,14 @@ class ResPartnerImport(models.Model):
             _logger.warning("⚠️ Date invalide : %s (%s)", value, str(e))
             return False
 
+    def _get_state_active(self, state_code):
+        """Indique si le client est actif :
+        type X3 2 """
+        if state_code == 2:
+            return True
+
+        return False
+
     # =========================================================================
     # PRÉPARATION DES VALEURS
     # =========================================================================
@@ -189,7 +197,7 @@ class ResPartnerImport(models.Model):
             "phone":              self._safe_string(customer.get("teL_0")),
             "vat":                self._safe_string(customer.get("naF_0")),
             "company_registry":   self._safe_string(customer.get("crN_0")),
-            "active":             True,
+            "active":             self._get_state_active(customer.get("bpcstA_0")),
             # "is_airsi_eligible":  is_airsi,
             "is_airsi_eligible":  False,
             "is_limit":           is_limit,
