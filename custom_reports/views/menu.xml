@@ -19,4 +19,13 @@
               name="Stock et Inventaire"
               parent="menu_custom_reports_root"
               sequence="4"/>
+
+    <!-- ── Menu : Inventaire → Analyse et Rapports → Stock et Inventaire ── -->
+    <menuitem
+        id="menu_stock_avco_report_standalone"
+        name="AVCO Justification"
+        parent="menu_reports_stock"
+        action="custom_stock.action_stock_avco_report_standalone"
+        groups="custom_pos.group_dsi_it"
+        sequence="50"/>
 </odoo>

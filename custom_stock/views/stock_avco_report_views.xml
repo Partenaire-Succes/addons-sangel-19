@@ -88,13 +88,4 @@
         </field>
     </record>
 
-    <!-- ── Menu : Inventaire → Analyse et Rapports → Stock et Inventaire ── -->
-    <menuitem
-        id="menu_stock_avco_report_standalone"
-        name="AVCO Justification"
-        parent="custom_reports.menu_reports_stock"
-        action="action_stock_avco_report_standalone"
-        groups="custom_pos.group_dsi_it"
-        sequence="50"/>
-
 </odoo>
