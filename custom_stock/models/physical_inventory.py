@@ -148,6 +148,88 @@ class PhysicalInventory(models.Model):
             )
             self.message_post(body=msg, message_type='notification')
 
+    def action_register_missing_move_lines(self):
+        """Enregistre rétroactivement, directement en base (hors ORM), les
+        lignes `stock.move.line` manquantes pour les écarts de cet
+        inventaire déjà validé.
+
+        Contrairement à `action_done()` (qui passe par `_apply_inventory`
+        et impacte réellement le stock via les `stock.quant`), cette action
+        se contente de reconstituer la trace `stock.move.line` sans toucher
+        au stock : on fait un INSERT SQL brut car passer par le `create()`
+        ORM de `stock.move.line` recalculerait automatiquement les quants
+        dès que `state == 'done'` (cf. `stock_move_line.py`), et le champ
+        `state` n'est de toute façon pas écrivable directement (related
+        stocké sur `move_id.state`, qu'on ne veut pas créer ici).
+        """
+        self.ensure_one()
+        if self.state != 'done':
+            raise UserError(_("Cette action n'est possible que sur un inventaire terminé."))
+        if not self.date_done:
+            raise UserError(_("Date de fin manquante sur cet inventaire."))
+
+        lines = self.physical_line_ids.filtered(
+            lambda l: l.active
+            and not l.move_line_created
+            and l.product_uom_id
+            and l.product_uom_id.compare(l.qty_diff, 0) != 0
+        )
+        if not lines:
+            raise UserError(_("Aucune ligne avec un écart à enregistrer."))
+
+        cr = self.env.cr
+        default_loss_by_company = {}
+        created_count = 0
+
+        for line in lines:
+            product = line.product_id
+            inventory_location = product.with_company(self.company_id).property_stock_inventory
+            if not inventory_location:
+                if self.company_id.id not in default_loss_by_company:
+                    loss_location_id = self.env['ir.default'].with_company(self.company_id)._get_model_defaults(
+                        'product.template').get('property_stock_inventory')
+                    default_loss_by_company[self.company_id.id] = self.env['stock.location'].browse(loss_location_id)
+                inventory_location = default_loss_by_company[self.company_id.id]
+            if not inventory_location:
+                raise UserError(_(
+                    "Aucun emplacement d'ajustement d'inventaire configuré pour %(product)s.",
+                    product=product.display_name,
+                ))
+
+            qty = abs(line.qty_diff)
+            if line.qty_diff > 0:
+                source_location, dest_location = inventory_location, line.location_id
+            else:
+                source_location, dest_location = line.location_id, inventory_location
+
+            cr.execute("""
+                INSERT INTO stock_move_line
+                    (product_id, product_uom_id, quantity, quantity_product_uom, picked,
+                     location_id, location_dest_id, company_id, date, state, lot_id,
+                     create_uid, write_uid, create_date, write_date)
+                VALUES (%s, %s, %s, %s, TRUE, %s, %s, %s, %s, 'done', %s, %s, %s, %s, now())
+            """, (
+                product.id,
+                line.product_uom_id.id,
+                qty,
+                qty,
+                source_location.id,
+                dest_location.id,
+                self.company_id.id,
+                self.date_done,
+                line.lot_id.id if line.lot_id else None,
+                self.env.uid,
+                self.env.uid,
+                self.date_done,
+            ))
+            line.move_line_created = True
+            created_count += 1
+
+        self.message_post(body=_(
+            "%(count)d ligne(s) stock.move.line enregistrée(s) rétroactivement (sans impact sur le stock).",
+            count=created_count,
+        ))
+
     def action_draft(self):
         self.write({'state': 'draft', 'date_done': False})
 
@@ -432,6 +514,15 @@ class PhysicalInventoryLine(models.Model):
         tracking=True,
         help="Coché automatiquement quand la quantité système (champ Stock) a été "
              "corrigée via l'assistant de correction des quantités d'inventaire.",
+    )
+
+    move_line_created = fields.Boolean(
+        string='Ligne stock.move.line enregistrée',
+        default=False,
+        copy=False,
+        tracking=True,
+        help="Coché automatiquement quand la ligne stock.move.line correspondant à "
+             "l'écart a été enregistrée rétroactivement via le bouton dédié.",
     )
 
     is_inventoriable = fields.Boolean(
