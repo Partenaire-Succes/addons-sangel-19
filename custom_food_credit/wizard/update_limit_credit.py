@@ -46,6 +46,7 @@ class UpdateLimitCreditWizard(models.TransientModel):
         ('invoice', 'Réglé une facture'),
         ('limit', 'Modifier le crédit'),
         ('change_conso', 'Modifier la consommation'),
+        ('cancel_payment', 'Annuler un paiement'),
     ], string='Motif', default='invoice', required=True)
 
     amount_conso = fields.Float(
@@ -81,8 +82,22 @@ class UpdateLimitCreditWizard(models.TransientModel):
             self.amount = self.payment_id.amount if self.payment_id else 0.0
         elif self.state == 'limit':
             self.amount = self.limit_id.amount_limit if self.limit_id else 0.0
+        elif self.state == 'cancel_payment':
+            self.amount = self.payment_id.amount if self.payment_id else 0.0
         else:
             self.amount_conso = 0.0
+
+        if self.state == 'cancel_payment':
+            return {'domain': {'payment_id': [
+                ('partner_id', '=', self.partner_id.id),
+                ('state', 'in', ['in_process', 'paid', 'canceled']),
+                ('linked_limit', '=', True),
+            ]}}
+        return {'domain': {'payment_id': [
+            ('memo', '=', self.memo),
+            ('partner_id', '=', self.partner_id.id),
+            ('state', 'in', ['in_process', 'paid']),
+        ]}}
     
     def update_limit_credit(self):
         """Met à jour la limite de crédit selon le motif"""
@@ -112,6 +127,13 @@ class UpdateLimitCreditWizard(models.TransientModel):
                     raise UserError("La somme payée doit être supérieure à zéro.")
                 self._process_conso_update(existing_limit)
                 message = f"Consommation réduite de {self.amount_conso:.2f} FCFA"
+
+            elif self.state == 'cancel_payment':
+                # Cas: Annulation d'un paiement - restaure le crédit consommé
+                if not self.payment_id:
+                    raise UserError("Veuillez sélectionner un paiement à annuler.")
+                self._process_cancel_payment(existing_limit)
+                message = f"Paiement de {self.amount:.2f} FCFA annulé avec succès"
             else:
                 raise UserError("Motif invalide sélectionné.")
             
@@ -215,6 +237,32 @@ class UpdateLimitCreditWizard(models.TransientModel):
         _logger.info(
             f"Consommation modifiée pour {limit_credit.partner_id.name}: "
             f"-{self.amount_conso:.2f} FCFA → nouveau consommé: {new_consumed:.2f} FCFA"
+        )
+
+    def _process_cancel_payment(self, limit_credit):
+        """Annule le paiement sélectionné, ou rattrape un paiement déjà
+        annulé dont le crédit consommé n'a jamais été restauré (ex: annulé
+        avant la mise en place de ce correctif).
+
+        La restauration du crédit consommé est déléguée à
+        `account.payment._retire_limit()`, pour garder une seule source de
+        vérité entre l'état comptable du paiement et le crédit consommé du
+        client.
+        """
+        payment = self.payment_id
+        if not payment.linked_limit:
+            raise UserError("Ce paiement n'est pas lié à une limite de crédit.")
+
+        if payment.state == 'canceled':
+            # Déjà annulé comptablement, mais le crédit consommé n'a pas
+            # encore été restauré : on rattrape uniquement le crédit.
+            payment._retire_limit()
+        else:
+            payment.action_cancel()
+
+        _logger.info(
+            f"Paiement {payment.name} annulé pour {limit_credit.partner_id.name} "
+            f"via l'assistant de mise à jour de limite de crédit."
         )
 
     def action_cancel(self):

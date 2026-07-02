@@ -13,7 +13,7 @@
                             <field name="limit_id"/>
                             <field name="state"/>
                             <field name="move_id" required="state == 'invoice'" invisible="state != 'invoice'"/>
-                            <field name="payment_id" required="state == 'invoice'" invisible="state != 'invoice'"/>
+                            <field name="payment_id" required="state in ('invoice', 'cancel_payment')" invisible="state not in ('invoice', 'cancel_payment')"/>
                             <field name="amount_conso" required="state == 'change_conso'" invisible="state != 'change_conso'"/>
                         </group>
                         <group>

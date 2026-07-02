@@ -12,12 +12,11 @@ class AccountPayment(models.Model):
     linked_limit = fields.Boolean('Est liee a une limite de crédit', default=False)
     linked_food = fields.Boolean('Est liee a un crédit alimentaire', default=False)
 
-    # def action_dratf(self):
-    #     res = super(AccountPayment, self).action_draft()
-    #     self._retire_credit()
-    #     self._retire_limit()
-    #     return res
-    
+    def action_cancel(self):
+        res = super(AccountPayment, self).action_cancel()
+        self._retire_limit()
+        return res
+
     # def action_post(self):
     #     res = super(AccountPayment, self).action_post()
     #     if self.linked_food or self.linked_limit:
@@ -47,20 +46,30 @@ class AccountPayment(models.Model):
     
 
     def _retire_limit(self):
+        """Restaure le crédit consommé lorsqu'un paiement lié à une limite de crédit est annulé.
+
+        Le règlement (`_process_invoice_payment`) diminue `amount_limit_consumed` à
+        l'enregistrement du paiement ; son annulation doit donc le restaurer (l'augmenter
+        à nouveau), pas le diminuer une seconde fois.
+        """
         for payment in self:
-            if payment.is_limit and payment.linked_limit:
-                limit_credit = self.env['limit.credit'].sudo().search([
-                    ('partner_id', '=', payment.invoice_ids[0].partner_id.id),
-                ], limit=1)
-                limit_credit.sudo().write({
-                    'amount_limit_consumed': limit_credit.amount_limit_consumed - payment.amount
-                })
-                self.env['limit.credit.operation'].create({
-                    'limit_id': limit_credit.id,
-                    'name': "Annulation Gros & 1/2 Gros - %s" % payment.invoice_ids[0].invoice_origin or payment.invoice_ids[0].name,
-                    'amount_operation': - payment.amount,
-                    'operation_date': fields.Datetime.now(),
-                })
-                # payment.linked_limit = False
-                self.env.invalidate_all()     
+            if not payment.linked_limit or not payment.invoice_ids:
+                continue
+
+            limit_credit = self.env['limit.credit'].sudo().search([
+                ('partner_id', '=', payment.invoice_ids[0].partner_id.id),
+            ], limit=1)
+            if not limit_credit:
+                continue
+
+            limit_credit.sudo().write({
+                'amount_limit_consumed': limit_credit.amount_limit_consumed + payment.amount
+            })
+            self.env['limit.credit.operation'].create({
+                'limit_id': limit_credit.id,
+                'name': "Annulation règlement - %s" % (payment.invoice_ids[0].invoice_origin or payment.invoice_ids[0].name),
+                'amount_operation': payment.amount,
+                'operation_date': fields.Datetime.now(),
+            })
+            payment.linked_limit = False
         return True
