@@ -23,14 +23,16 @@ class LimitCredit(models.Model):
     _description = 'Limite des credits'
     _rec_name = 'partner_id'
 
-    partner_id = fields.Many2one('res.partner', 
-                                         string='Client', 
-                                         required=True)
+    partner_id = fields.Many2one('res.partner',
+                                         string='Client',
+                                         required=True,
+                                         tracking=True)
     is_limit = fields.Boolean(string="Limite Credit",
                                               related='partner_id.is_limit',
-                                              readonly=True)
-    amount_limit = fields.Float(string="Limite Credit par employe", related='partner_id.amount_credit_limit', readonly=False)
-    amount_limit_consumed = fields.Float(string="Limite Credit Consommée", default=0.0)
+                                              readonly=True,
+                                              tracking=True)
+    amount_limit = fields.Float(string="Limite Credit par employe", related='partner_id.amount_credit_limit', readonly=False, tracking=True)
+    amount_limit_consumed = fields.Float(string="Limite Credit Consommée", default=0.0, tracking=True)
     amount_limit_solde = fields.Float(string="Solde disponible", compute='compute_amount_limit_solde')
     currency_id = fields.Many2one('res.currency', string='Currency', default=lambda self: self.env.company.currency_id)
     operations_ids = fields.One2many(
