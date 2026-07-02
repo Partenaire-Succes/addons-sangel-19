@@ -150,17 +150,22 @@ class PhysicalInventory(models.Model):
 
     def action_register_missing_move_lines(self):
         """Enregistre rétroactivement, directement en base (hors ORM), les
-        lignes `stock.move.line` manquantes pour les écarts de cet
+        `stock.move` / `stock.move.line` manquants pour les écarts de cet
         inventaire déjà validé.
 
         Contrairement à `action_done()` (qui passe par `_apply_inventory`
         et impacte réellement le stock via les `stock.quant`), cette action
-        se contente de reconstituer la trace `stock.move.line` sans toucher
-        au stock : on fait un INSERT SQL brut car passer par le `create()`
-        ORM de `stock.move.line` recalculerait automatiquement les quants
-        dès que `state == 'done'` (cf. `stock_move_line.py`), et le champ
-        `state` n'est de toute façon pas écrivable directement (related
-        stocké sur `move_id.state`, qu'on ne veut pas créer ici).
+        se contente de reconstituer la trace sans toucher au stock : on fait
+        des INSERT SQL bruts car passer par le `create()` ORM de
+        `stock.move.line` recalculerait automatiquement les quants dès que
+        `state == 'done'` (cf. `stock_move_line.py`), et le champ `state`
+        n'est de toute façon pas écrivable directement (related stocké sur
+        `move_id.state`). Le `stock.move` est créé pour la même raison :
+        uniquement pour porter `is_inventory`/`inventory_name`, afin que
+        `stock.move.line.reference` (related sur `move_id.reference`)
+        affiche le nom de l'inventaire - sans générer de couche de
+        valorisation ni d'écriture comptable, puisque `_action_done()`
+        n'est jamais appelé.
         """
         self.ensure_one()
         if self.state != 'done':
@@ -203,12 +208,42 @@ class PhysicalInventory(models.Model):
                 source_location, dest_location = line.location_id, inventory_location
 
             cr.execute("""
+                INSERT INTO stock_move
+                    (company_id, product_id, product_uom_qty, product_uom,
+                     location_id, location_dest_id, date, state, procure_method,
+                     is_inventory, inventory_name, reference, origin,
+                     quantity, product_qty, picked,
+                     create_uid, write_uid, create_date, write_date)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, 'done', 'make_to_stock',
+                        TRUE, %s, %s, %s, %s, %s, TRUE, %s, %s, %s, now())
+                RETURNING id
+            """, (
+                self.company_id.id,
+                product.id,
+                qty,
+                line.product_uom_id.id,
+                source_location.id,
+                dest_location.id,
+                self.date_done,
+                self.name,
+                self.name,
+                self.name,
+                qty,
+                qty,
+                self.env.uid,
+                self.env.uid,
+                self.date_done,
+            ))
+            move_id = cr.fetchone()[0]
+
+            cr.execute("""
                 INSERT INTO stock_move_line
-                    (product_id, product_uom_id, quantity, quantity_product_uom, picked,
+                    (move_id, product_id, product_uom_id, quantity, quantity_product_uom, picked,
                      location_id, location_dest_id, company_id, date, state, lot_id,
                      create_uid, write_uid, create_date, write_date)
-                VALUES (%s, %s, %s, %s, TRUE, %s, %s, %s, %s, 'done', %s, %s, %s, %s, now())
+                VALUES (%s, %s, %s, %s, %s, TRUE, %s, %s, %s, %s, 'done', %s, %s, %s, %s, now())
             """, (
+                move_id,
                 product.id,
                 line.product_uom_id.id,
                 qty,
