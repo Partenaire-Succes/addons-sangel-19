@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- ========== VUE FORMULAIRE ========== -->
+        <record id="stock_movement_report_form_view" model="ir.ui.view">
+            <field name="name">stock.movement.report.wizard.form</field>
+            <field name="model">stock.movement.report.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Rapport Stock et Mouvements">
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="date_from"/>
+                                <field name="date_to"/>
+                                <field name="location_id"/>
+                            </group>
+                            <group>
+                                <field name="company_id"/>
+                                <field name="category_ids" widget="many2many_tags"/>
+                            </group>
+                        </group>
+                    </sheet>
+                    <footer>
+                        <button string="Imprimer" name="action_print_report" type="object" class="btn-primary"/>
+                        <button string="Télécharger Excel" name="action_export_excel" type="object" class="btn-success" icon="fa-file-excel-o"/>
+                        <button string="Annuler" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <!-- ========== ACTION FENÊTRE ========== -->
+        <record id="action_stock_movement_report" model="ir.actions.act_window">
+            <field name="name">Rapport Stock et Mouvements</field>
+            <field name="res_model">stock.movement.report.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+        </record>
+
+        <!-- ========== MENU ========== -->
+        <menuitem id="menu_stock_movement_report"
+                  name="Rapport Stock et Mouvements"
+                  parent="custom_reports.menu_reports_stock"
+                  action="action_stock_movement_report"
+                  sequence="60"/>
+    </data>
+</odoo>
