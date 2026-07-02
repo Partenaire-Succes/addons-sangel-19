@@ -26,9 +26,11 @@ class UpdateLimitCreditWizard(models.TransientModel):
     )
 
     payment_id = fields.Many2one(
-        'account.payment', 
+        'account.payment',
         string='Paiement',
-        domain="[('partner_id', '=', partner_id), ('state', 'in', ['in_process', 'paid', 'canceled'])]"
+        domain="[('memo', '=', memo), ('partner_id', '=', partner_id), ('state', 'in', ['in_process', 'paid'])]"
+                " if state != 'cancel_payment' else"
+                " [('partner_id', '=', partner_id), ('state', '=', 'canceled'), ('linked_limit', '=', True)]"
     )
     move_id = fields.Many2one(
         'account.move', 
@@ -86,18 +88,6 @@ class UpdateLimitCreditWizard(models.TransientModel):
             self.amount = self.payment_id.amount if self.payment_id else 0.0
         else:
             self.amount_conso = 0.0
-
-        if self.state == 'cancel_payment':
-            return {'domain': {'payment_id': [
-                ('partner_id', '=', self.partner_id.id),
-                ('state', 'in', ['in_process', 'paid', 'canceled']),
-                ('linked_limit', '=', True),
-            ]}}
-        return {'domain': {'payment_id': [
-            ('memo', '=', self.memo),
-            ('partner_id', '=', self.partner_id.id),
-            ('state', 'in', ['in_process', 'paid']),
-        ]}}
     
     def update_limit_credit(self):
         """Met à jour la limite de crédit selon le motif"""
@@ -240,9 +230,9 @@ class UpdateLimitCreditWizard(models.TransientModel):
         )
 
     def _process_cancel_payment(self, limit_credit):
-        """Annule le paiement sélectionné, ou rattrape un paiement déjà
-        annulé dont le crédit consommé n'a jamais été restauré (ex: annulé
-        avant la mise en place de ce correctif).
+        """Rattrape un paiement déjà annulé (état 'canceled') dont le
+        crédit consommé n'a jamais été restauré, ex: annulé avant la mise
+        en place de ce correctif.
 
         La restauration du crédit consommé est déléguée à
         `account.payment._retire_limit()`, pour garder une seule source de
@@ -252,13 +242,10 @@ class UpdateLimitCreditWizard(models.TransientModel):
         payment = self.payment_id
         if not payment.linked_limit:
             raise UserError("Ce paiement n'est pas lié à une limite de crédit.")
+        if payment.state != 'canceled':
+            raise UserError("Seul un paiement déjà annulé peut être sélectionné ici.")
 
-        if payment.state == 'canceled':
-            # Déjà annulé comptablement, mais le crédit consommé n'a pas
-            # encore été restauré : on rattrape uniquement le crédit.
-            payment._retire_limit()
-        else:
-            payment.action_cancel()
+        payment._retire_limit()
 
         _logger.info(
             f"Paiement {payment.name} annulé pour {limit_credit.partner_id.name} "
