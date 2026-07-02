@@ -28,7 +28,7 @@ class UpdateLimitCreditWizard(models.TransientModel):
     payment_id = fields.Many2one(
         'account.payment', 
         string='Paiement',
-        domain="[('memo', '=', memo), ('partner_id', '=', partner_id), ('state', 'in', ['in_process', 'paid'])]"
+        domain="[('partner_id', '=', partner_id), ('state', 'in', ['in_process', 'paid', 'canceled'])]"
     )
     move_id = fields.Many2one(
         'account.move', 
