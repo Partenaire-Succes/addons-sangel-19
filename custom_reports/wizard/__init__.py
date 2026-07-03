@@ -16,5 +16,6 @@ from . import (
     stock_product_report_wizard,
     achat_produit_report_wizard,
     stock_movement_report_wizard,
+    retour_produit_report_wizard,
     # livraison_report_wizard,
 )

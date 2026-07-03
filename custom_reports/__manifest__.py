@@ -54,6 +54,8 @@
         'report/report_sale_vte_x3_template.xml',
         'wizard/stock_movement_report_wizard_views.xml',
         'report/report_stock_movement_template.xml',
+        'wizard/retour_produit_report_wizard_views.xml',
+        'report/report_retour_produit_template.xml',
         # 'wizard/livraison_report_wizard_views.xml',
         # 'report/report_livraison_template.xml',
     ],

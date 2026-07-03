@@ -16,3 +16,4 @@ access_stock_magasin_report_wizard,stock.magasin.report.wizard,model_stock_magas
 access_achat_produit_report_wizard,achat.produit.report.wizard,model_achat_produit_report_wizard,,1,1,1,1
 access_sale_vte_x3_report_wizard,sale.vte.x3.report.wizard,model_sale_vte_x3_report_wizard,,1,1,1,1
 access_stock_movement_report_wizard_user,stock.movement.report.wizard.user,model_stock_movement_report_wizard,stock.group_stock_user,1,1,1,1
+access_retour_produit_report_wizard,retour.produit.report.wizard,model_retour_produit_report_wizard,,1,1,1,1

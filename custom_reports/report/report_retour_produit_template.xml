@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_retour_produit_document">
+        <t t-call="web.external_layout">
+            <t t-set="o" t-value="doc"/>
+            <div class="page">
+                <style>
+                    .page { font-family: Arial, sans-serif; font-size: 8pt; }
+
+                    .header-section { margin-bottom: 10px; border-bottom: 2px solid #1A5276; padding-bottom: 6px; }
+                    .company-name   { font-size: 12pt; font-weight: bold; text-transform: uppercase; }
+                    .date-range     { text-align: right; font-weight: bold; font-size: 9pt; }
+                    .report-title   {
+                        text-align: center; font-size: 11pt; font-weight: bold;
+                        margin: 8px 0 12px 0; padding: 6px;
+                        background-color: #1A5276; color: #fff;
+                    }
+
+                    .prod-block { margin-bottom: 8px; }
+
+                    table.prod-hdr-table {
+                        width: 100%; border-collapse: collapse;
+                        margin-bottom: 1px;
+                    }
+                    table.prod-hdr-table td {
+                        background-color: #1A5276; color: #fff;
+                        font-weight: bold; font-size: 8.5pt;
+                        border: 1px solid #0E3460; padding: 4px 5px;
+                        vertical-align: middle;
+                    }
+                    .prod-ref  { width: 10%; text-align: center; }
+                    .prod-name { width: 46%; }
+                    .prod-stat { width: 22%; font-size: 7.5pt; line-height: 1.4; }
+                    .prod-stat span.lbl { font-weight: normal; opacity: .85; }
+
+                    table.sub-table {
+                        width: 100%; border-collapse: collapse;
+                        font-size: 7pt;
+                    }
+                    table.sub-table th {
+                        background-color: #2E86C1; color: #fff;
+                        border: 1px solid #1A5276; padding: 3px 3px;
+                        text-align: center; font-weight: bold;
+                    }
+                    table.sub-table td {
+                        border: 1px solid #BDC3C7;
+                        padding: 2px 3px; vertical-align: middle;
+                    }
+
+                    tr.sl-a td { background-color: #AED6F1; color: #000 !important; }
+                    tr.sl-b td { background-color: #D6EAF8; color: #000 !important; }
+
+                    table.total-table {
+                        width: 50%; margin-left: 50%; border-collapse: collapse;
+                        margin-top: 6px;
+                    }
+                    table.total-table td {
+                        background-color: #1A5276; color: #fff;
+                        font-weight: bold; font-size: 9pt;
+                        border: 1px solid #0E3460; padding: 4px 6px;
+                    }
+
+                    .r { text-align: right; }
+                    .c { text-align: center; }
+                    .footer-info { margin-top: 10px; font-size: 7pt; color: #555; }
+                </style>
+
+                <div class="header-section">
+                    <div class="row">
+                        <div class="col-8">
+                            <div class="company-name"><span t-field="o.company_id.name"/></div>
+                        </div>
+                        <div class="col-4">
+                            <div class="date-range">
+                                Du <span t-esc="o.date_debut.strftime('%d/%m/%Y')"/>
+                                au <span t-esc="o.date_fin.strftime('%d/%m/%Y')"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-title">RETOURS FOURNISSEURS PAR PRODUIT</div>
+
+                <t t-set="data"    t-value="o._get_report_data()"/>
+                <t t-set="tot_qty" t-value="0.0"/>
+                <t t-set="tot_mnt" t-value="0.0"/>
+
+                <t t-foreach="data" t-as="prod">
+                    <t t-set="tot_qty" t-value="tot_qty + prod['qty_retournee']"/>
+                    <t t-set="tot_mnt" t-value="tot_mnt + prod['montant_retour']"/>
+
+                    <div class="prod-block">
+                        <table class="prod-hdr-table">
+                            <tr>
+                                <td class="prod-ref">
+                                    <span t-esc="prod['ref']"/>
+                                </td>
+                                <td class="prod-name">
+                                    <span t-esc="prod['name']"/>
+                                </td>
+                                <td class="prod-stat">
+                                    <span class="lbl">Nb retours :</span>
+                                    <strong t-esc="prod['nb_retours']"/><br/>
+                                    <span class="lbl">Qté retournée :</span>
+                                    <strong t-esc="'{:,.2f}'.format(prod['qty_retournee']).replace(',', ' ')"/>
+                                </td>
+                                <td class="prod-stat r">
+                                    <span class="lbl">Mnt retourné :</span><br/>
+                                    <strong t-esc="'{:,.0f}'.format(prod['montant_retour']).replace(',', ' ')"/>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <table class="sub-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:20%;">N° Retour</th>
+                                    <th style="width:12%;">Date Retour</th>
+                                    <th style="width:28%;">Fournisseur</th>
+                                    <th style="width:15%;">Qté Retournée</th>
+                                    <th style="width:12%;">Prix Unit.</th>
+                                    <th style="width:13%;">Montant</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="prod['sub_lines']" t-as="sl">
+                                    <tr t-att-class="'sl-a' if sl_odd else 'sl-b'">
+                                        <td><span t-esc="sl['retour_ref'] or '—'"/></td>
+                                        <td class="c">
+                                            <span t-esc="sl['date_retour'].strftime('%d/%m/%Y') if sl['date_retour'] else '—'"/>
+                                        </td>
+                                        <td><span t-esc="sl['fournisseur'] or '—'"/></td>
+                                        <td class="r">
+                                            <span t-esc="'{:,.2f}'.format(sl['qty_retournee']).replace(',', ' ')"/>
+                                        </td>
+                                        <td class="r">
+                                            <span t-esc="'{:,.2f}'.format(sl['prix_retour']).replace(',', ' ')"/>
+                                        </td>
+                                        <td class="r">
+                                            <span t-esc="'{:,.0f}'.format(sl['montant_retour']).replace(',', ' ')"/>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                </t>
+
+                <table class="total-table">
+                    <tr>
+                        <td style="width:40%;">TOTAL GÉNÉRAL</td>
+                        <td class="r" style="width:30%;">
+                            Qté : <span t-esc="'{:,.2f}'.format(tot_qty).replace(',', ' ')"/>
+                        </td>
+                        <td class="r" style="width:30%;">
+                            Mnt : <span t-esc="'{:,.0f}'.format(tot_mnt).replace(',', ' ')"/>
+                        </td>
+                    </tr>
+                </table>
+
+                <div class="footer-info">
+                    <div class="row">
+                        <div class="col-6"><strong>Nb produits :</strong> <span t-esc="len(data)"/></div>
+                        <div class="col-6 text-right">
+                            <strong>Imprimé le :</strong>
+                            <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y %H:%M')"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <template id="report_retour_produit">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="custom_reports.report_retour_produit_document"/>
+            </t>
+        </t>
+    </template>
+
+    <record id="action_report_retour_produit" model="ir.actions.report">
+        <field name="name">Rapport Retours Fournisseurs par Produit</field>
+        <field name="model">retour.produit.report.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">custom_reports.report_retour_produit</field>
+        <field name="report_file">custom_reports.report_retour_produit</field>
+        <field name="binding_model_id" ref="model_retour_produit_report_wizard"/>
+        <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="base.paperformat_euro"/>
+        <field name="print_report_name">
+            'Retours_Produits_%s_%s' % (
+                object.date_debut.strftime('%d%m%Y'),
+                object.date_fin.strftime('%d%m%Y')
+            )
+        </field>
+    </record>
+</odoo>
