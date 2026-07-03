@@ -79,7 +79,8 @@ class SupplierReturnReportWizard(models.TransientModel):
                     sum(move.move_line_ids.mapped('quantity'))
                     or move.product_uom_qty
                 )
-                amount += qty_done * (move.price_unit or 0.0)
+                prix = move.price_unit or move.product_id.standard_price
+                amount += qty_done * prix
 
             data_by_supplier[key]['returns'].append({
                 'date': picking.date_done,
