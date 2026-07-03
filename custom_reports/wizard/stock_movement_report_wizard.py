@@ -99,19 +99,26 @@ class StockMovementReportWizard(models.TransientModel):
 
     def _get_movements(self, product_ids):
         """Mouvements nets (entrées - sorties) entre Date A (exclue) et Date B
-        (incluse), à l'emplacement sélectionné."""
+        (incluse), à l'emplacement sélectionné.
+
+        Exclut les ajustements d'inventaire (stock.move.is_inventory=True,
+        posés par stock.quant._apply_inventory : inventaires physiques
+        journaliers, éclatement carton/sachet...) — on ne veut ici que les
+        mouvements "métier" (ventes, réceptions, rebut, transferts...)."""
         if not product_ids:
             return {}
         self.env.cr.execute("""
-            SELECT product_id,
-                   SUM(CASE WHEN location_dest_id = %s THEN quantity ELSE -quantity END) AS mvt
-            FROM stock_move_line
-            WHERE product_id = ANY(%s)
-              AND state = 'done'
-              AND date > %s
-              AND date <= %s
-              AND (location_id = %s OR location_dest_id = %s)
-            GROUP BY product_id
+            SELECT sml.product_id,
+                   SUM(CASE WHEN sml.location_dest_id = %s THEN sml.quantity ELSE -sml.quantity END) AS mvt
+            FROM stock_move_line sml
+            LEFT JOIN stock_move sm ON sm.id = sml.move_id
+            WHERE sml.product_id = ANY(%s)
+              AND sml.state = 'done'
+              AND sml.date > %s
+              AND sml.date <= %s
+              AND (sml.location_id = %s OR sml.location_dest_id = %s)
+              AND COALESCE(sm.is_inventory, false) = false
+            GROUP BY sml.product_id
         """, [self.location_id.id, list(product_ids), self.date_from, self.date_to, self.location_id.id, self.location_id.id])
         return {row[0]: row[1] for row in self.env.cr.fetchall()}
 
