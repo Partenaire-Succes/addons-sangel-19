@@ -168,7 +168,7 @@ class SageX3Mixin(models.AbstractModel):
             residual = round(residual - line_montant, 2)
 
             echeances.append({
-                "montant":       line_montant,
+                "montant":       montant,
                 "sens":          sens,
                 "modeReglement": mode_reglement,
             })
