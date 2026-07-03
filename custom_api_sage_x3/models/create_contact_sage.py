@@ -95,7 +95,7 @@ class ResPartnerImport(models.Model):
                             skipped += 1
                             continue
 
-                        existing = partner_model.search(
+                        existing = partner_model.with_context(active_test=False).search(
                             [("customer_id", "=", vals["customer_id"])], limit=1
                         )
 
