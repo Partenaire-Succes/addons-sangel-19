@@ -9,8 +9,8 @@ _logger = logging.getLogger(__name__)
 
 
 class AccountPaymentTermInherit(models.Model):
-    _name = 'account.payment.term'
-    
+    _inherit = 'account.payment.term'
+
 
     payment_method = fields.Selection([
             ('chq', 'Chèque'), 
