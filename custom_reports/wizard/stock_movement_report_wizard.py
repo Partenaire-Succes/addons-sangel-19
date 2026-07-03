@@ -115,6 +115,23 @@ class StockMovementReportWizard(models.TransientModel):
         """, [self.location_id.id, list(product_ids), self.date_from, self.date_to, self.location_id.id, self.location_id.id])
         return {row[0]: row[1] for row in self.env.cr.fetchall()}
 
+    def _get_last_inventory_dates(self, product_ids):
+        """Date du dernier inventaire physique journalier validé (date_done)
+        par produit, toutes dates confondues."""
+        if not product_ids:
+            return {}
+        self.env.cr.execute("""
+            SELECT pil.product_id, MAX(pi.date_done) AS last_date
+            FROM physical_inventory_line pil
+            JOIN physical_inventory pi ON pi.id = pil.inventory_physical_id
+            WHERE pil.product_id = ANY(%s)
+              AND pil.active = true
+              AND pi.company_id = %s
+              AND pi.state = 'done'
+            GROUP BY pil.product_id
+        """, [list(product_ids), self.company_id.id])
+        return {row[0]: row[1] for row in self.env.cr.fetchall()}
+
     def _get_cumulative_gap(self, product_ids):
         """Écart cumulé : somme de tous les qty_diff des lignes d'inventaire
         physique journalier validées (toutes dates confondues) par produit."""
@@ -141,6 +158,7 @@ class StockMovementReportWizard(models.TransientModel):
         stock_b = self._get_stock_at(product_ids, self.date_to)
         movements = self._get_movements(product_ids)
         cumulative_gap = self._get_cumulative_gap(product_ids)
+        last_inventory_dates = self._get_last_inventory_dates(product_ids)
 
         lines = []
         for product in products:
@@ -155,6 +173,7 @@ class StockMovementReportWizard(models.TransientModel):
             lines.append({
                 'code_article': product.code_article or product.product_tmpl_id.code_article or '',
                 'name': product.name,
+                'last_inventory_date': last_inventory_dates.get(product.id),
                 'cost': float_round(product.with_company(self.company_id).standard_price or 0.0, 2),
                 'stock_a': float_round(qty_a, 2),
                 'stock_b': float_round(qty_b, 2),
@@ -195,11 +214,11 @@ class StockMovementReportWizard(models.TransientModel):
         def fill(h): return PatternFill("solid", fgColor=h)
         def aln(h="left"): return Alignment(horizontal=h, vertical="center")
 
-        ws.merge_cells("A1:G1")
+        ws.merge_cells("A1:H1")
         ws["A1"] = self.company_id.name
         ws["A1"].font = Font(name="Arial", bold=True, size=11)
 
-        ws.merge_cells("A2:G2")
+        ws.merge_cells("A2:H2")
         ws["A2"] = (
             f"STOCK ET MOUVEMENTS — {self.location_id.complete_name} — "
             f"{self.date_from.strftime('%d/%m/%Y %H:%M')} au {self.date_to.strftime('%d/%m/%Y %H:%M')}"
@@ -211,7 +230,8 @@ class StockMovementReportWizard(models.TransientModel):
         ws.append([])
 
         headers = [
-            "Code Article", "Nom produit", "Coût",
+            "Code Article", "Nom produit", "Date dernier inventaire",
+            "Coût",
             f"Stock {self.date_from.strftime('%d/%m/%Y %H:%M')}",
             f"Stock {self.date_to.strftime('%d/%m/%Y %H:%M')}",
             "Mvts (Entrée-Sortie)",
@@ -219,25 +239,29 @@ class StockMovementReportWizard(models.TransientModel):
         ]
         ws.append(headers)
         hrow = ws.max_row
-        for col in range(1, 8):
+        for col in range(1, 9):
             c = ws.cell(row=hrow, column=col)
             c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
             c.fill = fill(BLUE); c.alignment = aln("center"); c.border = brd
 
         for line in lines:
+            last_inv = (
+                line['last_inventory_date'].strftime('%d/%m/%Y %H:%M')
+                if line['last_inventory_date'] else ''
+            )
             ws.append([
-                line['code_article'], line['name'], line['cost'],
+                line['code_article'], line['name'], last_inv, line['cost'],
                 line['stock_a'], line['stock_b'], line['movement'], line['ecart_cumule'],
             ])
             r = ws.max_row
-            for col in range(1, 8):
+            for col in range(1, 9):
                 c = ws.cell(row=r, column=col)
                 c.font = Font(name="Arial", size=9); c.border = brd
-                c.alignment = aln("right" if col >= 3 else "left")
-            for col in (3, 4, 5, 6, 7):
+                c.alignment = aln("right" if col >= 4 else "left")
+            for col in (4, 5, 6, 7, 8):
                 ws.cell(row=r, column=col).number_format = '#,##0.00'
 
-        for col, width in enumerate([14, 34, 14, 20, 20, 18, 14], 1):
+        for col, width in enumerate([14, 34, 20, 14, 20, 20, 18, 14], 1):
             ws.column_dimensions[chr(64 + col)].width = width
 
         buffer = io.BytesIO(); wb.save(buffer); buffer.seek(0)

@@ -34,18 +34,20 @@
                             <table class="table table-sm table-bordered mt-3"
                                    style="table-layout:fixed; width:100%;">
                                 <colgroup>
-                                    <col style="width:12%;"/>
-                                    <col style="width:28%;"/>
-                                    <col style="width:12%;"/>
-                                    <col style="width:12%;"/>
-                                    <col style="width:12%;"/>
-                                    <col style="width:12%;"/>
-                                    <col style="width:12%;"/>
+                                    <col style="width:10%;"/>
+                                    <col style="width:22%;"/>
+                                    <col style="width:14%;"/>
+                                    <col style="width:10%;"/>
+                                    <col style="width:11%;"/>
+                                    <col style="width:11%;"/>
+                                    <col style="width:11%;"/>
+                                    <col style="width:11%;"/>
                                 </colgroup>
                                 <thead>
                                     <tr style="background-color:#f0f0f0;">
                                         <th>Code Article</th>
                                         <th>Nom produit</th>
+                                        <th class="text-center">Date dernier inventaire</th>
                                         <th class="text-end">Coût</th>
                                         <th class="text-end">Stock <span t-field="doc.date_from"/></th>
                                         <th class="text-end">Stock <span t-field="doc.date_to"/></th>
@@ -58,6 +60,11 @@
                                         <tr>
                                             <td><span t-esc="line['code_article']"/></td>
                                             <td><span t-esc="line['name']"/></td>
+                                            <td class="text-center">
+                                                <span t-if="line['last_inventory_date']"
+                                                      t-esc="line['last_inventory_date'].strftime('%d/%m/%Y %H:%M')"/>
+                                                <span t-else="">—</span>
+                                            </td>
                                             <td class="text-end">
                                                 <span t-esc="'%.2f' % line['cost']"/>
                                             </td>
