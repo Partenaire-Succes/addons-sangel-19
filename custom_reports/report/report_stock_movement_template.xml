@@ -34,14 +34,16 @@
                             <table class="table table-sm table-bordered mt-3"
                                    style="table-layout:fixed; width:100%;">
                                 <colgroup>
-                                    <col style="width:10%;"/>
-                                    <col style="width:22%;"/>
-                                    <col style="width:14%;"/>
-                                    <col style="width:10%;"/>
-                                    <col style="width:11%;"/>
-                                    <col style="width:11%;"/>
-                                    <col style="width:11%;"/>
-                                    <col style="width:11%;"/>
+                                    <col style="width:9%;"/>
+                                    <col style="width:18%;"/>
+                                    <col style="width:12%;"/>
+                                    <col style="width:9%;"/>
+                                    <col style="width:9%;"/>
+                                    <col style="width:9%;"/>
+                                    <col style="width:9%;"/>
+                                    <col style="width:9%;"/>
+                                    <col style="width:8%;"/>
+                                    <col style="width:8%;"/>
                                 </colgroup>
                                 <thead>
                                     <tr style="background-color:#f0f0f0;">
@@ -51,6 +53,8 @@
                                         <th class="text-end">Coût</th>
                                         <th class="text-end">Stock <span t-field="doc.date_from"/></th>
                                         <th class="text-end">Stock <span t-field="doc.date_to"/></th>
+                                        <th class="text-end">Entrée</th>
+                                        <th class="text-end">Sortie</th>
                                         <th class="text-end">Mvts (Entrée-Sortie)</th>
                                         <th class="text-end">Ecart cumulé</th>
                                     </tr>
@@ -73,6 +77,12 @@
                                             </td>
                                             <td class="text-end">
                                                 <span t-esc="'%.2f' % line['stock_b']"/>
+                                            </td>
+                                            <td class="text-end">
+                                                <span t-esc="'%.2f' % line['entree']"/>
+                                            </td>
+                                            <td class="text-end">
+                                                <span t-esc="'%.2f' % line['sortie']"/>
                                             </td>
                                             <td class="text-end">
                                                 <span t-esc="'%.2f' % line['movement']"/>

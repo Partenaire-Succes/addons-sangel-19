@@ -98,8 +98,9 @@ class StockMovementReportWizard(models.TransientModel):
         return {row[0]: row[1] for row in self.env.cr.fetchall()}
 
     def _get_movements(self, product_ids):
-        """Mouvements nets (entrées - sorties) entre Date A (exclue) et Date B
-        (incluse), à l'emplacement sélectionné.
+        """Entrées / sorties entre Date A (exclue) et Date B (incluse), à
+        l'emplacement sélectionné. Le net (entrée - sortie) correspond
+        exactement aux "Mvts" tels que calculés auparavant.
 
         Exclut les ajustements d'inventaire (stock.move.is_inventory=True,
         posés par stock.quant._apply_inventory : inventaires physiques
@@ -109,7 +110,10 @@ class StockMovementReportWizard(models.TransientModel):
             return {}
         self.env.cr.execute("""
             SELECT sml.product_id,
-                   SUM(CASE WHEN sml.location_dest_id = %s THEN sml.quantity ELSE -sml.quantity END) AS mvt
+                   SUM(CASE WHEN sml.location_dest_id = %s
+                       THEN sml.quantity ELSE 0 END) AS entree,
+                   SUM(CASE WHEN sml.location_id = %s AND sml.location_dest_id != %s
+                       THEN sml.quantity ELSE 0 END) AS sortie
             FROM stock_move_line sml
             LEFT JOIN stock_move sm ON sm.id = sml.move_id
             WHERE sml.product_id = ANY(%s)
@@ -119,8 +123,12 @@ class StockMovementReportWizard(models.TransientModel):
               AND (sml.location_id = %s OR sml.location_dest_id = %s)
               AND COALESCE(sm.is_inventory, false) = false
             GROUP BY sml.product_id
-        """, [self.location_id.id, list(product_ids), self.date_from, self.date_to, self.location_id.id, self.location_id.id])
-        return {row[0]: row[1] for row in self.env.cr.fetchall()}
+        """, [
+            self.location_id.id, self.location_id.id, self.location_id.id,
+            list(product_ids), self.date_from, self.date_to,
+            self.location_id.id, self.location_id.id,
+        ])
+        return {row[0]: (row[1], row[2]) for row in self.env.cr.fetchall()}
 
     def _get_last_inventory_dates(self, product_ids):
         """Date du dernier inventaire physique journalier validé (date_done)
@@ -171,7 +179,8 @@ class StockMovementReportWizard(models.TransientModel):
         for product in products:
             qty_a = stock_a.get(product.id, 0.0)
             qty_b = stock_b.get(product.id, 0.0)
-            mvt = movements.get(product.id, 0.0)
+            entree, sortie = movements.get(product.id, (0.0, 0.0))
+            mvt = entree - sortie
             gap = cumulative_gap.get(product.id, 0.0)
 
             if not qty_a and not qty_b and not mvt and not gap:
@@ -184,6 +193,8 @@ class StockMovementReportWizard(models.TransientModel):
                 'cost': float_round(product.with_company(self.company_id).standard_price or 0.0, 2),
                 'stock_a': float_round(qty_a, 2),
                 'stock_b': float_round(qty_b, 2),
+                'entree': float_round(entree, 2),
+                'sortie': float_round(sortie, 2),
                 'movement': float_round(mvt, 2),
                 'ecart_cumule': float_round(gap, 2),
             })
@@ -221,11 +232,11 @@ class StockMovementReportWizard(models.TransientModel):
         def fill(h): return PatternFill("solid", fgColor=h)
         def aln(h="left"): return Alignment(horizontal=h, vertical="center")
 
-        ws.merge_cells("A1:H1")
+        ws.merge_cells("A1:J1")
         ws["A1"] = self.company_id.name
         ws["A1"].font = Font(name="Arial", bold=True, size=11)
 
-        ws.merge_cells("A2:H2")
+        ws.merge_cells("A2:J2")
         ws["A2"] = (
             f"STOCK ET MOUVEMENTS — {self.location_id.complete_name} — "
             f"{self.date_from.strftime('%d/%m/%Y %H:%M')} au {self.date_to.strftime('%d/%m/%Y %H:%M')}"
@@ -241,12 +252,13 @@ class StockMovementReportWizard(models.TransientModel):
             "Coût",
             f"Stock {self.date_from.strftime('%d/%m/%Y %H:%M')}",
             f"Stock {self.date_to.strftime('%d/%m/%Y %H:%M')}",
+            "Entrée", "Sortie",
             "Mvts (Entrée-Sortie)",
             "Ecart cumulé",
         ]
         ws.append(headers)
         hrow = ws.max_row
-        for col in range(1, 9):
+        for col in range(1, 11):
             c = ws.cell(row=hrow, column=col)
             c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
             c.fill = fill(BLUE); c.alignment = aln("center"); c.border = brd
@@ -258,17 +270,18 @@ class StockMovementReportWizard(models.TransientModel):
             )
             ws.append([
                 line['code_article'], line['name'], last_inv, line['cost'],
-                line['stock_a'], line['stock_b'], line['movement'], line['ecart_cumule'],
+                line['stock_a'], line['stock_b'],
+                line['entree'], line['sortie'], line['movement'], line['ecart_cumule'],
             ])
             r = ws.max_row
-            for col in range(1, 9):
+            for col in range(1, 11):
                 c = ws.cell(row=r, column=col)
                 c.font = Font(name="Arial", size=9); c.border = brd
                 c.alignment = aln("right" if col >= 4 else "left")
-            for col in (4, 5, 6, 7, 8):
+            for col in (4, 5, 6, 7, 8, 9, 10):
                 ws.cell(row=r, column=col).number_format = '#,##0.00'
 
-        for col, width in enumerate([14, 34, 20, 14, 20, 20, 18, 14], 1):
+        for col, width in enumerate([14, 34, 20, 14, 20, 20, 14, 14, 18, 14], 1):
             ws.column_dimensions[chr(64 + col)].width = width
 
         buffer = io.BytesIO(); wb.save(buffer); buffer.seek(0)
