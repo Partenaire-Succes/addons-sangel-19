@@ -84,7 +84,11 @@ class RetourProduitReportWizard(models.TransientModel):
                 sum(move.move_line_ids.mapped('quantity'))
                 or move.product_uom_qty
             )
-            prix = move.price_unit or product.standard_price
+            prix = (
+                move.price_unit
+                or move.origin_returned_move_id.price_unit
+                or product.standard_price
+            )
             montant = qty_done * prix
 
             products_data[key]['qty_retournee'] += qty_done
