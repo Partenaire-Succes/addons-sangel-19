@@ -13,11 +13,11 @@ class AccountPaymentTermInherit(models.Model):
 
 
     payment_method = fields.Selection([
-            ('chq', 'Chèque'), 
-            ('esp', 'Especes'),
-            ('vir', 'Virement'),
-        ], string='Mode de reglement', 
-            default='esp', 
+            ('CHQ', 'Chèque'), 
+            ('ESP', 'Especes'),
+            ('VIR', 'Virement'),
+        ], string='Mode de reglement',
+            default='ESP',
             required=True
     )
     
