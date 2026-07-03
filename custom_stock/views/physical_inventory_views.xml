@@ -45,14 +45,6 @@
                                 icon="fa-print"
                                 invisible="1"
                         />
-                        <button name="action_register_missing_move_lines"
-                                string="Enregistrer les mouvements manquants"
-                                type="object"
-                                class="btn-secondary"
-                                groups="custom_pos.group_superviseur"
-                                confirm="Cette action enregistre les lignes stock.move.line manquantes pour les écarts de cet inventaire, sans impacter le stock. Confirmer ?"
-                                invisible="state != 'done'"
-                        />
                         <field name="state" widget="statusbar" statusbar_visible="draft,in_progress,done"
                         />
                     </header>
