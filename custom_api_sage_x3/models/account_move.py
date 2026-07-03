@@ -692,7 +692,7 @@ class AccountMoveSageX3(models.Model):
 
                     # Échéance(s) SAGE X3 — uniquement sur les FACLI
                     # ("mise en compte"), pas sur les AVCLI.
-                    echeances = self._build_echeances(
+                    date_echeance, echeances = self._build_echeances(
                         partner  = partner,
                         montant  = lignes[0]['montant'],
                         sens     = 1,
@@ -700,13 +700,14 @@ class AccountMoveSageX3(models.Model):
                     )
 
                     ecritures.append(self._build_ecriture(
-                        type_piece  = type_piece,
-                        site        = site,
-                        date_ddmmyy = pay_date,
-                        journal     = journal,
-                        libelle     = f"Mise en compte {partner_name}",
-                        lignes      = lignes,
-                        echeances   = echeances,
+                        type_piece    = type_piece,
+                        site          = site,
+                        date_ddmmyy   = pay_date,
+                        journal       = journal,
+                        libelle       = f"Mise en compte {partner_name}",
+                        lignes        = lignes,
+                        date_echeance = date_echeance,
+                        echeances     = echeances,
                     ))
                     payment_ids.append(payment.id)
 

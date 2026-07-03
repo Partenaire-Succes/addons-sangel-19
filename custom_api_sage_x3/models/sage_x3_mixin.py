@@ -85,19 +85,23 @@ class SageX3Mixin(models.AbstractModel):
         return ligne
 
     def _build_ecriture(self, type_piece, site, date_ddmmyy, journal,
-                        libelle, lignes, devise='XOF', echeances=None):
+                        libelle, lignes, devise='XOF', echeances=None,
+                        date_echeance=None):
         """
         Construit une écriture au format SAGE X3.
 
         Format attendu :
           { "type": "FACLI", "site": "VRIDI", "date": "230326",
-            "journal": "VTE", "libelle": "...", "devise": "XOF", "lignes": [...],
-            "echeances": [...] }
+            "journal": "VTE", "libelle": "...", "devise": "XOF",
+            "dateEcheance": "230426", "lignes": [...], "echeances": [...] }
 
-        date_ddmmyy : chaîne au format YYMMDD (ex: "230326" pour le 23/03/2026)
-        echeances   : liste optionnelle d'échéances (cf. _build_echeances). Omise
-                      du payload si vide, pour ne pas modifier les écritures
-                      existantes qui n'en ont pas besoin (ENCAI, DECAI, AVCLI...).
+        date_ddmmyy   : chaîne au format YYMMDD (ex: "230326" pour le 23/03/2026)
+        date_echeance : date d'échéance unique de l'écriture (même format),
+                        cf. _build_echeances. Omise si vide.
+        echeances     : liste optionnelle d'échéances (cf. _build_echeances).
+                        Omise du payload si vide, pour ne pas modifier les
+                        écritures existantes qui n'en ont pas besoin
+                        (ENCAI, DECAI, AVCLI...).
         """
         ecriture = {
             "type":    type_piece,
@@ -108,6 +112,8 @@ class SageX3Mixin(models.AbstractModel):
             "devise":  devise,
             "lignes":  lignes,
         }
+        if date_echeance:
+            ecriture["dateEcheance"] = date_echeance
         if echeances:
             ecriture["echeances"] = echeances
         return ecriture
@@ -117,13 +123,17 @@ class SageX3Mixin(models.AbstractModel):
         Construit les échéances SAGE X3 pour une facture "mise en compte"
         (client à crédit), à partir de la condition de paiement du client.
 
-        - modeReglement : account.payment.term.payment_method (chq/esp/vir)
-        - dateEcheance  : calculée par ligne de condition de paiement via
-                          account.payment.term.line._get_due_date(date_ref)
-        - montant       : réparti entre les lignes de la condition de
-                          paiement (pourcentage ou montant fixe), la
-                          dernière ligne absorbant l'écart d'arrondi pour
-                          que la somme égale exactement `montant`.
+        Retourne un tuple (date_echeance, echeances) :
+        - date_echeance : échéance finale de l'écriture (dernière ligne de
+                          la condition de paiement), format DDMMYY — l'API
+                          SAGE X3 n'accepte qu'une seule date par écriture,
+                          pas une par échéance.
+        - echeances     : liste de {montant, sens, modeReglement}, le
+                          montant étant réparti entre les lignes de la
+                          condition de paiement (pourcentage ou montant
+                          fixe), la dernière ligne absorbant l'écart
+                          d'arrondi pour que la somme égale exactement
+                          `montant`.
 
         Lève une UserError si le client n'a pas de condition de paiement
         configurée (property_payment_term_id), car aucune échéance ne peut
@@ -158,13 +168,13 @@ class SageX3Mixin(models.AbstractModel):
             residual = round(residual - line_montant, 2)
 
             echeances.append({
-                "montant":        line_montant,
-                "sens":           sens,
-                "modeReglement":  mode_reglement,
-                "dateEcheance":   line._get_due_date(date_ref).strftime("%d%m%y"),
+                "montant":       line_montant,
+                "sens":          sens,
+                "modeReglement": mode_reglement,
             })
 
-        return echeances
+        date_echeance = term.line_ids[-1]._get_due_date(date_ref).strftime("%d%m%y")
+        return date_echeance, echeances
 
     # =========================================================================
     # AUTHENTIFICATION AVEC CACHE TOKEN
