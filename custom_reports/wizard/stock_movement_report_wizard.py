@@ -130,41 +130,48 @@ class StockMovementReportWizard(models.TransientModel):
         ])
         return {row[0]: (row[1], row[2]) for row in self.env.cr.fetchall()}
 
-    def _get_last_inventory_dates(self, product_ids):
+    def _get_last_inventory_dates(self, tmpl_ids):
         """Date du dernier inventaire physique journalier validé (date_done)
-        par produit, toutes dates confondues."""
-        if not product_ids:
+        par produit (product_tmpl_id), toutes dates confondues.
+
+        On regroupe sur product_tmpl_id et non product_id : ce dernier est
+        recalculé sur product_tmpl_id.product_variant_id (voir
+        PhysicalInventoryLine._compute_product_id) et peut être vide ou
+        obsolète (variante archivée/changée) alors que product_tmpl_id reste
+        toujours renseigné."""
+        if not tmpl_ids:
             return {}
         self.env.cr.execute("""
-            SELECT pil.product_id, MAX(pi.date_done) AS last_date
+            SELECT pil.product_tmpl_id, MAX(pi.date_done) AS last_date
             FROM physical_inventory_line pil
             JOIN physical_inventory pi ON pi.id = pil.inventory_physical_id
-            WHERE pil.product_id = ANY(%s)
+            WHERE pil.product_tmpl_id = ANY(%s)
               AND pil.active = true
               AND pi.company_id = %s
               AND pi.state = 'done'
-            GROUP BY pil.product_id
-        """, [list(product_ids), self.company_id.id])
+            GROUP BY pil.product_tmpl_id
+        """, [list(tmpl_ids), self.company_id.id])
         return {row[0]: row[1] for row in self.env.cr.fetchall()}
 
-    def _get_cumulative_gap(self, product_ids):
+    def _get_cumulative_gap(self, tmpl_ids):
         """Écart cumulé (qty_diff) et écart cumulé valorisé (valorisation) :
         somme des lignes d'inventaire physique journalier validées (toutes
-        dates confondues) par produit."""
-        if not product_ids:
+        dates confondues) par produit (product_tmpl_id, cf. note ci-dessus
+        sur la fiabilité de product_id)."""
+        if not tmpl_ids:
             return {}, {}
         groups = self.env['physical.inventory.line'].read_group(
             domain=[
-                ('product_id', 'in', product_ids),
+                ('product_tmpl_id', 'in', tmpl_ids),
                 ('company_id', '=', self.company_id.id),
                 ('active', '=', True),
                 ('state', '=', 'done'),
             ],
             fields=['qty_diff:sum', 'valorisation:sum'],
-            groupby=['product_id'],
+            groupby=['product_tmpl_id'],
         )
-        cumulative_gap = {g['product_id'][0]: g['qty_diff'] for g in groups}
-        cumulative_gap_valued = {g['product_id'][0]: g['valorisation'] for g in groups}
+        cumulative_gap = {g['product_tmpl_id'][0]: g['qty_diff'] for g in groups}
+        cumulative_gap_valued = {g['product_tmpl_id'][0]: g['valorisation'] for g in groups}
         return cumulative_gap, cumulative_gap_valued
 
     def _get_report_lines(self):
@@ -172,11 +179,13 @@ class StockMovementReportWizard(models.TransientModel):
         products = self._get_products()
         product_ids = products.ids
 
+        tmpl_ids = products.mapped('product_tmpl_id').ids
+
         stock_a = self._get_stock_at(product_ids, self.date_from)
         stock_b = self._get_stock_at(product_ids, self.date_to)
         movements = self._get_movements(product_ids)
-        cumulative_gap, cumulative_gap_valued = self._get_cumulative_gap(product_ids)
-        last_inventory_dates = self._get_last_inventory_dates(product_ids)
+        cumulative_gap, cumulative_gap_valued = self._get_cumulative_gap(tmpl_ids)
+        last_inventory_dates = self._get_last_inventory_dates(tmpl_ids)
 
         lines = []
         for product in products:
@@ -184,8 +193,9 @@ class StockMovementReportWizard(models.TransientModel):
             qty_b = stock_b.get(product.id, 0.0)
             entree, sortie = movements.get(product.id, (0.0, 0.0))
             mvt = entree - sortie
-            gap = cumulative_gap.get(product.id, 0.0)
-            gap_valued = cumulative_gap_valued.get(product.id, 0.0)
+            gap = cumulative_gap.get(product.product_tmpl_id.id, 0.0)
+            gap_valued = cumulative_gap_valued.get(product.product_tmpl_id.id, 0.0)
+            last_inventory_date = last_inventory_dates.get(product.product_tmpl_id.id)
 
             if not qty_a and not qty_b and not mvt and not gap:
                 continue
@@ -193,7 +203,7 @@ class StockMovementReportWizard(models.TransientModel):
             lines.append({
                 'code_article': product.code_article or product.product_tmpl_id.code_article or '',
                 'name': product.name,
-                'last_inventory_date': last_inventory_dates.get(product.id),
+                'last_inventory_date': last_inventory_date,
                 'cost': float_round(product.with_company(self.company_id).standard_price or 0.0, 2),
                 'stock_a': float_round(qty_a, 2),
                 'stock_b': float_round(qty_b, 2),
