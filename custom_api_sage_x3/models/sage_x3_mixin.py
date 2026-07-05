@@ -85,17 +85,25 @@ class SageX3Mixin(models.AbstractModel):
         return ligne
 
     def _build_ecriture(self, type_piece, site, date_ddmmyy, journal,
-                        libelle, lignes, devise='XOF'):
+                        libelle, lignes, devise='XOF', echeances=None,
+                        date_echeance=None):
         """
         Construit une écriture au format SAGE X3.
 
         Format attendu :
           { "type": "FACLI", "site": "VRIDI", "date": "230326",
-            "journal": "VTE", "libelle": "...", "devise": "XOF", "lignes": [...] }
+            "journal": "VTE", "libelle": "...", "devise": "XOF",
+            "dateEcheance": "230426", "lignes": [...], "echeances": [...] }
 
-        date_ddmmyy : chaîne au format YYMMDD (ex: "230326" pour le 23/03/2026)
+        date_ddmmyy   : chaîne au format YYMMDD (ex: "230326" pour le 23/03/2026)
+        date_echeance : date d'échéance unique de l'écriture (même format),
+                        cf. _build_echeances. Omise si vide.
+        echeances     : liste optionnelle d'échéances (cf. _build_echeances).
+                        Omise du payload si vide, pour ne pas modifier les
+                        écritures existantes qui n'en ont pas besoin
+                        (ENCAI, DECAI, AVCLI...).
         """
-        return {
+        ecriture = {
             "type":    type_piece,
             "site":    site,
             "date":    date_ddmmyy,
@@ -104,6 +112,46 @@ class SageX3Mixin(models.AbstractModel):
             "devise":  devise,
             "lignes":  lignes,
         }
+        if date_echeance:
+            ecriture["dateEcheance"] = date_echeance
+        if echeances:
+            ecriture["echeances"] = echeances
+        return ecriture
+
+    def _build_echeances(self, partner, montant, sens, date_ref):
+        """
+        Construit l'échéance SAGE X3 d'une facture (FACLI), à partir de la
+        condition de paiement du client (partner.property_payment_term_id).
+
+        Retourne un tuple (date_echeance, echeances) :
+        - date_echeance : échéance de l'écriture (dernière ligne de la
+                          condition de paiement), format DDMMYY. Si le
+                          client n'a pas de condition de paiement, repli
+                          sur `date_ref` (paiement immédiat) plutôt que de
+                          bloquer l'envoi — l'échéance s'applique à toutes
+                          les FACLI, pas seulement aux ventes à crédit.
+        - echeances     : liste à une seule entrée {montant, sens,
+                          modeReglement} portant le montant total de la
+                          facture (une seule échéance par écriture, cf.
+                          schéma API — pas de répartition par ligne de
+                          condition de paiement).
+        """
+        montant = round(montant, 2)
+        term = partner.property_payment_term_id
+
+        if term and term.line_ids:
+            mode_reglement = term.payment_method
+            date_echeance = term.line_ids[-1]._get_due_date(date_ref).strftime("%d%m%y")
+        else:
+            mode_reglement = 'ESP'
+            date_echeance = date_ref.strftime("%d%m%y")
+
+        echeances = [{
+            "montant":       montant,
+            "sens":          sens,
+            "modeReglement": mode_reglement,
+        }]
+        return date_echeance, echeances
 
     # =========================================================================
     # AUTHENTIFICATION AVEC CACHE TOKEN
