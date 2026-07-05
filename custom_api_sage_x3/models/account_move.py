@@ -690,13 +690,23 @@ class AccountMoveSageX3(models.Model):
                     # Équilibre — ajuster ligne client (sens=1)
                     self._equilibrer_lignes(lignes, sens_cible=1)
 
+                    # Échéance SAGE X3 — uniquement sur les FACLI, pas les AVCLI.
+                    date_echeance, echeances = self._build_echeances(
+                        partner  = partner,
+                        montant  = lignes[0]['montant'],
+                        sens     = 1,
+                        date_ref = payment.payment_date or fields.Date.context_today(self),
+                    )
+
                     ecritures.append(self._build_ecriture(
-                        type_piece  = type_piece,
-                        site        = site,
-                        date_ddmmyy = pay_date,
-                        journal     = journal,
-                        libelle     = f"Mise en compte {partner_name}",
-                        lignes      = lignes,
+                        type_piece    = type_piece,
+                        site          = site,
+                        date_ddmmyy   = pay_date,
+                        journal       = journal,
+                        libelle       = f"Mise en compte {partner_name}",
+                        lignes        = lignes,
+                        date_echeance = date_echeance,
+                        echeances     = echeances,
                     ))
                     payment_ids.append(payment.id)
 
