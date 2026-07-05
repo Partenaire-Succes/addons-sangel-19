@@ -5,7 +5,15 @@
         <field name="model">pos.session</field>
         <field name="inherit_id" ref="point_of_sale.view_pos_session_form"/>
         <field name="arch" type="xml">
-            
+
+            <!-- La vue de base verrouille tout le formulaire (edit="0"), ce
+                 qui écrase le readonly="False" mis sur les champs SAGE X3
+                 ci-dessous. On débloque l'édition ici ; les autres champs
+                 restent protégés par leur propre condition readonly. -->
+            <xpath expr="//form" position="attributes">
+                <attribute name="edit">1</attribute>
+            </xpath>
+
             <!-- Onglet SAGE X3 -->
             <xpath expr="//group" position="after">
                 <group name="sage_x3" string="SAGE X3">
