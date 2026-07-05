@@ -89,7 +89,7 @@ class SageX3SendWizard(models.TransientModel):
             date_from_dt = fields.Datetime.to_datetime(wizard.date_from)
             date_to_dt   = fields.Datetime.to_datetime(wizard.date_to) + timedelta(days=1)
 
-            wizard.count_pos_sessions = self.env['pos.session'].search_count([
+            pos_sessions_pending = self.env['pos.session'].search([
                 ('company_id',   'in', company_ids),
                 ('state',        '=',  'closed'),
                 ('sage_x3_sent', '=',  False),
@@ -97,7 +97,19 @@ class SageX3SendWizard(models.TransientModel):
                 ('start_at',     '<',  date_to_dt),
             ])
 
-            # wizard.count_pos_sessions = len(pos_sessions.filtered(lambda s: s.cash_register_balance_end > 0))
+            # Sessions déjà marquées envoyées (ENCAI/DECAI ok) mais avec un
+            # paiement is_limit resté en échec (FACLI à retenter) — même
+            # logique que facli_payments dans _prepare_daily_entry, sinon le
+            # bouton disparaît alors qu'il reste bien quelque chose à envoyer.
+            facli_pending_sessions = self.env['pos.payment'].search([
+                ('session_id.company_id',     'in', company_ids),
+                ('session_id.start_at',       '>=', date_from_dt),
+                ('session_id.start_at',       '<',  date_to_dt),
+                ('sage_x3_sent',               '=', False),
+                ('payment_method_id.is_limit', '=', True),
+            ]).mapped('session_id')
+
+            wizard.count_pos_sessions = len(pos_sessions_pending | facli_pending_sessions)
 
             # Avoirs POS avec mode de paiement is_limit
             refund_candidates = self.env['account.move'].search([
@@ -137,6 +149,7 @@ class SageX3SendWizard(models.TransientModel):
                 ('invoice_date',                   '>=', wizard.date_from),
                 ('invoice_date',                   '<=', wizard.date_to),
                 ('invoice_line_ids.sale_line_ids', '!=', False),
+                ('pos_order_ids',                  '=',  False),
             ])
 
     # =========================================================================
@@ -158,7 +171,7 @@ class SageX3SendWizard(models.TransientModel):
         company_ids   = self.company_ids.ids
         account_model = self.env['account.move']
 
-        # Factures et avoirs classiques hors POS (avoirs POS is_limit)
+        # avoirs classiques hors POS (avoirs POS is_limit)
         moves = account_model.search([
             ('move_type', '=', 'out_refund'),
             ('state', '=', 'posted'),
