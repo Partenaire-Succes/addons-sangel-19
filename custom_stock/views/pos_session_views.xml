@@ -11,7 +11,7 @@
                  ci-dessous. On débloque l'édition ici ; les autres champs
                  restent protégés par leur propre condition readonly. -->
             <xpath expr="//form" position="attributes">
-                <attribute name="edit">1</attribute>
+                <attribute name="edit">0</attribute>
             </xpath>
 
             <!-- Onglet SAGE X3 -->
