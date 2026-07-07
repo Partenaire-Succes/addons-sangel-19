@@ -18,11 +18,17 @@ class CumulInventaryReportWizard(models.TransientModel):
         required=True,
         default=fields.Date.context_today
     )
+    company_ids = fields.Many2many(
+        'res.company',
+        string='Sociétés',
+        required=True,
+        default=lambda self: self.env.company,
+    )
     company_id = fields.Many2one(
         'res.company',
         string='Société',
-        required=True,
-        default=lambda self: self.env.company
+        compute='_compute_company_id',
+        help="Première société sélectionnée, utilisée pour l'en-tête du document.",
     )
 
     physical_lines_ids = fields.Many2many(
@@ -36,13 +42,18 @@ class CumulInventaryReportWizard(models.TransientModel):
         help='Laissez vide pour afficher tous les articles'
     )
 
-    @api.depends('date_from', 'date_to', 'company_id', 'code_article_filter')
+    @api.depends('company_ids')
+    def _compute_company_id(self):
+        for record in self:
+            record.company_id = record.company_ids[:1]
+
+    @api.depends('date_from', 'date_to', 'company_ids', 'code_article_filter')
     def _compute_physical_lines_ids(self):
         for record in self:
             domain = [
                 ('inventory_physical_id.date_done', '>=', record.date_from),
                 ('inventory_physical_id.date_done', '<=', record.date_to),
-                ('company_id', '=', record.company_id.id),
+                ('company_id', 'in', record.company_ids.ids),
                 ('active', '=', True),
             ]
 
@@ -50,12 +61,12 @@ class CumulInventaryReportWizard(models.TransientModel):
             if record.code_article_filter:
                 domain.append(('code_article', 'ilike', record.code_article_filter))
 
-            # Filtrer les produits autorisés pour la société
+            # Filtrer les produits autorisés pour les sociétés sélectionnées
             if self.env['product.template']._fields.get('allowed_company_ids'):
                 domain += [
                     '|',
                     ('product_tmpl_id.allowed_company_ids', '=', False),
-                    ('product_tmpl_id.allowed_company_ids', 'in', [record.company_id.id]),
+                    ('product_tmpl_id.allowed_company_ids', 'in', record.company_ids.ids),
                 ]
 
             lines = self.env['physical.inventory.line'].search(domain)
@@ -144,7 +155,7 @@ class CumulInventaryReportWizard(models.TransientModel):
         def aln(h="left"): return Alignment(horizontal=h, vertical="center")
 
         ws.merge_cells("A1:G1")
-        ws["A1"] = self.company_id.name
+        ws["A1"] = ', '.join(self.company_ids.mapped('name'))
         ws["A1"].font = Font(name="Arial", bold=True, size=11)
         ws.merge_cells("A2:G2")
         ws["A2"] = f"CUMUL INVENTAIRE — Du {self.date_from.strftime('%d/%m/%Y')} au {self.date_to.strftime('%d/%m/%Y')}"

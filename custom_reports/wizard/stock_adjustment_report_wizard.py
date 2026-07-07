@@ -18,11 +18,17 @@ class StockAdjustmentReportWizard(models.TransientModel):
         required=True,
         default=fields.Date.context_today
     )
+    company_ids = fields.Many2many(
+        'res.company',
+        string='Sociétés',
+        required=True,
+        default=lambda self: self.env.company,
+    )
     company_id = fields.Many2one(
         'res.company',
         string='Société',
-        required=True,
-        default=lambda self: self.env.company
+        compute='_compute_company_id',
+        help="Première société sélectionnée, utilisée pour l'en-tête du document.",
     )
 
     scrap_lines_ids = fields.Many2many(
@@ -36,27 +42,41 @@ class StockAdjustmentReportWizard(models.TransientModel):
         compute='_compute_return_scrap_lines_ids'
     )
 
-    @api.depends('date_from', 'date_to', 'company_id')
+    @api.depends('company_ids')
+    def _compute_company_id(self):
+        for record in self:
+            record.company_id = record.company_ids[:1]
+
+    @api.depends('date_from', 'date_to', 'company_ids')
     def _compute_scrap_lines_ids(self):
         for record in self:
             record.scrap_lines_ids = self.env['stock.scrap'].search([
                 ('date_done', '>=', record.date_from),
                 ('date_done', '<=', record.date_to),
-                ('company_id', '=', record.company_id.id),
+                ('company_id', 'in', record.company_ids.ids),
                 ('state', '=', 'done')
             ], order='date_done, name')
 
-    @api.depends('date_from', 'date_to', 'company_id')
+    @api.depends('date_from', 'date_to', 'company_ids')
     def _compute_return_scrap_lines_ids(self):
         for rec in self:
             rec.return_scrap_lines_ids = self.env['stock.move'].search([
                 ('picking_id.date_done', '>=', rec.date_from),
                 ('picking_id.date_done', '<=', rec.date_to),
-                ('picking_id.company_id', '=', rec.company_id.id),
+                ('picking_id.company_id', 'in', rec.company_ids.ids),
                 ('picking_id.location_id.usage', '=', 'inventory'),
                 ('picking_id.location_dest_id.usage', '=', 'internal'),
                 ('state', '=', 'done')
             ], order='date, id')
+
+    def _avg_standard_price(self, product):
+        """Moyenne (non pondérée) du coût standard du produit sur les
+        sociétés sélectionnées — utilisé quand plusieurs sociétés sont
+        sélectionnées, à la place du coût de la société de connexion."""
+        if not self.company_ids:
+            return product.standard_price or 0.0
+        prices = [product.with_company(c).standard_price or 0.0 for c in self.company_ids]
+        return sum(prices) / len(prices)
 
     def get_return_scrap_data(self):
         """Lignes de stock.move : entrées depuis emplacement inventaire → interne."""
@@ -71,7 +91,7 @@ class StockAdjustmentReportWizard(models.TransientModel):
                 'article':     move.product_id.code_article or '',
                 'designation': move.product_id.name,
                 'quantity':    qty,
-                'total_pa':    qty * move.product_id.standard_price,
+                'total_pa':    qty * self._avg_standard_price(move.product_id),
             })
         return lines
 
@@ -118,7 +138,7 @@ class StockAdjustmentReportWizard(models.TransientModel):
                 'article': scrap.product_id.code_article or '',
                 'designation': scrap.product_id.name,
                 'quantity': scrap.scrap_qty,
-                'total_pa': scrap.scrap_qty * scrap.product_id.standard_price,
+                'total_pa': scrap.scrap_qty * self._avg_standard_price(scrap.product_id),
             })
 
         return grouped_data
@@ -171,7 +191,7 @@ class StockAdjustmentReportWizard(models.TransientModel):
         def aln(h="left"): return Alignment(horizontal=h, vertical="center")
 
         ws.merge_cells("A1:I1")
-        ws["A1"] = self.company_id.name
+        ws["A1"] = ', '.join(self.company_ids.mapped('name'))
         ws["A1"].font = Font(name="Arial", bold=True, size=11)
         ws.merge_cells("A2:I2")
         ws["A2"] = f"AJUSTEMENTS STOCK — Du {self.date_from.strftime('%d/%m/%Y')} au {self.date_to.strftime('%d/%m/%Y')}"

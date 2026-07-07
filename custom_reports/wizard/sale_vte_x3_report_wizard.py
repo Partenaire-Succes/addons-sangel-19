@@ -40,15 +40,36 @@ class SaleVteX3ReportWizard(models.TransientModel):
     )
     default_code = fields.Char(string='Code article (CODE_ART)')
 
+    company_ids = fields.Many2many(
+        'res.company',
+        string='Sociétés',
+        required=True,
+        default=lambda self: self.env.company,
+    )
     company_id = fields.Many2one(
         'res.company',
         string='Société',
-        default=lambda self: self.env.company,
+        compute='_compute_company_id',
+        help="Première société sélectionnée, utilisée pour l'en-tête du document.",
     )
+
+    @api.depends('company_ids')
+    def _compute_company_id(self):
+        for record in self:
+            record.company_id = record.company_ids[:1]
 
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _avg_standard_price(self, product):
+        """Moyenne (non pondérée) du coût standard du produit sur les
+        sociétés sélectionnées — utilisé quand plusieurs sociétés sont
+        sélectionnées, à la place du coût d'une seule société."""
+        if not self.company_ids:
+            return product.standard_price or 0.0
+        prices = [product.with_company(c).standard_price or 0.0 for c in self.company_ids]
+        return sum(prices) / len(prices)
 
     def _dt_from(self):
         return datetime.combine(self.date_from, time.min)
@@ -93,7 +114,7 @@ class SaleVteX3ReportWizard(models.TransientModel):
     def _get_sale_lines(self):
         domain = [
             ('order_id.state', 'in', ['sale', 'done']),
-            ('order_id.company_id', '=', self.company_id.id),
+            ('order_id.company_id', 'in', self.company_ids.ids),
             ('order_id.date_order', '>=', self._dt_from()),
             ('order_id.date_order', '<=', self._dt_to()),
             ('product_id', '!=', False),
@@ -153,7 +174,7 @@ class SaleVteX3ReportWizard(models.TransientModel):
     def _get_pos_lines(self):
         domain = [
             ('order_id.state', 'in', ['paid', 'done', 'invoiced']),
-            ('order_id.company_id', '=', self.company_id.id),
+            ('order_id.company_id', 'in', self.company_ids.ids),
             ('order_id.date_order', '>=', self._dt_from()),
             ('order_id.date_order', '<=', self._dt_to()),
             ('product_id', '!=', False),
@@ -183,7 +204,7 @@ class SaleVteX3ReportWizard(models.TransientModel):
             if abs_qty and line.total_cost:
                 pump = abs(line.total_cost) / abs_qty
             else:
-                pump = line.product_id.with_company(self.company_id).standard_price or 0.0
+                pump = self._avg_standard_price(line.product_id)
 
             prod_info = self._product_info(line.product_id)
             part_info = self._partner_info(order.partner_id)
@@ -366,7 +387,7 @@ class SaleVteX3ReportWizard(models.TransientModel):
         # ── Ligne 1 : titre société ────────────────────────────────
         ws.merge_cells(f"A1:{last_col}1")
         ws["A1"] = (
-            f"{self.company_id.name}"
+            f"{', '.join(self.company_ids.mapped('name'))}"
             f"  —  RAPPORT DE VENTES"
             f"  du {self.date_from.strftime('%d/%m/%Y')}"
             f"  au {self.date_to.strftime('%d/%m/%Y')}"

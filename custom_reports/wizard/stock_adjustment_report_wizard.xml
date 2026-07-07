@@ -14,7 +14,7 @@
                                 <field name="date_to"/>
                             </group>
                             <group>
-                                <field name="company_id" readonly="1"/>
+                                <field name="company_ids" widget="many2many_tags" options="{'no_create': True}"/>
                             </group>
                         </group>
                         <notebook>

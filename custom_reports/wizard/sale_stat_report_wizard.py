@@ -52,11 +52,23 @@ class SaleStatReportWizard(models.TransientModel):
         domain=[('sale_ok', '=', True)],
     )
 
+    company_ids = fields.Many2many(
+        'res.company',
+        string='Sociétés',
+        required=True,
+        default=lambda self: self.env.company,
+    )
     company_id = fields.Many2one(
         'res.company',
         string='Société',
-        default=lambda self: self.env.company,
+        compute='_compute_company_id',
+        help="Première société sélectionnée, utilisée pour l'en-tête du document.",
     )
+
+    @api.depends('company_ids')
+    def _compute_company_id(self):
+        for record in self:
+            record.company_id = record.company_ids[:1]
 
     @api.constrains('date_start_period1', 'date_end_period1', 'date_start_period2', 'date_end_period2')
     def _check_dates(self):
@@ -77,7 +89,7 @@ class SaleStatReportWizard(models.TransientModel):
         """Domaine pour POS — filtre par date_order."""
         date_start = self.date_start_period1 if period == 1 else self.date_start_period2
         date_end   = self.date_end_period1   if period == 1 else self.date_end_period2
-        domain = [('company_id', '=', self.company_id.id)]
+        domain = [('company_id', 'in', self.company_ids.ids)]
         if date_start:
             domain.append(('date_order', '>=', fields.Datetime.to_datetime(date_start)))
         if date_end:
@@ -93,7 +105,7 @@ class SaleStatReportWizard(models.TransientModel):
         """Domaine pour factures/avoirs vente — filtre par invoice_date."""
         date_start = self.date_start_period1 if period == 1 else self.date_start_period2
         date_end   = self.date_end_period1   if period == 1 else self.date_end_period2
-        domain = [('company_id', '=', self.company_id.id), ('state', '=', 'posted')]
+        domain = [('company_id', 'in', self.company_ids.ids), ('state', '=', 'posted')]
         if date_start:
             domain.append(('invoice_date', '>=', date_start))
         if date_end:
@@ -430,7 +442,7 @@ class SaleStatReportWizard(models.TransientModel):
 
         # ── En-tête titre ──────────────────────────────────────────────────────
         ws.merge_cells(f"A1:{last_col_letter}1")
-        ws["A1"] = self.company_id.name
+        ws["A1"] = ', '.join(self.company_ids.mapped('name'))
         ws["A1"].font = Font(name="Arial", bold=True, size=11)
 
         ws.merge_cells(f"A2:{last_col_letter}2")
