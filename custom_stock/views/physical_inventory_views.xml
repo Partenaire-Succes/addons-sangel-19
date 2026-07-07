@@ -210,6 +210,10 @@
             <field name="name">physical.inventory.line.tree</field>
             <field name="model">physical.inventory.line</field>
             <field name="arch" type="xml">
+                <header>
+                    <button name="action_purge_orphan_lines" type="object" string="Ligne Orphelines"
+                            class="btn-primary" invisible="1"/>
+                </header>
                 <list string="Code inventaire">
                     <field name="date"/>
                     <field name="date_done"/>
