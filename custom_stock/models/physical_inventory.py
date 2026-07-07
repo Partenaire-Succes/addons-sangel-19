@@ -503,15 +503,6 @@ class PhysicalInventoryLine(models.Model):
                     )
         return super().unlink()
 
-    def action_purge_orphan_lines(self):
-        """Supprime les physical.inventory.line sans inventaire parent, pour la société courante."""
-        orphans = self.search([
-            ('inventory_physical_id', '=', False),
-            ('location_id.company_id', '=', self.env.company.id),
-            ('active', 'in', [True, False]),
-        ])
-        orphans.unlink()
-
     @api.depends('physical_qty', 'quantity', 'price')
     def compute_qty_dif(self):
         for line in self:
