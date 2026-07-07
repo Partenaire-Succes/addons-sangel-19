@@ -215,6 +215,8 @@
                             class="btn-primary" invisible="1"/>
                 </header>
                 <list string="Code inventaire">
+                    <field name="inventory_physical_id"/>
+                    <field name="state"/>
                     <field name="date"/>
                     <field name="date_done"/>
                     <field name="product_tmpl_id"/>
