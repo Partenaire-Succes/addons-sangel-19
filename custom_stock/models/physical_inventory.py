@@ -66,9 +66,21 @@ class PhysicalInventory(models.Model):
         """
         self.ensure_one()
 
+        active_lines = self.physical_line_ids.filtered(lambda l: l.active)
+
+        zero_price_lines = active_lines.filtered(lambda l: not l.price)
+        if zero_price_lines:
+            products = "\n".join(
+                f"• {l.product_id.display_name or l.product_tmpl_id.display_name}"
+                for l in zero_price_lines
+            )
+            raise UserError(
+                _("Impossible de valider : les produits suivants ont un prix à 0.\n"
+                  "Corrigez le prix avant de valider l'inventaire.\n%s") % products
+            )
+
         self.write({'state': 'done', 'date_done': fields.Datetime.now()})
 
-        active_lines = self.physical_line_ids.filtered(lambda l: l.active)
         if not active_lines:
             return
 
@@ -167,11 +179,11 @@ class PhysicalInventory(models.Model):
         self.write({'state': 'in_progress'})
 
     def update_price(self):
-        lines = self.env['physical.inventory.line'].search([])
+        lines = self.env['physical.inventory.line'].search([
+            ('inventory_physical_id.company_id', 'in', self.company_id.ids),
+        ])
         for line in lines:
-            if line.qty_diff:
-                line.price = line.valorisation / line.qty_diff
-            else:
+            if not line.price:
                 line.price = line.standard_price
 
     def action_refresh_qty_price(self):
@@ -383,7 +395,8 @@ class PhysicalInventoryLine(models.Model):
     product_tmpl_id = fields.Many2one(
         'product.template',
         'Produit',
-        domain=[('prod_type_x3_id.name', '=', 'TS')],
+        domain="[('prod_type_x3_id.name', '=', 'TS'), '|', "
+               "('allowed_company_ids', '=', False), ('allowed_company_ids', 'in', [company_id])]",
     )
     date = fields.Datetime(related='inventory_physical_id.date', string="Date de l'inventaire")
     date_done = fields.Datetime(related='inventory_physical_id.date_done', string='Date de fin')
@@ -487,6 +500,15 @@ class PhysicalInventoryLine(models.Model):
                           "Merci de valider votre inventaire.")
                     )
         return super().unlink()
+
+    def action_purge_orphan_lines(self):
+        """Supprime les physical.inventory.line sans inventaire parent, pour la société courante."""
+        orphans = self.search([
+            ('inventory_physical_id', '=', False),
+            ('location_id.company_id', '=', self.env.company.id),
+            ('active', 'in', [True, False]),
+        ])
+        orphans.unlink()
 
     @api.depends('physical_qty', 'quantity', 'price')
     def compute_qty_dif(self):
