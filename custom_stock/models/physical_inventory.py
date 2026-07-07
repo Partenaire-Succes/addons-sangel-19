@@ -395,8 +395,10 @@ class PhysicalInventoryLine(models.Model):
     product_tmpl_id = fields.Many2one(
         'product.template',
         'Produit',
-        domain="[('prod_type_x3_id.name', '=', 'TS'), '|', "
-               "('allowed_company_ids', '=', False), ('allowed_company_ids', 'in', [company_id])]",
+        # 'allowed_company_ids' est défini par custom_sales, qui DÉPEND de
+        # custom_stock (pas l'inverse) — on ne peut donc pas le supposer
+        # présent ici sans créer une dépendance circulaire entre modules.
+        domain="[('prod_type_x3_id.name', '=', 'TS')]",
     )
     date = fields.Datetime(related='inventory_physical_id.date', string="Date de l'inventaire")
     date_done = fields.Datetime(related='inventory_physical_id.date_done', string='Date de fin')
