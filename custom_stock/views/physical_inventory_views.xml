@@ -211,10 +211,6 @@
             <field name="model">physical.inventory.line</field>
             <field name="arch" type="xml">
                 <list string="Code inventaire">
-                    <header>
-                        <button name="action_purge_orphan_lines" type="object" string="Ligne Orphelines"
-                                class="btn-primary" invisible="1"/>
-                    </header>
                     <field name="inventory_physical_id"/>
                     <field name="state"/>
                     <field name="date"/>
