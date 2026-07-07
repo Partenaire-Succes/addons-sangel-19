@@ -101,9 +101,6 @@ class StockValoriseReport(models.TransientModel):
         total_qty = 0.0
         total_valorisation = 0.0
 
-        date_from = dt.combine(self.date_report.date(), t(0, 0, 0))
-        date_at = dt.combine(self.date_report.date(), t(23, 59, 59))
-
         # Quantités à l'emplacement en batch
         # ANCIEN CODE : to_date ignoré par Odoo 19 (qty_available utilise stock.quant, pas stock.move.line)
         # loc_qtys = self.product_ids.with_context(
@@ -122,54 +119,10 @@ class StockValoriseReport(models.TransientModel):
         """, [self.location_id.id, list(self.product_ids.ids), self.date_report, self.location_id.id, self.location_id.id])
         qty_loc = {row[0]: row[1] for row in self.env.cr.fetchall()}
 
-        # PMP du jour : mouvements entrants entre 00:00:00 et 23:59:59
-        move_groups_day = self.env['stock.move'].read_group(
-            domain=[
-                ('product_id', 'in', self.product_ids.ids),
-                ('company_id', '=', self.company_id.id),
-                ('state', '=', 'done'),
-                ('is_in', '=', True),
-                ('picking_id', '!=', False),
-                ('date', '>=', date_from),
-                ('date', '<=', date_at),
-            ],
-            fields=['value:sum', 'quantity:sum'],
-            groupby=['product_id'],
-        )
-        day_moves = {r['product_id'][0]: (r['value'], r['quantity']) for r in move_groups_day}
-
-        # PMP fallback : PMP du dernier jour ayant eu une réception avant date_from
-        # On cherche la dernière date de réception par produit, puis on prend
-        # uniquement les mouvements de CE jour-là (pas une moyenne cumulative).
-        if self.product_ids:
-            self.env.cr.execute("""
-                WITH last_dates AS (
-                    SELECT product_id, MAX(date::date) AS last_date
-                    FROM stock_move
-                    WHERE product_id = ANY(%s)
-                      AND company_id = %s
-                      AND state = 'done'
-                      AND is_in = true
-                      AND picking_id IS NOT NULL
-                      AND date < %s
-                    GROUP BY product_id
-                )
-                SELECT sm.product_id,
-                       SUM(sm.value)    AS value,
-                       SUM(sm.quantity) AS quantity
-                FROM stock_move sm
-                JOIN last_dates ld ON ld.product_id = sm.product_id
-                WHERE sm.state = 'done'
-                  AND sm.is_in = true
-                  AND sm.picking_id IS NOT NULL
-                  AND sm.date::date = ld.last_date
-                  AND sm.company_id = %s
-                GROUP BY sm.product_id
-            """, [list(self.product_ids.ids), self.company_id.id, date_from, self.company_id.id])
-            prev_moves = {row[0]: (row[1], row[2]) for row in self.env.cr.fetchall()}
-        else:
-            prev_moves = {}
-
+        # PAMP du jour : Odoo maintient déjà en continu le coût moyen pondéré
+        # réel (méthode AVCO) sur product.standard_price, recalculé à chaque
+        # entrée de stock — contrairement à l'ancien calcul ci-dessus qui ne
+        # reflétait que le coût moyen de la dernière journée avec réception.
         for product in self.product_ids:
             categ = product.cat_gestion_id
             cat_gestion_id = categ.id
@@ -179,15 +132,7 @@ class StockValoriseReport(models.TransientModel):
             if not qty or qty <= 0:
                 continue
 
-            day_value, day_qty = day_moves.get(product.id, (0.0, 0.0))
-            if day_qty > 0 and day_value > 0:
-                pamp = float_round(day_value / day_qty, 2)
-            else:
-                prev_value, prev_qty = prev_moves.get(product.id, (0.0, 0.0))
-                if prev_qty > 0 and prev_value > 0:
-                    pamp = float_round(prev_value / prev_qty, 2)
-                else:
-                    pamp = product.with_company(self.company_id).standard_price or 0.0
+            pamp = float_round(product.with_company(self.company_id).standard_price or 0.0, 2)
 
             valorisation = float_round(qty * pamp, 2)
 
