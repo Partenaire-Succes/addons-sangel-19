@@ -920,7 +920,7 @@ class AccountMoveSageX3(models.Model):
                     # → protège contre le rollback en cas d'erreur ultérieure
                     pos_payment_ids = payment_map.get(idx, [])
                     if pos_payment_ids:
-                        self._mark_pos_payments(pos_payment_ids, piece_str, message_str)
+                        # self._mark_pos_payments(pos_payment_ids, piece_str, message_str)
                         self.env.cr.commit()
                         _logger.info(
                             "🔒 [%s] %s pos.payment(s) marqué(s) et commité(s) — pièce %s",
@@ -965,10 +965,10 @@ class AccountMoveSageX3(models.Model):
         if (not encai_present or encai_ok) and (not decai_present or decai_ok):
             session_pieces   = encai_pieces + decai_pieces
             session_messages = encai_messages + decai_messages
-            self._mark_pos_sessions_as_sent(
-                company, target_date,
-                ", ".join(session_pieces), "\n".join(session_messages),
-            )
+            # self._mark_pos_sessions_as_sent(
+            #     company, target_date,
+            #     ", ".join(session_pieces), "\n".join(session_messages),
+            # )
             self.env.cr.commit()
 
         # ── Résultat final ──────────────────────────────────────────────────────
@@ -1236,13 +1236,13 @@ class AccountMoveSageX3(models.Model):
 
         _logger.info("✅ SAGE X3 OK — Pièces : %s", piece_numbers)
 
-        self.write({
-            'sage_x3_sent':         True,
-            'sage_x3_sent_date':    fields.Datetime.now(),
-            'sage_x3_piece_number': piece_numbers,
-            'sage_x3_response':     full_message,
-            'sage_x3_error':        False,
-        })
+        # self.write({
+        #     'sage_x3_sent':         True,
+        #     'sage_x3_sent_date':    fields.Datetime.now(),
+        #     'sage_x3_piece_number': piece_numbers,
+        #     'sage_x3_response':     full_message,
+        #     'sage_x3_error':        False,
+        # })
 
     def _compute_tva(self, montant_ttc, taux):
         if not montant_ttc:
