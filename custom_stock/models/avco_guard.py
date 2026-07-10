@@ -62,7 +62,7 @@ class ProductProduct(models.Model):
             ancien  = prix_avant.get(product.id, 0.0)
             nouveau = product.with_company(self.env.company).standard_price
 
-            qty_dispo = product.with_context(company_id=self.env.company.id).qty_available
+            qty_dispo = product.with_context(allowed_company_ids=[self.env.company.id]).qty_available
             qty_nulle = float_is_zero(qty_dispo, precision_rounding=product.uom_id.rounding)
 
             # --- Detection par valeur absolue -----------------------------------
@@ -138,7 +138,7 @@ class ProductProduct(models.Model):
 
             for product in products:
                 price = product.with_company(company).standard_price
-                qty   = product.with_context(company_id=company.id).qty_available
+                qty   = product.with_context(allowed_company_ids=[company.id]).qty_available
 
                 reasons = []
                 if price < 0:
