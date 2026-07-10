@@ -39,6 +39,7 @@
                             string="Corriger barcodes GS1"
                             type="object"
                             icon="fa-barcode"
+                            invisible="1"
                             confirm="Cette action va corriger tous les code-barres GS1 (27...) sur tous les produits actifs. Continuer ?"
                             class="btn btn-warning"
                             groups="base.group_system"/>
