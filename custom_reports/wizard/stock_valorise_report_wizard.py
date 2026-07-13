@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import io
 import base64
-from collections import defaultdict
 from datetime import datetime as dt, time as t
 from odoo import models, fields, api
 from odoo.exceptions import UserError
@@ -95,40 +94,50 @@ class StockValoriseReport(models.TransientModel):
     # LOGIQUE DU RAPPORT
     # -------------------------------------------------------------------------
     def _compute_avco_at_date(self):
-        """Coût moyen pondéré (AVCO) réel par produit à la date du rapport.
+        """Coût moyen pondéré (AVCO) par produit à la date du rapport.
 
-        On n'utilise PAS product.avg_cost avec le contexte to_date : ce champ
-        (stock_account/models/product.py::_compute_value) divise la valeur
-        historique rejouée par product.qty_available, qui est recalculée sur
-        un périmètre quants/emplacements différent de celui du rejeu de
-        mouvements — les deux quantités "à la date" peuvent diverger et donc
-        fausser le ratio.
-        On appelle directement _run_average_batch / _run_fifo_batch (le
-        moteur interne utilisé par avg_cost), qui rejoue les mouvements
-        is_in/is_out avec exactement le même algorithme que
-        stock_account.stock_avco_report, pour garantir un résultat cohérent
-        avec ce rapport de justification.
+        Ni product.avg_cost (divise par qty_available, recalculée sur un
+        périmètre différent), ni product._run_avco/_run_fifo (moteur de coût
+        réel, qui gère la rupture de stock différemment) ne sont utilisés ici :
+        sur cette instance les deux peuvent déjà diverger entre eux. On
+        reproduit donc directement la vue SQL stock_avco_report et
+        l'accumulation de stock_account.stock.avco.report
+        (_compute_cumulative_fields) pour garantir un résultat identique à ce
+        rapport de justification, notre référence de vérification.
         """
         self.ensure_one()
         avco_by_product_id = {}
         if not self.product_ids:
             return avco_by_product_id
 
-        products = self.product_ids.with_company(self.company_id).with_context(
-            allowed_company_ids=self.company_id.ids
-        )
-        products_by_cost_method = defaultdict(lambda: self.env['product.product'])
-        for product in products:
-            products_by_cost_method[product.cost_method] |= product
+        self.env.cr.execute("""
+            SELECT product_id, res_model_name, quantity, value
+            FROM stock_avco_report
+            WHERE product_id = ANY(%s)
+              AND company_id = %s
+              AND date <= %s
+            ORDER BY product_id, date, id
+        """, [list(self.product_ids.ids), self.company_id.id, self.date_report])
 
-        for cost_method, method_products in products_by_cost_method.items():
-            if cost_method == 'average':
-                std_prices, __ = method_products._run_average_batch(at_date=self.date_report)
-            elif cost_method == 'fifo':
-                std_prices, __ = method_products._run_fifo_batch(at_date=self.date_report)
-            else:
-                std_prices = {p.id: p.standard_price for p in method_products}
-            avco_by_product_id.update(std_prices)
+        state_by_product_id = {}
+        for product_id, res_model_name, quantity, value in self.env.cr.fetchall():
+            state = state_by_product_id.setdefault(product_id, {'qty': 0.0, 'value': 0.0})
+            if res_model_name == 'stock.move':
+                state['value'] += value
+                state['qty'] += quantity
+            else:  # 'product.value' : ajustement manuel (reference 'Adjustment')
+                state['value'] = value * state['qty']
+
+        for product_id, state in state_by_product_id.items():
+            avco_by_product_id[product_id] = state['value'] / state['qty'] if state['qty'] else 0.0
+
+        # Produits en coût standard : exclus de la vue stock_avco_report
+        # (filtrée sur fifo/average), on retombe sur le prix standard à date.
+        for product in self.product_ids:
+            if product.id not in avco_by_product_id:
+                avco_by_product_id[product.id] = product.with_company(
+                    self.company_id
+                )._get_standard_price_at_date(self.date_report)
 
         return avco_by_product_id
 
@@ -158,6 +167,9 @@ class StockValoriseReport(models.TransientModel):
         """, [self.location_id.id, list(self.product_ids.ids), self.date_report, self.location_id.id, self.location_id.id])
         qty_loc = {row[0]: row[1] for row in self.env.cr.fetchall()}
 
+        # AVCO réel à la date du rapport (rejeu des mouvements), pas le coût
+        # courant : voir _compute_avco_at_date pour le détail et la raison
+        # pour laquelle product.avg_cost n'est pas utilisable ici.
         avco_by_product_id = self._compute_avco_at_date()
 
         for product in self.product_ids:
