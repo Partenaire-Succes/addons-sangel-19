@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import io
 import base64
+from collections import defaultdict
 from datetime import datetime as dt, time as t
 from odoo import models, fields, api
 from odoo.exceptions import UserError
@@ -93,6 +94,44 @@ class StockValoriseReport(models.TransientModel):
     # -------------------------------------------------------------------------
     # LOGIQUE DU RAPPORT
     # -------------------------------------------------------------------------
+    def _compute_avco_at_date(self):
+        """Coût moyen pondéré (AVCO) réel par produit à la date du rapport.
+
+        On n'utilise PAS product.avg_cost avec le contexte to_date : ce champ
+        (stock_account/models/product.py::_compute_value) divise la valeur
+        historique rejouée par product.qty_available, qui est recalculée sur
+        un périmètre quants/emplacements différent de celui du rejeu de
+        mouvements — les deux quantités "à la date" peuvent diverger et donc
+        fausser le ratio.
+        On appelle directement _run_average_batch / _run_fifo_batch (le
+        moteur interne utilisé par avg_cost), qui rejoue les mouvements
+        is_in/is_out avec exactement le même algorithme que
+        stock_account.stock_avco_report, pour garantir un résultat cohérent
+        avec ce rapport de justification.
+        """
+        self.ensure_one()
+        avco_by_product_id = {}
+        if not self.product_ids:
+            return avco_by_product_id
+
+        products = self.product_ids.with_company(self.company_id).with_context(
+            allowed_company_ids=self.company_id.ids
+        )
+        products_by_cost_method = defaultdict(lambda: self.env['product.product'])
+        for product in products:
+            products_by_cost_method[product.cost_method] |= product
+
+        for cost_method, method_products in products_by_cost_method.items():
+            if cost_method == 'average':
+                std_prices, __ = method_products._run_average_batch(at_date=self.date_report)
+            elif cost_method == 'fifo':
+                std_prices, __ = method_products._run_fifo_batch(at_date=self.date_report)
+            else:
+                std_prices = {p.id: p.standard_price for p in method_products}
+            avco_by_product_id.update(std_prices)
+
+        return avco_by_product_id
+
     def _get_stock_by_category(self):
         """Retourne les données de valorisation à la date du rapport."""
         self.ensure_one()
@@ -119,10 +158,8 @@ class StockValoriseReport(models.TransientModel):
         """, [self.location_id.id, list(self.product_ids.ids), self.date_report, self.location_id.id, self.location_id.id])
         qty_loc = {row[0]: row[1] for row in self.env.cr.fetchall()}
 
-        # PAMP du jour : Odoo maintient déjà en continu le coût moyen pondéré
-        # réel (méthode AVCO) sur product.standard_price, recalculé à chaque
-        # entrée de stock — contrairement à l'ancien calcul ci-dessus qui ne
-        # reflétait que le coût moyen de la dernière journée avec réception.
+        avco_by_product_id = self._compute_avco_at_date()
+
         for product in self.product_ids:
             categ = product.cat_gestion_id
             cat_gestion_id = categ.id
@@ -132,7 +169,7 @@ class StockValoriseReport(models.TransientModel):
             if not qty or qty <= 0:
                 continue
 
-            pamp = float_round(product.with_company(self.company_id).standard_price or 0.0, 2)
+            pamp = float_round(avco_by_product_id.get(product.id, 0.0) or 0.0, 2)
 
             valorisation = float_round(qty * pamp, 2)
 
