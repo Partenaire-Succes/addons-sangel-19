@@ -98,12 +98,16 @@ class StockValoriseReport(models.TransientModel):
 
         Ni product.avg_cost (divise par qty_available, recalculée sur un
         périmètre différent), ni product._run_avco/_run_fifo (moteur de coût
-        réel, qui gère la rupture de stock différemment) ne sont utilisés ici :
-        sur cette instance les deux peuvent déjà diverger entre eux. On
-        reproduit donc directement la vue SQL stock_avco_report et
-        l'accumulation de stock_account.stock.avco.report
-        (_compute_cumulative_fields) pour garantir un résultat identique à ce
-        rapport de justification, notre référence de vérification.
+        réel, qui gère la rupture de stock différemment de stock.avco.report
+        sur cette version — cf. com-entreprise-19/stock_account/report/
+        stock_avco_audit_report.py) ne sont utilisés ici. On reproduit
+        directement la vue SQL stock_avco_report et l'accumulation de
+        stock_account.stock.avco.report (_compute_cumulative_fields) telle
+        qu'elle existe sur com-entreprise-19 (accumulation simple, sans
+        correction de rupture de stock — cette version-ci n'a pas cette
+        branche, contrairement à des builds plus récents d'Odoo 19), pour
+        garantir un résultat identique à ce rapport de justification, notre
+        référence de vérification.
         """
         self.ensure_one()
         avco_by_product_id = {}
@@ -123,6 +127,8 @@ class StockValoriseReport(models.TransientModel):
         for product_id, res_model_name, quantity, value in self.env.cr.fetchall():
             state = state_by_product_id.setdefault(product_id, {'qty': 0.0, 'value': 0.0})
             if res_model_name == 'stock.move':
+                # Accumulation simple (pas de gestion de rupture de stock),
+                # identique à _compute_cumulative_fields sur com-entreprise-19.
                 state['value'] += value
                 state['qty'] += quantity
             else:  # 'product.value' : ajustement manuel (reference 'Adjustment')
@@ -167,9 +173,7 @@ class StockValoriseReport(models.TransientModel):
         """, [self.location_id.id, list(self.product_ids.ids), self.date_report, self.location_id.id, self.location_id.id])
         qty_loc = {row[0]: row[1] for row in self.env.cr.fetchall()}
 
-        # AVCO réel à la date du rapport (rejeu des mouvements), pas le coût
-        # courant : voir _compute_avco_at_date pour le détail et la raison
-        # pour laquelle product.avg_cost n'est pas utilisable ici.
+        # AVCO réel à la date du rapport 
         avco_by_product_id = self._compute_avco_at_date()
 
         for product in self.product_ids:
