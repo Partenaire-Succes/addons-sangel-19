@@ -7,19 +7,6 @@
         <field name="inherit_id" ref="stock.view_picking_form"/>
         <field name="arch" type="xml">
 
-            <!-- Bouton Éclater en unités — visible uniquement sur réceptions validées
-                 contenant des articles pack (carton). Ne s'affiche pas sur les
-                 livraisons, transferts internes ou réceptions non validées. -->
-            <xpath expr="//header/button[@name='button_validate']" position="after">
-                <button name="action_eclater_cartons_en_unites"
-                        type="object"
-                        string="Éclater en unités"
-                        class="btn-secondary"
-                        invisible="1"
-                        confirm="Créer un transfert interne pour éclater les cartons en unités ?"
-                />
-            </xpath>
-
             <xpath expr="//field[@name='picking_type_id']" position="after">
                 <field name="ref_sage"/>
                 <field name="date_sage"/>

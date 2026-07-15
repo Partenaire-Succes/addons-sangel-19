@@ -1,7 +1,6 @@
 from . import product_select_wizard
 from . import fiche_comptage_wizard
 from . import reception_directe_wizard
-from . import retour_carton_wizard
 from . import retour_inventaire_wizard
 from . import retour_fournisseur_wizard
 from . import rapport_retours_receptions_wizard

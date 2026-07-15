@@ -108,16 +108,6 @@
                 <xpath expr="//page[6]" position="after">
                     <page string="Taxes &amp; Remises" name="article_and_discount">
                         <group>
-                            <group name="pack_group" string="Décomposition D'articles">
-                                <field name="is_pack_parent"/>
-                                <field name="pack_child_product_id" options="{'no_create_edit': True}"
-                                       invisible="is_pack_parent == False"/>
-                                <field name="pack_qty" invisible="is_pack_parent == False"/>
-                                <field name="pack_equiv_cartons_available" readonly="1"
-                                       invisible="is_pack_parent == False"/>
-                                <field name="pack_equiv_units_available" readonly="1"
-                                       invisible="is_pack_parent == False"/>
-                            </group>
                             <group name="article_and_discount" string="Remises et taxes">
                                 <field name="discount_ligne" readonly="1"/>
                                 <field name="airsi_taxes_id" widget="many2many_tags" readonly="1"/>

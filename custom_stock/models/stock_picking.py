@@ -1,6 +1,5 @@
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
-import math
 import logging
 
 _logger = logging.getLogger(__name__)
@@ -34,7 +33,7 @@ class StockPicking(models.Model):
 
 
     def button_validate(self):
-        """Override: price validation + sync facture fournisseur + éclatement cartons après réception."""
+        """Override: price validation + sync facture fournisseur après réception."""
 
         # ── 1. Pre-validation checks (before calling super) ──────────────────
         errors = []
@@ -75,11 +74,6 @@ class StockPicking(models.Model):
                     and picking.state == 'done'
                     and picking.purchase_id):
                 picking._sync_invoice_from_reception(prix_saisis=prix_saisis)
-
-        # ── 4. Éclatement automatique cartons → unités ───────────────────────
-        for picking in self:
-            if picking.picking_type_id.code == 'incoming' and picking.state == 'done':
-                picking.action_eclater_cartons_en_unites(auto=True)
 
         return result
 
@@ -149,176 +143,3 @@ class StockPicking(models.Model):
             invoice.name, self.name, purchase.name,
         )
 
-    def action_eclater_cartons_en_unites(self, auto=False):
-        """
-        Bouton manuel 'Éclater en unités' — ou appelé automatiquement après validation.
-
-        Création d'un transfert interne : Production → Entrepôt (injecte les unités au bon prix).
-
-        :param auto: True quand appelé depuis button_validate (skip silencieux si non applicable).
-        """
-        self.ensure_one()
-        if self.state != 'done':
-            raise UserError(_("La réception doit d'abord être validée."))
-        if self.picking_type_id.code != 'incoming':
-            raise UserError(_("L'éclatement ne s'applique qu'aux réceptions."))
-
-        # ── Protection double-appel ───────────────────────────────────────────
-        already_done = self.env['stock.picking'].search([
-            ('origin', '=', 'Eclatement cartons — %s' % self.name),
-            ('state', '=', 'done'),
-        ], limit=1)
-        if already_done:
-            if auto:
-                _logger.info("[ECLATER_AUTO] Déjà effectué pour %s → %s", self.name, already_done.name)
-                return
-            raise UserError(_(
-                "L'éclatement a déjà été effectué pour cette réception.\n"
-                "Transfert existant : %s"
-            ) % already_done.name)
-
-        pack_moves = []
-        for move in self.move_ids.filtered(lambda m: m.state == 'done' and m.quantity > 0):
-            pack_template = self._get_pack_template_for_move(move)
-            if not pack_template:
-                continue
-            pack_moves.append((move, pack_template))
-
-        if not pack_moves:
-            if auto:
-                return
-            raise UserError(_("Aucun article pack (carton) trouvé dans cette réception."))
-
-        # En Odoo 19, l'emplacement Production est par société (pas d'XML ID global).
-        # Récupération via ir.default (méthode officielle Odoo 19), avec fallback recherche.
-        production_loc_id = self.env['ir.default']._get(
-            'product.template', 'property_stock_production',
-            company_id=self.company_id.id,
-        )
-        production_loc = self.env['stock.location'].browse(production_loc_id) if production_loc_id else False
-        if not production_loc:
-            production_loc = self.env['stock.location'].search([
-                ('usage', '=', 'production'),
-                ('company_id', '=', self.company_id.id),
-            ], limit=1)
-        if not production_loc:
-            raise UserError(_("Emplacement de production introuvable. Vérifiez la configuration des emplacements virtuels (Inventaire → Configuration → Entrepôts)."))
-
-        internal_type = self.env['stock.picking.type'].search([
-            ('code', '=', 'internal'),
-            ('company_id', '=', self.company_id.id),
-            ('warehouse_id', '!=', False),
-        ], limit=1)
-        if not internal_type:
-            raise UserError(_("Aucun type 'Transfert interne' trouvé."))
-
-        dest_location = self.location_dest_id
-
-        # Crée les unités depuis Production → Entrepôt.
-        # Le stock carton physique n'est pas touché — il reste visible dans l'inventaire.
-        # L'affichage se fait via pack_equiv_cartons_available qui combine
-        # cartons physiques non éclatés + unités enfant / pack_qty.
-        explosion_picking = self.env['stock.picking'].create({
-            'picking_type_id': internal_type.id,
-            'location_id': production_loc.id,     # source virtuelle (Production)
-            'location_dest_id': dest_location.id,  # destination = entrepôt réception
-            'origin': 'Eclatement cartons — %s' % self.name,
-            'company_id': self.company_id.id,
-        })
-
-        for move, pack_template in pack_moves:
-            child_product = pack_template.pack_child_product_id
-            units_qty = move.quantity * pack_template.pack_qty
-            unit_price = (
-                move.price_unit / pack_template.pack_qty
-                if pack_template.pack_qty else child_product.standard_price
-            )
-            self.env['stock.move'].create({
-                'picking_id': explosion_picking.id,
-                'product_id': child_product.id,
-                'product_uom_qty': units_qty,
-                'product_uom': child_product.uom_id.id,
-                'location_id': production_loc.id,
-                'location_dest_id': dest_location.id,
-                'price_unit': unit_price,
-                'origin': self.name,
-                'company_id': self.company_id.id,
-            })
-
-        explosion_picking.action_confirm()
-
-        # Pour les sources virtuelles (Production), action_assign ne cree pas
-        # de move lines. On les cree explicitement puis on valide.
-        for sm in explosion_picking.move_ids.filtered(lambda m: m.state not in ('done', 'cancel')):
-            if not sm.move_line_ids:
-                self.env['stock.move.line'].create({
-                    'move_id': sm.id,
-                    'picking_id': explosion_picking.id,
-                    'product_id': sm.product_id.id,
-                    'product_uom_id': sm.product_uom.id,
-                    'quantity': sm.product_uom_qty,
-                    'location_id': sm.location_id.id,
-                    'location_dest_id': sm.location_dest_id.id,
-                })
-            else:
-                for ml in sm.move_line_ids:
-                    ml.quantity = sm.product_uom_qty
-
-        explosion_picking.with_context(skip_backorder=True, skip_immediate=True).button_validate()
-
-        label = _('Éclatement cartons automatique') if auto else _('Éclatement cartons effectué')
-        self.message_post(
-            body=_('%s → transfert unités <b>%s</b> créé.') % (label, explosion_picking.name),
-            message_type='notification',
-        )
-        _logger.info("[ECLATER_AUTO] Éclatement effectué pour %s → %s", self.name, explosion_picking.name)
-        if auto:
-            return
-        return {'type': 'ir.actions.client', 'tag': 'reload'}
-
-
-    def _get_pack_template_for_move(self, move):
-        """Récupère le template pack pour un mouvement de carton"""
-        template = move.product_id.product_tmpl_id
-        if (hasattr(template, "is_pack_parent") and
-                template.is_pack_parent and
-                template.pack_child_product_id and
-                template.pack_qty > 0):
-            return template
-        return False
-
-    def _get_unit_pack_template(self, product):
-        """Récupère le template pack parent pour un produit unité"""
-        return self.env['product.template'].search([
-            ("is_pack_parent", "=", True),
-            ("pack_child_product_id", "=", product.id),
-            ("company_id", "in", [False, self.company_id.id]),
-        ], limit=1)
-
-
-    def _get_current_qty(self, product, location):
-        """Récupère la quantité actuelle d'un produit dans un emplacement"""
-        quants = self.env['stock.quant'].search([
-            ('product_id', '=', product.id),
-            ('location_id', '=', location.id)
-        ])
-        return sum(quants.mapped('quantity'))
-
-    def _get_main_stock_location(self):
-        """Récupère l'emplacement de stock principal de la société"""
-        warehouse = self.env['stock.warehouse'].search([
-            ('company_id', '=', self.company_id.id)
-        ], limit=1)
-
-        if warehouse and warehouse.lot_stock_id:
-            return warehouse.lot_stock_id
-
-        # Fallback sur l'emplacement stock par défaut
-        try:
-            return self.env.ref('stock.stock_location_stock')
-        except:
-            # Dernier fallback - premier emplacement stock trouvé
-            return self.env['stock.location'].search([
-                ('usage', '=', 'internal'),
-                ('company_id', '=', self.company_id.id)
-            ], limit=1)

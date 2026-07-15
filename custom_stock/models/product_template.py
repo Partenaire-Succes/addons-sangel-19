@@ -1,8 +1,8 @@
 import logging
 import re
 
-from odoo import _, api, fields, models, tools
-from odoo.exceptions import AccessError, UserError, ValidationError
+from odoo import api, fields, models, tools
+from odoo.exceptions import AccessError, UserError
 from odoo.tools import format_amount
 
 _logger = logging.getLogger(__name__)
@@ -109,44 +109,6 @@ class ProductTemplateInherit(models.Model):
         'account.tax',
         string='Taxes AIRSI',
         help='Taxes AIRSI à appliquer pour les clients à limite avec paiement à crédit'
-    )
-
-    # Nouveau champ pour activer/désactiver la synchronisation
-    is_pack_parent = fields.Boolean(
-        string="Article pack (carton)",
-        help="Activez pour définir ce produit comme un carton/pack qui contient des unités.",
-    )
-    pack_child_product_id = fields.Many2one(
-        "product.product",
-        string="Sous-article (unité)",
-        help="Produit unité contenu dans le carton.",
-        # domain="[('detailed_type', '=', 'product')]",
-    )
-
-    pack_qty = fields.Integer(
-        string="Qté par carton",
-        default=0,
-        help="Nombre d'unités contenues dans un carton.",
-    )
-
-    pack_equiv_cartons_available = fields.Float(
-        string="Stock cartons (équiv.)",
-        compute="_compute_pack_equivalences",
-        digits="Product Unit of Measure",
-        help="Nombre de cartons disponibles calculé à partir du stock des unités.",
-    )
-
-    pack_equiv_units_available = fields.Float(
-        string="Stock unités (équiv.)",
-        compute="_compute_pack_equivalences",
-        digits="Product Unit of Measure",
-        help="Nombre d'unités disponibles (stock réel si vous stockez en unités).",
-    )
-
-    pending_units = fields.Float(
-        string="Unités en attente",
-        default=0.0,
-        help="Nombre d'unités vendues en attente de conversion en cartons complets"
     )
 
     code_article = fields.Char(
@@ -334,18 +296,6 @@ class ProductTemplateInherit(models.Model):
             ])
             template.pending_reception_qty = sum(moves.mapped('product_uom_qty'))
 
-    @api.depends('pack_child_product_id.qty_available', 'pack_qty')
-    def _compute_pack_equivalences(self):
-        for tmpl in self:
-            tmpl.pack_equiv_cartons_available = 0
-            tmpl.pack_equiv_units_available = 0
-            if (getattr(tmpl, "is_pack_parent", False)
-                    and tmpl.pack_child_product_id
-                    and tmpl.pack_qty > 0):
-                units = tmpl.pack_child_product_id.qty_available
-                tmpl.pack_equiv_units_available = units
-                tmpl.pack_equiv_cartons_available = units / tmpl.pack_qty
-
     @api.depends('standard_price', 'purchase_new_price')
     def _compute_effective_cost(self):
         for tmpl in self:
@@ -354,83 +304,6 @@ class ProductTemplateInherit(models.Model):
                 if tmpl.purchase_new_price and tmpl.purchase_new_price > 0
                 else tmpl.standard_price
             )
-
-    @api.constrains("is_pack_parent", "pack_child_product_id", "pack_qty")
-    def _check_pack_config(self):
-        for template in self:
-            if not template.is_pack_parent:
-                continue
-
-            if not template.pack_child_product_id or template.pack_qty <= 0:
-                raise ValidationError(
-                    _("Pour un article pack, renseignez le sous-article et une quantité par carton > 0.")
-                )
-            # Eviter référence à soi-même (via variantes)
-            if template.pack_child_product_id.product_tmpl_id == template:
-                raise ValidationError(_("Le sous-article ne peut pas être le même que l'article pack."))
-
-    def action_view_unit_product(self):
-        """Action pour voir l'article unitaire"""
-        self.ensure_one()
-        if not self.unit_product_id:
-            return
-
-        return {
-            'type': 'ir.actions.act_window',
-            'name': 'Article Unitaire',
-            'res_model': 'product.product',
-            'res_id': self.unit_product_id.id,
-            'view_mode': 'form',
-            'target': 'current',
-        }
-
-    def reset_pending_units_for_sales(self):
-        """Méthode utilitaire pour remettre à zéro les compteurs (maintenance)"""
-        self.ensure_one()
-        if self.is_pack_parent:
-            self.write({'pending_units': 0.0})
-            _logger.info(f"[SALE_PACK_SYNC] Remise à zéro du compteur pour {self.name}")
-
-    @api.model
-    def reset_all_pending_units(self):
-        """Remet à zéro tous les compteurs d'unités en attente"""
-        pack_templates = self.search([('is_pack_parent', '=', True)])
-        pack_templates.write({'pending_units': 0.0})
-        _logger.info(f"[SALE_PACK_SYNC] Remise à zéro de {len(pack_templates)} compteurs")
-
-
-    def reset_pack_sync_counters(self):
-        """Remet à zéro les compteurs de synchronisation pack"""
-        pack_templates = self.search([('is_pack_parent', '=', True)])
-        pack_templates.write({'pending_units': 0.0})
-        _logger.info(f"[PACK_SYNC] {len(pack_templates)} compteurs remis à zéro")
-
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _('Compteurs remis à zéro'),
-                'message': f'{len(pack_templates)} compteurs pack/unité remis à zéro',
-                'type': 'success',
-            }
-        }
-
-    def get_pack_sync_diagnostics(self):
-        """Retourne les informations de diagnostic pour la synchronisation"""
-        self.ensure_one()
-        if not self.is_pack_parent:
-            return {"status": "not_pack", "message": "Ce produit n'est pas un pack"}
-
-        return {
-            "status": "active",
-            "pack_qty": self.pack_qty,
-            "pending_units": self.pending_units,
-            "child_product": self.pack_child_product_id.name if self.pack_child_product_id else "Non défini",
-            "cartons_stock": self.qty_available,
-            "units_stock": self.pack_child_product_id.qty_available if self.pack_child_product_id else 0,
-            "theoretical_cartons": (
-                        self.pack_child_product_id.qty_available / self.pack_qty) if self.pack_qty > 0 else 0,
-        }
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -485,26 +358,6 @@ class ProductProduct(models.Model):
         related='product_tmpl_id.code_article',
     )
 
-    def _compute_quantities_dict(self, lot_id, owner_id, package_id, from_date=False, to_date=False):
-        res = super()._compute_quantities_dict(lot_id, owner_id, package_id, from_date, to_date)
-        # Pour les produits père (carton), qty_available = stock enfant (unités) / pack_qty
-        # Même formule que pack_equiv_cartons_available → les deux champs sont toujours identiques.
-        # Le contexte skip_pack_equiv_override évite la récursion lors de la lecture du stock enfant.
-        if self.env.context.get('skip_pack_equiv_override'):
-            return res
-        for product in self:
-            tmpl = product.product_tmpl_id
-            if (getattr(tmpl, 'is_pack_parent', False)
-                    and tmpl.pack_child_product_id
-                    and tmpl.pack_qty > 0):
-                child_qty = tmpl.pack_child_product_id.with_context(
-                    skip_pack_equiv_override=True
-                ).qty_available
-                equiv = child_qty / tmpl.pack_qty
-                if product.id in res:
-                    res[product.id]['qty_available'] = equiv
-        return res
-
     _sql_constraints = [
         ('default_code_unique', 'UNIQUE(default_code)', 'Le code article doit être unique !'),
     ]
@@ -529,29 +382,6 @@ class ProductProduct(models.Model):
         related='product_tmpl_id.pending_reception_qty',
         help="Quantité totale en attente de réception (Brouillon ou Prêt)"
     )
-
-    def action_view_pack_equivalence(self):
-        self.ensure_one()
-        tmpl = self.product_tmpl_id
-        if not tmpl.is_pack_parent:
-            return False
-        message = _(
-            "\nCartons (équiv.): %s\nUnités disponibles: %s\nQté par carton: %s",
-            int(tmpl.pack_equiv_cartons_available),
-            int(tmpl.pack_equiv_units_available),
-            tmpl.pack_qty,
-        )
-        return {
-            "type": "ir.actions.client",
-            "tag": "display_notification",
-            "params": {
-                "title": _("Équivalences de stock"),
-                "message": message,
-                "sticky": False,
-                "type": "info",
-            },
-        }
-
 
     @api.model_create_multi
     def create(self, vals_list):
