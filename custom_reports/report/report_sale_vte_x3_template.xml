@@ -9,9 +9,15 @@
 
                     <!-- EN-TÊTE SOCIÉTÉ -->
                     <div style="margin-bottom: 6px; font-size: 9pt; color: #555;">
-                        <strong><t t-esc="company.name"/></strong>
-                        <t t-if="company.street"> - <t t-esc="company.street"/></t>
-                        <t t-if="company.city">, <t t-esc="company.city"/></t>
+                        <t t-if="len(doc.company_ids) > 1">
+                            <strong>Sociétés :</strong>
+                            <t t-esc="', '.join(doc.company_ids.mapped('name'))"/>
+                        </t>
+                        <t t-else="">
+                            <strong><t t-esc="company.name"/></strong>
+                            <t t-if="company.street"> - <t t-esc="company.street"/></t>
+                            <t t-if="company.city">, <t t-esc="company.city"/></t>
+                        </t>
                     </div>
 
                     <!-- HEADER -->

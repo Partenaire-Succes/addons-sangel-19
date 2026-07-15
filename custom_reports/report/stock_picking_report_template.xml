@@ -16,6 +16,9 @@
                             <h5>Dépôt :
                                 <span t-field="o.location_id.complete_name"/>
                             </h5>
+                            <h5>Société(s) :
+                                <span t-esc="', '.join(o.company_ids.mapped('name'))"/>
+                            </h5>
                             <p>
                                 <strong>Édition faite le
                                     <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y à %H:%M')"/>

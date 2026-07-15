@@ -153,7 +153,7 @@
                         &amp;nbsp;&amp;nbsp;·&amp;nbsp;&amp;nbsp;
                         Période : <strong><t t-esc="data['date_from']"/> au <t t-esc="data['date_to']"/></strong>
                         &amp;nbsp;&amp;nbsp;·&amp;nbsp;&amp;nbsp;
-                        Société : <strong><t t-esc="data['company'].name"/></strong>
+                        Société(s) : <strong><t t-esc="', '.join(data['companies'].mapped('name'))"/></strong>
                         &amp;nbsp;&amp;nbsp;·&amp;nbsp;&amp;nbsp;
                         Devise : <strong><t t-esc="data['currency'].name"/></strong>
                     </div>

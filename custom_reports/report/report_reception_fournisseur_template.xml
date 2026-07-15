@@ -77,15 +77,22 @@
                 <div class="header-section">
                     <div class="row">
                         <div class="col-8">
-                            <div class="company-name">
-                                <span t-field="o.company_id.name"/>
-                            </div>
-                            <div t-if="o.company_id.street">
-                                <span t-field="o.company_id.street"/>
-                            </div>
-                            <div t-if="o.company_id.city">
-                                <span t-field="o.company_id.city"/>
-                            </div>
+                            <t t-if="len(o.company_ids) > 1">
+                                <div class="company-name">
+                                    <span t-esc="', '.join(o.company_ids.mapped('name'))"/>
+                                </div>
+                            </t>
+                            <t t-else="">
+                                <div class="company-name">
+                                    <span t-field="o.company_id.name"/>
+                                </div>
+                                <div t-if="o.company_id.street">
+                                    <span t-field="o.company_id.street"/>
+                                </div>
+                                <div t-if="o.company_id.city">
+                                    <span t-field="o.company_id.city"/>
+                                </div>
+                            </t>
                         </div>
                         <div class="col-4">
                             <div class="date-range">

@@ -15,9 +15,9 @@
                             <field name="date_fin" widget="date" required="1"/>
                         </group>
                         <group string="Filtres">
-                            <field name="company_id"
-                                   options="{'no_create': True, 'no_open': True}"
-                                   readonly="1"/>
+                            <field name="company_ids"
+                                   widget="many2many_tags"
+                                   options="{'no_create': True}"/>
                             <field name="fournisseur_ids"
                                    widget="many2many_tags"
                                    options="{'no_create': True}"

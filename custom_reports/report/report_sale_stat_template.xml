@@ -80,6 +80,10 @@
                                     <t t-if="len(doc.partner_ids) > 3">...</t>
                                 </t>
                             </h4>
+                            <h4>
+                                <strong>Société(s):</strong>
+                                <span t-esc="', '.join(doc.company_ids.mapped('name'))"/>
+                            </h4>
                         </div>
 
                         <!-- Données -->

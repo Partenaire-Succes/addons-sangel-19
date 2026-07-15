@@ -13,10 +13,9 @@
                             <field name="date_to" required="1"/>
                         </group>
                         <group string="Filtres">
-                            <field name="company_id"
+                            <field name="company_ids"
+                                   widget="many2many_tags"
                                    options="{'no_create': True}"
-                                   groups="base.group_multi_company"
-                                   readonly="1"
                             />
                         </group>
                     </group>

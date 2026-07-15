@@ -40,19 +40,32 @@ class StockValoriseReport(models.TransientModel):
         compute='_compute_product_ids',
     )
 
+    company_ids = fields.Many2many(
+        'res.company',
+        string='Sociétés',
+        required=True,
+        default=lambda self: self.env.company,
+    )
     company_id = fields.Many2one(
         'res.company',
         string='Société',
-        default=lambda self: self.env.company,
+        compute='_compute_company_id',
+        help="Première société sélectionnée, utilisée pour le coût standard de "
+             "repli — l'emplacement de stock reste unique quel que soit le nombre "
+             "de sociétés sélectionnées.",
     )
 
+    @api.depends('company_ids')
+    def _compute_company_id(self):
+        for record in self:
+            record.company_id = record.company_ids[:1]
 
-    @api.depends('company_id', 'cat_gestion_ids')
+    @api.depends('company_ids', 'cat_gestion_ids')
     def _compute_product_ids(self):
-        """Détermine les produits concernés par la société et les catégories choisies."""
+        """Détermine les produits concernés par les sociétés et les catégories choisies."""
         for record in self:
             domain = [
-                ('product_tmpl_id.allowed_company_ids', 'in', [record.company_id.id]),
+                ('product_tmpl_id.allowed_company_ids', 'in', record.company_ids.ids),
                 ('product_tmpl_id.type', '=', 'consu'),
                 ('product_tmpl_id.prod_type_x3_id.name', '=', 'TS'),
             ]
@@ -118,10 +131,10 @@ class StockValoriseReport(models.TransientModel):
             SELECT product_id, res_model_name, quantity, value
             FROM stock_avco_report
             WHERE product_id = ANY(%s)
-              AND company_id = %s
+              AND company_id = ANY(%s)
               AND date <= %s
             ORDER BY product_id, date, id
-        """, [list(self.product_ids.ids), self.company_id.id, self.date_report])
+        """, [list(self.product_ids.ids), list(self.company_ids.ids), self.date_report])
 
         state_by_product_id = {}
         for product_id, res_model_name, quantity, value in self.env.cr.fetchall():
@@ -257,7 +270,7 @@ class StockValoriseReport(models.TransientModel):
         def aln(h="left"): return Alignment(horizontal=h, vertical="center")
 
         ws.merge_cells("A1:G1")
-        ws["A1"] = self.company_id.name
+        ws["A1"] = ', '.join(self.company_ids.mapped('name'))
         ws["A1"].font = Font(name="Arial", bold=True, size=11)
 
         ws.merge_cells("A2:G2")

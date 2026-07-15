@@ -19,11 +19,17 @@ class SupplierReturnReportWizard(models.TransientModel):
         required=True,
         default=fields.Date.context_today
     )
+    company_ids = fields.Many2many(
+        'res.company',
+        string='Sociétés',
+        required=True,
+        default=lambda self: self.env.company,
+    )
     company_id = fields.Many2one(
         'res.company',
         string='Société',
-        required=True,
-        default=lambda self: self.env.company
+        compute='_compute_company_id',
+        help="Première société sélectionnée, utilisée pour l'en-tête du document.",
     )
     partner_ids = fields.Many2many(
         'res.partner',
@@ -38,6 +44,11 @@ class SupplierReturnReportWizard(models.TransientModel):
             if record.date_from > record.date_to:
                 raise UserError("La date de début doit être antérieure à la date de fin.")
 
+    @api.depends('company_ids')
+    def _compute_company_id(self):
+        for record in self:
+            record.company_id = record.company_ids[:1]
+
     def action_print_report(self):
         self.ensure_one()
         self._get_report_data()  # lève UserError si vide
@@ -49,7 +60,7 @@ class SupplierReturnReportWizard(models.TransientModel):
             ('state', '=', 'done'),
             ('date_done', '>=', self.date_from),
             ('date_done', '<=', self.date_to),
-            ('company_id', '=', self.company_id.id),
+            ('company_id', 'in', self.company_ids.ids),
         ]
         if self.partner_ids:
             domain.append(('partner_id', 'in', self.partner_ids.ids))
@@ -129,7 +140,7 @@ class SupplierReturnReportWizard(models.TransientModel):
             return Alignment(horizontal=h, vertical=v)
 
         ws.merge_cells("A1:F1")
-        ws["A1"] = self.company_id.name
+        ws["A1"] = ', '.join(self.company_ids.mapped('name'))
         ws["A1"].font = Font(name="Arial", bold=True, size=11)
 
         ws.merge_cells("A2:F2")

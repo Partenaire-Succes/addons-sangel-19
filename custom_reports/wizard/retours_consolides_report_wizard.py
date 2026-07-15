@@ -33,11 +33,17 @@ class RetoursConsolidesReportWizard(models.TransientModel):
         required=True,
         default=fields.Date.context_today,
     )
+    company_ids = fields.Many2many(
+        'res.company',
+        string='Sociétés',
+        required=True,
+        default=lambda self: self.env.company,
+    )
     company_id = fields.Many2one(
         'res.company',
         string='Société',
-        required=True,
-        default=lambda self: self.env.company,
+        compute='_compute_company_id',
+        help="Première société sélectionnée, utilisée pour la devise et l'en-tête du document.",
     )
 
     @api.constrains('date_from', 'date_to')
@@ -45,6 +51,11 @@ class RetoursConsolidesReportWizard(models.TransientModel):
         for rec in self:
             if rec.date_from > rec.date_to:
                 raise UserError("La date de début doit être antérieure à la date de fin.")
+
+    @api.depends('company_ids')
+    def _compute_company_id(self):
+        for rec in self:
+            rec.company_id = rec.company_ids[:1]
 
     # ────────────────────────────────────────────────────────────────────────
     # DONNÉES RAPPORT
@@ -75,7 +86,7 @@ class RetoursConsolidesReportWizard(models.TransientModel):
             ('origin', '=', 'Réception Directe'),
             ('date_done', '>=', self.date_from),
             ('date_done', '<=', self.date_to),
-            ('company_id', '=', self.company_id.id),
+            ('company_id', 'in', self.company_ids.ids),
         ], order='date_done')
 
         rows = []
@@ -114,7 +125,7 @@ class RetoursConsolidesReportWizard(models.TransientModel):
             ('location_dest_id.usage', '=', 'supplier'),
             ('date_done', '>=', self.date_from),
             ('date_done', '<=', self.date_to),
-            ('company_id', '=', self.company_id.id),
+            ('company_id', 'in', self.company_ids.ids),
         ], order='date_done')
 
         rows = []
@@ -143,7 +154,7 @@ class RetoursConsolidesReportWizard(models.TransientModel):
             ('ref', 'like', 'Retour inventaire%'),
             ('invoice_date', '>=', self.date_from),
             ('invoice_date', '<=', self.date_to),
-            ('company_id', '=', self.company_id.id),
+            ('company_id', 'in', self.company_ids.ids),
         ], order='invoice_date')
 
         etat_labels = {
@@ -193,6 +204,7 @@ class RetoursConsolidesReportWizard(models.TransientModel):
             'date_from': self._fmt_date(self.date_from),
             'date_to': self._fmt_date(self.date_to),
             'company': self.company_id,
+            'companies': self.company_ids,
             'currency': currency,
             'type_rapport': self.type_rapport,
             'type_label': self._get_type_label(),
@@ -261,7 +273,7 @@ class RetoursConsolidesReportWizard(models.TransientModel):
 
         def write_section(ws, title, headers, rows, col_widths):
             ws.merge_cells(f"A1:{chr(64 + len(headers))}1")
-            ws["A1"] = self.company_id.name
+            ws["A1"] = ', '.join(self.company_ids.mapped('name'))
             ws["A1"].font = Font(name="Arial", bold=True, size=11)
 
             ws.merge_cells(f"A2:{chr(64 + len(headers))}2")

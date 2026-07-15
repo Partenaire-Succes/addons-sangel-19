@@ -19,11 +19,17 @@ class RetourProduitReportWizard(models.TransientModel):
         required=True,
         default=fields.Date.context_today,
     )
+    company_ids = fields.Many2many(
+        'res.company',
+        string='Sociétés',
+        required=True,
+        default=lambda self: self.env.company,
+    )
     company_id = fields.Many2one(
         'res.company',
         string='Société',
-        required=True,
-        default=lambda self: self.env.company,
+        compute='_compute_company_id',
+        help="Première société sélectionnée, utilisée pour l'en-tête du document.",
     )
     fournisseur_ids = fields.Many2many(
         'res.partner',
@@ -37,6 +43,11 @@ class RetourProduitReportWizard(models.TransientModel):
         for rec in self:
             if rec.date_debut > rec.date_fin:
                 raise UserError("La date de début doit être antérieure à la date de fin.")
+
+    @api.depends('company_ids')
+    def _compute_company_id(self):
+        for rec in self:
+            rec.company_id = rec.company_ids[:1]
 
     def _get_report_data(self):
         """
@@ -56,7 +67,7 @@ class RetourProduitReportWizard(models.TransientModel):
             ('location_dest_id.usage', '=', 'supplier'),
             ('picking_id.date_done', '>=', self.date_debut),
             ('picking_id.date_done', '<=', self.date_fin),
-            ('picking_id.company_id', '=', self.company_id.id),
+            ('picking_id.company_id', 'in', self.company_ids.ids),
         ]
         if self.fournisseur_ids:
             domain.append(('picking_id.partner_id', 'in', self.fournisseur_ids.ids))
@@ -163,7 +174,7 @@ class RetourProduitReportWizard(models.TransientModel):
 
         NCOLS = 6
         ws.merge_cells("A1:F1")
-        ws["A1"] = self.company_id.name
+        ws["A1"] = ', '.join(self.company_ids.mapped('name'))
         ws["A1"].font = font(bold=True, size=11)
 
         ws.merge_cells("A2:F2")

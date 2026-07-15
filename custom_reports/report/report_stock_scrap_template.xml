@@ -109,7 +109,7 @@
                                 </div>
 
                                 <div class="meta-row">
-                                    <div><strong>Poste(s):</strong> Tous les postes</div>
+                                    <div><strong>Société(s):</strong> <span t-esc="', '.join(o.company_ids.mapped('name'))"/></div>
                                     <div><strong>Utilisateur(s):</strong> Tous les utilisateurs</div>
                                 </div>
                                 <div class="meta-row">

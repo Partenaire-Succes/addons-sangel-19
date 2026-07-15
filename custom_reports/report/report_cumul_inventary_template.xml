@@ -27,6 +27,11 @@
                             </em>
                         </p>
 
+                        <p>
+                            <strong>Société(s):</strong>
+                            <span t-esc="', '.join(doc.company_ids.mapped('name'))"/>
+                        </p>
+
                         <t t-set="grouped_lines" t-value="doc._get_grouped_lines()"/>
                         <t t-set="grand_total_ecart" t-value="0"/>
                         <t t-set="grand_total_montant" t-value="0"/>

@@ -19,11 +19,17 @@ class ReceptionFournisseurWizard(models.TransientModel):
         required=True,
         default=fields.Date.context_today
     )
+    company_ids = fields.Many2many(
+        'res.company',
+        string='Sociétés',
+        required=True,
+        default=lambda self: self.env.company,
+    )
     company_id = fields.Many2one(
         'res.company',
         string='Société',
-        required=True,
-        default=lambda self: self.env.company
+        compute='_compute_company_id',
+        help="Première société sélectionnée, utilisée pour l'en-tête du document.",
     )
     fournisseur_ids = fields.Many2many(
         'res.partner',
@@ -43,6 +49,11 @@ class ReceptionFournisseurWizard(models.TransientModel):
             if record.date_debut > record.date_fin:
                 raise UserError("La date de début doit être antérieure à la date de fin.")
 
+    @api.depends('company_ids')
+    def _compute_company_id(self):
+        for record in self:
+            record.company_id = record.company_ids[:1]
+
     def _get_pickings_data(self):
         """
         Récupère TOUS les pickings entrants validés (réceptions par commande ET
@@ -56,7 +67,7 @@ class ReceptionFournisseurWizard(models.TransientModel):
             ('state', '=', 'done'),
             ('date_done', '>=', self.date_debut),
             ('date_done', '<=', self.date_fin),
-            ('company_id', '=', self.company_id.id),
+            ('company_id', 'in', self.company_ids.ids),
             ('location_id.usage', 'in', ['supplier', 'transit']),  # exclut les retours fournisseurs
         ]
         if self.fournisseur_ids:
@@ -143,7 +154,7 @@ class ReceptionFournisseurWizard(models.TransientModel):
 
         # ── Ligne 1 : société ─────────────────────────────────────────────────
         ws.merge_cells("A1:F1")
-        ws["A1"] = self.company_id.name
+        ws["A1"] = ', '.join(self.company_ids.mapped('name'))
         ws["A1"].font = Font(name="Arial", bold=True, size=11)
 
         # ── Ligne 2 : titre ───────────────────────────────────────────────────

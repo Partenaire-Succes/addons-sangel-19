@@ -68,7 +68,9 @@
                 <div class="header-section">
                     <div class="row">
                         <div class="col-8">
-                            <div class="company-name"><span t-field="o.company_id.name"/></div>
+                            <div class="company-name">
+                                <span t-esc="', '.join(o.company_ids.mapped('name'))"/>
+                            </div>
                         </div>
                         <div class="col-4">
                             <div class="date-range">
