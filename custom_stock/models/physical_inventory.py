@@ -179,12 +179,10 @@ class PhysicalInventory(models.Model):
         self.write({'state': 'in_progress'})
 
     def update_price(self):
-        lines = self.env['physical.inventory.line'].search([
-            ('inventory_physical_id.company_id', 'in', self.company_id.ids),
-        ])
-        for line in lines:
-            if not line.price:
-                line.price = line.standard_price
+        for rec in self:
+            for line in rec.physical_line_ids:
+                if not line.price:
+                    line.price = line.standard_price
 
     def action_refresh_qty_price(self):
         self.ensure_one()
