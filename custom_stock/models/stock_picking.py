@@ -32,9 +32,47 @@ class StockPicking(models.Model):
     ref_sage = fields.Char(string="Ref SAGE", readonly=True)
     date_sage = fields.Datetime(string="Date SAGE", readonly=True)
 
+    facturation_state = fields.Selection([
+        ('none', 'Non facturé'),
+        ('invoiced', 'Facture créée'),
+    ], string="Facturation", default='none', copy=False, readonly=True)
+    facture_client_id = fields.Many2one(
+        'account.move', string="Facture client", copy=False, readonly=True)
+
+    def action_open_facture_client(self):
+        """Smart button : ouvrir la facture client créée depuis ce BL."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _("Facture client"),
+            'res_model': 'account.move',
+            'res_id': self.facture_client_id.id,
+            'view_mode': 'form',
+        }
 
     def button_validate(self):
         """Override: price validation + sync facture fournisseur + éclatement cartons après réception."""
+
+        # ── 0. Confirmation utilisateur pour les BL liés à une vente ─────────
+        # Uniquement pour les livraisons sortantes issues d'un sale.order,
+        # et seulement au premier clic (le wizard relance avec le flag).
+        if not self.env.context.get('bl_validate_confirmed'):
+            bl_ventes = self.filtered(
+                lambda p: p.picking_type_id.code == 'outgoing'
+                and p.sale_id and p.state not in ('done', 'cancel')
+            )
+            if bl_ventes:
+                wizard = self.env['validate.bl.confirm.wizard'].create({
+                    'picking_ids': [(6, 0, self.ids)],
+                })
+                return {
+                    'type': 'ir.actions.act_window',
+                    'name': _("Confirmation"),
+                    'res_model': 'validate.bl.confirm.wizard',
+                    'res_id': wizard.id,
+                    'view_mode': 'form',
+                    'target': 'new',
+                }
 
         # ── 1. Pre-validation checks (before calling super) ──────────────────
         errors = []
@@ -76,12 +114,72 @@ class StockPicking(models.Model):
                     and picking.purchase_id):
                 picking._sync_invoice_from_reception(prix_saisis=prix_saisis)
 
+        # ── 3b. Sync facture client (après livraison validée) ─────────────────
+        # Limité strictement aux livraisons issues d'une commande de vente
+        # (sale_id) : les autres pickings (POS, inter-société, éclatements…)
+        # ne sont pas concernés.
+        for picking in self:
+            if (picking.picking_type_id.code == 'outgoing'
+                    and picking.state == 'done'
+                    and picking.sale_id):
+                picking._sync_invoice_from_delivery()
+
         # ── 4. Éclatement automatique cartons → unités ───────────────────────
         for picking in self:
             if picking.picking_type_id.code == 'incoming' and picking.state == 'done':
                 picking.action_eclater_cartons_en_unites(auto=True)
 
         return result
+
+    def _sync_invoice_from_delivery(self):
+        """
+        Crée et valide automatiquement la facture client depuis la livraison.
+
+        Appelé APRÈS super().button_validate() quand picking = done + lié à
+        une commande de vente (sale_id).
+
+        Logique :
+          1. Vérifier qu'il y a quelque chose à facturer sur la commande.
+          2. Créer la facture via _create_invoices() (équivalent du bouton
+             'Créer une facture' sur le devis/commande).
+          3. Valider (poster) la facture.
+        """
+        self.ensure_one()
+        order = self.sale_id
+
+        if order.invoice_status != 'to invoice':
+            _logger.info(
+                "[SYNC_INVOICE_VENTE] Rien à facturer pour la commande %s "
+                "(statut facturation : %s) — livraison %s",
+                order.name, order.invoice_status, self.name,
+            )
+            return
+
+        invoices = order._create_invoices()
+
+        for invoice in invoices:
+            if invoice.amount_untaxed <= 0:
+                _logger.warning(
+                    "[SYNC_INVOICE_VENTE] Facture %s non postée : montant = 0 "
+                    "— commande %s",
+                    invoice.name, order.name,
+                )
+                continue
+            invoice.invoice_date = fields.Date.today()
+            invoice.action_post()
+            # Marquer le BL comme facturé (badge + smart button dans la vue)
+            self.write({
+                'facturation_state': 'invoiced',
+                'facture_client_id': invoice.id,
+            })
+            self.message_post(
+                body=_("Facture client <b>%s</b> créée et validée automatiquement.") % invoice.name,
+                message_type='notification',
+            )
+            _logger.info(
+                "[SYNC_INVOICE_VENTE] Facture %s validée — livraison %s / commande %s",
+                invoice.name, self.name, order.name,
+            )
 
     def _sync_invoice_from_reception(self, prix_saisis=None):
         """

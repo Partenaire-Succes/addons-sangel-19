@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         FACTURATION AUTOMATIQUE DES BL (livraisons issues d'un sale.order)
+         1. Wizard de confirmation avant validation du BL.
+         2. Badge "Facture créée" + smart button vers la facture client
+            sur le formulaire de transfert.
+         ══════════════════════════════════════════════════════════════════════ -->
+
+    <record id="view_validate_bl_confirm_wizard_form" model="ir.ui.view">
+        <field name="name">validate.bl.confirm.wizard.form</field>
+        <field name="model">validate.bl.confirm.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Confirmation">
+                <div class="alert alert-warning" role="alert">
+                    <strong>Êtes-vous sûr de vouloir valider ce bon de livraison ?</strong>
+                    <br/>
+                    La facture client sera créée et validée automatiquement
+                    sur la commande de vente.
+                </div>
+                <field name="picking_ids" invisible="1"/>
+                <footer>
+                    <button name="action_confirm" string="Oui, valider"
+                            type="object" class="btn-primary" data-hotkey="q"/>
+                    <button string="Annuler" special="cancel"
+                            class="btn-secondary" data-hotkey="x"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_picking_form_facturation" model="ir.ui.view">
+        <field name="name">stock.picking.form.facturation</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="arch" type="xml">
+            <!-- Badge de statut de facturation à côté du statut du BL -->
+            <xpath expr="//header/field[@name='state']" position="before">
+                <field name="facturation_state" widget="badge"
+                       decoration-success="facturation_state == 'invoiced'"
+                       invisible="facturation_state != 'invoiced'"/>
+            </xpath>
+            <!-- Smart button vers la facture client créée -->
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_open_facture_client" type="object"
+                        class="oe_stat_button" icon="fa-file-text-o"
+                        invisible="not facture_client_id">
+                    <div class="o_stat_info">
+                        <span class="o_stat_text">Facture</span>
+                        <span class="o_stat_text">client</span>
+                    </div>
+                </button>
+                <field name="facture_client_id" invisible="1"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

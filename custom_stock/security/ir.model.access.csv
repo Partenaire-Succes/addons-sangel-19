@@ -39,3 +39,4 @@ access_stock_move_product_report_wizard,stock.move.product.report.wizard,model_s
 access_physical_inventory_update_quantity_wizard,physical.inventory.update.quantity.wizard,model_physical_inventory_update_quantity_wizard,,1,1,1,1
 access_physical_inventory_update_quantity_wizard_line,physical.inventory.update.quantity.wizard.line,model_physical_inventory_update_quantity_wizard_line,,1,1,1,1
 
+access_validate_bl_confirm_wizard,validate.bl.confirm.wizard,model_validate_bl_confirm_wizard,,1,1,1,1
