@@ -49,6 +49,7 @@
         'wizard/stock_avco_wizard_views.xml',
         'wizard/sale_margin_recompute_wizard_views.xml',
         'wizard/product_status_import_wizard_views.xml',
+        'wizard/physical_inventory_line_cleanup_wizard_views.xml',
         'views/menus.xml',
     ],
     'installable': True,

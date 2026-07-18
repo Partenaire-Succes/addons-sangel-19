@@ -45,6 +45,13 @@
               groups="stock.group_stock_manager"
               sequence="40"/>
 
+    <menuitem id="menu_import_excel_physical_inventory_cleanup"
+              name="Nettoyage Lignes Inventaire Orphelines"
+              parent="menu_import_excel_cat_stock"
+              action="action_physical_inventory_line_cleanup_wizard"
+              groups="stock.group_stock_manager"
+              sequence="50"/>
+
     <!-- ══ Achats ══════════════════════════════════════════════════════════ -->
     <menuitem id="menu_import_excel_cat_purchase"
               name="Achats"

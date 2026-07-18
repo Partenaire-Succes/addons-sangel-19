@@ -28,3 +28,5 @@ access_pos_margin_cost_wizard,pos.margin.cost.wizard,model_pos_margin_cost_wizar
 access_pos_margin_cost_wizard_line,pos.margin.cost.wizard.line,model_pos_margin_cost_wizard_line,stock.group_stock_manager,1,1,1,1
 access_product_status_import_wizard,product.status.import.wizard,model_product_status_import_wizard,stock.group_stock_manager,1,1,1,1
 access_product_status_import_wizard_line,product.status.import.wizard.line,model_product_status_import_wizard_line,stock.group_stock_manager,1,1,1,1
+access_physical_inventory_line_cleanup_wizard,physical.inventory.line.cleanup.wizard,model_physical_inventory_line_cleanup_wizard,stock.group_stock_manager,1,1,1,1
+access_physical_inventory_line_cleanup_wizard_line,physical.inventory.line.cleanup.wizard.line,model_physical_inventory_line_cleanup_wizard_line,stock.group_stock_manager,1,1,1,1
