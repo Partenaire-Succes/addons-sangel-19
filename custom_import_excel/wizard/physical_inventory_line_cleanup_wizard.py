@@ -17,6 +17,11 @@ class PhysicalInventoryLineCleanupWizard(models.TransientModel):
         ('done',    'Terminé'),
     ], default='draft', readonly=True)
 
+    company_id = fields.Many2one(
+        'res.company', string="Société", required=True,
+        default=lambda self: self.env.company,
+    )
+
     line_ids = fields.One2many(
         'physical.inventory.line.cleanup.wizard.line', 'wizard_id', string="Lignes orphelines"
     )
@@ -33,10 +38,24 @@ class PhysicalInventoryLineCleanupWizard(models.TransientModel):
     # ------------------------------------------------------------------
 
     def _orphan_domain(self):
-        return [
+        domain = [
             ('inventory_physical_id', '=', False),
             ('physical_qty', '=', 0),
         ]
+        # Ces lignes n'ont pas de parent (donc pas de company_id via
+        # inventory_physical_id.company_id) : on ne peut les rattacher à une
+        # société qu'à travers la visibilité produit (allowed_company_ids,
+        # champ ajouté par custom_sales — pas une dépendance de ce module,
+        # d'où la vérification défensive, même pattern que
+        # PhysicalInventory.create_line_physical()).
+        has_allowed = bool(self.env['product.template']._fields.get('allowed_company_ids'))
+        if has_allowed:
+            domain += [
+                '|',
+                ('product_tmpl_id.allowed_company_ids', '=', False),
+                ('product_tmpl_id.allowed_company_ids', 'in', self.company_id.ids),
+            ]
+        return domain
 
     # ------------------------------------------------------------------
     # Étape 1 — Analyser

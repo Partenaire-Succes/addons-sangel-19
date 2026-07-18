@@ -34,6 +34,9 @@
                     <!-- ÉTAPE 1 : Import                      -->
                     <!-- ══════════════════════════════════════ -->
                     <group invisible="state != 'import'">
+                        <group string="Paramètres">
+                            <field name="company_id" options="{'no_create': True}"/>
+                        </group>
                         <group string="Fichier">
                             <field name="excel_file" filename="excel_filename"
                                    widget="binary" string="Fichier Excel (.xlsx)"/>

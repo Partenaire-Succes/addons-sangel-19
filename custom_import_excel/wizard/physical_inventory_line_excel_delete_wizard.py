@@ -21,6 +21,11 @@ class PhysicalInventoryLineExcelDeleteWizard(models.TransientModel):
         ('done',    'Terminé'),
     ], default='import', readonly=True)
 
+    company_id = fields.Many2one(
+        'res.company', string="Société", required=True,
+        default=lambda self: self.env.company,
+    )
+
     excel_file     = fields.Binary(string="Fichier Excel", attachment=False)
     excel_filename = fields.Char(string="Nom du fichier")
 
@@ -69,7 +74,12 @@ class PhysicalInventoryLineExcelDeleteWizard(models.TransientModel):
     def _analyse_row(self, code, inventaire_name):
         base = {'code_excel': code, 'inventaire_excel': inventaire_name}
 
-        product = self.env['product.product'].with_context(active_test=False).search(
+        env = self.env(context=dict(
+            self.env.context,
+            allowed_company_ids=[self.company_id.id],
+        ))
+
+        product = env['product.product'].with_context(active_test=False).search(
             [('default_code', '=', code)], limit=1
         )
         if not product:
@@ -77,12 +87,13 @@ class PhysicalInventoryLineExcelDeleteWizard(models.TransientModel):
                     'message': f"Code article '{code}' introuvable dans Odoo."}
         base['product_tmpl_id'] = product.product_tmpl_id.id
 
-        inventory = self.env['physical.inventory'].search(
-            [('name', '=', inventaire_name)], limit=1
+        inventory = env['physical.inventory'].search(
+            [('name', '=', inventaire_name), ('company_id', '=', self.company_id.id)], limit=1
         )
         if not inventory:
             return {**base, 'state': 'not_found',
-                    'message': f"Inventaire '{inventaire_name}' introuvable dans Odoo."}
+                    'message': f"Inventaire '{inventaire_name}' introuvable pour la société "
+                               f"'{self.company_id.name}'."}
         base['inventory_physical_id'] = inventory.id
 
         inv_lines = self.env['physical.inventory.line'].with_context(active_test=False).search([

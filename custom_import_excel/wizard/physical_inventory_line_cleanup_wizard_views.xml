@@ -34,6 +34,10 @@
                         </p>
                     </div>
 
+                    <group invisible="state != 'draft'">
+                        <field name="company_id" options="{'no_create': True}"/>
+                    </group>
+
                     <div invisible="state == 'draft'">
                         <group>
                             <field name="count_found" string="Lignes trouvées"/>
