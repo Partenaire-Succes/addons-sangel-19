@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_physical_inventory_line_excel_delete_wizard_form" model="ir.ui.view">
+        <field name="name">physical.inventory.line.excel.delete.wizard.form</field>
+        <field name="model">physical.inventory.line.excel.delete.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Suppression de lignes d'inventaire par import Excel">
+
+                <header>
+                    <button name="action_preview"
+                            string="Analyser le fichier"
+                            type="object" class="btn-primary"
+                            invisible="state != 'import'"/>
+                    <button name="action_delete"
+                            string="Supprimer les lignes"
+                            type="object" class="btn-danger"
+                            confirm="Les lignes d'inventaire correspondantes vont être définitivement supprimées. Continuer ?"
+                            invisible="state != 'preview' or count_ok == 0"/>
+                    <button name="action_reset"
+                            string="Recommencer"
+                            type="object" class="btn-secondary"
+                            invisible="state == 'import'"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="import,preview,done"/>
+                </header>
+
+                <sheet>
+                    <div class="oe_title">
+                        <h1>Suppression de lignes d'inventaire par import Excel</h1>
+                    </div>
+
+                    <!-- ══════════════════════════════════════ -->
+                    <!-- ÉTAPE 1 : Import                      -->
+                    <!-- ══════════════════════════════════════ -->
+                    <group invisible="state != 'import'">
+                        <group string="Fichier">
+                            <field name="excel_file" filename="excel_filename"
+                                   widget="binary" string="Fichier Excel (.xlsx)"/>
+                            <field name="excel_filename" invisible="1"/>
+                        </group>
+                    </group>
+
+                    <div invisible="state != 'import'"
+                         style="background:#f0f7ff;border:1px solid #b8d4f0;
+                                border-radius:6px;padding:12px;margin-top:8px;">
+                        <b>Format Excel attendu :</b>
+                        <table style="margin-top:8px;border-collapse:collapse;width:500px;">
+                            <tr style="background:#d0e8ff;">
+                                <th style="padding:6px;border:1px solid #aac;">CODE</th>
+                                <th style="padding:6px;border:1px solid #aac;">INVENTAIRE</th>
+                            </tr>
+                            <tr>
+                                <td style="padding:6px;border:1px solid #ddd;text-align:center;">0852</td>
+                                <td style="padding:6px;border:1px solid #ddd;">INVENTAIRE GENERAL DU 1904 CODE INV 12</td>
+                            </tr>
+                        </table>
+                        <p style="margin-top:8px;font-size:12px;color:#6c757d;">
+                            Le code article est complété à 4 chiffres automatiquement. Le nom
+                            d'inventaire doit correspondre exactement au champ « Nom » de
+                            l'inventaire physique dans Odoo.
+                        </p>
+                    </div>
+
+                    <!-- ══════════════════════════════════════ -->
+                    <!-- ÉTAPE 2 : Aperçu                      -->
+                    <!-- ══════════════════════════════════════ -->
+                    <div invisible="state != 'preview'">
+                        <group string="Résumé de l'analyse">
+                            <group>
+                                <field name="count_ok"       string="Lignes à supprimer"/>
+                                <field name="total_inv_lines" string="Total lignes d'inventaire"/>
+                            </group>
+                            <group>
+                                <field name="count_not_found" string="Introuvables"/>
+                                <field name="count_no_lines"  string="Aucune ligne correspondante"/>
+                            </group>
+                        </group>
+
+                        <notebook>
+                            <page string="Lignes à supprimer">
+                                <field name="line_ids" nolabel="1" readonly="1"
+                                       domain="[('state', '=', 'ok')]">
+                                    <list decoration-warning="nb_lines &gt; 1">
+                                        <field name="code_excel"             string="Code"/>
+                                        <field name="product_tmpl_id"        string="Article"/>
+                                        <field name="inventaire_excel"       string="Inventaire"/>
+                                        <field name="nb_lines"               string="Nb lignes"/>
+                                        <field name="state" string="Statut" widget="badge"
+                                               decoration-success="state == 'ok'"/>
+                                    </list>
+                                </field>
+                            </page>
+
+                            <page string="Introuvables / Sans lignes"
+                                  invisible="count_not_found == 0 and count_no_lines == 0">
+                                <field name="line_ids" nolabel="1" readonly="1"
+                                       domain="[('state', 'in', ['not_found', 'no_lines'])]">
+                                    <list decoration-danger="state == 'not_found'"
+                                          decoration-warning="state == 'no_lines'">
+                                        <field name="code_excel"       string="Code"/>
+                                        <field name="inventaire_excel" string="Inventaire"/>
+                                        <field name="state"   string="Statut" widget="badge"
+                                               decoration-danger="state == 'not_found'"
+                                               decoration-warning="state == 'no_lines'"/>
+                                        <field name="message" string="Message"/>
+                                    </list>
+                                </field>
+                            </page>
+                        </notebook>
+                    </div>
+
+                    <!-- ══════════════════════════════════════ -->
+                    <!-- ÉTAPE 3 : Résultat                    -->
+                    <!-- ══════════════════════════════════════ -->
+                    <div invisible="state != 'done'">
+                        <field name="line_ids" nolabel="1" readonly="1"
+                               domain="[('state', '=', 'done')]">
+                            <list>
+                                <field name="code_excel"       string="Code"/>
+                                <field name="product_tmpl_id"  string="Article"/>
+                                <field name="inventaire_excel" string="Inventaire"/>
+                                <field name="nb_lines"         string="Lignes supprimées"/>
+                            </list>
+                        </field>
+                        <field name="summary_html" widget="html" readonly="1" nolabel="1"/>
+                    </div>
+
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_physical_inventory_line_excel_delete_wizard" model="ir.actions.act_window">
+        <field name="name">Suppression lignes inventaire (Excel)</field>
+        <field name="res_model">physical.inventory.line.excel.delete.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+</odoo>
