@@ -279,7 +279,10 @@ class PhysicalInventoryLineExcelDeleteWizardLine(models.TransientModel):
     product_tmpl_id       = fields.Many2one('product.template', string="Article",   readonly=True)
     inventory_physical_id = fields.Many2one('physical.inventory', string="Inventaire", readonly=True)
     inv_line_ids = fields.Many2many(
-        'physical.inventory.line', string="Lignes d'inventaire concernées", readonly=True
+        'physical.inventory.line',
+        relation='pil_excel_delete_wizard_line_rel',
+        column1='wizard_line_id', column2='inv_line_id',
+        string="Lignes d'inventaire concernées", readonly=True,
     )
     nb_lines = fields.Integer(string="Nb lignes", readonly=True)
 
