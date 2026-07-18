@@ -117,7 +117,13 @@ class PhysicalInventoryLineExcelDeleteWizard(models.TransientModel):
 
         for wl in ok_lines:
             try:
-                inv_lines = wl.inv_line_ids
+                # physical.inventory.line.unlink() refuse la suppression dès
+                # que l'inventaire parent est en mode 'normal' (le mode par
+                # défaut), sauf sous ce contexte — même contournement que
+                # PhysicalInventory.create_line_physical(). Ici la
+                # suppression est déjà validée explicitement par l'utilisateur
+                # (aperçu + confirmation), donc le contournement est légitime.
+                inv_lines = wl.inv_line_ids.with_context(from_generate_lines=True)
                 count = len(inv_lines)
                 inv_lines.unlink()
                 nb_inv_lines += count
