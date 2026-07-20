@@ -5,6 +5,7 @@
     <menuitem id="menu_import_excel_root"
               name="Import Excel"
               action="action_import_excel_dashboard"
+              groups="custom_pos.group_dsi_it"
               sequence="100"/>
 
     <!-- ══ Toutes les mises à jour ════════════════════════════════════════ -->
