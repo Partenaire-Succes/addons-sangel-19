@@ -36,6 +36,8 @@
 
                     <group invisible="state != 'draft'">
                         <field name="company_id" options="{'no_create': True}"/>
+                        <field name="date_from"/>
+                        <field name="date_to"/>
                     </group>
 
                     <div invisible="state == 'draft'">

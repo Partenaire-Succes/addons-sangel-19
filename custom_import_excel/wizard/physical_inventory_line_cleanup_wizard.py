@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
+from datetime import datetime, time
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
@@ -21,6 +22,8 @@ class PhysicalInventoryLineCleanupWizard(models.TransientModel):
         'res.company', string="Société", required=True,
         default=lambda self: self.env.company,
     )
+    date_from = fields.Date(string="Date de début")
+    date_to   = fields.Date(string="Date de fin")
 
     line_ids = fields.One2many(
         'physical.inventory.line.cleanup.wizard.line', 'wizard_id', string="Lignes orphelines"
@@ -55,6 +58,13 @@ class PhysicalInventoryLineCleanupWizard(models.TransientModel):
                 ('product_tmpl_id.allowed_company_ids', '=', False),
                 ('product_tmpl_id.allowed_company_ids', 'in', self.company_id.ids),
             ]
+        # Période de contrôle : sur create_date (date de création native
+        # Odoo de la ligne), pas sur une date métier — ces lignes orphelines
+        # n'ont pas de date d'inventaire (pas de parent).
+        if self.date_from:
+            domain.append(('create_date', '>=', datetime.combine(self.date_from, time.min)))
+        if self.date_to:
+            domain.append(('create_date', '<=', datetime.combine(self.date_to, time.max)))
         return domain
 
     # ------------------------------------------------------------------
@@ -63,6 +73,9 @@ class PhysicalInventoryLineCleanupWizard(models.TransientModel):
 
     def action_preview(self):
         self.ensure_one()
+        if self.date_from and self.date_to and self.date_from > self.date_to:
+            raise UserError(_("La date de début doit être antérieure ou égale à la date de fin."))
+
         self.line_ids.unlink()
 
         orphan_lines = self.env['physical.inventory.line'].with_context(
