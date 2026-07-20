@@ -79,13 +79,18 @@ class PhysicalInventoryLineExcelDeleteWizard(models.TransientModel):
             allowed_company_ids=[self.company_id.id],
         ))
 
-        product = env['product.product'].with_context(active_test=False).search(
+        # physical.inventory.line se rattache par product_tmpl_id (pas par
+        # variante) : on cherche directement sur product.template, dont le
+        # default_code est le champ code_article utilisé partout ailleurs
+        # dans ce module pour l'inventaire (custom_stock/product_template.py
+        # : code_article = related='default_code').
+        product_tmpl = env['product.template'].with_context(active_test=False).search(
             [('default_code', '=', code)], limit=1
         )
-        if not product:
+        if not product_tmpl:
             return {**base, 'state': 'not_found',
                     'message': f"Code article '{code}' introuvable dans Odoo."}
-        base['product_tmpl_id'] = product.product_tmpl_id.id
+        base['product_tmpl_id'] = product_tmpl.id
 
         inventory = env['physical.inventory'].search(
             [('name', '=', inventaire_name), ('company_id', '=', self.company_id.id)], limit=1
@@ -97,7 +102,7 @@ class PhysicalInventoryLineExcelDeleteWizard(models.TransientModel):
         base['inventory_physical_id'] = inventory.id
 
         inv_lines = self.env['physical.inventory.line'].with_context(active_test=False).search([
-            ('product_tmpl_id', '=', product.product_tmpl_id.id),
+            ('product_tmpl_id', '=', product_tmpl.id),
             ('inventory_physical_id', '=', inventory.id),
         ])
         if not inv_lines:
