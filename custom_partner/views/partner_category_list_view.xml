@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_res_partner_category_list_inherit" model="ir.ui.view">
+            <field name="name">res.partner.category.list.code</field>
+            <field name="model">res.partner.category</field>
+            <field name="inherit_id" ref="base.view_partner_category_list"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='name']" position="before">
+                    <field name="code" />
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>

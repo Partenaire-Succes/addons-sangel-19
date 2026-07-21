@@ -205,7 +205,7 @@ class ResPartnerImport(models.Model):
             "code_family":        self._safe_string(customer.get("tsccoD_0")),
         }
 
-        category_id = self._get_category_id(customer.get("bccgcoD_0"))
+        category_id = self._get_category_id(customer.get("tsccoD_0"))
         if category_id:
             vals["category_id"] = [(4, category_id)]
 
@@ -248,17 +248,27 @@ class ResPartnerImport(models.Model):
     # =========================================================================
 
     def _get_category_id(self, name):
+        """Retourne l'ID de la catégorie partenaire correspondant au code,
+        en la créant si nécessaire. Retourne False si name est vide ou en cas d'erreur."""
         if not name:
             return False
+
+        name = name.strip()
+        Category = self.env["res.partner.category"]
+
         try:
-            rec = self.env["res.partner.category"].search([("name", "=", name)], limit=1)
-            if rec:
-                return rec.id
-            new_rec = self.env["res.partner.category"].create({"name": name})
-            _logger.info("➕ Catégorie créée : %s", name)
-            return new_rec.id
-        except Exception as e:
-            _logger.warning("⚠️ Erreur catégorie '%s' : %s", name, str(e))
+            with self.env.cr.savepoint():
+                rec = Category.search([("code", "=", name)], limit=1)
+                if rec:
+                    return rec.id
+                new_rec = Category.create({
+                    "code": name,
+                    "name": name,
+                })
+                _logger.info("Catégorie créée : %s", name)
+                return new_rec.id
+        except Exception:
+            _logger.exception("Erreur lors de la récupération/création de la catégorie '%s'", name)
             return False
 
     def _get_currency_id(self, name):

@@ -18,6 +18,7 @@
     'data': [
         'views/res_partner_inherit_views.xml',
         'views/loyalty_card_inherit_views.xml',
+        'views/partner_category_list_view.xml',
     ],
     'license': 'LGPL-3',
     'installable': True,

@@ -28,7 +28,9 @@ class PurchaseOrderSageX3(models.Model):
         return self.action_submit_to_sage_x3()
 
     def action_submit_all_pending_to_sage_x3(self):
-        """Soumet toutes les commandes en attente de la société courante."""
+        """Soumet toutes les commandes en attente de la société courante,
+        en un seul appel API groupé (_submit_batch_to_sage_x3) plutôt qu'un
+        appel réseau par commande."""
         pending_orders = self.search([
             ('company_id',        '=',  self.env.company.id),
             ('state',             'in', ['sent']),
@@ -53,24 +55,30 @@ class PurchaseOrderSageX3(models.Model):
         ok = ko = 0
         errors = []
 
-        for order in pending_orders:
-            try:
-                order._submit_to_sage_x3()
+        try:
+            pending_orders._submit_batch_to_sage_x3()
+        except Exception as e:
+            # Échec global (authentification, réseau, réponse SAGE X3
+            # invalide) : aucune commande n'a pu être envoyée, le lot entier
+            # est en échec — pas de tentative partielle possible puisque
+            # c'est un seul appel réseau pour tout le lot.
+            ko = len(pending_orders)
+            errors.append(f"Envoi groupé échoué — {str(e)}")
+        else:
+            for order in pending_orders:
                 if order.sage_x3_validated:
-                    order.button_confirm()
-                    ok += 1
+                    try:
+                        order.button_confirm()
+                        ok += 1
+                    except Exception as e:
+                        ko += 1
+                        errors.append(
+                            f"{order.name} : validée par SAGE X3 mais échec de "
+                            f"confirmation Odoo — {str(e)}"
+                        )
                 else:
                     ko += 1
                     errors.append(f"{order.name} : {order.sage_x3_error or 'Rejetée'}")
-            except UserError as e:
-                ko += 1
-                errors.append(f"{order.name} : {str(e)}")
-            except Exception as e:
-                ko += 1
-                errors.append(f"{order.name} : Erreur inattendue — {str(e)}")
-
-            if (ok + ko) % 10 == 0:
-                self.env.cr.commit()
 
         self.env.cr.commit()
 
@@ -168,8 +176,78 @@ class PurchaseOrderSageX3(models.Model):
 
         raise UserError("Réponse inattendue de SAGE X3 (liste vide ou format invalide)")
 
-    def _prepare_order_for_sage_x3(self):
-        """Formate la commande pour l'API SAGE X3."""
+    def _prepare_orders_batch_for_sage_x3(self):
+        """Formate PLUSIEURS commandes (self = recordset multi-lignes) en un
+        seul payload API SAGE X3 : "commandes" contient une entrée par
+        commande de self, dans l'ordre d'itération du recordset (le même
+        ordre est réutilisé pour réassocier la réponse à chaque commande
+        dans _submit_batch_to_sage_x3 — même endpoint /api/Orders/batch que
+        l'envoi individuel, qui n'y plaçait jusqu'ici toujours qu'un seul
+        élément malgré le nom)."""
+        return {"commandes": [order._build_commande_dict() for order in self]}
+
+    def _submit_batch_to_sage_x3(self):
+        """Envoie TOUTES les commandes de self en un seul appel réseau à
+        SAGE X3, au lieu d'un appel par commande (cf.
+        action_submit_all_pending_to_sage_x3). Écrit les champs de suivi et
+        poste un message sur CHAQUE commande selon sa propre entrée dans la
+        réponse — la réponse SAGE X3 est une liste alignée sur l'ordre
+        d'envoi (même convention que l'envoi individuel et que
+        /api/AccountingEntries/batch, cf.
+        sage_x3_mixin._extract_x3_results).
+
+        Ne lève PAS d'exception pour un échec individuel : chaque commande
+        rejetée reste reflétée par son propre sage_x3_error/sage_x3_validé,
+        à charge de l'appelant (action_submit_all_pending_to_sage_x3) de
+        compter succès/échecs. Ne lève que pour un échec global (auth,
+        réseau, réponse invalide) qui empêche de traiter le lot entier."""
+        if not self:
+            return
+
+        token = self._authenticate_sage_x3()
+        if not token:
+            raise UserError("Échec de l'authentification SAGE X3")
+
+        config     = self._get_sage_x3_config()
+        orders_url = f"{config['base_url']}/api/Orders/batch"
+        payload    = self._prepare_orders_batch_for_sage_x3()
+
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type":  "application/json",
+            "Accept":        "application/json",
+        }
+
+        response_data = self._safe_post(orders_url, headers, payload).json()
+
+        if not isinstance(response_data, list) or len(response_data) != len(self):
+            got = len(response_data) if isinstance(response_data, list) else "format invalide"
+            raise UserError(
+                f"Réponse inattendue de SAGE X3 (attendu {len(self)} résultat(s), reçu {got})"
+            )
+
+        for order, result in zip(self, response_data):
+            success = result.get("success", False)
+            message = result.get("message", "")
+
+            order.write({
+                'sage_x3_submitted':        True,
+                'sage_x3_validated':        success,
+                'sage_x3_submitted_date':   fields.Datetime.now(),
+                'sage_x3_response_message': message if success else False,
+                'sage_x3_error':            False if success else message,
+            })
+
+            order.message_post(
+                body=f"{'✅ Validée' if success else '❌ Rejetée'}\n{message}",
+                subject=f"{'✅' if success else '❌'} SAGE X3",
+            )
+
+    def _build_commande_dict(self):
+        """Formate une seule commande au format attendu par l'élément
+        "commandes" de l'API SAGE X3 — extrait de _prepare_order_for_sage_x3
+        pour être réutilisé aussi bien pour un envoi individuel qu'un envoi
+        groupé (_prepare_orders_batch_for_sage_x3)."""
         self.ensure_one()
 
         if not self.partner_id or not self.order_line:
@@ -188,16 +266,20 @@ class PurchaseOrderSageX3(models.Model):
             })
 
         return {
-            "commandes": [{
-                "siteVente":               site,
-                "DateCommande":            (self.date_order or datetime.now()).isoformat(),
-                "Client":                  self.company_id.lib_company or "YOP01",
-                "Devise":                  self.currency_id.name or "XOF",
-                "Magasin":                 self.company_id.name or "PRINCIPAL",
-                "ReferenceCommandeClient": self.name,
-                "items":                   items,
-            }]
+            "siteVente":               site,
+            "DateCommande":            (self.date_order or datetime.now()).isoformat(),
+            "Client":                  self.company_id.lib_company or "YOP01",
+            "Devise":                  self.currency_id.name or "XOF",
+            "Magasin":                 self.company_id.name or "PRINCIPAL",
+            "ReferenceCommandeClient": self.name,
+            "items":                   items,
         }
+
+    def _prepare_order_for_sage_x3(self):
+        """Formate la commande pour l'API SAGE X3 (envoi individuel — une
+        seule commande dans "commandes")."""
+        self.ensure_one()
+        return {"commandes": [self._build_commande_dict()]}
 
     # =========================================================================
     # IMPORT DES LIVRAISONS DEPUIS SAGE X3
